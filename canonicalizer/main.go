@@ -63,12 +63,18 @@ func main() {
 	log.Println("✓ Connected to PostgreSQL")
 
 	// Connect to RabbitMQ
+	// RabbitMQ vhost encoding: vhost "/axiom" must become "/%2Faxiom" in the URL
+	// The "/" in the vhost name needs to be URL-encoded as %2F
+	vhostPath := strings.ReplaceAll(config.RabbitMQVHost, "/", "%2F")
+	if !strings.HasPrefix(vhostPath, "/") {
+		vhostPath = "/" + vhostPath
+	}
 	rabbitURL := fmt.Sprintf("amqp://%s:%s@%s:%s%s",
 		config.RabbitMQUser,
 		config.RabbitMQPassword,
 		config.RabbitMQHost,
 		config.RabbitMQPort,
-		config.RabbitMQVHost,
+		vhostPath,
 	)
 
 	conn, err := amqp.Dial(rabbitURL)

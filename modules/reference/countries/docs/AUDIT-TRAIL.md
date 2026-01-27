@@ -16,7 +16,7 @@ The `reference.countries_audit` table provides complete provenance and complianc
 
 ```sql
 CREATE TABLE reference.countries_audit (
-    audit_id BIGSERIAL PRIMARY KEY,              -- Unique audit record ID
+    audit_id BIGSERIAL PRIMARY KEY,               -- Unique audit record ID
     operation TEXT NOT NULL,                      -- INSERT, UPDATE, or DELETE
     operated_at TIMESTAMP WITH TIME ZONE,         -- When the change occurred
     
