@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -75,6 +76,12 @@ func run(cmd *cobra.Command, args []string) error {
 	headers, err := reader.Read()
 	if err != nil {
 		return fmt.Errorf("failed to read CSV headers: %w", err)
+	}
+
+	// Strip UTF-8 BOM from first header if present
+	if len(headers) > 0 && len(headers[0]) > 0 {
+		headers[0] = strings.TrimPrefix(headers[0], "\uFEFF") // UTF-8 BOM
+		headers[0] = strings.TrimPrefix(headers[0], "\xEF\xBB\xBF") // UTF-8 BOM bytes
 	}
 
 	log.Printf("CSV headers: %v", headers)

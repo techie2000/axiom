@@ -21,9 +21,9 @@ type RawCountryData struct {
 	Alpha4Code       string `json:"Alpha-4 code,omitempty"`
 	Numeric          string `json:"Numeric"`
 	Status           string `json:"status"`
-	StartDate        string `json:"start_date,omitempty"`
-	EndDate          string `json:"end_date,omitempty"`
-	Remarks          string `json:"remarks,omitempty"`
+	StartDate        string `json:"Start date,omitempty"`
+	EndDate          string `json:"End date,omitempty"`
+	Remarks          string `json:"Remarks,omitempty"`
 }
 
 // ValidStatuses defines the allowed status values per ISO 3166-1

@@ -206,17 +206,17 @@ func main() {
 					"x-rejection-reason":     result.Error.Error(),
 					"x-rejected-at":          time.Now().UTC().Format(time.RFC3339),
 				}
-				
+
 				// Publish directly to DLQ with error context
 				err := channel.Publish(
-					"axiom.data.dlx",        // exchange (DLX)
-					"reference.countries",   // routing key
-					false,                   // mandatory
-					false,                   // immediate
+					"axiom.data.dlx",      // exchange (DLX)
+					"reference.countries", // routing key
+					false,                 // mandatory
+					false,                 // immediate
 					amqp.Publishing{
-						ContentType: "application/json",
-						Body:        msg.Body,
-						Headers:     dlqHeaders,
+						ContentType:  "application/json",
+						Body:         msg.Body,
+						Headers:      dlqHeaders,
 						DeliveryMode: amqp.Persistent,
 					},
 				)
