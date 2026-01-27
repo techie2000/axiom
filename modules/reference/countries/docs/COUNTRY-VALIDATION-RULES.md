@@ -42,10 +42,11 @@ Codes reserved at the request of international organizations (e.g., UN, EU) for 
 **Required Fields:**
 - `status` (must be "exceptionally_reserved")
 - `alpha2`
-- `name_english`
 - `remarks` (explains why code is reserved)
 
 **Optional Fields:**
+- `name_english` (not always provided for exceptional reservations)
+- `name_french`
 - `start_date`
 - `end_date`
 
