@@ -52,7 +52,7 @@ services:
       dockerfile: csv2json/Dockerfile
     container_name: axiom-csv2json
     environment:
-      RABBITMQ_URL: amqp://axiom:changeme@rabbitmq:5672/axiom
+      RABBITMQ_URL: amqp://axiom:changeme@rabbitmq:5672/%2Faxiom
       RABBITMQ_EXCHANGE: axiom.data.exchange
     volumes:
       - ./modules/reference/countries/data:/data:ro  # Mount CSV files

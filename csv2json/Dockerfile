@@ -16,6 +16,7 @@ ENV GOPROXY=direct
 ENV GOSUMDB=off
 ENV GOINSECURE="*"
 RUN git config --global http.sslVerify false
+# Download dependencies
 RUN go mod download
 RUN go mod tidy
 
