@@ -42,6 +42,15 @@ type RouteConfig struct {
 	logger            *log.Logger   // Route-specific logger
 }
 
+// Log level constants
+type LogLevel string
+
+const (
+	LogLevelINFO  LogLevel = "INFO"
+	LogLevelWARN  LogLevel = "WARN"
+	LogLevelERROR LogLevel = "ERROR"
+)
+
 // Logf logs a message using the route-specific logger if available, otherwise uses standard log
 func (r *RouteConfig) Logf(format string, args ...interface{}) {
 	if r.logger != nil {
@@ -49,6 +58,31 @@ func (r *RouteConfig) Logf(format string, args ...interface{}) {
 	} else {
 		log.Printf("[%s] "+format, append([]interface{}{r.Name}, args...)...)
 	}
+}
+
+// LogWithLevel logs a message with severity level
+func (r *RouteConfig) LogWithLevel(level LogLevel, format string, args ...interface{}) {
+	msg := fmt.Sprintf(format, args...)
+	if r.logger != nil {
+		r.logger.Printf("%s: %s", level, msg)
+	} else {
+		log.Printf("[%s] %s: %s", r.Name, level, msg)
+	}
+}
+
+// Info logs an informational message
+func (r *RouteConfig) Info(format string, args ...interface{}) {
+	r.LogWithLevel(LogLevelINFO, format, args...)
+}
+
+// Warn logs a warning message
+func (r *RouteConfig) Warn(format string, args ...interface{}) {
+	r.LogWithLevel(LogLevelWARN, format, args...)
+}
+
+// Error logs an error message
+func (r *RouteConfig) Error(format string, args ...interface{}) {
+	r.LogWithLevel(LogLevelERROR, format, args...)
 }
 
 type InputConfig struct {
@@ -112,21 +146,21 @@ func main() {
 		var err error
 		serviceLogFile, err = os.OpenFile(serviceLogPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 		if err != nil {
-			log.Printf("Warning: Failed to open service log file %s: %v", serviceLogPath, err)
+			log.Printf("WARN: Failed to open service log file %s: %v", serviceLogPath, err)
 		} else {
 			// Set default logger to write to both stdout and service log file
 			log.SetOutput(io.MultiWriter(os.Stdout, serviceLogFile))
-			log.Printf("Service logging enabled: %s", serviceLogPath)
+			log.Printf("INFO: Service logging enabled: %s", serviceLogPath)
 			defer serviceLogFile.Close()
 		}
 	}
 
-	log.Printf("csv2json v%s starting", Version)
+	log.Printf("INFO: csv2json v%s starting", Version)
 
 	// Check if routes config is specified
 	if globalConfig.RoutesConfigPath != "" {
-		log.Printf("Running in Multi-Ingress Routing Mode")
-		log.Printf("Routes config: %s", globalConfig.RoutesConfigPath)
+		log.Printf("INFO: Running in Multi-Ingress Routing Mode")
+		log.Printf("INFO: Routes config: %s", globalConfig.RoutesConfigPath)
 		runMultiIngressMode(globalConfig)
 	} else {
 		log.Fatal("ROUTES_CONFIG environment variable must be set")
@@ -150,12 +184,12 @@ func runMultiIngressMode(globalConfig GlobalConfig) {
 		log.Fatalf("Failed to load routes: %v", err)
 	}
 
-	log.Printf("Loaded %d route(s)", len(routes.Routes))
+	log.Printf("INFO: Loaded %d route(s)", len(routes.Routes))
 
 	// Create folders for all routes
 	for _, route := range routes.Routes {
 		createRouteFolders(route)
-		log.Printf("  - Route '%s': monitoring %s -> %s.%s",
+		log.Printf("INFO:   - Route '%s': monitoring %s -> %s.%s",
 			route.Name, route.Input.Path, route.Domain, route.Entity)
 	}
 
@@ -205,7 +239,7 @@ func createRouteFolders(route RouteConfig) {
 
 	for _, folder := range folders {
 		if err := os.MkdirAll(folder, 0755); err != nil {
-			log.Printf("Warning: Failed to create folder %s: %v", folder, err)
+			log.Printf("WARN: Failed to create folder %s: %v", folder, err)
 		}
 	}
 }
@@ -216,16 +250,16 @@ func startRouteMonitoring(route RouteConfig, globalConfig GlobalConfig) {
 		logFilePath := filepath.Join(route.Logging.LogFolder, fmt.Sprintf("%s.log", route.Name))
 		logFile, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 		if err != nil {
-			log.Printf("[%s] Warning: Failed to open log file %s: %v", route.Name, logFilePath, err)
+			log.Printf("[%s] WARN: Failed to open log file %s: %v", route.Name, logFilePath, err)
 		} else {
 			route.logFile = logFile
 			route.logger = log.New(io.MultiWriter(os.Stdout, logFile), fmt.Sprintf("[%s] ", route.Name), log.LstdFlags)
-			route.logger.Printf("File logging enabled: %s", logFilePath)
+			route.logger.Printf("INFO: File logging enabled: %s", logFilePath)
 			defer logFile.Close()
 		}
 	}
 
-	route.Logf("Starting %s mode monitoring", route.Input.WatchMode)
+	route.Info("Starting %s mode monitoring", route.Input.WatchMode)
 
 	switch route.Input.WatchMode {
 	case "event":
@@ -235,7 +269,7 @@ func startRouteMonitoring(route RouteConfig, globalConfig GlobalConfig) {
 	case "hybrid":
 		startHybridWatchForRoute(route, globalConfig)
 	default:
-		route.Logf("Invalid watch mode '%s', defaulting to hybrid", route.Input.WatchMode)
+		route.Warn("Invalid watch mode '%s', defaulting to hybrid", route.Input.WatchMode)
 		startHybridWatchForRoute(route, globalConfig)
 	}
 }
@@ -243,18 +277,18 @@ func startRouteMonitoring(route RouteConfig, globalConfig GlobalConfig) {
 func startEventWatchForRoute(route RouteConfig, globalConfig GlobalConfig) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		route.Logf("Failed to create fsnotify watcher: %v", err)
+		route.Error("Failed to create fsnotify watcher: %v", err)
 		return
 	}
 	defer watcher.Close()
 
 	err = watcher.Add(route.Input.Path)
 	if err != nil {
-		route.Logf("Failed to watch folder %s: %v", route.Input.Path, err)
+		route.Error("Failed to watch folder %s: %v", route.Input.Path, err)
 		return
 	}
 
-	route.Logf("Event watching enabled on %s", route.Input.Path)
+	route.Info("Event watching enabled on %s", route.Input.Path)
 
 	// Process existing files immediately
 	scanFolderForRoute(route, globalConfig)
@@ -272,7 +306,7 @@ func startEventWatchForRoute(route RouteConfig, globalConfig GlobalConfig) {
 			if !ok {
 				return
 			}
-			route.Logf("Watcher error: %v", err)
+			route.Error("Watcher error: %v", err)
 		}
 	}
 }
@@ -286,7 +320,7 @@ func startPollWatchForRoute(route RouteConfig, globalConfig GlobalConfig) {
 	ticker := time.NewTicker(time.Duration(interval) * time.Second)
 	defer ticker.Stop()
 
-	route.Logf("Poll watching enabled (interval: %ds)", interval)
+	route.Info("Poll watching enabled (interval: %ds)", interval)
 
 	// Process existing files first
 	scanFolderForRoute(route, globalConfig)
@@ -313,7 +347,7 @@ func startHybridWatchForRoute(route RouteConfig, globalConfig GlobalConfig) {
 	ticker := time.NewTicker(time.Duration(interval) * time.Second)
 	defer ticker.Stop()
 
-	route.Logf("Hybrid watching enabled (event + %ds backup polling)", interval)
+	route.Info("Hybrid watching enabled (event + %ds backup polling)", interval)
 
 	for range ticker.C {
 		logPollCycle(route, "hybrid")
@@ -330,9 +364,9 @@ func logPollCycle(route RouteConfig, mode string) {
 
 	if logMode == "always" {
 		if mode == "hybrid" {
-			route.Logf("Backup poll cycle started")
+			route.Info("Backup poll cycle started")
 		} else {
-			route.Logf("Poll cycle started")
+			route.Info("Poll cycle started")
 		}
 	}
 	// "on-files" mode logs in scanFolderForRoute only when files found
@@ -342,7 +376,7 @@ func logPollCycle(route RouteConfig, mode string) {
 func scanFolderForRoute(route RouteConfig, globalConfig GlobalConfig) {
 	entries, err := os.ReadDir(route.Input.Path)
 	if err != nil {
-		route.Logf("Error reading input folder: %v", err)
+		route.Error("Error reading input folder: %v", err)
 		return
 	}
 
@@ -362,7 +396,7 @@ func scanFolderForRoute(route RouteConfig, globalConfig GlobalConfig) {
 
 	// Log if mode is "on-files" and files were found
 	if logMode == "on-files" && fileCount > 0 {
-		route.Logf("Poll cycle found %d file(s)", fileCount)
+		route.Info("Poll cycle found %d file(s)", fileCount)
 	}
 
 	for _, entry := range entries {
@@ -380,18 +414,18 @@ func handleFileForRoute(filePath string, route RouteConfig, globalConfig GlobalC
 
 	// Check suffix filter
 	if !matchesSuffixFilter(filename, route.Input.SuffixFilter) {
-		route.Logf("Ignoring %s (doesn't match suffix filter)", filename)
+		route.Info("Ignoring %s (doesn't match suffix filter)", filename)
 		archiveFile(filePath, route.Archive.IgnoredPath, filename)
 		return
 	}
 
-	route.Logf("Processing file: %s", filename)
+	route.Info("Processing file: %s", filename)
 
 	if err := processFileForRoute(filePath, route, globalConfig); err != nil {
-		route.Logf("Failed to process %s: %v", filename, err)
+		route.Error("Failed to process %s: %v", filename, err)
 		archiveFile(filePath, route.Archive.FailedPath, filename)
 	} else {
-		route.Logf("✓ Successfully processed %s", filename)
+		route.Info("✓ Successfully processed %s", filename)
 		archiveFile(filePath, route.Archive.ProcessedPath, filename)
 	}
 }
@@ -419,7 +453,7 @@ func archiveFile(srcPath, archiveFolder, filename string) {
 	dstPath := filepath.Join(archiveFolder, archivedFilename)
 
 	if err := os.Rename(srcPath, dstPath); err != nil {
-		log.Printf("Failed to archive %s: %v", filename, err)
+		log.Printf("ERROR: Failed to archive %s: %v", filename, err)
 	}
 }
 
@@ -601,7 +635,7 @@ func processFileForRoute(filePath string, route RouteConfig, globalConfig Global
 
 		rowCount++
 		if rowCount%100 == 0 {
-			route.Logf("Processed %d rows...", rowCount)
+			route.Info("Processed %d rows...", rowCount)
 		}
 	}
 
@@ -613,7 +647,7 @@ func processFileForRoute(filePath string, route RouteConfig, globalConfig Global
 	}
 
 	outputTypes := route.Output.Type
-	route.Logf("✓ Processed %d rows from %s (output: %s)", rowCount, filepath.Base(filePath), outputTypes)
+	route.Info("✓ Processed %d rows from %s (output: %s)", rowCount, filepath.Base(filePath), outputTypes)
 	return nil
 }
 
