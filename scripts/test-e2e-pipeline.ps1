@@ -136,8 +136,9 @@ Write-Host ""
 # Step 6: Verify data in PostgreSQL
 Write-Step "Step 6: Verifying data in PostgreSQL..."
 
-$countryCount = docker exec -i axiom-postgres psql -U axiom -d axiom_db -t -c "SELECT COUNT(*) FROM reference.countries;"
-$countryCount = $countryCount.Trim()
+$countryCountRaw = docker exec -i axiom-postgres psql -U axiom -d axiom_db -t -c "SELECT COUNT(*) FROM reference.countries;"
+# Extract just the number from the output (handle array or multi-line output)
+$countryCount = ($countryCountRaw | Out-String).Trim()
 
 Write-Info "Countries in database: $countryCount"
 
