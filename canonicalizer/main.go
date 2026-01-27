@@ -123,7 +123,7 @@ func main() {
 
 	log.Println("✓ Connected to RabbitMQ")
 
-	// Declare exchange (idempotent)
+	// Declare main exchange (idempotent)
 	err = channel.ExchangeDeclare(
 		config.RabbitMQExchange, // name
 		"topic",                 // type
@@ -136,6 +136,49 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to declare exchange: %v", err)
 	}
+
+	// Declare Dead Letter Exchange (DLX)
+	dlxName := "axiom.data.dlx"
+	err = channel.ExchangeDeclare(
+		dlxName,  // name
+		"topic",  // type
+		true,     // durable
+		false,    // auto-deleted
+		false,    // internal
+		false,    // no-wait
+		nil,      // arguments
+	)
+	if err != nil {
+		log.Fatalf("Failed to declare DLX: %v", err)
+	}
+	log.Printf("✓ Dead Letter Exchange '%s' declared", dlxName)
+
+	// Declare Dead Letter Queue (DLQ) for countries
+	dlqName := "axiom.reference.countries.dlq"
+	dlqQueue, err := channel.QueueDeclare(
+		dlqName, // name
+		true,    // durable
+		false,   // delete when unused
+		false,   // exclusive
+		false,   // no-wait
+		nil,     // arguments (no further DLX for DLQ itself)
+	)
+	if err != nil {
+		log.Fatalf("Failed to declare DLQ: %v", err)
+	}
+
+	// Bind DLQ to DLX
+	err = channel.QueueBind(
+		dlqQueue.Name,       // queue name
+		"reference.countries", // routing key (must match the x-dead-letter-routing-key)
+		dlxName,             // exchange (the DLX)
+		false,
+		nil,
+	)
+	if err != nil {
+		log.Fatalf("Failed to bind DLQ to DLX: %v", err)
+	}
+	log.Printf("✓ Dead Letter Queue '%s' bound to DLX with routing key 'reference.countries'", dlqName)
 
 	// Declare queue for countries with DLX
 	queueName := "axiom.reference.countries"
