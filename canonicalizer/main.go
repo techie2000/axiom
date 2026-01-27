@@ -199,8 +199,34 @@ func main() {
 
 			result := processMessage(ctx, msg.Body, repo)
 			if result.Error != nil {
-				log.Printf("✗ Failed to process message: %v", result.Error)
-				msg.Nack(false, false) // Don't requeue - send to DLX
+				// Publish to DLQ with error information in headers
+				dlqHeaders := amqp.Table{
+					"x-original-exchange":    config.RabbitMQExchange,
+					"x-original-routing-key": "reference.countries",
+					"x-rejection-reason":     result.Error.Error(),
+					"x-rejected-at":          time.Now().UTC().Format(time.RFC3339),
+				}
+				
+				// Publish directly to DLQ with error context
+				err := channel.Publish(
+					"axiom.data.dlx",        // exchange (DLX)
+					"reference.countries",   // routing key
+					false,                   // mandatory
+					false,                   // immediate
+					amqp.Publishing{
+						ContentType: "application/json",
+						Body:        msg.Body,
+						Headers:     dlqHeaders,
+						DeliveryMode: amqp.Persistent,
+					},
+				)
+				if err != nil {
+					log.Printf("Failed to publish to DLQ: %v", err)
+					msg.Nack(false, true) // Requeue on publish failure
+				} else {
+					log.Printf("✗ Rejected: %v", result.Error)
+					msg.Ack(false) // Ack original message after successful DLQ publish
+				}
 				rejectedCount++
 			} else if result.Skipped {
 				msg.Ack(false) // Ack skipped messages (not errors)
