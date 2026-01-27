@@ -18,7 +18,6 @@ type RawCountryData struct {
 	FrenchShortName  string `json:"French short name"`
 	Alpha2Code       string `json:"Alpha-2 code"`
 	Alpha3Code       string `json:"Alpha-3 code"`
-	Alpha4Code       string `json:"Alpha-4 code,omitempty"`
 	Numeric          string `json:"Numeric"`
 	Status           string `json:"status"`
 	StartDate        string `json:"Start date,omitempty"`
@@ -54,7 +53,6 @@ func TransformToCountry(raw RawCountryData) (*model.Country, error) {
 	// 3. Normalize country codes (uppercase, trim)
 	alpha2 := strings.ToUpper(strings.TrimSpace(raw.Alpha2Code))
 	alpha3 := strings.ToUpper(strings.TrimSpace(raw.Alpha3Code))
-	alpha4 := strings.ToUpper(strings.TrimSpace(raw.Alpha4Code))
 
 	// 4. Trim and clean optional fields
 	numeric := strings.TrimSpace(raw.Numeric)
@@ -96,7 +94,6 @@ func TransformToCountry(raw RawCountryData) (*model.Country, error) {
 	return &model.Country{
 		Alpha2:      alpha2,
 		Alpha3:      alpha3,
-		Alpha4:      alpha4,
 		Numeric:     transformedNumeric,
 		NameEnglish: nameEnglish,
 		NameFrench:  nameFrench,

@@ -260,7 +260,7 @@ func TestTransformToCountry_FormerlyUsed(t *testing.T) {
 				FrenchShortName:  "Îles Gilbert et Ellice",
 				Alpha2Code:       "GE",
 				Alpha3Code:       "GEL",
-				Alpha4Code:       "GEKI",
+
 				Numeric:          "296",
 				Status:           "formerly_used",
 				StartDate:        "1974-01-01",
@@ -275,7 +275,7 @@ func TestTransformToCountry_FormerlyUsed(t *testing.T) {
 				FrenchShortName:  "Yougoslavie",
 				Alpha2Code:       "YU",
 				Alpha3Code:       "YUG",
-				Alpha4Code:       "YUCS",
+
 				Numeric:          "891",
 				Status:           "formerly_used",
 				StartDate:        "1974-01-01",

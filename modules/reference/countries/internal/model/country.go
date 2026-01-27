@@ -17,11 +17,10 @@ const (
 // Country represents a country entity from ISO 3166-1
 // See: https://www.iso.org/glossary-for-iso-3166.html
 type Country struct {
-	Alpha2      string     `json:"alpha2" db:"alpha2"`                   // ISO 3166-1 alpha-2 (e.g., "US") - Primary key
-	Alpha3      string     `json:"alpha3" db:"alpha3"`                   // ISO 3166-1 alpha-3 (e.g., "USA")
-	Alpha4      string     `json:"alpha4,omitempty" db:"alpha4"`         // ISO 3166-1 alpha-4 (rare, e.g., former codes)
-	Numeric     string     `json:"numeric" db:"numeric"`                 // ISO 3166-1 numeric code (e.g., "840")
-	NameEnglish string     `json:"name_english" db:"name_english"`       // Official English name
+	Alpha2      string     `json:"alpha2" db:"alpha2"`             // ISO 3166-1 alpha-2 (e.g., "US") - Primary key
+	Alpha3      string     `json:"alpha3" db:"alpha3"`             // ISO 3166-1 alpha-3 (e.g., "USA")
+	Numeric     string     `json:"numeric" db:"numeric"`           // ISO 3166-1 numeric code (e.g., "840")
+	NameEnglish string     `json:"name_english" db:"name_english"` // Official English name
 	NameFrench  string     `json:"name_french" db:"name_french"`         // Official French name (ISO standard)
 	Status      CodeStatus `json:"status" db:"status"`                   // Assignment status
 	StartDate   *time.Time `json:"start_date,omitempty" db:"start_date"` // Date country code came into use

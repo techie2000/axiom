@@ -39,10 +39,10 @@ func (r *CountryRepository) SetAuditContext(ctx context.Context, sourceSystem, s
 func (r *CountryRepository) Create(ctx context.Context, country *model.Country) error {
 	query := `
 		INSERT INTO reference.countries (
-			alpha2, alpha3, alpha4, numeric, 
+			alpha2, alpha3, numeric, 
 			name_english, name_french, status, 
 			start_date, end_date, remarks
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING created_at, updated_at
 	`
 
@@ -50,7 +50,6 @@ func (r *CountryRepository) Create(ctx context.Context, country *model.Country) 
 		ctx, query,
 		country.Alpha2,
 		nullString(country.Alpha3),
-		nullString(country.Alpha4),
 		nullString(country.Numeric),
 		nullString(country.NameEnglish),
 		nullString(country.NameFrench),
@@ -71,9 +70,9 @@ func (r *CountryRepository) Create(ctx context.Context, country *model.Country) 
 func (r *CountryRepository) Update(ctx context.Context, country *model.Country) error {
 	query := `
 		UPDATE reference.countries
-		SET alpha3 = $2, alpha4 = $3, numeric = $4,
-		    name_english = $5, name_french = $6, status = $7,
-		    start_date = $8, end_date = $9, remarks = $10
+		SET alpha3 = $2, numeric = $3,
+		    name_english = $4, name_french = $5, status = $6,
+		    start_date = $7, end_date = $8, remarks = $9
 		WHERE alpha2 = $1
 		RETURNING updated_at
 	`
@@ -82,7 +81,6 @@ func (r *CountryRepository) Update(ctx context.Context, country *model.Country) 
 		ctx, query,
 		country.Alpha2,
 		nullString(country.Alpha3),
-		nullString(country.Alpha4),
 		nullString(country.Numeric),
 		nullString(country.NameEnglish),
 		nullString(country.NameFrench),
@@ -106,13 +104,12 @@ func (r *CountryRepository) Update(ctx context.Context, country *model.Country) 
 func (r *CountryRepository) Upsert(ctx context.Context, country *model.Country) error {
 	query := `
 		INSERT INTO reference.countries (
-			alpha2, alpha3, alpha4, numeric,
+			alpha2, alpha3, numeric,
 			name_english, name_french, status,
 			start_date, end_date, remarks
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		ON CONFLICT (alpha2) DO UPDATE SET
 			alpha3 = EXCLUDED.alpha3,
-			alpha4 = EXCLUDED.alpha4,
 			numeric = EXCLUDED.numeric,
 			name_english = EXCLUDED.name_english,
 			name_french = EXCLUDED.name_french,
@@ -127,7 +124,6 @@ func (r *CountryRepository) Upsert(ctx context.Context, country *model.Country) 
 		ctx, query,
 		country.Alpha2,
 		nullString(country.Alpha3),
-		nullString(country.Alpha4),
 		nullString(country.Numeric),
 		nullString(country.NameEnglish),
 		nullString(country.NameFrench),
@@ -147,7 +143,7 @@ func (r *CountryRepository) Upsert(ctx context.Context, country *model.Country) 
 // GetByAlpha2 retrieves a country by its alpha-2 code
 func (r *CountryRepository) GetByAlpha2(ctx context.Context, alpha2 string) (*model.Country, error) {
 	query := `
-		SELECT alpha2, alpha3, alpha4, numeric,
+		SELECT alpha2, alpha3, numeric,
 		       name_english, name_french, status,
 		       start_date, end_date, remarks,
 		       created_at, updated_at
@@ -156,9 +152,9 @@ func (r *CountryRepository) GetByAlpha2(ctx context.Context, alpha2 string) (*mo
 	`
 
 	country := &model.Country{}
-	var alpha3, alpha4, numeric, nameEnglish, nameFrench, remarks sql.NullString
+	var alpha3, numeric, nameEnglish, nameFrench, remarks sql.NullString
 	err := r.db.QueryRowContext(ctx, query, alpha2).Scan(
-		&country.Alpha2, &alpha3, &alpha4, &numeric,
+		&country.Alpha2, &alpha3, &numeric,
 		&nameEnglish, &nameFrench, &country.Status,
 		&country.StartDate, &country.EndDate, &remarks,
 		&country.CreatedAt, &country.UpdatedAt,
@@ -166,7 +162,6 @@ func (r *CountryRepository) GetByAlpha2(ctx context.Context, alpha2 string) (*mo
 
 	if err == nil {
 		country.Alpha3 = alpha3.String
-		country.Alpha4 = alpha4.String
 		country.Numeric = numeric.String
 		country.NameEnglish = nameEnglish.String
 		country.NameFrench = nameFrench.String
@@ -186,7 +181,7 @@ func (r *CountryRepository) GetByAlpha2(ctx context.Context, alpha2 string) (*mo
 // GetByAlpha3 retrieves a country by its alpha-3 code
 func (r *CountryRepository) GetByAlpha3(ctx context.Context, alpha3 string) (*model.Country, error) {
 	query := `
-		SELECT alpha2, alpha3, alpha4, numeric,
+		SELECT alpha2, alpha3, numeric,
 		       name_english, name_french, status,
 		       start_date, end_date, remarks,
 		       created_at, updated_at
@@ -195,9 +190,9 @@ func (r *CountryRepository) GetByAlpha3(ctx context.Context, alpha3 string) (*mo
 	`
 
 	country := &model.Country{}
-	var alpha3Var, alpha4, numeric, nameEnglish, nameFrench, remarks sql.NullString
+	var alpha3Var, numeric, nameEnglish, nameFrench, remarks sql.NullString
 	err := r.db.QueryRowContext(ctx, query, alpha3).Scan(
-		&country.Alpha2, &alpha3Var, &alpha4, &numeric,
+		&country.Alpha2, &alpha3Var, &numeric,
 		&nameEnglish, &nameFrench, &country.Status,
 		&country.StartDate, &country.EndDate, &remarks,
 		&country.CreatedAt, &country.UpdatedAt,
@@ -205,7 +200,6 @@ func (r *CountryRepository) GetByAlpha3(ctx context.Context, alpha3 string) (*mo
 
 	if err == nil {
 		country.Alpha3 = alpha3Var.String
-		country.Alpha4 = alpha4.String
 		country.Numeric = numeric.String
 		country.NameEnglish = nameEnglish.String
 		country.NameFrench = nameFrench.String
@@ -225,7 +219,7 @@ func (r *CountryRepository) GetByAlpha3(ctx context.Context, alpha3 string) (*mo
 // ListActive retrieves all currently active countries
 func (r *CountryRepository) ListActive(ctx context.Context) ([]*model.Country, error) {
 	query := `
-		SELECT alpha2, alpha3, alpha4, numeric,
+		SELECT alpha2, alpha3, numeric,
 		       name_english, name_french, status,
 		       start_date, end_date, remarks,
 		       created_at, updated_at
@@ -245,9 +239,9 @@ func (r *CountryRepository) ListActive(ctx context.Context) ([]*model.Country, e
 	countries := make([]*model.Country, 0)
 	for rows.Next() {
 		country := &model.Country{}
-		var alpha3, alpha4, numeric, nameEnglish, nameFrench, remarks sql.NullString
+		var alpha3, numeric, nameEnglish, nameFrench, remarks sql.NullString
 		err := rows.Scan(
-			&country.Alpha2, &alpha3, &alpha4, &numeric,
+			&country.Alpha2, &alpha3, &numeric,
 			&nameEnglish, &nameFrench, &country.Status,
 			&country.StartDate, &country.EndDate, &remarks,
 			&country.CreatedAt, &country.UpdatedAt,
@@ -256,7 +250,6 @@ func (r *CountryRepository) ListActive(ctx context.Context) ([]*model.Country, e
 			return nil, fmt.Errorf("failed to scan country: %w", err)
 		}
 		country.Alpha3 = alpha3.String
-		country.Alpha4 = alpha4.String
 		country.Numeric = numeric.String
 		country.NameEnglish = nameEnglish.String
 		country.NameFrench = nameFrench.String
@@ -274,7 +267,7 @@ func (r *CountryRepository) ListActive(ctx context.Context) ([]*model.Country, e
 // ListAll retrieves all countries regardless of status
 func (r *CountryRepository) ListAll(ctx context.Context) ([]*model.Country, error) {
 	query := `
-		SELECT alpha2, alpha3, alpha4, numeric,
+		SELECT alpha2, alpha3, numeric,
 		       name_english, name_french, status,
 		       start_date, end_date, remarks,
 		       created_at, updated_at
@@ -291,9 +284,9 @@ func (r *CountryRepository) ListAll(ctx context.Context) ([]*model.Country, erro
 	countries := make([]*model.Country, 0)
 	for rows.Next() {
 		country := &model.Country{}
-		var alpha3, alpha4, numeric, nameEnglish, nameFrench, remarks sql.NullString
+		var alpha3, numeric, nameEnglish, nameFrench, remarks sql.NullString
 		err := rows.Scan(
-			&country.Alpha2, &alpha3, &alpha4, &numeric,
+			&country.Alpha2, &alpha3, &numeric,
 			&nameEnglish, &nameFrench, &country.Status,
 			&country.StartDate, &country.EndDate, &remarks,
 			&country.CreatedAt, &country.UpdatedAt,
@@ -302,7 +295,6 @@ func (r *CountryRepository) ListAll(ctx context.Context) ([]*model.Country, erro
 			return nil, fmt.Errorf("failed to scan country: %w", err)
 		}
 		country.Alpha3 = alpha3.String
-		country.Alpha4 = alpha4.String
 		country.Numeric = numeric.String
 		country.NameEnglish = nameEnglish.String
 		country.NameFrench = nameFrench.String

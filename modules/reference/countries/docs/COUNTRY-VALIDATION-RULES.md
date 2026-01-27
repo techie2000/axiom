@@ -22,7 +22,6 @@ Active country codes currently in use.
 - `name_french` (official French name, per ISO requirement)
 
 **Optional Fields:**
-- `alpha4` (4-letter code, rare)
 - `numeric` (3-digit numeric code)
 - `start_date` (when code was assigned)
 - `end_date` (should be NULL for active codes)
@@ -109,7 +108,6 @@ Historical codes that are no longer in use but may be reused in the future.
 - `status` (must be "formerly_used")
 - `alpha2`
 - `alpha3`
-- `alpha4`
 - `numeric`
 - `name_english`
 - `name_french`
@@ -124,9 +122,9 @@ Historical codes that are no longer in use but may be reused in the future.
 
 **Examples (will be skipped):**
 ```csv
-alpha2,alpha3,alpha4,numeric,name_english,name_french,status,start_date,end_date,remarks
-GE,GEL,GEKI,296,Gilbert and Ellice Islands,Îles Gilbert et Ellice,formerly_used,1974-01-01,1979-12-31,Code reassigned to Georgia (GE/GEO/268) in 1992.
-YU,YUG,YUCS,891,Yugoslavia,Yougoslavie,formerly_used,1974-01-01,2003-07-14,Code ceased after country dissolved.
+alpha2,alpha3,numeric,name_english,name_french,status,start_date,end_date,remarks
+GE,GEL,296,Gilbert and Ellice Islands,Îles Gilbert et Ellice,formerly_used,1974-01-01,1979-12-31,Code reassigned to Georgia (GE/GEO/268) in 1992.
+YU,YUG,891,Yugoslavia,Yougoslavie,formerly_used,1974-01-01,2003-07-14,Code ceased after country dissolved.
 ```
 
 ### 6. Unassigned (`unassigned`)

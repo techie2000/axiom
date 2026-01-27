@@ -261,7 +261,6 @@ func setupTestDB(t *testing.T) *sql.DB {
 		CREATE TABLE IF NOT EXISTS reference.countries (
 			alpha2 CHAR(2) PRIMARY KEY,
 			alpha3 CHAR(3) NOT NULL UNIQUE,
-			alpha4 CHAR(4),
 			numeric CHAR(3) NOT NULL UNIQUE,
 			name_english VARCHAR(255) NOT NULL,
 			name_french VARCHAR(255) NOT NULL,
@@ -272,7 +271,6 @@ func setupTestDB(t *testing.T) *sql.DB {
 			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			CONSTRAINT alpha2_uppercase CHECK (alpha2 = UPPER(alpha2)),
 			CONSTRAINT alpha3_uppercase CHECK (alpha3 = UPPER(alpha3)),
-			CONSTRAINT alpha4_uppercase CHECK (alpha4 IS NULL OR alpha4 = UPPER(alpha4)),
 			CONSTRAINT numeric_format CHECK (numeric ~ '^[0-9]{3}$'),
 			CONSTRAINT valid_date_range CHECK (start_date IS NULL OR end_date IS NULL OR start_date <= end_date)
 		);
