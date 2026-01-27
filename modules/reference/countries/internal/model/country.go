@@ -26,6 +26,7 @@ type Country struct {
 	Status      CodeStatus `json:"status" db:"status"`                   // Assignment status
 	StartDate   *time.Time `json:"start_date,omitempty" db:"start_date"` // Date country code came into use
 	EndDate     *time.Time `json:"end_date,omitempty" db:"end_date"`     // Date country code ceased (if applicable)
+	Remarks     string     `json:"remarks,omitempty" db:"remarks"`       // Status-specific notes (e.g., "Reserved for ISO 6166")
 	CreatedAt   time.Time  `json:"created_at" db:"created_at"`
 	UpdatedAt   time.Time  `json:"updated_at" db:"updated_at"`
 }

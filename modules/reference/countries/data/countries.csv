@@ -1,250 +1,657 @@
-﻿English short name,French short name,Alpha-2 code,Alpha-3 code,Numeric,status
-Afghanistan,Afghanistan (l'),AF,AFG,4,officially_assigned
-Albania,Albanie (l'),AL,ALB,8,officially_assigned
-Algeria,Algérie (l'),DZ,DZA,12,officially_assigned
-American Samoa,Samoa américaines (les),AS,ASM,16,officially_assigned
-Andorra,Andorre (l'),AD,AND,20,officially_assigned
-Angola,Angola (l'),AO,AGO,24,officially_assigned
-Anguilla,Anguilla,AI,AIA,660,officially_assigned
-Antarctica,Antarctique (l'),AQ,ATA,10,officially_assigned
-Antigua and Barbuda,Antigua-et-Barbuda,AG,ATG,28,officially_assigned
-Argentina,Argentine (l'),AR,ARG,32,officially_assigned
-Armenia,Arménie (l'),AM,ARM,51,officially_assigned
-Aruba,Aruba,AW,ABW,533,officially_assigned
-Australia,Australie (l'),AU,AUS,36,officially_assigned
-Austria,Autriche (l'),AT,AUT,40,officially_assigned
-Azerbaijan,Azerbaïdjan (l'),AZ,AZE,31,officially_assigned
-Bahamas (The),Bahamas (Les),BS,BHS,44,officially_assigned
-Bahrain,Bahreïn,BH,BHR,48,officially_assigned
-Bangladesh,Bangladesh (le),BD,BGD,50,officially_assigned
-Barbados,Barbade (la),BB,BRB,52,officially_assigned
-Belarus,Bélarus (le),BY,BLR,112,officially_assigned
-Belgium,Belgique (la),BE,BEL,56,officially_assigned
-Belize,Belize (le),BZ,BLZ,84,officially_assigned
-Benin,Bénin (le),BJ,BEN,204,officially_assigned
-Bermuda,Bermudes (les),BM,BMU,60,officially_assigned
-Åland Islands,Åland(les Îles),AX,ALA,248,officially_assigned
-Bhutan,Bhoutan (le),BT,BTN,64,officially_assigned
-Bolivia (Plurinational State of),Bolivie (État plurinational de),BO,BOL,68,officially_assigned
-"Bonaire, Sint Eustatius and Saba","Bonaire, Saint-Eustache et Saba",BQ,BES,535,officially_assigned
-Bosnia and Herzegovina,Bosnie-Herzégovine (la),BA,BIH,70,officially_assigned
-Botswana,Botswana (le),BW,BWA,72,officially_assigned
-Bouvet Island,Bouvet (l'Île),BV,BVT,74,officially_assigned
-Brazil,Brésil (le),BR,BRA,76,officially_assigned
-British Indian Ocean Territory (the),Indien (le Territoire britannique de l'océan),IO,IOT,86,officially_assigned
-Brunei Darussalam,Brunéi Darussalam (le),BN,BRN,96,officially_assigned
-Bulgaria,Bulgarie (la),BG,BGR,100,officially_assigned
-Burkina Faso,Burkina Faso (le),BF,BFA,854,officially_assigned
-Burundi,Burundi (le),BI,BDI,108,officially_assigned
-Cabo Verde,Cabo Verde,CV,CPV,132,officially_assigned
-Cambodia,Cambodge (le),KH,KHM,116,officially_assigned
-Cameroon,Cameroun (le),CM,CMR,120,officially_assigned
-Canada,Canada (le),CA,CAN,124,officially_assigned
-Cayman Islands (the),Caïmans (les Îles),KY,CYM,136,officially_assigned
-Central African Republic (the),République centrafricaine (la),CF,CAF,140,officially_assigned
-Chad,Tchad (le),TD,TCD,148,officially_assigned
-Chile,Chili (le),CL,CHL,152,officially_assigned
-China,Chine (la),CN,CHN,156,officially_assigned
-Christmas Island,Christmas (l'Île),CX,CXR,162,officially_assigned
-Cocos (Keeling) Islands (the),Cocos (les Îles)/ Keeling (les Îles),CC,CCK,166,officially_assigned
-Colombia,Colombie (la),CO,COL,170,officially_assigned
-Comoros (the),Comores (les),KM,COM,174,officially_assigned
-Congo (the Democratic Republic of the),Congo (la République démocratique du),CD,COD,180,officially_assigned
-Congo (the),Congo (le),CG,COG,178,officially_assigned
-Cook Islands (the),Cook (les Îles),CK,COK,184,officially_assigned
-Costa Rica,Costa Rica (le),CR,CRI,188,officially_assigned
-Croatia,Croatie (la),HR,HRV,191,officially_assigned
-Cuba,Cuba,CU,CUB,192,officially_assigned
-Curaçao,Curaçao,CW,CUW,531,officially_assigned
-Cyprus,Chypre,CY,CYP,196,officially_assigned
-Czechia,Tchéquie (la),CZ,CZE,203,officially_assigned
-Côte d'Ivoire,Côte d'Ivoire (la),CI,CIV,384,officially_assigned
-Denmark,Danemark (le),DK,DNK,208,officially_assigned
-Djibouti,Djibouti,DJ,DJI,262,officially_assigned
-Dominica,Dominique (la),DM,DMA,212,officially_assigned
-Dominican Republic (the),dominicaine (la République),DO,DOM,214,officially_assigned
-Ecuador,Équateur (l'),EC,ECU,218,officially_assigned
-Egypt,Égypte (l'),EG,EGY,818,officially_assigned
-El Salvador,El Salvador,SV,SLV,222,officially_assigned
-Equatorial Guinea,Guinée équatoriale (la),GQ,GNQ,226,officially_assigned
-Eritrea,Érythrée (l'),ER,ERI,232,officially_assigned
-Estonia,Estonie (l'),EE,EST,233,officially_assigned
-Eswatini,Eswatini (l'),SZ,SWZ,748,officially_assigned
-Ethiopia,Éthiopie (l'),ET,ETH,231,officially_assigned
-Falkland Islands (the) [Malvinas],Falkland (les Îles)/Malouines (les Îles),FK,FLK,238,officially_assigned
-Faroe Islands (the),Féroé (les Îles),FO,FRO,234,officially_assigned
-Fiji,Fidji (les),FJ,FJI,242,officially_assigned
-Finland,Finlande (la),FI,FIN,246,officially_assigned
-France,France (la),FR,FRA,250,officially_assigned
-French Guiana,Guyane française (la ),GF,GUF,254,officially_assigned
-French Polynesia,Polynésie française (la),PF,PYF,258,officially_assigned
-French Southern Territories (the),Terres australes françaises (les),TF,ATF,260,officially_assigned
-Gabon,Gabon (le),GA,GAB,266,officially_assigned
-Gambia (the),Gambie (la),GM,GMB,270,officially_assigned
-Georgia,Géorgie (la),GE,GEO,268,officially_assigned
-Germany,Allemagne (l'),DE,DEU,276,officially_assigned
-Ghana,Ghana (le),GH,GHA,288,officially_assigned
-Gibraltar,Gibraltar,GI,GIB,292,officially_assigned
-Greece,Grèce (la),GR,GRC,300,officially_assigned
-Greenland,Groenland (le),GL,GRL,304,officially_assigned
-Grenada,Grenade (la),GD,GRD,308,officially_assigned
-Guadeloupe,Guadeloupe (la),GP,GLP,312,officially_assigned
-Guam,Guam,GU,GUM,316,officially_assigned
-Guatemala,Guatemala (le),GT,GTM,320,officially_assigned
-Guernsey,Guernesey,GG,GGY,831,officially_assigned
-Guinea,Guinée (la),GN,GIN,324,officially_assigned
-Guinea-Bissau,Guinée-Bissau (la),GW,GNB,624,officially_assigned
-Guyana,Guyana (le),GY,GUY,328,officially_assigned
-Haiti,Haïti,HT,HTI,332,officially_assigned
-Heard Island and McDonald Islands,Heard-et-Îles MacDonald (l'Île),HM,HMD,334,officially_assigned
-Holy See (the),Saint-Siège (le),VA,VAT,336,officially_assigned
-Honduras,Honduras (le),HN,HND,340,officially_assigned
-Hong Kong,Hong Kong,HK,HKG,344,officially_assigned
-Hungary,Hongrie (la),HU,HUN,348,officially_assigned
-Iceland,Islande (l'),IS,ISL,352,officially_assigned
-India,Inde (l'),IN,IND,356,officially_assigned
-Indonesia,Indonésie (l'),ID,IDN,360,officially_assigned
-Iran (Islamic Republic of),Iran (République Islamique d'),IR,IRN,364,officially_assigned
-Iraq,Iraq (l'),IQ,IRQ,368,officially_assigned
-Ireland,Irlande (l'),IE,IRL,372,officially_assigned
-Isle of Man,Île de Man,IM,IMN,833,officially_assigned
-Israel,Israël,IL,ISR,376,officially_assigned
-Italy,Italie (l'),IT,ITA,380,officially_assigned
-Jamaica,Jamaïque (la),JM,JAM,388,officially_assigned
-Japan,Japon (le),JP,JPN,392,officially_assigned
-Jersey,Jersey,JE,JEY,832,officially_assigned
-Jordan,Jordanie (la),JO,JOR,400,officially_assigned
-Kazakhstan,Kazakhstan (le),KZ,KAZ,398,officially_assigned
-Kenya,Kenya (le),KE,KEN,404,officially_assigned
-Kiribati,Kiribati,KI,KIR,296,officially_assigned
-Korea (the Democratic People's Republic of),Corée (la République populaire démocratique de),KP,PRK,408,officially_assigned
-Korea (the Republic of),Corée (la République de),KR,KOR,410,officially_assigned
-Kuwait,Koweït (le),KW,KWT,414,officially_assigned
-Kyrgyzstan,Kirghizistan (le),KG,KGZ,417,officially_assigned
-Lao People's Democratic Republic (the),Lao (la République démocratique populaire),LA,LAO,418,officially_assigned
-Latvia,Lettonie (la),LV,LVA,428,officially_assigned
-Lebanon,Liban (le),LB,LBN,422,officially_assigned
-Lesotho,Lesotho (le),LS,LSO,426,officially_assigned
-Liberia,Libéria (le),LR,LBR,430,officially_assigned
-Libya,Libye (la),LY,LBY,434,officially_assigned
-Liechtenstein,Liechtenstein (le),LI,LIE,438,officially_assigned
-Lithuania,Lituanie (la),LT,LTU,440,officially_assigned
-Luxembourg,Luxembourg (le),LU,LUX,442,officially_assigned
-Macao,Macao,MO,MAC,446,officially_assigned
-Madagascar,Madagascar,MG,MDG,450,officially_assigned
-Malawi,Malawi (le),MW,MWI,454,officially_assigned
-Malaysia,Malaisie (la),MY,MYS,458,officially_assigned
-Maldives,Maldives (les),MV,MDV,462,officially_assigned
-Mali,Mali (le),ML,MLI,466,officially_assigned
-Malta,Malte,MT,MLT,470,officially_assigned
-Marshall Islands (the),Marshall (les Îles),MH,MHL,584,officially_assigned
-Martinique,Martinique (la),MQ,MTQ,474,officially_assigned
-Mauritania,Mauritanie (la),MR,MRT,478,officially_assigned
-Mauritius,Maurice,MU,MUS,480,officially_assigned
-Mayotte,Mayotte,YT,MYT,175,officially_assigned
-Mexico,Mexique (le),MX,MEX,484,officially_assigned
-Micronesia (Federated States of),Micronésie (États fédérés de),FM,FSM,583,officially_assigned
-Moldova (the Republic of),Moldova (la République de),MD,MDA,498,officially_assigned
-Monaco,Monaco,MC,MCO,492,officially_assigned
-Mongolia,Mongolie (la),MN,MNG,496,officially_assigned
-Montenegro,Monténégro (le),ME,MNE,499,officially_assigned
-Montserrat,Montserrat,MS,MSR,500,officially_assigned
-Morocco,Maroc (le),MA,MAR,504,officially_assigned
-Mozambique,Mozambique (le),MZ,MOZ,508,officially_assigned
-Myanmar,Myanmar (le),MM,MMR,104,officially_assigned
-Namibia,Namibie (la),NA,NAM,516,officially_assigned
-Nauru,Nauru,NR,NRU,520,officially_assigned
-Nepal,Népal (le),NP,NPL,524,officially_assigned
-Netherlands (Kingdom of the),Pays-Bas (Royaume des),NL,NLD,528,officially_assigned
-New Caledonia,Nouvelle-Calédonie (la),NC,NCL,540,officially_assigned
-New Zealand,Nouvelle-Zélande (la),NZ,NZL,554,officially_assigned
-Nicaragua,Nicaragua (le),NI,NIC,558,officially_assigned
-Niger (the),Niger (le),NE,NER,562,officially_assigned
-Nigeria,Nigéria (le),NG,NGA,566,officially_assigned
-Niue,Niue,NU,NIU,570,officially_assigned
-Norfolk Island,Norfolk (l'Île),NF,NFK,574,officially_assigned
-North Macedonia,Macédoine du Nord (la),MK,MKD,807,officially_assigned
-Northern Mariana Islands (the),Mariannes du Nord (les Îles),MP,MNP,580,officially_assigned
-Norway,Norvège (la),NO,NOR,578,officially_assigned
-Oman,Oman,OM,OMN,512,officially_assigned
-Pakistan,Pakistan (le),PK,PAK,586,officially_assigned
-Palau,Palaos (les),PW,PLW,585,officially_assigned
-"Palestine, State of","Palestine, État de",PS,PSE,275,officially_assigned
-Panama,Panama (le),PA,PAN,591,officially_assigned
-Papua New Guinea,Papouasie-Nouvelle-Guinée (la),PG,PNG,598,officially_assigned
-Paraguay,Paraguay (le),PY,PRY,600,officially_assigned
-Peru,Pérou (le),PE,PER,604,officially_assigned
-Philippines (the),Philippines (les),PH,PHL,608,officially_assigned
-Pitcairn,Pitcairn,PN,PCN,612,officially_assigned
-Poland,Pologne (la),PL,POL,616,officially_assigned
-Portugal,Portugal (le),PT,PRT,620,officially_assigned
-Puerto Rico,Porto Rico,PR,PRI,630,officially_assigned
-Qatar,Qatar (le),QA,QAT,634,officially_assigned
-Romania,Roumanie (la),RO,ROU,642,officially_assigned
-Russian Federation (the),Russie (la Fédération de),RU,RUS,643,officially_assigned
-Rwanda,Rwanda (le),RW,RWA,646,officially_assigned
-Réunion,Réunion (La),RE,REU,638,officially_assigned
-Saint Barthélemy,Saint-Barthélemy,BL,BLM,652,officially_assigned
-"Saint Helena, Ascension and Tristan da Cunha","Sainte-Hélène, Ascension et Tristan da Cunha",SH,SHN,654,officially_assigned
-Saint Kitts and Nevis,Saint-Kitts-et-Nevis,KN,KNA,659,officially_assigned
-Saint Lucia,Sainte-Lucie,LC,LCA,662,officially_assigned
-Saint Martin (French part),Saint-Martin (partie française),MF,MAF,663,officially_assigned
-Saint Pierre and Miquelon,Saint-Pierre-et-Miquelon,PM,SPM,666,officially_assigned
-Saint Vincent and the Grenadines,Saint-Vincent-et-les Grenadines,VC,VCT,670,officially_assigned
-Samoa,Samoa (le),WS,WSM,882,officially_assigned
-San Marino,Saint-Marin,SM,SMR,674,officially_assigned
-Sao Tome and Principe,Sao Tomé-et-Principe,ST,STP,678,officially_assigned
-Saudi Arabia,Arabie saoudite (l'),SA,SAU,682,officially_assigned
-Senegal,Sénégal (le),SN,SEN,686,officially_assigned
-Serbia,Serbie (la),RS,SRB,688,officially_assigned
-Seychelles,Seychelles (les),SC,SYC,690,officially_assigned
-Sierra Leone,Sierra Leone (la),SL,SLE,694,officially_assigned
-Singapore,Singapour,SG,SGP,702,officially_assigned
-Sint Maarten (Dutch part),Saint-Martin (partie néerlandaise),SX,SXM,534,officially_assigned
-Slovakia,Slovaquie (la),SK,SVK,703,officially_assigned
-Slovenia,Slovénie (la),SI,SVN,705,officially_assigned
-Solomon Islands,Salomon (les Îles),SB,SLB,90,officially_assigned
-Somalia,Somalie (la),SO,SOM,706,officially_assigned
-South Africa,Afrique du Sud (l'),ZA,ZAF,710,officially_assigned
-South Georgia and the South Sandwich Islands,Géorgie du Sud-et-les Îles Sandwich du Sud (la),GS,SGS,239,officially_assigned
-South Sudan,Soudan du Sud (le),SS,SSD,728,officially_assigned
-Spain,Espagne (l'),ES,ESP,724,officially_assigned
-Sri Lanka,Sri Lanka,LK,LKA,144,officially_assigned
-Sudan (the),Soudan (le),SD,SDN,729,officially_assigned
-Suriname,Suriname (le),SR,SUR,740,officially_assigned
-Svalbard and Jan Mayen,Svalbard et l'Île Jan Mayen (le),SJ,SJM,744,officially_assigned
-Sweden,Suède (la),SE,SWE,752,officially_assigned
-Switzerland,Suisse (la),CH,CHE,756,officially_assigned
-Syrian Arab Republic (the),République arabe syrienne (la),SY,SYR,760,officially_assigned
-Taiwan (Province of China),Taïwan (Province de Chine),TW,TWN,158,officially_assigned
-Tajikistan,Tadjikistan (le),TJ,TJK,762,officially_assigned
-"Tanzania, the United Republic of",Tanzanie (la République-Unie de),TZ,TZA,834,officially_assigned
-Thailand,Thaïlande (la),TH,THA,764,officially_assigned
-Timor-Leste,Timor-Leste (le),TL,TLS,626,officially_assigned
-Togo,Togo (le),TG,TGO,768,officially_assigned
-Tokelau,Tokelau (les),TK,TKL,772,officially_assigned
-Tonga,Tonga (les),TO,TON,776,officially_assigned
-Trinidad and Tobago,Trinité-et-Tobago (la),TT,TTO,780,officially_assigned
-Tunisia,Tunisie (la),TN,TUN,788,officially_assigned
-Turkmenistan,Turkménistan (le),TM,TKM,795,officially_assigned
-Turks and Caicos Islands (the),Turks-et-Caïcos (les Îles),TC,TCA,796,officially_assigned
-Tuvalu,Tuvalu (les),TV,TUV,798,officially_assigned
-Türkiye,Türkiye (la),TR,TUR,792,officially_assigned
-Uganda,Ouganda (l'),UG,UGA,800,officially_assigned
-Ukraine,Ukraine (l'),UA,UKR,804,officially_assigned
-United Arab Emirates (the),Émirats arabes unis (les),AE,ARE,784,officially_assigned
-United Kingdom of Great Britain and Northern Ireland (the),Royaume-Uni de Grande-Bretagne et d'Irlande du Nord (le),GB,GBR,826,officially_assigned
-United States Minor Outlying Islands (the),Îles mineures éloignées des États-Unis (les),UM,UMI,581,officially_assigned
-United States of America (the),États-Unis d'Amérique (les),US,USA,840,officially_assigned
-Uruguay,Uruguay (l'),UY,URY,858,officially_assigned
-Uzbekistan,Ouzbékistan (l'),UZ,UZB,860,officially_assigned
-Vanuatu,Vanuatu (le),VU,VUT,548,officially_assigned
-Venezuela (Bolivarian Republic of),Venezuela (République bolivarienne du),VE,VEN,862,officially_assigned
-Viet Nam,Viet Nam (le),VN,VNM,704,officially_assigned
-Virgin Islands (British),Vierges britanniques (les Îles),VG,VGB,92,officially_assigned
-Virgin Islands (U.S.),Vierges des États-Unis (les Îles),VI,VIR,850,officially_assigned
-Wallis and Futuna,Wallis-et-Futuna,WF,WLF,876,officially_assigned
-Western Sahara*,Sahara occidental (le)*,EH,ESH,732,officially_assigned
-Yemen,Yémen (le),YE,YEM,887,officially_assigned
-Zambia,Zambie (la),ZM,ZMB,894,officially_assigned
-Zimbabwe,Zimbabwe (le),ZW,ZWE,716,officially_assigned
+﻿English short name,French short name,Alpha-2 code,Alpha-3 code,Alpha-4 code,Numeric,status,Start date,End date,Remarks,,,
+Afghanistan,Afghanistan (l'),AF,AFG,,4,officially_assigned,,,,,,
+Albania,Albanie (l'),AL,ALB,,8,officially_assigned,,,,,,
+Algeria,Algérie (l'),DZ,DZA,,12,officially_assigned,,,,,,
+American Samoa,Samoa américaines (les),AS,ASM,,16,officially_assigned,,,,,,
+Andorra,Andorre (l'),AD,AND,,20,officially_assigned,,,,,,
+Angola,Angola (l'),AO,AGO,,24,officially_assigned,,,,,,
+Anguilla,Anguilla,AI,AIA,,660,officially_assigned,,,,,,
+Antarctica,Antarctique (l'),AQ,ATA,,10,officially_assigned,,,,,,
+Antigua and Barbuda,Antigua-et-Barbuda,AG,ATG,,28,officially_assigned,,,,,,
+Argentina,Argentine (l'),AR,ARG,,32,officially_assigned,,,,,,
+Armenia,Arménie (l'),AM,ARM,,51,officially_assigned,,,,,,
+Aruba,Aruba,AW,ABW,,533,officially_assigned,,,,,,
+Australia,Australie (l'),AU,AUS,,36,officially_assigned,,,,,,
+Austria,Autriche (l'),AT,AUT,,40,officially_assigned,,,,,,
+Azerbaijan,Azerbaïdjan (l'),AZ,AZE,,31,officially_assigned,,,,,,
+Bahamas (The),Bahamas (Les),BS,BHS,,44,officially_assigned,,,,,,
+Bahrain,Bahreïn,BH,BHR,,48,officially_assigned,,,,,,
+Bangladesh,Bangladesh (le),BD,BGD,,50,officially_assigned,,,,,,
+Barbados,Barbade (la),BB,BRB,,52,officially_assigned,,,,,,
+Belarus,Bélarus (le),BY,BLR,,112,officially_assigned,,,,,,
+Belgium,Belgique (la),BE,BEL,,56,officially_assigned,,,,,,
+Belize,Belize (le),BZ,BLZ,,84,officially_assigned,,,,,,
+Benin,Bénin (le),BJ,BEN,,204,officially_assigned,,,,,,
+Bermuda,Bermudes (les),BM,BMU,,60,officially_assigned,,,,,,
+Åland Islands,Åland(les Îles),AX,ALA,,248,officially_assigned,,,,,,
+Bhutan,Bhoutan (le),BT,BTN,,64,officially_assigned,,,,,,
+Bolivia (Plurinational State of),Bolivie (État plurinational de),BO,BOL,,68,officially_assigned,,,,,,
+"Bonaire, Sint Eustatius and Saba","Bonaire, Saint-Eustache et Saba",BQ,BES,,535,officially_assigned,,,,,,
+Bosnia and Herzegovina,Bosnie-Herzégovine (la),BA,BIH,,70,officially_assigned,,,,,,
+Botswana,Botswana (le),BW,BWA,,72,officially_assigned,,,,,,
+Bouvet Island,Bouvet (l'Île),BV,BVT,,74,officially_assigned,,,,,,
+Brazil,Brésil (le),BR,BRA,,76,officially_assigned,,,,,,
+British Indian Ocean Territory (the),Indien (le Territoire britannique de l'océan),IO,IOT,,86,officially_assigned,,,,,,
+Brunei Darussalam,Brunéi Darussalam (le),BN,BRN,,96,officially_assigned,,,,,,
+Bulgaria,Bulgarie (la),BG,BGR,,100,officially_assigned,,,,,,
+Burkina Faso,Burkina Faso (le),BF,BFA,,854,officially_assigned,,,,,,
+Burundi,Burundi (le),BI,BDI,,108,officially_assigned,,,,,,
+Cabo Verde,Cabo Verde,CV,CPV,,132,officially_assigned,,,,,,
+Cambodia,Cambodge (le),KH,KHM,,116,officially_assigned,,,,,,
+Cameroon,Cameroun (le),CM,CMR,,120,officially_assigned,,,,,,
+Canada,Canada (le),CA,CAN,,124,officially_assigned,,,,,,
+Cayman Islands (the),Caïmans (les Îles),KY,CYM,,136,officially_assigned,,,,,,
+Central African Republic (the),République centrafricaine (la),CF,CAF,,140,officially_assigned,,,,,,
+Chad,Tchad (le),TD,TCD,,148,officially_assigned,,,,,,
+Chile,Chili (le),CL,CHL,,152,officially_assigned,,,,,,
+China,Chine (la),CN,CHN,,156,officially_assigned,,,,,,
+Christmas Island,Christmas (l'Île),CX,CXR,,162,officially_assigned,,,,,,
+Cocos (Keeling) Islands (the),Cocos (les Îles)/ Keeling (les Îles),CC,CCK,,166,officially_assigned,,,,,,
+Colombia,Colombie (la),CO,COL,,170,officially_assigned,,,,,,
+Comoros (the),Comores (les),KM,COM,,174,officially_assigned,,,,,,
+Congo (the Democratic Republic of the),Congo (la République démocratique du),CD,COD,,180,officially_assigned,,,,,,
+Congo (the),Congo (le),CG,COG,,178,officially_assigned,,,,,,
+Cook Islands (the),Cook (les Îles),CK,COK,,184,officially_assigned,,,,,,
+Costa Rica,Costa Rica (le),CR,CRI,,188,officially_assigned,,,,,,
+Croatia,Croatie (la),HR,HRV,,191,officially_assigned,,,,,,
+Cuba,Cuba,CU,CUB,,192,officially_assigned,,,,,,
+Curaçao,Curaçao,CW,CUW,,531,officially_assigned,,,,,,
+Cyprus,Chypre,CY,CYP,,196,officially_assigned,,,,,,
+Czechia,Tchéquie (la),CZ,CZE,,203,officially_assigned,,,,,,
+Côte d'Ivoire,Côte d'Ivoire (la),CI,CIV,,384,officially_assigned,,,,,,
+Denmark,Danemark (le),DK,DNK,,208,officially_assigned,,,,,,
+Djibouti,Djibouti,DJ,DJI,,262,officially_assigned,,,,,,
+Dominica,Dominique (la),DM,DMA,,212,officially_assigned,,,,,,
+Dominican Republic (the),dominicaine (la République),DO,DOM,,214,officially_assigned,,,,,,
+Ecuador,Équateur (l'),EC,ECU,,218,officially_assigned,,,,,,
+Egypt,Égypte (l'),EG,EGY,,818,officially_assigned,,,,,,
+El Salvador,El Salvador,SV,SLV,,222,officially_assigned,,,,,,
+Equatorial Guinea,Guinée équatoriale (la),GQ,GNQ,,226,officially_assigned,,,,,,
+Eritrea,Érythrée (l'),ER,ERI,,232,officially_assigned,,,,,,
+Estonia,Estonie (l'),EE,EST,,233,officially_assigned,,,,,,
+Eswatini,Eswatini (l'),SZ,SWZ,,748,officially_assigned,,,,,,
+Ethiopia,Éthiopie (l'),ET,ETH,,231,officially_assigned,,,,,,
+Falkland Islands (the) [Malvinas],Falkland (les Îles)/Malouines (les Îles),FK,FLK,,238,officially_assigned,,,,,,
+Faroe Islands (the),Féroé (les Îles),FO,FRO,,234,officially_assigned,,,,,,
+Fiji,Fidji (les),FJ,FJI,,242,officially_assigned,,,,,,
+Finland,Finlande (la),FI,FIN,,246,officially_assigned,,,,,,
+France,France (la),FR,FRA,,250,officially_assigned,,,,,,
+French Guiana,Guyane française (la ),GF,GUF,,254,officially_assigned,,,,,,
+French Polynesia,Polynésie française (la),PF,PYF,,258,officially_assigned,,,,,,
+French Southern Territories (the),Terres australes françaises (les),TF,ATF,,260,officially_assigned,,,,,,
+Gabon,Gabon (le),GA,GAB,,266,officially_assigned,,,,,,
+Gambia (the),Gambie (la),GM,GMB,,270,officially_assigned,,,,,,
+Georgia,Géorgie (la),GE,GEO,,268,officially_assigned,,,,,,
+Germany,Allemagne (l'),DE,DEU,,276,officially_assigned,,,,,,
+Ghana,Ghana (le),GH,GHA,,288,officially_assigned,,,,,,
+Gibraltar,Gibraltar,GI,GIB,,292,officially_assigned,,,,,,
+Greece,Grèce (la),GR,GRC,,300,officially_assigned,,,,,,
+Greenland,Groenland (le),GL,GRL,,304,officially_assigned,,,,,,
+Grenada,Grenade (la),GD,GRD,,308,officially_assigned,,,,,,
+Guadeloupe,Guadeloupe (la),GP,GLP,,312,officially_assigned,,,,,,
+Guam,Guam,GU,GUM,,316,officially_assigned,,,,,,
+Guatemala,Guatemala (le),GT,GTM,,320,officially_assigned,,,,,,
+Guernsey,Guernesey,GG,GGY,,831,officially_assigned,,,,,,
+Guinea,Guinée (la),GN,GIN,,324,officially_assigned,,,,,,
+Guinea-Bissau,Guinée-Bissau (la),GW,GNB,,624,officially_assigned,,,,,,
+Guyana,Guyana (le),GY,GUY,,328,officially_assigned,,,,,,
+Haiti,Haïti,HT,HTI,,332,officially_assigned,,,,,,
+Heard Island and McDonald Islands,Heard-et-Îles MacDonald (l'Île),HM,HMD,,334,officially_assigned,,,,,,
+Holy See (the),Saint-Siège (le),VA,VAT,,336,officially_assigned,,,,,,
+Honduras,Honduras (le),HN,HND,,340,officially_assigned,,,,,,
+Hong Kong,Hong Kong,HK,HKG,,344,officially_assigned,,,,,,
+Hungary,Hongrie (la),HU,HUN,,348,officially_assigned,,,,,,
+Iceland,Islande (l'),IS,ISL,,352,officially_assigned,,,,,,
+India,Inde (l'),IN,IND,,356,officially_assigned,,,,,,
+Indonesia,Indonésie (l'),ID,IDN,,360,officially_assigned,,,,,,
+Iran (Islamic Republic of),Iran (République Islamique d'),IR,IRN,,364,officially_assigned,,,,,,
+Iraq,Iraq (l'),IQ,IRQ,,368,officially_assigned,,,,,,
+Ireland,Irlande (l'),IE,IRL,,372,officially_assigned,,,,,,
+Isle of Man,Île de Man,IM,IMN,,833,officially_assigned,,,,,,
+Israel,Israël,IL,ISR,,376,officially_assigned,,,,,,
+Italy,Italie (l'),IT,ITA,,380,officially_assigned,,,,,,
+Jamaica,Jamaïque (la),JM,JAM,,388,officially_assigned,,,,,,
+Japan,Japon (le),JP,JPN,,392,officially_assigned,,,,,,
+Jersey,Jersey,JE,JEY,,832,officially_assigned,,,,,,
+Jordan,Jordanie (la),JO,JOR,,400,officially_assigned,,,,,,
+Kazakhstan,Kazakhstan (le),KZ,KAZ,,398,officially_assigned,,,,,,
+Kenya,Kenya (le),KE,KEN,,404,officially_assigned,,,,,,
+Kiribati,Kiribati,KI,KIR,,296,officially_assigned,,,,,,
+Korea (the Democratic People's Republic of),Corée (la République populaire démocratique de),KP,PRK,,408,officially_assigned,,,,,,
+Korea (the Republic of),Corée (la République de),KR,KOR,,410,officially_assigned,,,,,,
+Kuwait,Koweït (le),KW,KWT,,414,officially_assigned,,,,,,
+Kyrgyzstan,Kirghizistan (le),KG,KGZ,,417,officially_assigned,,,,,,
+Lao People's Democratic Republic (the),Lao (la République démocratique populaire),LA,LAO,,418,officially_assigned,,,,,,
+Latvia,Lettonie (la),LV,LVA,,428,officially_assigned,,,,,,
+Lebanon,Liban (le),LB,LBN,,422,officially_assigned,,,,,,
+Lesotho,Lesotho (le),LS,LSO,,426,officially_assigned,,,,,,
+Liberia,Libéria (le),LR,LBR,,430,officially_assigned,,,,,,
+Libya,Libye (la),LY,LBY,,434,officially_assigned,,,,,,
+Liechtenstein,Liechtenstein (le),LI,LIE,,438,officially_assigned,,,,,,
+Lithuania,Lituanie (la),LT,LTU,,440,officially_assigned,,,,,,
+Luxembourg,Luxembourg (le),LU,LUX,,442,officially_assigned,,,,,,
+Macao,Macao,MO,MAC,,446,officially_assigned,,,,,,
+Madagascar,Madagascar,MG,MDG,,450,officially_assigned,,,,,,
+Malawi,Malawi (le),MW,MWI,,454,officially_assigned,,,,,,
+Malaysia,Malaisie (la),MY,MYS,,458,officially_assigned,,,,,,
+Maldives,Maldives (les),MV,MDV,,462,officially_assigned,,,,,,
+Mali,Mali (le),ML,MLI,,466,officially_assigned,,,,,,
+Malta,Malte,MT,MLT,,470,officially_assigned,,,,,,
+Marshall Islands (the),Marshall (les Îles),MH,MHL,,584,officially_assigned,,,,,,
+Martinique,Martinique (la),MQ,MTQ,,474,officially_assigned,,,,,,
+Mauritania,Mauritanie (la),MR,MRT,,478,officially_assigned,,,,,,
+Mauritius,Maurice,MU,MUS,,480,officially_assigned,,,,,,
+Mayotte,Mayotte,YT,MYT,,175,officially_assigned,,,,,,
+Mexico,Mexique (le),MX,MEX,,484,officially_assigned,,,,,,
+Micronesia (Federated States of),Micronésie (États fédérés de),FM,FSM,,583,officially_assigned,,,,,,
+Moldova (the Republic of),Moldova (la République de),MD,MDA,,498,officially_assigned,,,,,,
+Monaco,Monaco,MC,MCO,,492,officially_assigned,,,,,,
+Mongolia,Mongolie (la),MN,MNG,,496,officially_assigned,,,,,,
+Montenegro,Monténégro (le),ME,MNE,,499,officially_assigned,,,,,,
+Montserrat,Montserrat,MS,MSR,,500,officially_assigned,,,,,,
+Morocco,Maroc (le),MA,MAR,,504,officially_assigned,,,,,,
+Mozambique,Mozambique (le),MZ,MOZ,,508,officially_assigned,,,,,,
+Myanmar,Myanmar (le),MM,MMR,,104,officially_assigned,,,,,,
+Namibia,Namibie (la),NA,NAM,,516,officially_assigned,,,,,,
+Nauru,Nauru,NR,NRU,,520,officially_assigned,,,,,,
+Nepal,Népal (le),NP,NPL,,524,officially_assigned,,,,,,
+Netherlands (Kingdom of the),Pays-Bas (Royaume des),NL,NLD,,528,officially_assigned,,,,,,
+New Caledonia,Nouvelle-Calédonie (la),NC,NCL,,540,officially_assigned,,,,,,
+New Zealand,Nouvelle-Zélande (la),NZ,NZL,,554,officially_assigned,,,,,,
+Nicaragua,Nicaragua (le),NI,NIC,,558,officially_assigned,,,,,,
+Niger (the),Niger (le),NE,NER,,562,officially_assigned,,,,,,
+Nigeria,Nigéria (le),NG,NGA,,566,officially_assigned,,,,,,
+Niue,Niue,NU,NIU,,570,officially_assigned,,,,,,
+Norfolk Island,Norfolk (l'Île),NF,NFK,,574,officially_assigned,,,,,,
+North Macedonia,Macédoine du Nord (la),MK,MKD,,807,officially_assigned,,,,,,
+Northern Mariana Islands (the),Mariannes du Nord (les Îles),MP,MNP,,580,officially_assigned,,,,,,
+Norway,Norvège (la),NO,NOR,,578,officially_assigned,,,,,,
+Oman,Oman,OM,OMN,,512,officially_assigned,,,,,,
+Pakistan,Pakistan (le),PK,PAK,,586,officially_assigned,,,,,,
+Palau,Palaos (les),PW,PLW,,585,officially_assigned,,,,,,
+"Palestine, State of","Palestine, État de",PS,PSE,,275,officially_assigned,,,,,,
+Panama,Panama (le),PA,PAN,,591,officially_assigned,,,,,,
+Papua New Guinea,Papouasie-Nouvelle-Guinée (la),PG,PNG,,598,officially_assigned,,,,,,
+Paraguay,Paraguay (le),PY,PRY,,600,officially_assigned,,,,,,
+Peru,Pérou (le),PE,PER,,604,officially_assigned,,,,,,
+Philippines (the),Philippines (les),PH,PHL,,608,officially_assigned,,,,,,
+Pitcairn,Pitcairn,PN,PCN,,612,officially_assigned,,,,,,
+Poland,Pologne (la),PL,POL,,616,officially_assigned,,,,,,
+Portugal,Portugal (le),PT,PRT,,620,officially_assigned,,,,,,
+Puerto Rico,Porto Rico,PR,PRI,,630,officially_assigned,,,,,,
+Qatar,Qatar (le),QA,QAT,,634,officially_assigned,,,,,,
+Romania,Roumanie (la),RO,ROU,,642,officially_assigned,,,,,,
+Russian Federation (the),Russie (la Fédération de),RU,RUS,,643,officially_assigned,,,,,,
+Rwanda,Rwanda (le),RW,RWA,,646,officially_assigned,,,,,,
+Réunion,Réunion (La),RE,REU,,638,officially_assigned,,,,,,
+Saint Barthélemy,Saint-Barthélemy,BL,BLM,,652,officially_assigned,,,,,,
+"Saint Helena, Ascension and Tristan da Cunha","Sainte-Hélène, Ascension et Tristan da Cunha",SH,SHN,,654,officially_assigned,,,,,,
+Saint Kitts and Nevis,Saint-Kitts-et-Nevis,KN,KNA,,659,officially_assigned,,,,,,
+Saint Lucia,Sainte-Lucie,LC,LCA,,662,officially_assigned,,,,,,
+Saint Martin (French part),Saint-Martin (partie française),MF,MAF,,663,officially_assigned,,,,,,
+Saint Pierre and Miquelon,Saint-Pierre-et-Miquelon,PM,SPM,,666,officially_assigned,,,,,,
+Saint Vincent and the Grenadines,Saint-Vincent-et-les Grenadines,VC,VCT,,670,officially_assigned,,,,,,
+Samoa,Samoa (le),WS,WSM,,882,officially_assigned,,,,,,
+San Marino,Saint-Marin,SM,SMR,,674,officially_assigned,,,,,,
+Sao Tome and Principe,Sao Tomé-et-Principe,ST,STP,,678,officially_assigned,,,,,,
+Saudi Arabia,Arabie saoudite (l'),SA,SAU,,682,officially_assigned,,,,,,
+Senegal,Sénégal (le),SN,SEN,,686,officially_assigned,,,,,,
+Serbia,Serbie (la),RS,SRB,,688,officially_assigned,,,,,,
+Seychelles,Seychelles (les),SC,SYC,,690,officially_assigned,,,,,,
+Sierra Leone,Sierra Leone (la),SL,SLE,,694,officially_assigned,,,,,,
+Singapore,Singapour,SG,SGP,,702,officially_assigned,,,,,,
+Sint Maarten (Dutch part),Saint-Martin (partie néerlandaise),SX,SXM,,534,officially_assigned,,,,,,
+Slovakia,Slovaquie (la),SK,SVK,,703,officially_assigned,,,,,,
+Slovenia,Slovénie (la),SI,SVN,,705,officially_assigned,,,,,,
+Solomon Islands,Salomon (les Îles),SB,SLB,,90,officially_assigned,,,,,,
+Somalia,Somalie (la),SO,SOM,,706,officially_assigned,,,,,,
+South Africa,Afrique du Sud (l'),ZA,ZAF,,710,officially_assigned,,,,,,
+South Georgia and the South Sandwich Islands,Géorgie du Sud-et-les Îles Sandwich du Sud (la),GS,SGS,,239,officially_assigned,,,,,,
+South Sudan,Soudan du Sud (le),SS,SSD,,728,officially_assigned,,,,,,
+Spain,Espagne (l'),ES,ESP,,724,officially_assigned,,,,,,
+Sri Lanka,Sri Lanka,LK,LKA,,144,officially_assigned,,,,,,
+Sudan (the),Soudan (le),SD,SDN,,729,officially_assigned,,,,,,
+Suriname,Suriname (le),SR,SUR,,740,officially_assigned,,,,,,
+Svalbard and Jan Mayen,Svalbard et l'Île Jan Mayen (le),SJ,SJM,,744,officially_assigned,,,,,,
+Sweden,Suède (la),SE,SWE,,752,officially_assigned,,,,,,
+Switzerland,Suisse (la),CH,CHE,,756,officially_assigned,,,,,,
+Syrian Arab Republic (the),République arabe syrienne (la),SY,SYR,,760,officially_assigned,,,,,,
+Taiwan (Province of China),Taïwan (Province de Chine),TW,TWN,,158,officially_assigned,,,,,,
+Tajikistan,Tadjikistan (le),TJ,TJK,,762,officially_assigned,,,,,,
+"Tanzania, the United Republic of",Tanzanie (la République-Unie de),TZ,TZA,,834,officially_assigned,,,,,,
+Thailand,Thaïlande (la),TH,THA,,764,officially_assigned,,,,,,
+Timor-Leste,Timor-Leste (le),TL,TLS,,626,officially_assigned,,,,,,
+Togo,Togo (le),TG,TGO,,768,officially_assigned,,,,,,
+Tokelau,Tokelau (les),TK,TKL,,772,officially_assigned,,,,,,
+Tonga,Tonga (les),TO,TON,,776,officially_assigned,,,,,,
+Trinidad and Tobago,Trinité-et-Tobago (la),TT,TTO,,780,officially_assigned,,,,,,
+Tunisia,Tunisie (la),TN,TUN,,788,officially_assigned,,,,,,
+Turkmenistan,Turkménistan (le),TM,TKM,,795,officially_assigned,,,,,,
+Turks and Caicos Islands (the),Turks-et-Caïcos (les Îles),TC,TCA,,796,officially_assigned,,,,,,
+Tuvalu,Tuvalu (les),TV,TUV,,798,officially_assigned,,,,,,
+Türkiye,Türkiye (la),TR,TUR,,792,officially_assigned,,,,,,
+Uganda,Ouganda (l'),UG,UGA,,800,officially_assigned,,,,,,
+Ukraine,Ukraine (l'),UA,UKR,,804,officially_assigned,,,,,,
+United Arab Emirates (the),Émirats arabes unis (les),AE,ARE,,784,officially_assigned,,,,,,
+United Kingdom of Great Britain and Northern Ireland (the),Royaume-Uni de Grande-Bretagne et d'Irlande du Nord (le),GB,GBR,,826,officially_assigned,,,,,,
+United States Minor Outlying Islands (the),Îles mineures éloignées des États-Unis (les),UM,UMI,,581,officially_assigned,,,,,,
+United States of America (the),États-Unis d'Amérique (les),US,USA,,840,officially_assigned,,,,,,
+Uruguay,Uruguay (l'),UY,URY,,858,officially_assigned,,,,,,
+Uzbekistan,Ouzbékistan (l'),UZ,UZB,,860,officially_assigned,,,,,,
+Vanuatu,Vanuatu (le),VU,VUT,,548,officially_assigned,,,,,,
+Venezuela (Bolivarian Republic of),Venezuela (République bolivarienne du),VE,VEN,,862,officially_assigned,,,,,,
+Viet Nam,Viet Nam (le),VN,VNM,,704,officially_assigned,,,,,,
+Virgin Islands (British),Vierges britanniques (les Îles),VG,VGB,,92,officially_assigned,,,,,,
+Virgin Islands (U.S.),Vierges des États-Unis (les Îles),VI,VIR,,850,officially_assigned,,,,,,
+Wallis and Futuna,Wallis-et-Futuna,WF,WLF,,876,officially_assigned,,,,,,
+Western Sahara*,Sahara occidental (le)*,EH,ESH,,732,officially_assigned,,,,,,
+Yemen,Yémen (le),YE,YEM,,887,officially_assigned,,,,,,
+Zambia,Zambie (la),ZM,ZMB,,894,officially_assigned,,,,,,
+Zimbabwe,Zimbabwe (le),ZW,ZWE,,716,officially_assigned,,,,,,
+,,AC,,,,exceptionally_reserved,,,Refers to Ascension Island and reserved at the request of Universal Postal Union (UPU),,,
+,,CP,,,,exceptionally_reserved,,,Refers to Clipperton Island and reserved at the request of International Telecommunication Union (ITU).,,,
+,,CQ,,,,exceptionally_reserved,,,Refers to the island of Sark and reserved at the request of the United Kingdom.,,,
+,,DG,,,,exceptionally_reserved,,,Refers to Diego Garcia and reserved at the request of International Telecommunication Union (ITU),,,
+,,EA,,,,exceptionally_reserved,,,"Refers to Ceuta, Melilla and reserved at the request of World Customs Organization (WCO).",,,
+,,EU,,,,exceptionally_reserved,,,"Refers to European Union and reserved at the request of ISO 4217/MA (March 1998) for ISO 6166, Securities - International securities identification numbering system (ISIN).",,,
+,,EZ,,,,exceptionally_reserved,,,"Refers to European OTC derivatives and reserved at the request of ISO 6166/RA, Securities - International securities identification numbering system (ISIN).",,,
+"France, Metropolitan",,FX,,,,exceptionally_reserved,,,Refers to Metropolitan France and reserved at the request of France.,,,
+,,IC,,,,exceptionally_reserved,,,Refers to the Canary Islands and reserved at the request of World Customs Organization (WCO),,,
+USSR,,SU,,,,exceptionally_reserved,,,Refers to the former USSR and reserved at the request of the Foundation for Internet Development (FID).,,,
+,,TA,,,,exceptionally_reserved,,,Refers to Tristan da Cunha and reserved at the request of Universal Postal Union (UPU).,,,
+,,UK,,,,exceptionally_reserved,,,Refers to the United Kingdom and reserved at the request of United Kingdom.,,,
+,,UN,,,,exceptionally_reserved,,,Refers to the United Nations and reserved by the ISO 3166 Maintenance Agency.,,,
+Netherlands Antilles,,AN,,,,transitionally_reserved,,,Reserved from 2010-12 to 2060-12.,,,
+Burma,,BU,,,,transitionally_reserved,,,Reserved from 1989-12 to 2039-12.,,,
+Serbia and Montenegro,,CS,,,,transitionally_reserved,,,Reserved from 2006-09 to 2056-09.,,,
+Neutral Zone,,NT,,,,transitionally_reserved,,,Reserved from 1993-07 to 2043-07.,,,
+East Timor,,TP,,,,transitionally_reserved,,,Reserved from 2002-05 to 2052-05.,,,
+Yugoslavia,,YU,,,,transitionally_reserved,,,Reserved from 2003-07 to 2053-07.,,,
+Zaire,,ZR,,,,transitionally_reserved,,,Reserved from 1997-07 to 2047-07.,,,
+,,AP,,,,intermediately_reserved,,,Refers to African Regional Intellectual Property Organization and reserved at the request of World Intellectual Property Organization (WIPO) for use in Standard ST.3.,,,
+,,BX,,,,intermediately_reserved,,,Refers to Benelux Office for Intellectual Property and reserved at the request of World Intellectual Property Organization (WIPO) for use in Standard ST.3.,,,
+,,DY,,,,intermediately_reserved,,,"Refers to Benin (BJ, BEN, 204) and to a list of car vehicle distinguishing signs notified to the Secretary-General of the United Nations under 1949 Road Traffic Convention and 1968 Road Traffic Convention.",,,
+,,EF,,,,intermediately_reserved,,,Refers to Union of Countries under the European Community Patent Convention and reserved at the request of World Intellectual Property Organization (WIPO) for use in Standard ST.3.,,,
+,,EM,,,,intermediately_reserved,,,Refers to the European Trademark Office and reserved at the request of World Intellectual Property Organization (WIPO) for use in Standard ST.3.,,,
+,,EP,,,,intermediately_reserved,,,Refers to the European Patent Organization and reserved at the request of World Intellectual Property Organization (WIPO) for use in Standard ST.3.,,,
+,,EV,,,,intermediately_reserved,,,Requested by World Intellectual Property Organization (WIPO) for use in Standard ST.3,,,
+,,EW,,,,intermediately_reserved,,,Refers to Estonia and to a list of car vehicle distinguishing signs notified to the Secretary-General of the United Nations under 1949 Road Traffic Convention and 1968 Road Traffic Convention.,,,
+,,FL,,,,intermediately_reserved,,,Refers to Liechtenstein and to a car vehicle distinguishing signs which are in use but which were not notified to the Secretary-General of the United Nations under the 1949 Convention,,,
+,,GC,,,,intermediately_reserved,,,Refers to the Patent Office of the Cooperation Council for the Arab States of the Gulf (GCC) and reserved at the request of World Intellectual Property Organization (WIPO) for use in Standard ST.3.,,,
+,,IB,,,,intermediately_reserved,,,Refers to International Bureau of WIPO and reserved at the request of World Intellectual Property Organization (WIPO) for use in Standard ST.3.,,,
+,,JA,,,,intermediately_reserved,,,Refers to Jamaica and to the 1949 Road Traffic Convention. Requested by Secretary-General of UN for Road Traffic Conventions.,,,
+,,LF,,,,intermediately_reserved,,,Refers Libya Fezzan and to car vehicle distinguishing signs which are in use but which were not notified to the Secretary-General of the United Nations under the 1949 Convention.,,,
+,,OA,,,,intermediately_reserved,,,Refers to the African Intellectual Property Organization and reserved at the request of World Intellectual Property Organization (WIPO) for use in Standard ST.3.,,,
+,,PI,,,,intermediately_reserved,,,Refers to the Philippines and to 1949 Road Traffic Convention. Requested by Secretary-General of UN for Road Traffic Conventions.,,,
+,,RA,,,,intermediately_reserved,,,Refers to Argentina and to the 1949 Road Traffic Convention. Requested by Secretary-General of UN for Road Traffic Conventions.,,,
+,,RB,,,,intermediately_reserved,,,Refers to Bolivia or to Botswana (identical codes) and to the 1949 Road Traffic Convention. Requested by Secretary-General of UN for Road Traffic Conventions.,,,
+,,RC,,,,intermediately_reserved,,,Refers to China and to the 1949 Road Traffic Convention. Requested by Secretary-General of UN for Road Traffic Conventions.,,,
+,,RH,,,,intermediately_reserved,,,Refers to Haiti and to a list of car vehicle distinguishing signs notified to the Secretary-General of the United Nations under 1949 Road Traffic Convention and 1968 Road Traffic Convention.,,,
+,,RI,,,,intermediately_reserved,,,Refers to Indonesia and to the 1949 Road Traffic Convention. Requested by Secretary-General of UN for Road Traffic Conventions.,,,
+,,RL,,,,intermediately_reserved,,,Refers to Lebanon and to the 1949 Road Traffic Convention. Requested by Secretary-General of UN for Road Traffic Conventions.,,,
+,,RM,,,,intermediately_reserved,,,Refers to Madagascar and to the 1949 Road Traffic Convention. Requested by Secretary-General of UN for Road Traffic Conventions.,,,
+,,RN,,,,intermediately_reserved,,,Refers to Niger and to the 1968 Road Traffic Convention. Requested by Secretary-General of UN for Road Traffic Conventions.,,,
+,,RP,,,,intermediately_reserved,,,Refers to the Philippines and to the 1968 Road Traffic Convention. Requested by Secretary-General of UN for Road Traffic Conventions.,,,
+,,SF,,,,intermediately_reserved,,,Refers to Finland and to a list of car vehicle distinguishing signs notified to the Secretary-General of the United Nations under 1949 Road Traffic Convention and 1968 Road Traffic Convention.,,,
+,,WG,,,,intermediately_reserved,,,Refers to Grenada and to a list of car vehicle distinguishing signs notified to the Secretary-General of the United Nations under 1949 Road Traffic Convention and 1968 Road Traffic Convention.,,,
+,,WL,,,,intermediately_reserved,,,Refers to Saint Lucia and to a list of car vehicle distinguishing signs notified to the Secretary-General of the United Nations under 1949 Road Traffic Convention and 1968 Road Traffic Convention.,,,
+,,WO,,,,intermediately_reserved,,,Refers to the World Intellectual Property Organization and reserved at the request of World Intellectual Property Organization (WIPO) for use in Standard ST.3.,,,
+,,WV,,,,intermediately_reserved,,,Refers to Saint Vincent and to a list of car vehicle distinguishing signs notified to the Secretary-General of the United Nations under 1949 Road Traffic Convention and 1968 Road Traffic Convention.,,,
+,,YV,,,,intermediately_reserved,,,Refers to Venezuela and to a list of car vehicle distinguishing signs notified to the Secretary-General of the United Nations under 1949 Road Traffic Convention and 1968 Road Traffic Convention.,,,
+British Antarctic Territory,"Antarctique, Territoire britannique de l'",BQ,ATB,BQAQ,,formerly_used,15/12/1974,15/05/1981,"British Antarctic Territory is now part of the entry Antarctica (AQ, ATA, 010).",,,
+Byelorussian SSR,"Biélorussie, RSS de",BY,BYS,BYAA,112,formerly_used,15/12/1974,15/06/1992,"Name changed to Belarus (BY, BLR, 112). Code element BYS removed from ISO 3166-1.",,,
+Canton and Enderbury Islands,"Canton et Enderbury, Îles",CT,CTE,CTKI,128,formerly_used,15/12/1974,15/01/1984,"Now part of Kiribati (KI, KIR, 296).",,,
+Czechoslovakia,Tchécoslovaquie,CS,CSK,CSHH,200,formerly_used,15/12/1974,15/06/1993,"Czechoslovakia was divided into Czechia (CZ, CZE, 203), and Slovakia (SK, SVK, 703).",,,
+Dahomey,Dahomey,DY,DHY,DYBJ,,formerly_used,15/12/1974,01/08/1977,"Name changed to Benin (BJ, BEN, 204).",,,
+Dronning Maud Land,Terre de la Reine Maud,NQ,ATN,NQAQ,216,formerly_used,15/12/1974,15/01/1983,"Now part of Antarctica (AQ, ATA, 010).",,,
+French Afars and Issas,Afars et Issas,AI,AFI,AIDJ,,formerly_used,15/12/1974,15/07/1978,"Name changed from French Afars and Issas to Djibouti (DJ, DJI, 262).",,,
+French Southern and Antarctic Territories,"Australes et Antarctiques françaises, Terres",FQ,ATF,FQHH,,formerly_used,15/12/1974,15/05/1981,"French Southern and Antarctic Territories are now part of Antarctica (AQ, ATA, 010) and French Southern Territories (TF, ATF, 260).",,,
+German Democratic Republic,"Allemande, République démocratique",DD,DDR,DDDE,278,formerly_used,15/12/1974,04/12/1990,"Now part of code entry for Germany (DE, DEU, 276).",,,
+Gilbert and Ellice Islands,"Gilbert et Ellice, Îles",GE,GEL,GEHH,,formerly_used,15/12/1974,01/08/1977,"The Gilbert and Ellice Islands were divided into: Gilbert Islands: Kiribati (KI, KIR, 296), and Ellice Islands: Tuvalu (TV, TUV, 798).",,,
+Johnston Island,"Johnston, Île",JT,JTN,JTUM,396,formerly_used,15/12/1974,14/07/1986,"Johnston Island is now incorporated in the entry for US Minor Outlying Islands (UM, UMI, 581).",,,
+Midway Islands,"Midway, Îles",MI,MID,MIUM,488,formerly_used,15/12/1974,14/07/1986,"Midway Islands are now incorporated in the entry for US Minor Outlying Islands (UM, UMI, 581).",,,
+New Hebrides,Nouvelles-Hébrides,NH,NHB,NHVU,,formerly_used,15/12/1974,15/01/1980,"Name changed from New Hebrides to Vanuatu (VU, VUT, 548).",,,
+Pacific Islands (Trust Territory),"Pacifique, Îles du (territoire sous tutelle)",PC,PCI,PCHH,582,formerly_used,15/12/1974,15/01/1986,"Pacific Islands (Trust Territory) were divided into: Marshall Islands (MH, MHL, 584), Micronesia, Federated States of (FM, FSM, 583), Northern Mariana Islands (MP, MNP, 580) and Palau (PW, PLW, 585).",,,
+Panama Canal Zone,"Panama, Zone du Canal de",PZ,PCZ,PZPA,,formerly_used,15/12/1974,15/05/1981,"The Zone of the Panama Canal is now part of the entry for Panama (PA, PAN, 591).",,,
+Sikkim,Sikkim,SK,SKM,SKIN,,formerly_used,15/12/1974,01/08/1977,"Sikkim is now part of the entry for India (IN, IND, 356).",,,
+Southern Rhodesia,Rhodésie du Sud,RH,RHO,RHZW,,formerly_used,15/12/1974,15/01/1980,"Name changed from Southern Rhodesia (RH, RHO, --) to Zimbabwe (ZW, ZWE, 716).",,,
+United States Miscellaneous Pacific Islands,"Pacifique, Diverses îles du (États-Unis)",PU,PUS,PUUM,849,formerly_used,15/12/1974,14/07/1986,"United States Miscellaneous Pacific Islands are now part of the entry for US Minor Outlying Islands (UM, UMI, 581).",,,
+Upper Volta,Haute-Volta,HV,HVO,HVBF,854,formerly_used,15/12/1974,30/11/1984,"Name changed from Upper Volta to Burkina Faso (BF, BFA, 854).",,,
+"Viet-Nam, Democratic Republic of","Viet-Nam, République démocratique du",VD,VDR,VDVN,,formerly_used,15/12/1974,01/08/1977,"The former Democratic Republic of Viet-Nam is now part of the entry for Viet Nam (VN, VNM, 704).",,,
+Wake Island,"Wake, Île de",WK,WAK,WKUM,872,formerly_used,15/12/1974,14/07/1986,"Wake Island (WK, WAK, 872) is now part of the entry for US Minor Outlying Islands (UM, UMI, 581).",,,
+"Yemen, Democratic",Yémen démocratique,YD,YMD,YDYE,720,formerly_used,15/12/1974,14/08/1990,"The Democratic Yemen is now part of the entry Yemen (YE, YEM, 887).",,,
+,,AH,,,,unassigned,,,,,,
+,,AJ,,,,unassigned,,,,,,
+,,AK,,,,unassigned,,,,,,
+,,AV,,,,unassigned,,,,,,
+,,AY,,,,unassigned,,,,,,
+,,BC,,,,unassigned,,,,,,
+,,BK,,,,unassigned,,,,,,
+,,BP,,,,unassigned,,,,,,
+,,CB,,,,unassigned,,,,,,
+,,CE,,,,unassigned,,,,,,
+,,CJ,,,,unassigned,,,,,,
+,,CT,,,,unassigned,,,,,,
+,,DA,,,,unassigned,,,,,,
+,,DB,,,,unassigned,,,,,,
+,,DC,,,,unassigned,,,,,,
+,,DD,,,,unassigned,,,,,,
+,,DF,,,,unassigned,,,,,,
+,,DH,,,,unassigned,,,,,,
+,,DI,,,,unassigned,,,,,,
+,,DL,,,,unassigned,,,,,,
+,,DN,,,,unassigned,,,,,,
+,,DP,,,,unassigned,,,,,,
+,,DQ,,,,unassigned,,,,,,
+,,DR,,,,unassigned,,,,,,
+,,DS,,,,unassigned,,,,,,
+,,DT,,,,unassigned,,,,,,
+,,DU,,,,unassigned,,,,,,
+,,DV,,,,unassigned,,,,,,
+,,DW,,,,unassigned,,,,,,
+,,DX,,,,unassigned,,,,,,
+,,EB,,,,unassigned,,,,,,
+,,ED,,,,unassigned,,,,,,
+,,EH,,,,unassigned,,,,,,
+,,EI,,,,unassigned,,,,,,
+,,EJ,,,,unassigned,,,,,,
+,,EK,,,,unassigned,,,,,,
+,,EL,,,,unassigned,,,,,,
+,,EN,,,,unassigned,,,,,,
+,,EO,,,,unassigned,,,,,,
+,,EQ,,,,unassigned,,,,,,
+,,EX,,,,unassigned,,,,,,
+,,EY,,,,unassigned,,,,,,
+,,FA,,,,unassigned,,,,,,
+,,FB,,,,unassigned,,,,,,
+,,FC,,,,unassigned,,,,,,
+,,FD,,,,unassigned,,,,,,
+,,FE,,,,unassigned,,,,,,
+,,FF,,,,unassigned,,,,,,
+,,FG,,,,unassigned,,,,,,
+,,FH,,,,unassigned,,,,,,
+,,FN,,,,unassigned,,,,,,
+,,FP,,,,unassigned,,,,,,
+,,FQ,,,,unassigned,,,,,,
+,,FS,,,,unassigned,,,,,,
+,,FT,,,,unassigned,,,,,,
+,,FU,,,,unassigned,,,,,,
+,,FV,,,,unassigned,,,,,,
+,,FW,,,,unassigned,,,,,,
+,,FY,,,,unassigned,,,,,,
+,,FZ,,,,unassigned,,,,,,
+,,GJ,,,,unassigned,,,,,,
+,,GK,,,,unassigned,,,,,,
+,,GO,,,,unassigned,,,,,,
+,,GV,,,,unassigned,,,,,,
+,,GX,,,,unassigned,,,,,,
+,,GZ,,,,unassigned,,,,,,
+,,HA,,,,unassigned,,,,,,
+,,HB,,,,unassigned,,,,,,
+,,HC,,,,unassigned,,,,,,
+,,HD,,,,unassigned,,,,,,
+,,HE,,,,unassigned,,,,,,
+,,HF,,,,unassigned,,,,,,
+,,HG,,,,unassigned,,,,,,
+,,HH,,,,unassigned,,,,,,
+,,HI,,,,unassigned,,,,,,
+,,HJ,,,,unassigned,,,,,,
+,,HL,,,,unassigned,,,,,,
+,,HO,,,,unassigned,,,,,,
+,,HP,,,,unassigned,,,,,,
+,,HQ,,,,unassigned,,,,,,
+,,HS,,,,unassigned,,,,,,
+,,HV,,,,unassigned,,,,,,
+,,HW,,,,unassigned,,,,,,
+,,HX,,,,unassigned,,,,,,
+,,HY,,,,unassigned,,,,,,
+,,HZ,,,,unassigned,,,,,,
+,,IA,,,,unassigned,,,,,,
+,,IF,,,,unassigned,,,,,,
+,,IG,,,,unassigned,,,,,,
+,,IH,,,,unassigned,,,,,,
+,,II,,,,unassigned,,,,,,
+,,IJ,,,,unassigned,,,,,,
+,,IK,,,,unassigned,,,,,,
+,,IP,,,,unassigned,,,,,,
+,,IU,,,,unassigned,,,,,,
+,,IV,,,,unassigned,,,,,,
+,,IW,,,,unassigned,,,,,,
+,,IX,,,,unassigned,,,,,,
+,,IY,,,,unassigned,,,,,,
+,,IZ,,,,unassigned,,,,,,
+,,JB,,,,unassigned,,,,,,
+,,JC,,,,unassigned,,,,,,
+,,JD,,,,unassigned,,,,,,
+,,JF,,,,unassigned,,,,,,
+,,JG,,,,unassigned,,,,,,
+,,JH,,,,unassigned,,,,,,
+,,JI,,,,unassigned,,,,,,
+,,JJ,,,,unassigned,,,,,,
+,,JK,,,,unassigned,,,,,,
+,,JL,,,,unassigned,,,,,,
+,,JN,,,,unassigned,,,,,,
+,,JQ,,,,unassigned,,,,,,
+,,JR,,,,unassigned,,,,,,
+,,JS,,,,unassigned,,,,,,
+,,JT,,,,unassigned,,,,,,
+,,JU,,,,unassigned,,,,,,
+,,JV,,,,unassigned,,,,,,
+,,JW,,,,unassigned,,,,,,
+,,JX,,,,unassigned,,,,,,
+,,JY,,,,unassigned,,,,,,
+,,JZ,,,,unassigned,,,,,,
+,,KA,,,,unassigned,,,,,,
+,,KB,,,,unassigned,,,,,,
+,,KC,,,,unassigned,,,,,,
+,,KD,,,,unassigned,,,,,,
+,,KF,,,,unassigned,,,,,,
+,,KJ,,,,unassigned,,,,,,
+,,KK,,,,unassigned,,,,,,
+,,KL,,,,unassigned,,,,,,
+,,KO,,,,unassigned,,,,,,
+,,KQ,,,,unassigned,,,,,,
+,,KS,,,,unassigned,,,,,,
+,,KT,,,,unassigned,,,,,,
+,,KU,,,,unassigned,,,,,,
+,,KV,,,,unassigned,,,,,,
+,,KX,,,,unassigned,,,,,,
+,,LD,,,,unassigned,,,,,,
+,,LE,,,,unassigned,,,,,,
+,,LG,,,,unassigned,,,,,,
+,,LH,,,,unassigned,,,,,,
+,,LJ,,,,unassigned,,,,,,
+,,LL,,,,unassigned,,,,,,
+,,LM,,,,unassigned,,,,,,
+,,LN,,,,unassigned,,,,,,
+,,LO,,,,unassigned,,,,,,
+,,LP,,,,unassigned,,,,,,
+,,LQ,,,,unassigned,,,,,,
+,,LW,,,,unassigned,,,,,,
+,,LX,,,,unassigned,,,,,,
+,,LZ,,,,unassigned,,,,,,
+,,MB,,,,unassigned,,,,,,
+,,MI,,,,unassigned,,,,,,
+,,MJ,,,,unassigned,,,,,,
+,,NB,,,,unassigned,,,,,,
+,,ND,,,,unassigned,,,,,,
+,,NH,,,,unassigned,,,,,,
+,,NJ,,,,unassigned,,,,,,
+,,NK,,,,unassigned,,,,,,
+,,NM,,,,unassigned,,,,,,
+,,NN,,,,unassigned,,,,,,
+,,NQ,,,,unassigned,,,,,,
+,,NS,,,,unassigned,,,,,,
+,,NV,,,,unassigned,,,,,,
+,,NW,,,,unassigned,,,,,,
+,,NX,,,,unassigned,,,,,,
+,,NY,,,,unassigned,,,,,,
+,,OB,,,,unassigned,,,,,,
+,,OC,,,,unassigned,,,,,,
+,,OD,,,,unassigned,,,,,,
+,,OE,,,,unassigned,,,,,,
+,,OF,,,,unassigned,,,,,,
+,,OG,,,,unassigned,,,,,,
+,,OH,,,,unassigned,,,,,,
+,,OI,,,,unassigned,,,,,,
+,,OJ,,,,unassigned,,,,,,
+,,OK,,,,unassigned,,,,,,
+,,OL,,,,unassigned,,,,,,
+,,ON,,,,unassigned,,,,,,
+,,OO,,,,unassigned,,,,,,
+,,OP,,,,unassigned,,,,,,
+,,OQ,,,,unassigned,,,,,,
+,,OR,,,,unassigned,,,,,,
+,,OS,,,,unassigned,,,,,,
+,,OT,,,,unassigned,,,,,,
+,,OU,,,,unassigned,,,,,,
+,,OV,,,,unassigned,,,,,,
+,,OW,,,,unassigned,,,,,,
+,,OX,,,,unassigned,,,,,,
+,,OY,,,,unassigned,,,,,,
+,,OZ,,,,unassigned,,,,,,
+,,PB,,,,unassigned,,,,,,
+,,PC,,,,unassigned,,,,,,
+,,PD,,,,unassigned,,,,,,
+,,PJ,,,,unassigned,,,,,,
+,,PO,,,,unassigned,,,,,,
+,,PP,,,,unassigned,,,,,,
+,,PQ,,,,unassigned,,,,,,
+,,PU,,,,unassigned,,,,,,
+,,PV,,,,unassigned,,,,,,
+,,PX,,,,unassigned,,,,,,
+,,PZ,,,,unassigned,,,,,,
+,,QB,,,,unassigned,,,,,,
+,,QC,,,,unassigned,,,,,,
+,,QD,,,,unassigned,,,,,,
+,,QE,,,,unassigned,,,,,,
+,,QF,,,,unassigned,,,,,,
+,,QG,,,,unassigned,,,,,,
+,,QH,,,,unassigned,,,,,,
+,,QI,,,,unassigned,,,,,,
+,,QJ,,,,unassigned,,,,,,
+,,QK,,,,unassigned,,,,,,
+,,QL,,,,unassigned,,,,,,
+,,RD,,,,unassigned,,,,,,
+,,RF,,,,unassigned,,,,,,
+,,RG,,,,unassigned,,,,,,
+,,RJ,,,,unassigned,,,,,,
+,,RK,,,,unassigned,,,,,,
+,,RQ,,,,unassigned,,,,,,
+,,RR,,,,unassigned,,,,,,
+,,RT,,,,unassigned,,,,,,
+,,RV,,,,unassigned,,,,,,
+,,RX,,,,unassigned,,,,,,
+,,RY,,,,unassigned,,,,,,
+,,RZ,,,,unassigned,,,,,,
+,,SP,,,,unassigned,,,,,,
+,,SQ,,,,unassigned,,,,,,
+,,SW,,,,unassigned,,,,,,
+,,TB,,,,unassigned,,,,,,
+,,TE,,,,unassigned,,,,,,
+,,TI,,,,unassigned,,,,,,
+,,TQ,,,,unassigned,,,,,,
+,,TS,,,,unassigned,,,,,,
+,,TU,,,,unassigned,,,,,,
+,,TX,,,,unassigned,,,,,,
+,,TY,,,,unassigned,,,,,,
+,,UB,,,,unassigned,,,,,,
+,,UC,,,,unassigned,,,,,,
+,,UD,,,,unassigned,,,,,,
+,,UE,,,,unassigned,,,,,,
+,,UF,,,,unassigned,,,,,,
+,,UH,,,,unassigned,,,,,,
+,,UI,,,,unassigned,,,,,,
+,,UJ,,,,unassigned,,,,,,
+,,UL,,,,unassigned,,,,,,
+,,UO,,,,unassigned,,,,,,
+,,UP,,,,unassigned,,,,,,
+,,UQ,,,,unassigned,,,,,,
+,,UR,,,,unassigned,,,,,,
+,,UT,,,,unassigned,,,,,,
+,,UU,,,,unassigned,,,,,,
+,,UV,,,,unassigned,,,,,,
+,,UW,,,,unassigned,,,,,,
+,,UX,,,,unassigned,,,,,,
+,,VB,,,,unassigned,,,,,,
+,,VD,,,,unassigned,,,,,,
+,,VF,,,,unassigned,,,,,,
+,,VH,,,,unassigned,,,,,,
+,,VJ,,,,unassigned,,,,,,
+,,VK,,,,unassigned,,,,,,
+,,VL,,,,unassigned,,,,,,
+,,VM,,,,unassigned,,,,,,
+,,VO,,,,unassigned,,,,,,
+,,VP,,,,unassigned,,,,,,
+,,VQ,,,,unassigned,,,,,,
+,,VR,,,,unassigned,,,,,,
+,,VS,,,,unassigned,,,,,,
+,,VT,,,,unassigned,,,,,,
+,,VV,,,,unassigned,,,,,,
+,,VW,,,,unassigned,,,,,,
+,,VX,,,,unassigned,,,,,,
+,,VY,,,,unassigned,,,,,,
+,,VZ,,,,unassigned,,,,,,
+,,WA,,,,unassigned,,,,,,
+,,WB,,,,unassigned,,,,,,
+,,WC,,,,unassigned,,,,,,
+,,WD,,,,unassigned,,,,,,
+,,WE,,,,unassigned,,,,,,
+,,WH,,,,unassigned,,,,,,
+,,WI,,,,unassigned,,,,,,
+,,WJ,,,,unassigned,,,,,,
+,,WK,,,,unassigned,,,,,,
+,,WM,,,,unassigned,,,,,,
+,,WN,,,,unassigned,,,,,,
+,,WP,,,,unassigned,,,,,,
+,,WQ,,,,unassigned,,,,,,
+,,WR,,,,unassigned,,,,,,
+,,WT,,,,unassigned,,,,,,
+,,WU,,,,unassigned,,,,,,
+,,WW,,,,unassigned,,,,,,
+,,WX,,,,unassigned,,,,,,
+,,WY,,,,unassigned,,,,,,
+,,WZ,,,,unassigned,,,,,,
+,,YA,,,,unassigned,,,,,,
+,,YB,,,,unassigned,,,,,,
+,,YC,,,,unassigned,,,,,,
+,,YD,,,,unassigned,,,,,,
+,,YF,,,,unassigned,,,,,,
+,,YG,,,,unassigned,,,,,,
+,,YH,,,,unassigned,,,,,,
+,,YI,,,,unassigned,,,,,,
+,,YJ,,,,unassigned,,,,,,
+,,YK,,,,unassigned,,,,,,
+,,YL,,,,unassigned,,,,,,
+,,YM,,,,unassigned,,,,,,
+,,YN,,,,unassigned,,,,,,
+,,YO,,,,unassigned,,,,,,
+,,YP,,,,unassigned,,,,,,
+,,YQ,,,,unassigned,,,,,,
+,,YR,,,,unassigned,,,,,,
+,,YS,,,,unassigned,,,,,,
+,,YW,,,,unassigned,,,,,,
+,,YX,,,,unassigned,,,,,,
+,,YY,,,,unassigned,,,,,,
+,,YZ,,,,unassigned,,,,,,
+,,ZB,,,,unassigned,,,,,,
+,,ZC,,,,unassigned,,,,,,
+,,ZD,,,,unassigned,,,,,,
+,,ZE,,,,unassigned,,,,,,
+,,ZF,,,,unassigned,,,,,,
+,,ZG,,,,unassigned,,,,,,
+,,ZH,,,,unassigned,,,,,,
+,,ZI,,,,unassigned,,,,,,
+,,ZJ,,,,unassigned,,,,,,
+,,ZK,,,,unassigned,,,,,,
+,,ZL,,,,unassigned,,,,,,
+,,ZN,,,,unassigned,,,,,,
+,,ZO,,,,unassigned,,,,,,
+,,ZP,,,,unassigned,,,,,,
+,,ZQ,,,,unassigned,,,,,,
+,,ZS,,,,unassigned,,,,,,
+,,ZT,,,,unassigned,,,,,,
+,,ZU,,,,unassigned,,,,,,
+,,ZV,,,,unassigned,,,,,,
+,,ZX,,,,unassigned,,,,,,
+,,ZY,,,,unassigned,,,,,,

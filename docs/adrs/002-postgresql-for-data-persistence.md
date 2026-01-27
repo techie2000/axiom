@@ -80,3 +80,4 @@ We will use **PostgreSQL** as the primary database for all Axiom domains.
 
 - [ADR-003: Schema-Based Database Isolation](003-schema-based-database-isolation.md)
 - [ADR-006: Audit Trail for Reference Data Provenance](006-audit-trail-for-provenance.md)
+- [ADR-007: Exclude Formerly Used Country Codes](007-exclude-formerly-used-country-codes.md)

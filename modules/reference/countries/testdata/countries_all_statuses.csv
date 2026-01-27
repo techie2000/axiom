@@ -1,0 +1,14 @@
+English short name,French short name,Alpha-2 code,Alpha-3 code,Alpha-4 code,Numeric,status,start_date,end_date,remarks
+United States of America,États-Unis d'Amérique,US,USA,,840,officially_assigned,,,
+United Kingdom of Great Britain and Northern Ireland,Royaume-Uni de Grande-Bretagne et d'Irlande du Nord,GB,GBR,,826,officially_assigned,,,
+Canada,Canada,CA,CAN,,124,officially_assigned,,,
+European Union,Union européenne,EU,,,,"exceptionally_reserved",,,Reserved at the request of ISO 4217/MA for ISO 6166 (ISIN).
+United Nations,Nations Unies,UN,,,,"exceptionally_reserved",,,Reserved at the request of the United Nations Statistics Division.
+United Kingdom,,UK,,,,"transitionally_reserved",,,Reserved transitionally. Code GB is officially assigned.
+Ascension Island,,AC,,,,"indeterminately_reserved",,,Reserved for UPU purposes.
+Clipperton Island,,CP,,,,"indeterminately_reserved",,,Reserved for ITU purposes.
+User-assigned,,ZZ,,,,"unassigned",,,"Reserved for user assignment per ISO 3166-1."
+Not allocated,,AA,,,,"unassigned",,,Not allocated by ISO 3166/MA.
+Gilbert and Ellice Islands,Îles Gilbert et Ellice,GE,GEL,GEKI,296,"formerly_used",1974-01-01,1979-12-31,"Code reassigned to Georgia (GE/GEO/268) in 1992."
+Yugoslavia,Yougoslavie,YU,YUG,YUCS,891,"formerly_used",1974-01-01,2003-07-14,"Code ceased after country dissolved."
+German Democratic Republic,République démocratique allemande,DD,DDR,DDDE,278,"formerly_used",1974-01-01,1990-10-02,"Reunified with Federal Republic of Germany (DE)."

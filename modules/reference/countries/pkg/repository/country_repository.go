@@ -41,16 +41,23 @@ func (r *CountryRepository) Create(ctx context.Context, country *model.Country) 
 		INSERT INTO reference.countries (
 			alpha2, alpha3, alpha4, numeric, 
 			name_english, name_french, status, 
-			start_date, end_date
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+			start_date, end_date, remarks
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		RETURNING created_at, updated_at
 	`
 
 	err := r.db.QueryRowContext(
 		ctx, query,
-		country.Alpha2, country.Alpha3, country.Alpha4, country.Numeric,
-		country.NameEnglish, country.NameFrench, country.Status,
-		country.StartDate, country.EndDate,
+		country.Alpha2,
+		nullString(country.Alpha3),
+		nullString(country.Alpha4),
+		nullString(country.Numeric),
+		nullString(country.NameEnglish),
+		nullString(country.NameFrench),
+		country.Status,
+		country.StartDate,
+		country.EndDate,
+		nullString(country.Remarks),
 	).Scan(&country.CreatedAt, &country.UpdatedAt)
 
 	if err != nil {
@@ -66,16 +73,23 @@ func (r *CountryRepository) Update(ctx context.Context, country *model.Country) 
 		UPDATE reference.countries
 		SET alpha3 = $2, alpha4 = $3, numeric = $4,
 		    name_english = $5, name_french = $6, status = $7,
-		    start_date = $8, end_date = $9
+		    start_date = $8, end_date = $9, remarks = $10
 		WHERE alpha2 = $1
 		RETURNING updated_at
 	`
 
 	err := r.db.QueryRowContext(
 		ctx, query,
-		country.Alpha2, country.Alpha3, country.Alpha4, country.Numeric,
-		country.NameEnglish, country.NameFrench, country.Status,
-		country.StartDate, country.EndDate,
+		country.Alpha2,
+		nullString(country.Alpha3),
+		nullString(country.Alpha4),
+		nullString(country.Numeric),
+		nullString(country.NameEnglish),
+		nullString(country.NameFrench),
+		country.Status,
+		country.StartDate,
+		country.EndDate,
+		nullString(country.Remarks),
 	).Scan(&country.UpdatedAt)
 
 	if err == sql.ErrNoRows {
@@ -94,8 +108,8 @@ func (r *CountryRepository) Upsert(ctx context.Context, country *model.Country) 
 		INSERT INTO reference.countries (
 			alpha2, alpha3, alpha4, numeric,
 			name_english, name_french, status,
-			start_date, end_date
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+			start_date, end_date, remarks
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		ON CONFLICT (alpha2) DO UPDATE SET
 			alpha3 = EXCLUDED.alpha3,
 			alpha4 = EXCLUDED.alpha4,
@@ -104,15 +118,23 @@ func (r *CountryRepository) Upsert(ctx context.Context, country *model.Country) 
 			name_french = EXCLUDED.name_french,
 			status = EXCLUDED.status,
 			start_date = EXCLUDED.start_date,
-			end_date = EXCLUDED.end_date
+			end_date = EXCLUDED.end_date,
+			remarks = EXCLUDED.remarks
 		RETURNING created_at, updated_at
 	`
 
 	err := r.db.QueryRowContext(
 		ctx, query,
-		country.Alpha2, country.Alpha3, country.Alpha4, country.Numeric,
-		country.NameEnglish, country.NameFrench, country.Status,
-		country.StartDate, country.EndDate,
+		country.Alpha2,
+		nullString(country.Alpha3),
+		nullString(country.Alpha4),
+		nullString(country.Numeric),
+		nullString(country.NameEnglish),
+		nullString(country.NameFrench),
+		country.Status,
+		country.StartDate,
+		country.EndDate,
+		nullString(country.Remarks),
 	).Scan(&country.CreatedAt, &country.UpdatedAt)
 
 	if err != nil {
@@ -127,18 +149,29 @@ func (r *CountryRepository) GetByAlpha2(ctx context.Context, alpha2 string) (*mo
 	query := `
 		SELECT alpha2, alpha3, alpha4, numeric,
 		       name_english, name_french, status,
-		       start_date, end_date, created_at, updated_at
+		       start_date, end_date, remarks,
+		       created_at, updated_at
 		FROM reference.countries
 		WHERE alpha2 = $1
 	`
 
 	country := &model.Country{}
+	var alpha3, alpha4, numeric, nameEnglish, nameFrench, remarks sql.NullString
 	err := r.db.QueryRowContext(ctx, query, alpha2).Scan(
-		&country.Alpha2, &country.Alpha3, &country.Alpha4, &country.Numeric,
-		&country.NameEnglish, &country.NameFrench, &country.Status,
-		&country.StartDate, &country.EndDate,
+		&country.Alpha2, &alpha3, &alpha4, &numeric,
+		&nameEnglish, &nameFrench, &country.Status,
+		&country.StartDate, &country.EndDate, &remarks,
 		&country.CreatedAt, &country.UpdatedAt,
 	)
+
+	if err == nil {
+		country.Alpha3 = alpha3.String
+		country.Alpha4 = alpha4.String
+		country.Numeric = numeric.String
+		country.NameEnglish = nameEnglish.String
+		country.NameFrench = nameFrench.String
+		country.Remarks = remarks.String
+	}
 
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("country not found: %s", alpha2)
@@ -155,18 +188,29 @@ func (r *CountryRepository) GetByAlpha3(ctx context.Context, alpha3 string) (*mo
 	query := `
 		SELECT alpha2, alpha3, alpha4, numeric,
 		       name_english, name_french, status,
-		       start_date, end_date, created_at, updated_at
+		       start_date, end_date, remarks,
+		       created_at, updated_at
 		FROM reference.countries
 		WHERE alpha3 = $1
 	`
 
 	country := &model.Country{}
+	var alpha3Var, alpha4, numeric, nameEnglish, nameFrench, remarks sql.NullString
 	err := r.db.QueryRowContext(ctx, query, alpha3).Scan(
-		&country.Alpha2, &country.Alpha3, &country.Alpha4, &country.Numeric,
-		&country.NameEnglish, &country.NameFrench, &country.Status,
-		&country.StartDate, &country.EndDate,
+		&country.Alpha2, &alpha3Var, &alpha4, &numeric,
+		&nameEnglish, &nameFrench, &country.Status,
+		&country.StartDate, &country.EndDate, &remarks,
 		&country.CreatedAt, &country.UpdatedAt,
 	)
+
+	if err == nil {
+		country.Alpha3 = alpha3Var.String
+		country.Alpha4 = alpha4.String
+		country.Numeric = numeric.String
+		country.NameEnglish = nameEnglish.String
+		country.NameFrench = nameFrench.String
+		country.Remarks = remarks.String
+	}
 
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("country not found: %s", alpha3)
@@ -183,7 +227,8 @@ func (r *CountryRepository) ListActive(ctx context.Context) ([]*model.Country, e
 	query := `
 		SELECT alpha2, alpha3, alpha4, numeric,
 		       name_english, name_french, status,
-		       start_date, end_date, created_at, updated_at
+		       start_date, end_date, remarks,
+		       created_at, updated_at
 		FROM reference.countries
 		WHERE status = 'officially_assigned'
 		  AND (start_date IS NULL OR start_date <= $1)
@@ -200,15 +245,22 @@ func (r *CountryRepository) ListActive(ctx context.Context) ([]*model.Country, e
 	countries := make([]*model.Country, 0)
 	for rows.Next() {
 		country := &model.Country{}
+		var alpha3, alpha4, numeric, nameEnglish, nameFrench, remarks sql.NullString
 		err := rows.Scan(
-			&country.Alpha2, &country.Alpha3, &country.Alpha4, &country.Numeric,
-			&country.NameEnglish, &country.NameFrench, &country.Status,
-			&country.StartDate, &country.EndDate,
+			&country.Alpha2, &alpha3, &alpha4, &numeric,
+			&nameEnglish, &nameFrench, &country.Status,
+			&country.StartDate, &country.EndDate, &remarks,
 			&country.CreatedAt, &country.UpdatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan country: %w", err)
 		}
+		country.Alpha3 = alpha3.String
+		country.Alpha4 = alpha4.String
+		country.Numeric = numeric.String
+		country.NameEnglish = nameEnglish.String
+		country.NameFrench = nameFrench.String
+		country.Remarks = remarks.String
 		countries = append(countries, country)
 	}
 
@@ -224,7 +276,8 @@ func (r *CountryRepository) ListAll(ctx context.Context) ([]*model.Country, erro
 	query := `
 		SELECT alpha2, alpha3, alpha4, numeric,
 		       name_english, name_french, status,
-		       start_date, end_date, created_at, updated_at
+		       start_date, end_date, remarks,
+		       created_at, updated_at
 		FROM reference.countries
 		ORDER BY name_english
 	`
@@ -238,15 +291,22 @@ func (r *CountryRepository) ListAll(ctx context.Context) ([]*model.Country, erro
 	countries := make([]*model.Country, 0)
 	for rows.Next() {
 		country := &model.Country{}
+		var alpha3, alpha4, numeric, nameEnglish, nameFrench, remarks sql.NullString
 		err := rows.Scan(
-			&country.Alpha2, &country.Alpha3, &country.Alpha4, &country.Numeric,
-			&country.NameEnglish, &country.NameFrench, &country.Status,
-			&country.StartDate, &country.EndDate,
+			&country.Alpha2, &alpha3, &alpha4, &numeric,
+			&nameEnglish, &nameFrench, &country.Status,
+			&country.StartDate, &country.EndDate, &remarks,
 			&country.CreatedAt, &country.UpdatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan country: %w", err)
 		}
+		country.Alpha3 = alpha3.String
+		country.Alpha4 = alpha4.String
+		country.Numeric = numeric.String
+		country.NameEnglish = nameEnglish.String
+		country.NameFrench = nameFrench.String
+		country.Remarks = remarks.String
 		countries = append(countries, country)
 	}
 
@@ -276,4 +336,12 @@ func (r *CountryRepository) Delete(ctx context.Context, alpha2 string) error {
 	}
 
 	return nil
+}
+
+// nullString converts empty strings to sql.NullString for nullable database columns
+func nullString(s string) sql.NullString {
+	return sql.NullString{
+		String: s,
+		Valid:  s != "",
+	}
 }

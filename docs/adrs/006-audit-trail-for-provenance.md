@@ -261,6 +261,7 @@ ORDER BY operated_at DESC;
 
 - [ADR-002: PostgreSQL for Data Persistence](002-postgresql-for-data-persistence.md)
 - [ADR-003: Schema-Based Database Isolation](003-schema-based-database-isolation.md)
+- [ADR-007: Exclude Formerly Used Country Codes](007-exclude-formerly-used-country-codes.md)
 
 ## References
 

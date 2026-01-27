@@ -1,6 +1,7 @@
 package transform
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -8,16 +9,21 @@ import (
 	"github.com/techie2000/axiom/modules/reference/countries/internal/model"
 )
 
+// ErrFormerlyUsedSkipped is returned when a formerly_used code is encountered (should be skipped per ADR-007)
+var ErrFormerlyUsedSkipped = errors.New("formerly_used code should be skipped per ADR-007")
+
 // RawCountryData represents the raw input from csv2json (before canonicalization)
 type RawCountryData struct {
 	EnglishShortName string `json:"English short name"`
 	FrenchShortName  string `json:"French short name"`
 	Alpha2Code       string `json:"Alpha-2 code"`
 	Alpha3Code       string `json:"Alpha-3 code"`
+	Alpha4Code       string `json:"Alpha-4 code,omitempty"`
 	Numeric          string `json:"Numeric"`
 	Status           string `json:"status"`
 	StartDate        string `json:"start_date,omitempty"`
 	EndDate          string `json:"end_date,omitempty"`
+	Remarks          string `json:"remarks,omitempty"`
 }
 
 // ValidStatuses defines the allowed status values per ISO 3166-1
@@ -32,33 +38,45 @@ var ValidStatuses = map[string]model.CodeStatus{
 
 // TransformToCountry applies all canonicalizer transformation rules
 // This is where ALL business rules are implemented
+// Returns nil, ErrFormerlyUsedSkipped for formerly_used codes that should be skipped
 func TransformToCountry(raw RawCountryData) (*model.Country, error) {
-	// 1. Validate required fields
-	if err := validateRequired(raw); err != nil {
-		return nil, err
-	}
-
-	// 2. Transform numeric code (pad to 3 digits)
-	numeric, err := transformNumericCode(raw.Numeric)
-	if err != nil {
-		return nil, err
-	}
-
-	// 3. Normalize country codes (uppercase)
-	alpha2 := strings.ToUpper(strings.TrimSpace(raw.Alpha2Code))
-	alpha3 := strings.ToUpper(strings.TrimSpace(raw.Alpha3Code))
-
-	// 4. Trim and clean names
-	nameEnglish := strings.TrimSpace(raw.EnglishShortName)
-	nameFrench := strings.TrimSpace(raw.FrenchShortName)
-
-	// 5. Validate and normalize status
+	// 1. Validate and normalize status FIRST (required for all records)
 	status, err := validateStatus(raw.Status)
 	if err != nil {
 		return nil, err
 	}
 
-	// 6. Parse dates (if provided)
+	// 2. Check if this is a formerly_used code (skip per ADR-007)
+	if status == model.StatusFormerlyUsed {
+		return nil, ErrFormerlyUsedSkipped
+	}
+
+	// 3. Normalize country codes (uppercase, trim)
+	alpha2 := strings.ToUpper(strings.TrimSpace(raw.Alpha2Code))
+	alpha3 := strings.ToUpper(strings.TrimSpace(raw.Alpha3Code))
+	alpha4 := strings.ToUpper(strings.TrimSpace(raw.Alpha4Code))
+
+	// 4. Trim and clean optional fields
+	numeric := strings.TrimSpace(raw.Numeric)
+	nameEnglish := strings.TrimSpace(raw.EnglishShortName)
+	nameFrench := strings.TrimSpace(raw.FrenchShortName)
+	remarks := strings.TrimSpace(raw.Remarks)
+
+	// 5. Apply status-specific validation rules
+	if err := validateStatusSpecificFields(status, alpha2, alpha3, numeric, nameEnglish, nameFrench, remarks); err != nil {
+		return nil, err
+	}
+
+	// 6. Transform numeric code (pad to 3 digits) - only if provided
+	var transformedNumeric string
+	if numeric != "" {
+		transformedNumeric, err = transformNumericCode(numeric)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// 7. Parse dates (if provided)
 	var startDate, endDate *time.Time
 	if raw.StartDate != "" {
 		sd, err := parseDate(raw.StartDate)
@@ -78,16 +96,75 @@ func TransformToCountry(raw RawCountryData) (*model.Country, error) {
 	return &model.Country{
 		Alpha2:      alpha2,
 		Alpha3:      alpha3,
-		Numeric:     numeric,
+		Alpha4:      alpha4,
+		Numeric:     transformedNumeric,
 		NameEnglish: nameEnglish,
 		NameFrench:  nameFrench,
 		Status:      status,
 		StartDate:   startDate,
 		EndDate:     endDate,
+		Remarks:     remarks,
 	}, nil
 }
 
+// validateStatusSpecificFields validates fields based on ISO 3166-1 status type
+// See: COUNTRY-VALIDATION-RULES.md for complete specification
+func validateStatusSpecificFields(status model.CodeStatus, alpha2, alpha3, numeric, nameEnglish, nameFrench, remarks string) error {
+	// alpha2 is required for ALL statuses
+	if alpha2 == "" {
+		return fmt.Errorf("alpha2 is required for all status types")
+	}
+
+	switch status {
+	case model.StatusOfficiallyAssigned:
+		// Required: alpha2, alpha3, name_english, name_french
+		if alpha3 == "" {
+			return fmt.Errorf("alpha3 is required for officially_assigned status")
+		}
+		if nameEnglish == "" {
+			return fmt.Errorf("name_english is required for officially_assigned status")
+		}
+		if nameFrench == "" {
+			return fmt.Errorf("name_french is required for officially_assigned status")
+		}
+
+	case model.StatusExceptionallyReserved, model.StatusIndeterminatelyReserved:
+		// Required: alpha2, name_english, remarks
+		if nameEnglish == "" {
+			return fmt.Errorf("name_english is required for %s status", status)
+		}
+		if remarks == "" {
+			return fmt.Errorf("remarks is required for %s status (must explain reservation)", status)
+		}
+
+	case model.StatusTransitionallyReserved:
+		// Required: alpha2, name_english, remarks
+		if nameEnglish == "" {
+			return fmt.Errorf("name_english is required for transitionally_reserved status")
+		}
+		if remarks == "" {
+			return fmt.Errorf("remarks is required for transitionally_reserved status (must explain transition)")
+		}
+
+	case model.StatusUnassigned:
+		// Required: only alpha2
+		// No additional validation needed
+
+	case model.StatusFormerlyUsed:
+		// This should be caught earlier and skipped
+		// But validate here as defensive programming
+		return fmt.Errorf("formerly_used codes should be filtered before validation (ADR-007)")
+
+	default:
+		return fmt.Errorf("unknown status: %s", status)
+	}
+
+	return nil
+}
+
 // validateRequired checks that all required fields are present
+// DEPRECATED: Replaced by validateStatusSpecificFields
+// Kept for backward compatibility but no longer called
 func validateRequired(raw RawCountryData) error {
 	if strings.TrimSpace(raw.Alpha2Code) == "" {
 		return fmt.Errorf("alpha2 code is required")

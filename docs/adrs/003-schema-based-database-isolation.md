@@ -124,3 +124,4 @@ When metrics show resource contention:
 
 - [ADR-002: PostgreSQL for Data Persistence](002-postgresql-for-data-persistence.md)
 - [ADR-006: Audit Trail for Reference Data Provenance](006-audit-trail-for-provenance.md)
+- [ADR-007: Exclude Formerly Used Country Codes](007-exclude-formerly-used-country-codes.md)

@@ -4,10 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -170,12 +172,13 @@ func main() {
 
 	// Process messages
 	processedCount := 0
+	skippedCount := 0
 	rejectedCount := 0
 
 	for {
 		select {
 		case <-ctx.Done():
-			log.Printf("Shutting down - processed: %d, rejected: %d", processedCount, rejectedCount)
+			log.Printf("Shutting down - processed: %d, skipped: %d, rejected: %d", processedCount, skippedCount, rejectedCount)
 			return
 
 		case msg, ok := <-msgs:
@@ -184,45 +187,65 @@ func main() {
 				return
 			}
 
-			err := processMessage(ctx, msg.Body, repo)
-			if err != nil {
-				log.Printf("✗ Failed to process message: %v", err)
+			result := processMessage(ctx, msg.Body, repo)
+			if result.Error != nil {
+				log.Printf("✗ Failed to process message: %v", result.Error)
 				msg.Nack(false, false) // Don't requeue - send to DLX
 				rejectedCount++
+			} else if result.Skipped {
+				msg.Ack(false) // Ack skipped messages (not errors)
+				skippedCount++
+				log.Printf("⊘ Skipped: %s - %s", result.Alpha2, result.SkipReason)
 			} else {
 				msg.Ack(false)
 				processedCount++
 			}
 
-			if processedCount%10 == 0 && processedCount > 0 {
-				log.Printf("Progress: processed=%d, rejected=%d", processedCount, rejectedCount)
+			if (processedCount+skippedCount)%10 == 0 && (processedCount+skippedCount) > 0 {
+				log.Printf("Progress: processed=%d, skipped=%d, rejected=%d", processedCount, skippedCount, rejectedCount)
 			}
 		}
 	}
 }
 
-func processMessage(ctx context.Context, body []byte, repo *repository.CountryRepository) error {
+// ProcessResult encapsulates the result of processing a message
+type ProcessResult struct {
+	Error      error
+	Skipped    bool
+	SkipReason string
+	Alpha2     string
+}
+
+func processMessage(ctx context.Context, body []byte, repo *repository.CountryRepository) ProcessResult {
 	// Parse envelope
 	var envelope MessageEnvelope
 	if err := json.Unmarshal(body, &envelope); err != nil {
-		return fmt.Errorf("failed to unmarshal envelope: %w", err)
+		return ProcessResult{Error: fmt.Errorf("failed to unmarshal envelope: %w", err)}
 	}
 
 	// Validate envelope
 	if envelope.Domain != "reference" || envelope.Entity != "countries" {
-		return fmt.Errorf("invalid domain/entity: %s/%s", envelope.Domain, envelope.Entity)
+		return ProcessResult{Error: fmt.Errorf("invalid domain/entity: %s/%s", envelope.Domain, envelope.Entity)}
 	}
 
 	// Parse raw country data (from csv2json)
 	var rawCountry transform.RawCountryData
 	if err := json.Unmarshal(envelope.Payload, &rawCountry); err != nil {
-		return fmt.Errorf("failed to unmarshal payload: %w", err)
+		return ProcessResult{Error: fmt.Errorf("failed to unmarshal payload: %w", err)}
 	}
 
 	// Apply ALL canonicalizer transformation rules
 	country, err := transform.TransformToCountry(rawCountry)
 	if err != nil {
-		return fmt.Errorf("transformation failed: %w", err)
+		// Check if this is a formerly_used code that should be skipped
+		if errors.Is(err, transform.ErrFormerlyUsedSkipped) {
+			return ProcessResult{
+				Skipped:    true,
+				SkipReason: "formerly_used status per ADR-007",
+				Alpha2:     strings.ToUpper(strings.TrimSpace(rawCountry.Alpha2Code)),
+			}
+		}
+		return ProcessResult{Error: fmt.Errorf("transformation failed: %w", err)}
 	}
 
 	// Set audit trail context (source tracking for provenance)
@@ -232,11 +255,11 @@ func processMessage(ctx context.Context, body []byte, repo *repository.CountryRe
 
 	// Upsert to database
 	if err := repo.Upsert(ctx, country); err != nil {
-		return fmt.Errorf("database upsert failed: %w", err)
+		return ProcessResult{Error: fmt.Errorf("database upsert failed: %w", err)}
 	}
 
 	log.Printf("✓ Processed: %s (%s)", country.Alpha2, country.NameEnglish)
-	return nil
+	return ProcessResult{}
 }
 
 func loadConfig() Config {

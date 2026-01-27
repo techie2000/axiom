@@ -161,9 +161,15 @@ Follow official Markdown linting rules to maintain consistency and compatibility
 4. **Mermaid Diagrams**
    - Use Mermaid flowcharts instead of ASCII art for data flows
    - Specify language as `mermaid` in fenced code blocks
-   - Include color styling for clarity
+   - Use dark mode compatible colors:
+     - Success/Positive: `fill:#2ea043,stroke:#51cf66,color:#ffffff` (green)
+     - Error/Negative: `fill:#cc3333,stroke:#ff6b6b,color:#ffffff` (red)
+     - Warning/Skip: `fill:#d97706,stroke:#fbbf24,color:#ffffff` (orange)
+     - Info/Neutral: `fill:#1f6feb,stroke:#58a6ff,color:#ffffff` (blue)
+   - Always include `color:#ffffff` for text to ensure readability
+   - Test that colors are readable in both light and dark modes
 
-**Example:**
+**Example:****
 
 ```markdown
 ## Section Title

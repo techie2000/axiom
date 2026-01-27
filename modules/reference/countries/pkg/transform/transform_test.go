@@ -331,7 +331,7 @@ func TestTransformToCountry(t *testing.T) {
 			},
 		},
 		{
-			name: "formerly used country",
+			name: "formerly used country - should skip",
 			input: RawCountryData{
 				EnglishShortName: "East Germany",
 				FrenchShortName:  "Allemagne de l'Est",
@@ -342,16 +342,7 @@ func TestTransformToCountry(t *testing.T) {
 				StartDate:        "1974-07-18",
 				EndDate:          "1990-10-03",
 			},
-			want: &model.Country{
-				Alpha2:      "DD",
-				Alpha3:      "DDR",
-				Numeric:     "278",
-				NameEnglish: "East Germany",
-				NameFrench:  "Allemagne de l'Est",
-				Status:      model.StatusFormerlyUsed,
-				StartDate:   parseTestDate("1974-07-18"),
-				EndDate:     parseTestDate("1990-10-03"),
-			},
+			wantErr: true, // Should return ErrFormerlyUsedSkipped
 		},
 		{
 			name: "missing required field",
