@@ -105,15 +105,19 @@ func main() {
 		log.Fatalf("Failed to declare exchange: %v", err)
 	}
 
-	// Declare queue for countries
+	// Declare queue for countries with DLX
 	queueName := "axiom.reference.countries"
+	queueArgs := amqp.Table{
+		"x-dead-letter-exchange":    "axiom.data.dlx",
+		"x-dead-letter-routing-key": "reference.countries",
+	}
 	queue, err := channel.QueueDeclare(
 		queueName, // name
 		true,      // durable
 		false,     // delete when unused
 		false,     // exclusive
 		false,     // no-wait
-		nil,       // arguments
+		queueArgs, // arguments with DLX
 	)
 	if err != nil {
 		log.Fatalf("Failed to declare queue: %v", err)
