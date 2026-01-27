@@ -56,6 +56,7 @@ type InputConfig struct {
 	WatchMode                 string `json:"watchMode"`
 	PollIntervalSeconds       int    `json:"pollIntervalSeconds"`
 	HybridPollIntervalSeconds int    `json:"hybridPollIntervalSeconds"`
+	PollingLogMode            string `json:"pollingLogMode"`
 	SuffixFilter              string `json:"suffixFilter"`
 }
 
@@ -291,6 +292,7 @@ func startPollWatchForRoute(route RouteConfig, globalConfig GlobalConfig) {
 	scanFolderForRoute(route, globalConfig)
 
 	for range ticker.C {
+		logPollCycle(route, "poll")
 		scanFolderForRoute(route, globalConfig)
 	}
 }
@@ -314,8 +316,27 @@ func startHybridWatchForRoute(route RouteConfig, globalConfig GlobalConfig) {
 	route.Logf("Hybrid watching enabled (event + %ds backup polling)", interval)
 
 	for range ticker.C {
+		logPollCycle(route, "hybrid")
 		scanFolderForRoute(route, globalConfig)
 	}
+}
+
+func logPollCycle(route RouteConfig, mode string) {
+	// Normalize pollingLogMode (default: "always")
+	logMode := route.Input.PollingLogMode
+	if logMode == "" {
+		logMode = "always"
+	}
+
+	if logMode == "always" {
+		if mode == "hybrid" {
+			route.Logf("Backup poll cycle started")
+		} else {
+			route.Logf("Poll cycle started")
+		}
+	}
+	// "on-files" mode logs in scanFolderForRoute only when files found
+	// "never" mode doesn't log poll cycles at all
 }
 
 func scanFolderForRoute(route RouteConfig, globalConfig GlobalConfig) {
@@ -323,6 +344,25 @@ func scanFolderForRoute(route RouteConfig, globalConfig GlobalConfig) {
 	if err != nil {
 		route.Logf("Error reading input folder: %v", err)
 		return
+	}
+
+	// Normalize pollingLogMode (default: "always")
+	logMode := route.Input.PollingLogMode
+	if logMode == "" {
+		logMode = "always"
+	}
+
+	// Count eligible files
+	fileCount := 0
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			fileCount++
+		}
+	}
+
+	// Log if mode is "on-files" and files were found
+	if logMode == "on-files" && fileCount > 0 {
+		route.Logf("Poll cycle found %d file(s)", fileCount)
 	}
 
 	for _, entry := range entries {

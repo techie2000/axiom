@@ -67,6 +67,7 @@ The service reads [routes.json](routes.json) which defines all monitored domains
 | `input.watchMode` | ❌ | `event`, `poll`, or `hybrid` (default: hybrid) |
 | `input.pollIntervalSeconds` | ❌ | Poll mode interval (default: 5) |
 | `input.hybridPollIntervalSeconds` | ❌ | Hybrid backup interval (default: 60) |
+| `input.pollingLogMode` | ❌ | Poll cycle logging: `always`, `on-files`, `never` (default: always) |
 | `input.suffixFilter` | ❌ | File extensions to process (default: .csv) |
 | `output.type` | ✅ | Output destination: `queue`, `file`, or `both` |
 | `output.queueDestination` | ⚠️ | RabbitMQ exchange name (required if type=queue/both) |
@@ -360,6 +361,56 @@ This allows canonicalizer to bind queues with patterns:
 - Works with all filesystems (NFS, SMB, cloud mounts)
 - Continuous CPU usage
 - **Use case**: Network filesystems
+
+## Polling Log Modes
+
+Control how much logging occurs during poll cycles (applies to `poll` and `hybrid` modes):
+
+### Always Mode (Default)
+
+```json
+{
+  "input": {
+    "pollingLogMode": "always"
+  }
+}
+```
+
+- Logs every poll cycle regardless of files found
+- **Logs**: `[countries] 2026/01/27 17:30:00 Backup poll cycle started`
+- **Use case**: Operational monitoring, debugging polling issues
+- Confirms the service is actively polling
+
+### On-Files Mode
+
+```json
+{
+  "input": {
+    "pollingLogMode": "on-files"
+  }
+}
+```
+
+- Logs only when files are discovered
+- **Logs**: `[countries] 2026/01/27 17:30:00 Poll cycle found 3 file(s)`
+- **Use case**: Quieter logs, only log when work is detected
+- Reduces log volume in idle periods
+
+### Never Mode
+
+```json
+{
+  "input": {
+    "pollingLogMode": "never"
+  }
+}
+```
+
+- No poll cycle logging (file processing still logged)
+- **Use case**: Minimal logging, high-frequency polling
+- Note: File-level events (processing, errors) still logged
+
+**Default**: `always` - provides visibility that polling is working
 
 ## Testing
 
