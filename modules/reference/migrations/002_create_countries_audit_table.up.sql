@@ -2,14 +2,14 @@
 -- Creates audit table for tracking all changes to reference.countries
 -- Provides complete provenance and compliance trail
 
--- Create audit operation enum
+\echo 'Creating enum type: reference.audit_operation'
 CREATE TYPE reference.audit_operation AS ENUM (
     'INSERT',
     'UPDATE',
     'DELETE'
 );
 
--- Create audit table (write-only, no updates or deletes)
+\echo 'Creating table: reference.countries_audit'
 CREATE TABLE IF NOT EXISTS reference.countries_audit (
     audit_id BIGSERIAL PRIMARY KEY,
     operation reference.audit_operation NOT NULL,
@@ -42,13 +42,13 @@ CREATE TABLE IF NOT EXISTS reference.countries_audit (
         ON DELETE CASCADE
 );
 
--- Indexes for common audit queries
+\echo 'Creating indexes for reference.countries_audit'
 CREATE INDEX idx_countries_audit_alpha2 ON reference.countries_audit(alpha2);
 CREATE INDEX idx_countries_audit_operated_at ON reference.countries_audit(operated_at DESC);
 CREATE INDEX idx_countries_audit_operation ON reference.countries_audit(operation);
 CREATE INDEX idx_countries_audit_source ON reference.countries_audit(source_system, source_user);
 
--- Function to capture changes and write to audit table
+\echo 'Creating function: reference.audit_countries_changes()'
 CREATE OR REPLACE FUNCTION reference.audit_countries_changes()
 RETURNS TRIGGER AS $$
 DECLARE

@@ -17,6 +17,18 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
+// Version is set at build time via ldflags or read from VERSION file
+var Version = "dev"
+
+func init() {
+	// If version wasn't set at build time, try to read from VERSION file
+	if Version == "dev" {
+		if versionBytes, err := os.ReadFile("VERSION"); err == nil {
+			Version = strings.TrimSpace(string(versionBytes))
+		}
+	}
+}
+
 type RouteConfig struct {
 	Name              string        `json:"name"`
 	IngestionContract string        `json:"ingestionContract"`
@@ -78,18 +90,37 @@ type GlobalConfig struct {
 
 // MessageEnvelope wraps the CSV data in a standard message format
 type MessageEnvelope struct {
-	Domain    string                 `json:"domain"` // e.g., "reference"
-	Entity    string                 `json:"entity"` // e.g., "countries"
-	Timestamp time.Time              `json:"timestamp"`
-	Source    string                 `json:"source"`   // always "csv2json"
-	Contract  string                 `json:"contract"` // ingestion contract
-	Payload   map[string]interface{} `json:"payload"`  // CSV row as JSON
+	Domain     string                 `json:"domain"` // e.g., "reference"
+	Entity     string                 `json:"entity"` // e.g., "countries"
+	Timestamp  time.Time              `json:"timestamp"`
+	Source     string                 `json:"source"`     // always "csv2json"
+	Version    string                 `json:"version"`    // csv2json version
+	Hostname   string                 `json:"hostname"`   // host where csv2json executed
+	SourceFile string                 `json:"sourceFile"` // original CSV filename
+	Contract   string                 `json:"contract"`   // ingestion contract
+	Payload    map[string]interface{} `json:"payload"`    // CSV row as JSON
 }
 
 func main() {
 	globalConfig := loadGlobalConfig()
 
-	log.Printf("csv2json starting")
+	// Setup service-level logging (stdout + file)
+	var serviceLogFile *os.File
+	if globalConfig.EnableFileLogging {
+		serviceLogPath := filepath.Join(filepath.Dir(globalConfig.RoutesConfigPath), "csv2json.log")
+		var err error
+		serviceLogFile, err = os.OpenFile(serviceLogPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+		if err != nil {
+			log.Printf("Warning: Failed to open service log file %s: %v", serviceLogPath, err)
+		} else {
+			// Set default logger to write to both stdout and service log file
+			log.SetOutput(io.MultiWriter(os.Stdout, serviceLogFile))
+			log.Printf("Service logging enabled: %s", serviceLogPath)
+			defer serviceLogFile.Close()
+		}
+	}
+
+	log.Printf("csv2json v%s starting", Version)
 
 	// Check if routes config is specified
 	if globalConfig.RoutesConfigPath != "" {
@@ -465,14 +496,23 @@ func processFileForRoute(filePath string, route RouteConfig, globalConfig Global
 			}
 		}
 
+		// Get hostname
+		hostname, _ := os.Hostname()
+		if hostname == "" {
+			hostname = "unknown"
+		}
+
 		// Wrap in message envelope with ingestion contract
 		envelope := MessageEnvelope{
-			Domain:    route.Domain,
-			Entity:    route.Entity,
-			Timestamp: time.Now().UTC(),
-			Source:    "csv2json",
-			Contract:  route.IngestionContract,
-			Payload:   rowData,
+			Domain:     route.Domain,
+			Entity:     route.Entity,
+			Timestamp:  time.Now().UTC(),
+			Source:     "csv2json",
+			Version:    Version,
+			Hostname:   hostname,
+			SourceFile: filepath.Base(filePath),
+			Contract:   route.IngestionContract,
+			Payload:    rowData,
 		}
 
 		// Marshal to JSON

@@ -60,12 +60,9 @@ services:
       ENABLE_FILE_LOGGING: "true"  # Set to "false" to disable route-specific log files
     volumes:
       # Routes configuration
-      - ./csv2json/routes.json:/app/routes.json:ro
-      # Domain data folders (add more as domains are created)
-      - ./modules/reference/countries/data:/app/data/reference/countries
-      - ./modules/reference/currencies/data:/app/data/reference/currencies
-      # Future domains - uncomment when ready
-      # - ./modules/reference/instruments/data:/app/data/reference/instruments
+      - ./data/routes.json:/app/routes.json:ro
+      # Operational data folder (input, output, logs, archive for all domains)
+      - ./data:/app/data
     depends_on:
       rabbitmq:
         condition: service_healthy

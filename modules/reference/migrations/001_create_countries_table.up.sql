@@ -2,10 +2,10 @@
 -- Creates the reference.countries table following ISO 3166-1 standard
 -- See: https://www.iso.org/glossary-for-iso-3166.html
 
--- Ensure schema exists
+\echo 'Ensuring schema exists: reference'
 CREATE SCHEMA IF NOT EXISTS reference;
 
--- Create enum type for country code status (namespaced to avoid conflicts with other reference tables)
+\echo 'Creating enum type: reference.country_code_status'
 CREATE TYPE reference.country_code_status AS ENUM (
     'officially_assigned',
     'exceptionally_reserved',
@@ -15,7 +15,7 @@ CREATE TYPE reference.country_code_status AS ENUM (
     'unassigned'
 );
 
--- Create countries table
+\echo 'Creating table: reference.countries'
 CREATE TABLE IF NOT EXISTS reference.countries (
     alpha2 CHAR(2) PRIMARY KEY,                          -- ISO 3166-1 alpha-2 (e.g., "US")
     alpha3 CHAR(3) NOT NULL UNIQUE,                      -- ISO 3166-1 alpha-3 (e.g., "USA")
@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS reference.countries (
     CONSTRAINT numeric_format CHECK (numeric ~ '^[0-9]{3}$')  -- Exactly 3 digits
 );
 
+\echo 'Creating indexes for reference.countries'
 -- Indexes for common queries
 -- Note: alpha2 is PRIMARY KEY, so it's automatically indexed (most common lookup)
 CREATE INDEX idx_countries_alpha3 ON reference.countries(alpha3);  -- Secondary lookup by alpha3
@@ -46,7 +47,7 @@ CREATE INDEX idx_countries_name_english ON reference.countries(name_english); --
 CREATE INDEX idx_countries_active ON reference.countries(status, end_date)    -- Active countries filter
     WHERE status = 'officially_assigned' AND end_date IS NULL;
 
--- Function to automatically update updated_at timestamp (only when data actually changes)
+\echo 'Creating function: reference.update_updated_at_column()'
 CREATE OR REPLACE FUNCTION reference.update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -63,13 +64,13 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Trigger to auto-update updated_at
+\echo 'Creating trigger: update_countries_updated_at'
 CREATE TRIGGER update_countries_updated_at
     BEFORE UPDATE ON reference.countries
     FOR EACH ROW
     EXECUTE FUNCTION reference.update_updated_at_column();
 
--- Comments for documentation
+\echo 'Adding table and column comments'
 COMMENT ON TABLE reference.countries IS 'ISO 3166-1 country codes - single source of truth for country reference data';
 COMMENT ON COLUMN reference.countries.alpha2 IS 'Two-letter country code (primary identifier)';
 COMMENT ON COLUMN reference.countries.alpha3 IS 'Three-letter country code';

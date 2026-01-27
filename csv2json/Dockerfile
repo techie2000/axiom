@@ -23,8 +23,15 @@ RUN go mod tidy
 # Copy source from csv2json directory
 COPY csv2json/ .
 
-# Build binary (keep env vars for any missing modules)
-RUN CGO_ENABLED=0 GOOS=linux go build -mod=mod -o csv2json .
+# Set build argument for version (can be overridden at build time)
+ARG VERSION
+ENV VERSION=${VERSION:-unknown}
+
+# Build binary with version injected via ldflags
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -mod=mod \
+    -ldflags "-X main.Version=${VERSION}" \
+    -o csv2json .
 
 # Final stage
 FROM alpine:latest

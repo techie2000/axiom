@@ -2,10 +2,10 @@
 -- Rationale: Track which migrations have been applied to the database
 -- This should be run before all other migrations
 
--- Create schema if it doesn't exist
+\echo 'Creating schema: reference'
 CREATE SCHEMA IF NOT EXISTS reference;
 
--- Create migration tracking table
+\echo 'Creating table: reference.schema_migrations'
 CREATE TABLE IF NOT EXISTS reference.schema_migrations (
     version VARCHAR(255) PRIMARY KEY,
     description VARCHAR(255) NOT NULL,
@@ -16,11 +16,11 @@ CREATE TABLE IF NOT EXISTS reference.schema_migrations (
     CONSTRAINT chk_version_format CHECK (version ~ '^[0-9]{3}_.+$')
 );
 
--- Create index for faster lookups
+\echo 'Creating index: idx_schema_migrations_installed_on'
 CREATE INDEX IF NOT EXISTS idx_schema_migrations_installed_on 
     ON reference.schema_migrations(installed_on DESC);
 
--- Add comment
+\echo 'Adding table and column comments'
 COMMENT ON TABLE reference.schema_migrations IS 
     'Tracks database migrations applied to the reference schema';
 

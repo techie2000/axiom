@@ -6,7 +6,7 @@
       "domain": "reference",
       "entity": "countries",
       "input": {
-        "path": "/app/data/reference/countries/input",
+        "path": "/app/data/input/reference/countries",
         "watchMode": "hybrid",
         "pollIntervalSeconds": 5,
         "hybridPollIntervalSeconds": 60,
@@ -15,16 +15,16 @@
       "output": {
         "type": "both",
         "queueDestination": "axiom.data.exchange",
-        "fileDestination": "/app/data/reference/countries/output",
+        "fileDestination": "/app/data/output/reference/countries",
         "addTimestampSuffix": true
       },
       "archive": {
-        "processedPath": "/app/data/reference/countries/archive/processed",
-        "failedPath": "/app/data/reference/countries/archive/failed",
-        "ignoredPath": "/app/data/reference/countries/archive/ignored"
+        "processedPath": "/app/data/archive/reference/countries/processed",
+        "failedPath": "/app/data/archive/reference/countries/failed",
+        "ignoredPath": "/app/data/archive/reference/countries/ignored"
       },
       "logging": {
-        "logFolder": "/app/data/reference/countries/logs"
+        "logFolder": "/app/data/logs"
       }
     },
     {
@@ -33,7 +33,7 @@
       "domain": "reference",
       "entity": "currencies",
       "input": {
-        "path": "/app/data/reference/currencies/input",
+        "path": "/app/data/input/reference/currencies",
         "watchMode": "hybrid",
         "pollIntervalSeconds": 5,
         "hybridPollIntervalSeconds": 60,
@@ -42,16 +42,16 @@
       "output": {
         "type": "both",
         "queueDestination": "axiom.data.exchange",
-        "fileDestination": "/app/data/reference/currencies/output",
+        "fileDestination": "/app/data/output/reference/currencies",
         "addTimestampSuffix": true
       },
       "archive": {
-        "processedPath": "/app/data/reference/currencies/archive/processed",
-        "failedPath": "/app/data/reference/currencies/archive/failed",
-        "ignoredPath": "/app/data/reference/currencies/archive/ignored"
+        "processedPath": "/app/data/archive/reference/currencies/processed",
+        "failedPath": "/app/data/archive/reference/currencies/failed",
+        "ignoredPath": "/app/data/archive/reference/currencies/ignored"
       },
       "logging": {
-        "logFolder": "/app/data/reference/currencies/logs"
+        "logFolder": "/app/data/logs"
       }
     },
     {
@@ -60,23 +60,25 @@
       "domain": "reference",
       "entity": "instruments",
       "input": {
-        "path": "/app/data/reference/instruments/input",
+        "path": "/app/data/input/reference/instruments",
         "watchMode": "hybrid",
         "pollIntervalSeconds": 5,
         "hybridPollIntervalSeconds": 60,
         "suffixFilter": ".csv"
       },
       "output": {
-        "type": "queue",
-        "destination": "axiom.data.exchange"
+        "type": "both",
+        "queueDestination": "axiom.data.exchange",
+        "fileDestination": "/app/data/output/reference/instruments",
+        "addTimestampSuffix": true
       },
       "archive": {
-        "processedPath": "/app/data/reference/instruments/archive/processed",
-        "failedPath": "/app/data/reference/instruments/archive/failed",
-        "ignoredPath": "/app/data/reference/instruments/archive/ignored"
+        "processedPath": "/app/data/archive/reference/instruments/processed",
+        "failedPath": "/app/data/archive/reference/instruments/failed",
+        "ignoredPath": "/app/data/archive/reference/instruments/ignored"
       },
       "logging": {
-        "logFolder": "/app/data/reference/instruments/logs"
+        "logFolder": "/app/data/logs"
       }
     }
   ]

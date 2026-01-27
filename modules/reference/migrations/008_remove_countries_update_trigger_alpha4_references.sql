@@ -3,6 +3,7 @@
 -- This causes "record 'old' has no field 'alpha4'" errors during UPDATE operations
 -- This updates the update_updated_at_column() function to remove alpha4 from field comparison
 
+\echo 'Updating function: reference.update_updated_at_column() to remove alpha4 references'
 CREATE OR REPLACE FUNCTION reference.update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN

@@ -2,18 +2,19 @@
 -- Adds remarks column and relaxes constraints to support all ISO 3166-1 status types
 -- See ADR-007: Exclude Formerly Used Country Codes
 
--- Add remarks column for status-specific notes
+\echo 'Adding remarks column to reference.countries'
 ALTER TABLE reference.countries 
     ADD COLUMN remarks TEXT;
 
--- Make alpha3 nullable (not required for reserved/unassigned statuses)
+\echo 'Making alpha3 column nullable'
 ALTER TABLE reference.countries 
     ALTER COLUMN alpha3 DROP NOT NULL;
 
--- Make numeric nullable (not required for reserved/unassigned statuses)
+\echo 'Making numeric column nullable'
 ALTER TABLE reference.countries 
     ALTER COLUMN numeric DROP NOT NULL;
 
+\echo 'Making name_english and name_french columns nullable'
 -- Make name_english and name_french nullable (not required for unassigned status)
 -- We'll use CHECK constraints for status-specific requirements
 ALTER TABLE reference.countries 
@@ -22,6 +23,7 @@ ALTER TABLE reference.countries
 ALTER TABLE reference.countries 
     ALTER COLUMN name_french DROP NOT NULL;
 
+\echo 'Dropping UNIQUE constraints on alpha3 and numeric'
 -- Drop UNIQUE constraints on alpha3 and numeric
 -- Multiple unassigned/reserved codes may share NULL values
 -- Note: PostgreSQL considers NULL != NULL, so UNIQUE would allow multiple NULLs anyway,
@@ -32,6 +34,7 @@ ALTER TABLE reference.countries
 ALTER TABLE reference.countries 
     DROP CONSTRAINT IF EXISTS countries_numeric_key;
 
+\echo 'Creating partial UNIQUE indexes for alpha3 and numeric'
 -- Add partial UNIQUE indexes (only for non-NULL values)
 -- This prevents duplicate alpha3/numeric for officially_assigned codes
 -- while allowing multiple NULL values for unassigned codes
@@ -43,6 +46,7 @@ CREATE UNIQUE INDEX idx_countries_numeric_unique
     ON reference.countries(numeric) 
     WHERE numeric IS NOT NULL;
 
+\echo 'Adding CHECK constraints for status-specific business rules'
 -- Add CHECK constraints for status-specific business rules
 -- These enforce the validation rules from ADR-007
 

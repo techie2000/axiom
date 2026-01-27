@@ -43,8 +43,11 @@ In [routes.json](../../../csv2json/routes.json):
   {
     "domain": "reference",
     "entity": "currencies",
-    "timestamp": "2026-01-27T15:32:29.843752015Z",
+    "timestamp": "2026-01-27T16:47:22.291275548Z",
     "source": "csv2json",
+    "version": "0.1.0",
+    "hostname": "20f780abfb93",
+    "sourceFile": "currencies.csv",
     "contract": "reference.currencies.csv.v1",
     "payload": {
       "code": "USD",
@@ -62,7 +65,16 @@ In [routes.json](../../../csv2json/routes.json):
 
 - **Format**: JSON array with comma-separated objects
 - **Indentation**: 2 spaces for readability
-- **Content**: Complete message envelope (domain, entity, timestamp, source, contract, payload)
+- **Envelope Fields**:
+  - `domain`: Domain name (e.g., "reference", "trading")
+  - `entity`: Entity name (e.g., "countries", "currencies")
+  - `timestamp`: ISO 8601 UTC timestamp when record was processed
+  - `source`: Always "csv2json"
+  - `version`: csv2json version number (e.g., "1.0.0")
+  - `hostname`: Container/host where csv2json executed
+  - `sourceFile`: Original CSV filename (for traceability)
+  - `contract`: Ingestion contract version
+  - `payload`: CSV row data as JSON object
 
 ## Filename Patterns
 

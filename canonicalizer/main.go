@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/signal"
@@ -18,6 +19,18 @@ import (
 	"github.com/techie2000/axiom/modules/reference/countries/pkg/repository"
 	"github.com/techie2000/axiom/modules/reference/countries/pkg/transform"
 )
+
+// Version is set at build time via ldflags or read from VERSION file
+var Version = "dev"
+
+func init() {
+	// If version wasn't set at build time, try to read from VERSION file
+	if Version == "dev" {
+		if versionBytes, err := os.ReadFile("VERSION"); err == nil {
+			Version = strings.TrimSpace(string(versionBytes))
+		}
+	}
+}
 
 // Config holds canonicalizer configuration
 type Config struct {
@@ -36,6 +49,10 @@ type Config struct {
 	RabbitMQPassword string
 	RabbitMQVHost    string
 	RabbitMQExchange string
+
+	// Logging
+	EnableFileLogging bool
+	LogFilePath       string
 }
 
 // MessageEnvelope represents the message from csv2json
@@ -48,10 +65,25 @@ type MessageEnvelope struct {
 }
 
 func main() {
-	log.Println("Canonicalizer starting...")
-
 	// Load configuration
 	config := loadConfig()
+
+	// Setup service-level logging (stdout + file)
+	var serviceLogFile *os.File
+	if config.EnableFileLogging {
+		var err error
+		serviceLogFile, err = os.OpenFile(config.LogFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+		if err != nil {
+			log.Printf("Warning: Failed to open service log file %s: %v", config.LogFilePath, err)
+		} else {
+			// Set default logger to write to both stdout and service log file
+			log.SetOutput(io.MultiWriter(os.Stdout, serviceLogFile))
+			log.Printf("Service logging enabled: %s", config.LogFilePath)
+			defer serviceLogFile.Close()
+		}
+	}
+
+	log.Printf("Canonicalizer v%s starting...", Version)
 
 	// Connect to PostgreSQL
 	db, err := connectDB(config)
@@ -299,19 +331,24 @@ func processMessage(ctx context.Context, body []byte, repo *repository.CountryRe
 }
 
 func loadConfig() Config {
+	enableFileLogging := getEnv("ENABLE_FILE_LOGGING", "true") == "true"
+	logFilePath := getEnv("LOG_FILE_PATH", "./data/canonicalizer.log")
+
 	return Config{
-		DBHost:           getEnv("DB_HOST", "localhost"),
-		DBPort:           getEnv("DB_PORT", "5432"),
-		DBName:           getEnv("DB_NAME", "axiom_db"),
-		DBUser:           getEnv("DB_USER", "axiom"),
-		DBPassword:       getEnv("DB_PASSWORD", "changeme"),
-		DBSSLMode:        getEnv("DB_SSLMODE", "disable"),
-		RabbitMQHost:     getEnv("RABBITMQ_HOST", "localhost"),
-		RabbitMQPort:     getEnv("RABBITMQ_PORT", "5672"),
-		RabbitMQUser:     getEnv("RABBITMQ_USER", "axiom"),
-		RabbitMQPassword: getEnv("RABBITMQ_PASSWORD", "changeme"),
-		RabbitMQVHost:    getEnv("RABBITMQ_VHOST", "/axiom"),
-		RabbitMQExchange: getEnv("RABBITMQ_EXCHANGE", "axiom.data.exchange"),
+		DBHost:            getEnv("DB_HOST", "localhost"),
+		DBPort:            getEnv("DB_PORT", "5432"),
+		DBName:            getEnv("DB_NAME", "axiom_db"),
+		DBUser:            getEnv("DB_USER", "axiom"),
+		DBPassword:        getEnv("DB_PASSWORD", "changeme"),
+		DBSSLMode:         getEnv("DB_SSLMODE", "disable"),
+		RabbitMQHost:      getEnv("RABBITMQ_HOST", "localhost"),
+		RabbitMQPort:      getEnv("RABBITMQ_PORT", "5672"),
+		RabbitMQUser:      getEnv("RABBITMQ_USER", "axiom"),
+		RabbitMQPassword:  getEnv("RABBITMQ_PASSWORD", "changeme"),
+		RabbitMQVHost:     getEnv("RABBITMQ_VHOST", "/axiom"),
+		RabbitMQExchange:  getEnv("RABBITMQ_EXCHANGE", "axiom.data.exchange"),
+		EnableFileLogging: enableFileLogging,
+		LogFilePath:       logFilePath,
 	}
 }
 

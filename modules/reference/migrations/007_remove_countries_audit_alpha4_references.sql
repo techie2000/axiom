@@ -2,6 +2,7 @@
 -- Rationale: alpha4 column removed in migration 006, but audit trigger still references it
 -- This updates the audit_countries_changes() function to remove all alpha4 references
 
+\echo 'Updating function: reference.audit_countries_changes() to remove alpha4 references'
 CREATE OR REPLACE FUNCTION reference.audit_countries_changes()
 RETURNS TRIGGER AS $$
 DECLARE

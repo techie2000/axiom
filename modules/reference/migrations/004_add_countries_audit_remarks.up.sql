@@ -2,11 +2,11 @@
 -- Adds remarks column to the audit table to match the countries table schema
 -- Must be run after 003_add_remarks_and_relax_constraints.up.sql
 
--- Add remarks column to audit table
+\echo 'Adding remarks column to reference.countries_audit'
 ALTER TABLE reference.countries_audit 
     ADD COLUMN remarks TEXT;
 
--- Update the audit trigger function to include remarks
+\echo 'Updating function: reference.audit_countries_changes() to include remarks'
 CREATE OR REPLACE FUNCTION reference.audit_countries_changes()
 RETURNS TRIGGER AS $$
 DECLARE
