@@ -91,8 +91,12 @@ services:
       RABBITMQ_PASSWORD: changeme
       RABBITMQ_VHOST: /axiom
       RABBITMQ_EXCHANGE: axiom.data.exchange
-      # Service
+      # Logging
       LOG_LEVEL: info
+      ENABLE_FILE_LOGGING: "true"  # Set to "false" to disable service log file
+      LOG_FILE_PATH: /app/data/logs/canonicalizer.log
+    volumes:
+      - ./data:/app/data
     depends_on:
       postgres:
         condition: service_healthy

@@ -140,13 +140,13 @@ func main() {
 	// Declare Dead Letter Exchange (DLX)
 	dlxName := "axiom.data.dlx"
 	err = channel.ExchangeDeclare(
-		dlxName,  // name
-		"topic",  // type
-		true,     // durable
-		false,    // auto-deleted
-		false,    // internal
-		false,    // no-wait
-		nil,      // arguments
+		dlxName, // name
+		"topic", // type
+		true,    // durable
+		false,   // auto-deleted
+		false,   // internal
+		false,   // no-wait
+		nil,     // arguments
 	)
 	if err != nil {
 		log.Fatalf("Failed to declare DLX: %v", err)
@@ -169,9 +169,9 @@ func main() {
 
 	// Bind DLQ to DLX
 	err = channel.QueueBind(
-		dlqQueue.Name,       // queue name
+		dlqQueue.Name,         // queue name
 		"reference.countries", // routing key (must match the x-dead-letter-routing-key)
-		dlxName,             // exchange (the DLX)
+		dlxName,               // exchange (the DLX)
 		false,
 		nil,
 	)
