@@ -23,6 +23,36 @@ import (
 // Version is set at build time via ldflags or read from VERSION file
 var Version = "dev"
 
+// Log level constants
+type LogLevel string
+
+const (
+	LogLevelINFO  LogLevel = "INFO"
+	LogLevelWARN  LogLevel = "WARN"
+	LogLevelERROR LogLevel = "ERROR"
+)
+
+// logWithLevel logs a message with severity level
+func logWithLevel(level LogLevel, format string, args ...interface{}) {
+	msg := fmt.Sprintf(format, args...)
+	log.Printf("%s: %s", level, msg)
+}
+
+// logInfo logs an informational message
+func logInfo(format string, args ...interface{}) {
+	logWithLevel(LogLevelINFO, format, args...)
+}
+
+// logWarn logs a warning message
+func logWarn(format string, args ...interface{}) {
+	logWithLevel(LogLevelWARN, format, args...)
+}
+
+// logError logs an error message
+func logError(format string, args ...interface{}) {
+	logWithLevel(LogLevelERROR, format, args...)
+}
+
 func init() {
 	// If version wasn't set at build time, try to read from VERSION file
 	if Version == "dev" {
@@ -74,16 +104,16 @@ func main() {
 		var err error
 		serviceLogFile, err = os.OpenFile(config.LogFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 		if err != nil {
-			log.Printf("Warning: Failed to open service log file %s: %v", config.LogFilePath, err)
+			log.Printf("WARN: Failed to open service log file %s: %v", config.LogFilePath, err)
 		} else {
 			// Set default logger to write to both stdout and service log file
 			log.SetOutput(io.MultiWriter(os.Stdout, serviceLogFile))
-			log.Printf("Service logging enabled: %s", config.LogFilePath)
+			logInfo("Service logging enabled: %s", config.LogFilePath)
 			defer serviceLogFile.Close()
 		}
 	}
 
-	log.Printf("Canonicalizer v%s starting...", Version)
+	logInfo("Canonicalizer v%s starting...", Version)
 
 	// Connect to PostgreSQL
 	db, err := connectDB(config)
@@ -92,7 +122,7 @@ func main() {
 	}
 	defer db.Close()
 
-	log.Println("✓ Connected to PostgreSQL")
+	logInfo("✓ Connected to PostgreSQL")
 
 	// Connect to RabbitMQ
 	// RabbitMQ vhost encoding: vhost "/axiom" must become "/%2Faxiom" in the URL
@@ -121,7 +151,7 @@ func main() {
 	}
 	defer channel.Close()
 
-	log.Println("✓ Connected to RabbitMQ")
+	logInfo("✓ Connected to RabbitMQ")
 
 	// Declare main exchange (idempotent)
 	err = channel.ExchangeDeclare(
@@ -151,7 +181,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to declare DLX: %v", err)
 	}
-	log.Printf("✓ Dead Letter Exchange '%s' declared", dlxName)
+	logInfo("✓ Dead Letter Exchange '%s' declared", dlxName)
 
 	// Declare Dead Letter Queue (DLQ) for countries
 	dlqName := "axiom.reference.countries.dlq"
@@ -178,7 +208,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to bind DLQ to DLX: %v", err)
 	}
-	log.Printf("✓ Dead Letter Queue '%s' bound to DLX with routing key 'reference.countries'", dlqName)
+	logInfo("✓ Dead Letter Queue '%s' bound to DLX with routing key 'reference.countries'", dlqName)
 
 	// Declare queue for countries with DLX
 	queueName := "axiom.reference.countries"
@@ -210,7 +240,7 @@ func main() {
 		log.Fatalf("Failed to bind queue: %v", err)
 	}
 
-	log.Printf("✓ Queue '%s' bound to exchange '%s' with routing key 'reference.countries'",
+	logInfo("✓ Queue '%s' bound to exchange '%s' with routing key 'reference.countries'",
 		queueName, config.RabbitMQExchange)
 
 	// Set QoS
@@ -237,7 +267,7 @@ func main() {
 		log.Fatalf("Failed to register consumer: %v", err)
 	}
 
-	log.Println("✓ Canonicalizer ready - waiting for messages...")
+	logInfo("✓ Canonicalizer ready - waiting for messages...")
 
 	// Create repository
 	repo := repository.NewCountryRepository(db)
@@ -251,7 +281,7 @@ func main() {
 
 	go func() {
 		<-sigChan
-		log.Println("Shutdown signal received, stopping...")
+		logInfo("Shutdown signal received, stopping...")
 		cancel()
 	}()
 
@@ -263,12 +293,12 @@ func main() {
 	for {
 		select {
 		case <-ctx.Done():
-			log.Printf("Shutting down - processed: %d, skipped: %d, rejected: %d", processedCount, skippedCount, rejectedCount)
+			logInfo("Shutting down - processed: %d, skipped: %d, rejected: %d", processedCount, skippedCount, rejectedCount)
 			return
 
 		case msg, ok := <-msgs:
 			if !ok {
-				log.Println("Channel closed")
+				logInfo("Channel closed")
 				return
 			}
 
@@ -296,24 +326,24 @@ func main() {
 					},
 				)
 				if err != nil {
-					log.Printf("Failed to publish to DLQ: %v", err)
+					logError("Failed to publish to DLQ: %v", err)
 					msg.Nack(false, true) // Requeue on publish failure
 				} else {
-					log.Printf("✗ Rejected: %v", result.Error)
+					logError("✗ Rejected: %v", result.Error)
 					msg.Ack(false) // Ack original message after successful DLQ publish
 				}
 				rejectedCount++
 			} else if result.Skipped {
 				msg.Ack(false) // Ack skipped messages (not errors)
 				skippedCount++
-				log.Printf("⊘ Skipped: %s - %s", result.Alpha2, result.SkipReason)
+				logWarn("⊘ Skipped: %s - %s", result.Alpha2, result.SkipReason)
 			} else {
 				msg.Ack(false)
 				processedCount++
 			}
 
 			if (processedCount+skippedCount)%10 == 0 && (processedCount+skippedCount) > 0 {
-				log.Printf("Progress: processed=%d, skipped=%d, rejected=%d", processedCount, skippedCount, rejectedCount)
+				logInfo("Progress: processed=%d, skipped=%d, rejected=%d", processedCount, skippedCount, rejectedCount)
 			}
 		}
 	}
@@ -361,7 +391,7 @@ func processMessage(ctx context.Context, body []byte, repo *repository.CountryRe
 
 	// Set audit trail context (source tracking for provenance)
 	if _, err := repo.SetAuditContext(ctx, envelope.Source, "canonicalizer"); err != nil {
-		log.Printf("Warning: Failed to set audit context: %v", err)
+		logWarn("Failed to set audit context: %v", err)
 	}
 
 	// Upsert to database
@@ -369,7 +399,7 @@ func processMessage(ctx context.Context, body []byte, repo *repository.CountryRe
 		return ProcessResult{Error: fmt.Errorf("database upsert failed: %w", err)}
 	}
 
-	log.Printf("✓ Processed: %s (%s)", country.Alpha2, country.NameEnglish)
+	logInfo("✓ Processed: %s (%s)", country.Alpha2, country.NameEnglish)
 	return ProcessResult{}
 }
 
