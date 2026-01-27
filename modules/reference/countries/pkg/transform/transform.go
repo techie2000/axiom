@@ -1,0 +1,159 @@
+package transform
+
+import (
+	"fmt"
+	"strings"
+	"time"
+
+	"github.com/techie2000/axiom/modules/reference/countries/internal/model"
+)
+
+// RawCountryData represents the raw input from csv2json (before canonicalization)
+type RawCountryData struct {
+	EnglishShortName string `json:"English short name"`
+	FrenchShortName  string `json:"French short name"`
+	Alpha2Code       string `json:"Alpha-2 code"`
+	Alpha3Code       string `json:"Alpha-3 code"`
+	Numeric          string `json:"Numeric"`
+	Status           string `json:"status"`
+	StartDate        string `json:"start_date,omitempty"`
+	EndDate          string `json:"end_date,omitempty"`
+}
+
+// ValidStatuses defines the allowed status values per ISO 3166-1
+var ValidStatuses = map[string]model.CodeStatus{
+	"officially_assigned":      model.StatusOfficiallyAssigned,
+	"exceptionally_reserved":   model.StatusExceptionallyReserved,
+	"transitionally_reserved":  model.StatusTransitionallyReserved,
+	"indeterminately_reserved": model.StatusIndeterminatelyReserved,
+	"formerly_used":            model.StatusFormerlyUsed,
+	"unassigned":               model.StatusUnassigned,
+}
+
+// TransformToCountry applies all canonicalizer transformation rules
+// This is where ALL business rules are implemented
+func TransformToCountry(raw RawCountryData) (*model.Country, error) {
+	// 1. Validate required fields
+	if err := validateRequired(raw); err != nil {
+		return nil, err
+	}
+
+	// 2. Transform numeric code (pad to 3 digits)
+	numeric, err := transformNumericCode(raw.Numeric)
+	if err != nil {
+		return nil, err
+	}
+
+	// 3. Normalize country codes (uppercase)
+	alpha2 := strings.ToUpper(strings.TrimSpace(raw.Alpha2Code))
+	alpha3 := strings.ToUpper(strings.TrimSpace(raw.Alpha3Code))
+
+	// 4. Trim and clean names
+	nameEnglish := strings.TrimSpace(raw.EnglishShortName)
+	nameFrench := strings.TrimSpace(raw.FrenchShortName)
+
+	// 5. Validate and normalize status
+	status, err := validateStatus(raw.Status)
+	if err != nil {
+		return nil, err
+	}
+
+	// 6. Parse dates (if provided)
+	var startDate, endDate *time.Time
+	if raw.StartDate != "" {
+		sd, err := parseDate(raw.StartDate)
+		if err != nil {
+			return nil, fmt.Errorf("invalid start_date: %w", err)
+		}
+		startDate = &sd
+	}
+	if raw.EndDate != "" {
+		ed, err := parseDate(raw.EndDate)
+		if err != nil {
+			return nil, fmt.Errorf("invalid end_date: %w", err)
+		}
+		endDate = &ed
+	}
+
+	return &model.Country{
+		Alpha2:      alpha2,
+		Alpha3:      alpha3,
+		Numeric:     numeric,
+		NameEnglish: nameEnglish,
+		NameFrench:  nameFrench,
+		Status:      status,
+		StartDate:   startDate,
+		EndDate:     endDate,
+	}, nil
+}
+
+// validateRequired checks that all required fields are present
+func validateRequired(raw RawCountryData) error {
+	if strings.TrimSpace(raw.Alpha2Code) == "" {
+		return fmt.Errorf("alpha2 code is required")
+	}
+	if strings.TrimSpace(raw.Alpha3Code) == "" {
+		return fmt.Errorf("alpha3 code is required")
+	}
+	if strings.TrimSpace(raw.Numeric) == "" {
+		return fmt.Errorf("numeric code is required")
+	}
+	if strings.TrimSpace(raw.EnglishShortName) == "" {
+		return fmt.Errorf("english name is required")
+	}
+	if strings.TrimSpace(raw.FrenchShortName) == "" {
+		return fmt.Errorf("french name is required")
+	}
+	if strings.TrimSpace(raw.Status) == "" {
+		return fmt.Errorf("status is required (cannot default missing data)")
+	}
+	return nil
+}
+
+// transformNumericCode pads numeric codes to 3 digits with leading zeros
+// Examples: "4" -> "004", "840" -> "840"
+func transformNumericCode(numeric string) (string, error) {
+	trimmed := strings.TrimSpace(numeric)
+	if trimmed == "" {
+		return "", fmt.Errorf("numeric code cannot be empty")
+	}
+
+	// Validate it's only digits
+	for _, char := range trimmed {
+		if char < '0' || char > '9' {
+			return "", fmt.Errorf("numeric code must contain only digits: %s", trimmed)
+		}
+	}
+
+	// Pad to 3 digits
+	if len(trimmed) > 3 {
+		return "", fmt.Errorf("numeric code cannot exceed 3 digits: %s", trimmed)
+	}
+
+	return fmt.Sprintf("%03s", trimmed), nil
+}
+
+// validateStatus checks if the status is valid and returns the normalized enum value
+// Supports aliases: converts spaces to underscores ("officially assigned" → "officially_assigned")
+func validateStatus(status string) (model.CodeStatus, error) {
+	normalized := strings.ToLower(strings.TrimSpace(status))
+
+	if normalized == "" {
+		return "", fmt.Errorf("status is required (cannot default missing data)")
+	}
+
+	// Transform format: replace spaces with underscores (alias support)
+	normalized = strings.ReplaceAll(normalized, " ", "_")
+
+	validStatus, ok := ValidStatuses[normalized]
+	if !ok {
+		return "", fmt.Errorf("invalid status: %s (must be one of: officially_assigned, exceptionally_reserved, transitionally_reserved, indeterminately_reserved, formerly_used, unassigned)", status)
+	}
+
+	return validStatus, nil
+}
+
+// parseDate parses ISO 8601 date format (YYYY-MM-DD)
+func parseDate(dateStr string) (time.Time, error) {
+	return time.Parse("2006-01-02", strings.TrimSpace(dateStr))
+}

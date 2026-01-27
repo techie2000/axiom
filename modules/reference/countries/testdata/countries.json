@@ -1,0 +1,31 @@
+{
+  "domain": "reference",
+  "entity": "countries",
+  "data": [
+    {"alpha2": "AF", "alpha3": "AFG", "numeric": "004", "name_english": "Afghanistan", "name_french": "Afghanistan (l')", "status": "officially_assigned"},
+    {"alpha2": "AL", "alpha3": "ALB", "numeric": "008", "name_english": "Albania", "name_french": "Albanie (l')", "status": "officially_assigned"},
+    {"alpha2": "DZ", "alpha3": "DZA", "numeric": "012", "name_english": "Algeria", "name_french": "Algérie (l')", "status": "officially_assigned"},
+    {"alpha2": "AS", "alpha3": "ASM", "numeric": "016", "name_english": "American Samoa", "name_french": "Samoa américaines (les)", "status": "officially_assigned"},
+    {"alpha2": "AD", "alpha3": "AND", "numeric": "020", "name_english": "Andorra", "name_french": "Andorre (l')", "status": "officially_assigned"},
+    {"alpha2": "AO", "alpha3": "AGO", "numeric": "024", "name_english": "Angola", "name_french": "Angola (l')", "status": "officially_assigned"},
+    {"alpha2": "AI", "alpha3": "AIA", "numeric": "660", "name_english": "Anguilla", "name_french": "Anguilla", "status": "officially_assigned"},
+    {"alpha2": "AQ", "alpha3": "ATA", "numeric": "010", "name_english": "Antarctica", "name_french": "Antarctique (l')", "status": "officially_assigned"},
+    {"alpha2": "AG", "alpha3": "ATG", "numeric": "028", "name_english": "Antigua and Barbuda", "name_french": "Antigua-et-Barbuda", "status": "officially_assigned"},
+    {"alpha2": "AR", "alpha3": "ARG", "numeric": "032", "name_english": "Argentina", "name_french": "Argentine (l')", "status": "officially_assigned"},
+    {"alpha2": "AM", "alpha3": "ARM", "numeric": "051", "name_english": "Armenia", "name_french": "Arménie (l')", "status": "officially_assigned"},
+    {"alpha2": "AW", "alpha3": "ABW", "numeric": "533", "name_english": "Aruba", "name_french": "Aruba", "status": "officially_assigned"},
+    {"alpha2": "AU", "alpha3": "AUS", "numeric": "036", "name_english": "Australia", "name_french": "Australie (l')", "status": "officially_assigned"},
+    {"alpha2": "AT", "alpha3": "AUT", "numeric": "040", "name_english": "Austria", "name_french": "Autriche (l')", "status": "officially_assigned"},
+    {"alpha2": "AZ", "alpha3": "AZE", "numeric": "031", "name_english": "Azerbaijan", "name_french": "Azerbaïdjan (l')", "status": "officially_assigned"},
+    {"alpha2": "BS", "alpha3": "BHS", "numeric": "044", "name_english": "Bahamas (The)", "name_french": "Bahamas (Les)", "status": "officially_assigned"},
+    {"alpha2": "BH", "alpha3": "BHR", "numeric": "048", "name_english": "Bahrain", "name_french": "Bahreïn", "status": "officially_assigned"},
+    {"alpha2": "BD", "alpha3": "BGD", "numeric": "050", "name_english": "Bangladesh", "name_french": "Bangladesh (le)", "status": "officially_assigned"},
+    {"alpha2": "BB", "alpha3": "BRB", "numeric": "052", "name_english": "Barbados", "name_french": "Barbade (la)", "status": "officially_assigned"},
+    {"alpha2": "BY", "alpha3": "BLR", "numeric": "112", "name_english": "Belarus", "name_french": "Bélarus (le)", "status": "officially_assigned"},
+    {"alpha2": "BE", "alpha3": "BEL", "numeric": "056", "name_english": "Belgium", "name_french": "Belgique (la)", "status": "officially_assigned"},
+    {"alpha2": "BZ", "alpha3": "BLZ", "numeric": "084", "name_english": "Belize", "name_french": "Belize (le)", "status": "officially_assigned"},
+    {"alpha2": "BJ", "alpha3": "BEN", "numeric": "204", "name_english": "Benin", "name_french": "Bénin (le)", "status": "officially_assigned"},
+    {"alpha2": "BM", "alpha3": "BMU", "numeric": "060", "name_english": "Bermuda", "name_french": "Bermudes (les)", "status": "officially_assigned"},
+    {"alpha2": "AX", "alpha3": "ALA", "numeric": "248", "name_english": "Åland Islands", "name_french": "Åland(les Îles)", "status": "officially_assigned"}
+  ]
+}

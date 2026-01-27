@@ -1,0 +1,106 @@
+# Docker Compose for Axiom Development Environment
+# Complete pipeline: CSV → csv2json → RabbitMQ → canonicalizer → PostgreSQL → Countries Service
+
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: axiom-postgres
+    environment:
+      POSTGRES_USER: axiom
+      POSTGRES_PASSWORD: changeme
+      POSTGRES_DB: axiom_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./modules/reference/countries/migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U axiom -d axiom_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - axiom-network
+
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: axiom-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: axiom
+      RABBITMQ_DEFAULT_PASS: changeme
+      RABBITMQ_DEFAULT_VHOST: /axiom
+    ports:
+      - "5672:5672"   # AMQP port
+      - "15672:15672" # Management UI
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+      - ./rabbitmq-init.sh:/docker-entrypoint-initdb.d/init.sh:ro
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - axiom-network
+
+  # CSV to JSON converter - processes CSV files and publishes to RabbitMQ
+  csv2json:
+    build:
+      context: .
+      dockerfile: csv2json/Dockerfile
+    container_name: axiom-csv2json
+    environment:
+      RABBITMQ_URL: amqp://axiom:changeme@rabbitmq:5672/axiom
+      RABBITMQ_EXCHANGE: axiom.data.exchange
+    volumes:
+      - ./modules/reference/countries/data:/data:ro  # Mount CSV files
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - axiom-network
+    # Run once to process CSV files, then exit
+    command: ["--input", "/data/countries.csv", "--domain", "reference", "--entity", "countries"]
+    restart: "no"
+
+  # Canonicalizer - standardizes data from csv2json and writes to PostgreSQL
+  canonicalizer:
+    build:
+      context: .
+      dockerfile: canonicalizer/Dockerfile
+    container_name: axiom-canonicalizer
+    environment:
+      # Database
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: axiom_db
+      DB_USER: axiom
+      DB_PASSWORD: changeme
+      DB_SSLMODE: disable
+      # RabbitMQ
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: axiom
+      RABBITMQ_PASSWORD: changeme
+      RABBITMQ_VHOST: /axiom
+      RABBITMQ_EXCHANGE: axiom.data.exchange
+      # Service
+      LOG_LEVEL: info
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - axiom-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  rabbitmq_data:
+
+networks:
+  axiom-network:
+    driver: bridge

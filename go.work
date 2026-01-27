@@ -1,0 +1,7 @@
+go 1.21
+
+use (
+	./modules/reference/countries
+	./csv2json
+	./canonicalizer
+)

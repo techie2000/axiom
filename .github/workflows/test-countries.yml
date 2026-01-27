@@ -1,0 +1,229 @@
+name: CI - Countries Module
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'modules/reference/countries/**'
+      - 'csv2json/**'
+      - 'canonicalizer/**'
+      - '.github/workflows/test-countries.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'modules/reference/countries/**'
+      - 'csv2json/**'
+      - 'canonicalizer/**'
+
+jobs:
+  test-transform-logic:
+    name: Test Transformation Rules
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+          cache-dependency-path: modules/reference/countries/go.sum
+      
+      - name: Run unit tests
+        working-directory: modules/reference/countries
+        run: |
+          go test ./internal/transform -v -cover -race
+          go test ./internal/transform -coverprofile=coverage.out
+      
+      - name: Check coverage
+        working-directory: modules/reference/countries
+        run: |
+          coverage=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
+          echo "Coverage: $coverage%"
+          if (( $(echo "$coverage < 90" | bc -l) )); then
+            echo "❌ Coverage below 90%"
+            exit 1
+          fi
+          echo "✅ Coverage meets requirement (>90%)"
+      
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./modules/reference/countries/coverage.out
+          flags: transform-logic
+          name: transform-coverage
+
+  test-repository:
+    name: Test Database Operations
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: axiom
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: axiom_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+          cache-dependency-path: modules/reference/countries/go.sum
+      
+      - name: Run migrations
+        run: |
+          PGPASSWORD=testpass psql -h localhost -U axiom -d axiom_test -f modules/reference/countries/migrations/001_create_countries_table.up.sql
+      
+      - name: Run integration tests
+        working-directory: modules/reference/countries
+        env:
+          DATABASE_URL: postgres://axiom:testpass@localhost:5432/axiom_test?sslmode=disable
+        run: go test ./internal/repository -v
+
+  build-services:
+    name: Build Services
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        service: [csv2json, canonicalizer]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+      
+      - name: Build ${{ matrix.service }}
+        working-directory: ${{ matrix.service }}
+        run: |
+          go mod download
+          go build -v .
+      
+      - name: Test build
+        working-directory: ${{ matrix.service }}
+        run: go build -o /tmp/${{ matrix.service }} .
+
+  e2e-pipeline-test:
+    name: End-to-End Pipeline Test
+    runs-on: ubuntu-latest
+    needs: [test-transform-logic, build-services]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Start infrastructure
+        run: |
+          docker-compose up -d postgres rabbitmq
+          sleep 10
+      
+      - name: Run migrations
+        run: |
+          docker exec axiom-postgres psql -U axiom -d axiom_db -f /docker-entrypoint-initdb.d/001_create_countries_table.up.sql
+      
+      - name: Build and run csv2json
+        run: |
+          docker-compose build csv2json
+          docker-compose up csv2json
+      
+      - name: Verify messages in RabbitMQ
+        run: |
+          sleep 5
+          messages=$(docker exec axiom-rabbitmq rabbitmqctl list_queues -p /axiom name messages | grep axiom.reference.countries | awk '{print $2}')
+          echo "Messages in queue: $messages"
+          if [ "$messages" -eq "0" ]; then
+            echo "❌ No messages in queue"
+            exit 1
+          fi
+          echo "✅ Messages queued: $messages"
+      
+      - name: Build and run canonicalizer
+        run: |
+          docker-compose build canonicalizer
+          docker-compose up -d canonicalizer
+          sleep 15
+      
+      - name: Verify data in PostgreSQL
+        run: |
+          count=$(docker exec axiom-postgres psql -U axiom -d axiom_db -t -c "SELECT COUNT(*) FROM reference.countries;")
+          echo "Countries in database: $count"
+          if [ "$count" -eq "0" ]; then
+            echo "❌ No data in database"
+            docker-compose logs canonicalizer
+            exit 1
+          fi
+          echo "✅ Countries loaded: $count"
+      
+      - name: Verify transformations
+        run: |
+          # Check Afghanistan has padded numeric
+          result=$(docker exec axiom-postgres psql -U axiom -d axiom_db -t -c "SELECT numeric FROM reference.countries WHERE alpha2 = 'AF';")
+          if [[ ! "$result" =~ "004" ]]; then
+            echo "❌ Numeric padding failed"
+            exit 1
+          fi
+          echo "✅ Numeric padding verified: '4' → '004'"
+          
+          # Check uppercase transformation
+          alpha2=$(docker exec axiom-postgres psql -U axiom -d axiom_db -t -c "SELECT alpha2 FROM reference.countries WHERE alpha2 = 'AF';")
+          if [[ ! "$alpha2" =~ "AF" ]]; then
+            echo "❌ Uppercase transformation failed"
+            exit 1
+          fi
+          echo "✅ Uppercase transformation verified"
+      
+      - name: Show logs on failure
+        if: failure()
+        run: |
+          echo "=== PostgreSQL Logs ==="
+          docker-compose logs postgres
+          echo "=== RabbitMQ Logs ==="
+          docker-compose logs rabbitmq
+          echo "=== csv2json Logs ==="
+          docker-compose logs csv2json
+          echo "=== canonicalizer Logs ==="
+          docker-compose logs canonicalizer
+      
+      - name: Cleanup
+        if: always()
+        run: docker-compose down -v
+
+  lint:
+    name: Lint Code
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+      
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v4
+        with:
+          version: latest
+          working-directory: modules/reference/countries
+          args: --timeout=5m
