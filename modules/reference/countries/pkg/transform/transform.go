@@ -128,13 +128,19 @@ func validateStatusSpecificFields(status model.CodeStatus, alpha2, alpha3, numer
 			return fmt.Errorf("name_french is required for officially_assigned status")
 		}
 
-	case model.StatusExceptionallyReserved, model.StatusIndeterminatelyReserved:
+	case model.StatusExceptionallyReserved:
+		// Required: alpha2, remarks (name_english is optional)
+		if remarks == "" {
+			return fmt.Errorf("remarks is required for exceptionally_reserved status (must explain reservation)")
+		}
+
+	case model.StatusIndeterminatelyReserved:
 		// Required: alpha2, name_english, remarks
 		if nameEnglish == "" {
-			return fmt.Errorf("name_english is required for %s status", status)
+			return fmt.Errorf("name_english is required for indeterminately_reserved status")
 		}
 		if remarks == "" {
-			return fmt.Errorf("remarks is required for %s status (must explain reservation)", status)
+			return fmt.Errorf("remarks is required for indeterminately_reserved status (must explain reservation)")
 		}
 
 	case model.StatusTransitionallyReserved:
