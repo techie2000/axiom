@@ -261,11 +261,11 @@ func TestTransformToCountry_FormerlyUsed(t *testing.T) {
 				Alpha2Code:       "GE",
 				Alpha3Code:       "GEL",
 
-				Numeric:          "296",
-				Status:           "formerly_used",
-				StartDate:        "1974-01-01",
-				EndDate:          "1979-12-31",
-				Remarks:          "Code reassigned to Georgia.",
+				Numeric:   "296",
+				Status:    "formerly_used",
+				StartDate: "1974-01-01",
+				EndDate:   "1979-12-31",
+				Remarks:   "Code reassigned to Georgia.",
 			},
 		},
 		{
@@ -276,11 +276,11 @@ func TestTransformToCountry_FormerlyUsed(t *testing.T) {
 				Alpha2Code:       "YU",
 				Alpha3Code:       "YUG",
 
-				Numeric:          "891",
-				Status:           "formerly_used",
-				StartDate:        "1974-01-01",
-				EndDate:          "2003-07-14",
-				Remarks:          "Country dissolved.",
+				Numeric:   "891",
+				Status:    "formerly_used",
+				StartDate: "1974-01-01",
+				EndDate:   "2003-07-14",
+				Remarks:   "Country dissolved.",
 			},
 		},
 	}

@@ -1,8 +1,6 @@
 # Docker Compose for Axiom Development Environment
 # Complete pipeline: CSV → csv2json → RabbitMQ → canonicalizer → PostgreSQL → Countries Service
 
-version: '3.8'
-
 services:
   postgres:
     image: postgres:15-alpine
@@ -45,25 +43,35 @@ services:
     networks:
       - axiom-network
 
-  # CSV to JSON converter - processes CSV files and publishes to RabbitMQ
+  # CSV to JSON converter - monitors multiple domain folders and publishes to RabbitMQ
   csv2json:
     build:
       context: .
       dockerfile: csv2json/Dockerfile
     container_name: axiom-csv2json
     environment:
+      # Multi-Ingress Routing Mode
+      ROUTES_CONFIG: /app/routes.json
+      # RabbitMQ Connection
       RABBITMQ_URL: amqp://axiom:changeme@rabbitmq:5672/%2Faxiom
       RABBITMQ_EXCHANGE: axiom.data.exchange
+      # Logging
+      LOG_LEVEL: info
+      ENABLE_FILE_LOGGING: "true"  # Set to "false" to disable route-specific log files
     volumes:
-      - ./modules/reference/countries/data:/data:ro  # Mount CSV files
+      # Routes configuration
+      - ./csv2json/routes.json:/app/routes.json:ro
+      # Domain data folders (add more as domains are created)
+      - ./modules/reference/countries/data:/app/data/reference/countries
+      - ./modules/reference/currencies/data:/app/data/reference/currencies
+      # Future domains - uncomment when ready
+      # - ./modules/reference/instruments/data:/app/data/reference/instruments
     depends_on:
       rabbitmq:
         condition: service_healthy
     networks:
       - axiom-network
-    # Run once to process CSV files, then exit
-    command: ["--input", "/data/countries.csv", "--domain", "reference", "--entity", "countries"]
-    restart: "no"
+    restart: unless-stopped
 
   # Canonicalizer - standardizes data from csv2json and writes to PostgreSQL
   canonicalizer:

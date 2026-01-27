@@ -1,0 +1,83 @@
+{
+  "routes": [
+    {
+      "name": "countries",
+      "ingestionContract": "reference.countries.csv.v1",
+      "domain": "reference",
+      "entity": "countries",
+      "input": {
+        "path": "/app/data/reference/countries/input",
+        "watchMode": "hybrid",
+        "pollIntervalSeconds": 5,
+        "hybridPollIntervalSeconds": 60,
+        "suffixFilter": ".csv"
+      },
+      "output": {
+        "type": "both",
+        "queueDestination": "axiom.data.exchange",
+        "fileDestination": "/app/data/reference/countries/output",
+        "addTimestampSuffix": true
+      },
+      "archive": {
+        "processedPath": "/app/data/reference/countries/archive/processed",
+        "failedPath": "/app/data/reference/countries/archive/failed",
+        "ignoredPath": "/app/data/reference/countries/archive/ignored"
+      },
+      "logging": {
+        "logFolder": "/app/data/reference/countries/logs"
+      }
+    },
+    {
+      "name": "currencies",
+      "ingestionContract": "reference.currencies.csv.v1",
+      "domain": "reference",
+      "entity": "currencies",
+      "input": {
+        "path": "/app/data/reference/currencies/input",
+        "watchMode": "hybrid",
+        "pollIntervalSeconds": 5,
+        "hybridPollIntervalSeconds": 60,
+        "suffixFilter": ".csv"
+      },
+      "output": {
+        "type": "both",
+        "queueDestination": "axiom.data.exchange",
+        "fileDestination": "/app/data/reference/currencies/output",
+        "addTimestampSuffix": true
+      },
+      "archive": {
+        "processedPath": "/app/data/reference/currencies/archive/processed",
+        "failedPath": "/app/data/reference/currencies/archive/failed",
+        "ignoredPath": "/app/data/reference/currencies/archive/ignored"
+      },
+      "logging": {
+        "logFolder": "/app/data/reference/currencies/logs"
+      }
+    },
+    {
+      "name": "instruments",
+      "ingestionContract": "reference.instruments.csv.v1",
+      "domain": "reference",
+      "entity": "instruments",
+      "input": {
+        "path": "/app/data/reference/instruments/input",
+        "watchMode": "hybrid",
+        "pollIntervalSeconds": 5,
+        "hybridPollIntervalSeconds": 60,
+        "suffixFilter": ".csv"
+      },
+      "output": {
+        "type": "queue",
+        "destination": "axiom.data.exchange"
+      },
+      "archive": {
+        "processedPath": "/app/data/reference/instruments/archive/processed",
+        "failedPath": "/app/data/reference/instruments/archive/failed",
+        "ignoredPath": "/app/data/reference/instruments/archive/ignored"
+      },
+      "logging": {
+        "logFolder": "/app/data/reference/instruments/logs"
+      }
+    }
+  ]
+}

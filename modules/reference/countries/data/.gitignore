@@ -1,0 +1,16 @@
+# Ignore all files in monitoring folders during development
+input/*
+!input/.gitkeep
+output/*
+!output/.gitkeep
+logs/*
+!logs/.gitkeep
+archive/processed/*
+!archive/processed/.gitkeep
+archive/ignored/*
+!archive/ignored/.gitkeep
+archive/failed/*
+!archive/failed/.gitkeep
+
+# Keep the source CSV for reference
+!countries.csv

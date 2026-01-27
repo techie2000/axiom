@@ -1,0 +1,13 @@
+# Ignore processed files
+archive/processed/*
+archive/failed/*
+archive/ignored/*
+output/*
+logs/*
+
+# Keep folder structure
+!archive/processed/.gitkeep
+!archive/failed/.gitkeep
+!archive/ignored/.gitkeep
+!output/.gitkeep
+!logs/.gitkeep
