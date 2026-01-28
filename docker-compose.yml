@@ -12,7 +12,7 @@ services:
     ports:
       - "5433:5432"  # Expose on host port 5433 to avoid conflict with local PostgreSQL
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ./data/postgres:/var/lib/postgresql/data
       - ./modules/reference/countries/migrations:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U axiom -d axiom_db"]
@@ -33,7 +33,7 @@ services:
       - "5672:5672"   # AMQP port
       - "15672:15672" # Management UI
     volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
+      - ./data/rabbitmq:/var/lib/rabbitmq
       - ./rabbitmq-init.sh:/docker-entrypoint-initdb.d/init.sh:ro
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
@@ -105,10 +105,6 @@ services:
     networks:
       - axiom-network
     restart: unless-stopped
-
-volumes:
-  postgres_data:
-  rabbitmq_data:
 
 networks:
   axiom-network:

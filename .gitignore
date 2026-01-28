@@ -41,3 +41,11 @@ logs/
 bin/
 dist/
 build/
+
+# Data directory - runtime artifacts (keep routes.json tracked)
+data/archive/
+data/input/
+data/logs/
+data/output/
+data/postgres/
+data/rabbitmq/
