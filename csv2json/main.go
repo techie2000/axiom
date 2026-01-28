@@ -399,6 +399,7 @@ func scanFolderForRoute(route RouteConfig, globalConfig GlobalConfig) {
 		route.Info("Poll cycle found %d file(s)", fileCount)
 	}
 
+	processedCount := 0
 	for _, entry := range entries {
 		if entry.IsDir() {
 			continue
@@ -406,6 +407,14 @@ func scanFolderForRoute(route RouteConfig, globalConfig GlobalConfig) {
 
 		filePath := filepath.Join(route.Input.Path, entry.Name())
 		handleFileForRoute(filePath, route, globalConfig)
+		processedCount++
+	}
+
+	// Log completion when no files found (helps see poll cycle completed)
+	if logMode == "always" && fileCount == 0 {
+		route.Info("Poll cycle completed - no files found")
+	} else if logMode == "always" && processedCount > 0 {
+		route.Info("Poll cycle completed - processed %d file(s)", processedCount)
 	}
 }
 
