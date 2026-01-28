@@ -5,8 +5,9 @@ WORKDIR /build
 # Install ca-certificates for HTTPS
 RUN apk --no-cache add ca-certificates git
 
-# Copy countries module first (to parent dir as per go.mod replace directive)
+# Copy modules first (to parent dir as per go.mod replace directive)
 COPY modules/reference/countries /modules/reference/countries
+COPY modules/reference/currencies /modules/reference/currencies
 
 # Copy canonicalizer module files
 COPY canonicalizer/go.mod canonicalizer/go.sum* ./

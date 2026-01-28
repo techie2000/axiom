@@ -16,8 +16,10 @@ import (
 
 	_ "github.com/lib/pq"
 	amqp "github.com/rabbitmq/amqp091-go"
-	"github.com/techie2000/axiom/modules/reference/countries/pkg/repository"
-	"github.com/techie2000/axiom/modules/reference/countries/pkg/transform"
+	countryrepo "github.com/techie2000/axiom/modules/reference/countries/pkg/repository"
+	countrytransform "github.com/techie2000/axiom/modules/reference/countries/pkg/transform"
+	currencyrepo "github.com/techie2000/axiom/modules/reference/currencies/pkg/repository"
+	currencytransform "github.com/techie2000/axiom/modules/reference/currencies/pkg/transform"
 )
 
 // Version is set at build time via ldflags or read from VERSION file
@@ -269,8 +271,8 @@ func main() {
 
 	logInfo("✓ Canonicalizer ready - waiting for messages...")
 
-	// Create repository
-	repo := repository.NewCountryRepository(db)
+	// Create repositories
+	repo := countryrepo.NewCountryRepository(db)
 
 	// Handle graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())
@@ -357,7 +359,7 @@ type ProcessResult struct {
 	Alpha2     string
 }
 
-func processMessage(ctx context.Context, body []byte, repo *repository.CountryRepository) ProcessResult {
+func processMessage(ctx context.Context, body []byte, repo *countryrepo.CountryRepository) ProcessResult {
 	// Parse envelope
 	var envelope MessageEnvelope
 	if err := json.Unmarshal(body, &envelope); err != nil {
@@ -370,16 +372,16 @@ func processMessage(ctx context.Context, body []byte, repo *repository.CountryRe
 	}
 
 	// Parse raw country data (from csv2json)
-	var rawCountry transform.RawCountryData
+	var rawCountry countrytransform.RawCountryData
 	if err := json.Unmarshal(envelope.Payload, &rawCountry); err != nil {
 		return ProcessResult{Error: fmt.Errorf("failed to unmarshal payload: %w", err)}
 	}
 
 	// Apply ALL canonicalizer transformation rules
-	country, err := transform.TransformToCountry(rawCountry)
+	country, err := countrytransform.TransformToCountry(rawCountry)
 	if err != nil {
 		// Check if this is a formerly_used code that should be skipped
-		if errors.Is(err, transform.ErrFormerlyUsedSkipped) {
+		if errors.Is(err, countrytransform.ErrFormerlyUsedSkipped) {
 			return ProcessResult{
 				Skipped:    true,
 				SkipReason: "formerly_used status per ADR-007",
@@ -400,6 +402,128 @@ func processMessage(ctx context.Context, body []byte, repo *repository.CountryRe
 	}
 
 	logInfo("✓ Processed: %s (%s)", country.Alpha2, country.NameEnglish)
+	return ProcessResult{}
+}
+
+// processCountryMessage processes country messages (keeping for backwards compatibility)
+func processCountryMessage(ctx context.Context, body []byte, repo *countryrepo.CountryRepository, channel *amqp.Channel, exchange string) ProcessResult {
+	result := processMessage(ctx, body, repo)
+	if result.Error != nil {
+		// Publish to DLQ with error information
+		dlqHeaders := amqp.Table{
+			"x-original-exchange":    exchange,
+			"x-original-routing-key": "reference.countries",
+			"x-rejection-reason":     result.Error.Error(),
+			"x-rejected-at":          time.Now().UTC().Format(time.RFC3339),
+		}
+
+		err := channel.Publish(
+			"axiom.data.dlx",      // exchange (DLX)
+			"reference.countries", // routing key
+			false,                 // mandatory
+			false,                 // immediate
+			amqp.Publishing{
+				ContentType:  "application/json",
+				Body:         body,
+				Headers:      dlqHeaders,
+				DeliveryMode: amqp.Persistent,
+			},
+		)
+		if err != nil {
+			logError("Failed to publish to DLQ: %v", err)
+		} else {
+			logError("✗ Rejected: %v", result.Error)
+		}
+	}
+	return result
+}
+
+// processCurrencyMessage processes currency messages from RabbitMQ
+func processCurrencyMessage(ctx context.Context, body []byte, repo *currencyrepo.CurrencyRepository, channel *amqp.Channel, exchange string) ProcessResult {
+	// Parse envelope
+	var envelope MessageEnvelope
+	if err := json.Unmarshal(body, &envelope); err != nil {
+		return ProcessResult{Error: fmt.Errorf("failed to unmarshal envelope: %w", err)}
+	}
+
+	// Validate envelope
+	if envelope.Domain != "reference" || envelope.Entity != "currencies" {
+		return ProcessResult{Error: fmt.Errorf("invalid domain/entity: %s/%s", envelope.Domain, envelope.Entity)}
+	}
+
+	// Parse raw currency data (from csv2json)
+	var rawCurrency currencytransform.RawCurrencyData
+	if err := json.Unmarshal(envelope.Payload, &rawCurrency); err != nil {
+		return ProcessResult{Error: fmt.Errorf("failed to unmarshal payload: %w", err)}
+	}
+
+	// Apply ALL canonicalizer transformation rules
+	currency, err := currencytransform.TransformToCurrency(rawCurrency)
+	if err != nil {
+		// Publish to DLQ with error information
+		dlqHeaders := amqp.Table{
+			"x-original-exchange":    exchange,
+			"x-original-routing-key": "reference.currencies",
+			"x-rejection-reason":     err.Error(),
+			"x-rejected-at":          time.Now().UTC().Format(time.RFC3339),
+		}
+
+		pubErr := channel.Publish(
+			"axiom.data.dlx",       // exchange (DLX)
+			"reference.currencies", // routing key
+			false,                  // mandatory
+			false,                  // immediate
+			amqp.Publishing{
+				ContentType:  "application/json",
+				Body:         body,
+				Headers:      dlqHeaders,
+				DeliveryMode: amqp.Persistent,
+			},
+		)
+		if pubErr != nil {
+			logError("Failed to publish to DLQ: %v", pubErr)
+		} else {
+			logError("✗ Rejected: %v", err)
+		}
+		return ProcessResult{Error: fmt.Errorf("transformation failed: %w", err)}
+	}
+
+	// Set audit trail context (source tracking for provenance)
+	if _, err := repo.SetAuditContext(ctx, envelope.Source, "canonicalizer"); err != nil {
+		logWarn("Failed to set audit context: %v", err)
+	}
+
+	// Upsert to database
+	if err := repo.Upsert(ctx, currency); err != nil {
+		// Publish to DLQ
+		dlqHeaders := amqp.Table{
+			"x-original-exchange":    exchange,
+			"x-original-routing-key": "reference.currencies",
+			"x-rejection-reason":     err.Error(),
+			"x-rejected-at":          time.Now().UTC().Format(time.RFC3339),
+		}
+
+		pubErr := channel.Publish(
+			"axiom.data.dlx",       // exchange (DLX)
+			"reference.currencies", // routing key
+			false,                  // mandatory
+			false,                  // immediate
+			amqp.Publishing{
+				ContentType:  "application/json",
+				Body:         body,
+				Headers:      dlqHeaders,
+				DeliveryMode: amqp.Persistent,
+			},
+		)
+		if pubErr != nil {
+			logError("Failed to publish to DLQ: %v", pubErr)
+		} else {
+			logError("✗ Rejected: %v", err)
+		}
+		return ProcessResult{Error: fmt.Errorf("database upsert failed: %w", err)}
+	}
+
+	logInfo("✓ Processed: %s (%s)", currency.Code, currency.Name)
 	return ProcessResult{}
 }
 
