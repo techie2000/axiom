@@ -22,17 +22,16 @@ type RawCurrencyData struct {
 
 // Currency represents the canonical currency structure for database
 type Currency struct {
-	Code        string
-	Number      *string
-	Name        string
-	Alpha2      *string
-	MinorUnits  *int
-	StartDate   *string
-	EndDate     *string
-	Remarks     *string
-	Status      string
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	Code       string
+	Number     *string
+	Name       string
+	MinorUnits *int
+	StartDate  *string
+	EndDate    *string
+	Remarks    *string
+	Status     string
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
 }
 
 // TransformToCurrency applies ALL canonicalizer transformation rules
@@ -69,12 +68,7 @@ func TransformToCurrency(raw RawCurrencyData) (*Currency, error) {
 		return nil, fmt.Errorf("name (Currency) is required")
 	}
 
-	// 4. Alpha2 country mapping (nullable for special currencies)
-	// TODO: Implement country lookup from ENTITY field
-	// For now, set to nil - will be enhanced later
-	currency.Alpha2 = nil
-
-	// 5. Minor units parsing (nullable)
+	// 4. Minor units parsing (nullable)
 	if raw.MinorUnit != "" {
 		trimmed := strings.TrimSpace(raw.MinorUnit)
 		if trimmed != "" {
