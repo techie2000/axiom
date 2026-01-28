@@ -32,6 +32,12 @@ The canonicalizer is the **ONLY** layer responsible for data transformation and 
 
 - ✅ Enforces database constraints
 - ✅ Rejects invalid data that bypasses canonicalizer
+- ✅ CHECK constraints enforce business rules:
+  - `chk_code_format`: Currency code must be 3 uppercase letters
+  - `chk_number_format`: Numeric code must be 3 digits if present
+  - `chk_status_values`: Status must be 'active', 'historical', or 'special'
+  - `chk_active_has_minor_units`: Active currencies MUST have minor_units defined
+  - `chk_active_no_end_date`: Active currencies cannot have end_date
 - ❌ Should rarely fail if canonicalizer works correctly
 
 ## Transformation Rules for reference.currencies
@@ -92,14 +98,14 @@ currency.Name = strings.TrimSpace(input.Currency)
 
 ### 4. Minor Units Validation
 
-**Rule**: Parse minor units (decimal places) as integer. NULL if missing or non-numeric.
+**Rule**: Parse minor units (decimal places) as integer. **REQUIRED for active currencies**, NULL allowed only for special/historical currencies.
 
 **Examples**:
 
-- Input: `"2"` → Output: `2` (USD, EUR, GBP - cents/pence)
-- Input: `"0"` → Output: `0` (JPY, KRW - no subdivision)
-- Input: `"3"` → Output: `3` (BHD, KWD - fils)
-- Input: `""` → Output: `NULL` (XAU Gold - no subdivision)
+- Input: `"2"` → Output: `2` (USD, EUR, GBP - cents/pence) **[REQUIRED for active]**
+- Input: `"0"` → Output: `0` (JPY, KRW - no subdivision) **[REQUIRED for active]**
+- Input: `"3"` → Output: `3` (BHD, KWD - fils) **[REQUIRED for active]**
+- Input: `""` → Output: `NULL` (XAU Gold - special currency, NULL allowed)
 
 **Implementation**:
 
@@ -110,9 +116,17 @@ if input.MinorUnit != "" {
         currency.MinorUnits = &minorUnits
     }
 }
+
+// Validate: minor_units REQUIRED for active currencies
+if currency.Status == "active" && currency.MinorUnits == nil {
+    return fmt.Errorf("minor_units is required for active currency: %s", currency.Code)
+}
 ```
 
-**Why**: Database stores as INTEGER, NULL allowed for special currencies
+**Why**: 
+- Active currencies need decimal precision for transactions
+- Database stores as INTEGER
+- NULL allowed only for special currencies (precious metals, bond units) and historical currencies
 
 ### 5. Country Mapping (alpha2)
 
@@ -396,7 +410,7 @@ if currency.EndDate != nil && *currency.EndDate != "" {
 
 - `number` (Numeric Code) - Can be NULL for some special currencies
 - `alpha2` - NULL for special currencies (XAU, XBA, etc.)
-- `minor_units` - NULL for precious metals and some special currencies
+- `minor_units` - **REQUIRED for status='active'**, NULL allowed only for status='special' or status='historical'
 - `start_date` - NULL if not known
 - `end_date` - NULL for active currencies
 - `remarks` - NULL if no additional context
@@ -415,6 +429,7 @@ if currency.EndDate != nil && *currency.EndDate != "" {
 - `name` is empty
 - `number` is invalid format (must be numeric if present)
 - `minor_units` is non-numeric (if present)
+- `minor_units` is NULL when status='active' (REQUIRED for active currencies)
 - `alpha2` references non-existent country
 - `start_date` or `end_date` in invalid format
 

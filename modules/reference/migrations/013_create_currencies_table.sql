@@ -24,7 +24,18 @@ CREATE TABLE IF NOT EXISTS reference.currencies (
     
     -- Foreign key to countries (NULLABLE, no CASCADE to preserve history)
     CONSTRAINT fk_currencies_alpha2 FOREIGN KEY (alpha2) 
-        REFERENCES reference.countries(alpha2)
+        REFERENCES reference.countries(alpha2),
+    
+    -- CHECK constraints to enforce business rules
+    CONSTRAINT chk_code_format CHECK (code ~ '^[A-Z]{3}$'),                    -- Must be 3 uppercase letters
+    CONSTRAINT chk_number_format CHECK (number IS NULL OR number ~ '^\d{3}$'), -- Must be 3 digits if present
+    CONSTRAINT chk_status_values CHECK (status IN ('active', 'historical', 'special')),
+    CONSTRAINT chk_active_has_minor_units CHECK (
+        status != 'active' OR minor_units IS NOT NULL
+    ),                                                                          -- Active currencies MUST have minor_units
+    CONSTRAINT chk_active_no_end_date CHECK (
+        status != 'active' OR end_date IS NULL
+    )                                                                           -- Active currencies cannot have end_date
 );
 
 -- Create audit table for currencies
