@@ -185,65 +185,137 @@ func main() {
 	}
 	logInfo("✓ Dead Letter Exchange '%s' declared", dlxName)
 
+	// ========================================
+	// Setup for COUNTRIES
+	// ========================================
+
 	// Declare Dead Letter Queue (DLQ) for countries
-	dlqName := "axiom.reference.countries.dlq"
-	dlqQueue, err := channel.QueueDeclare(
-		dlqName, // name
-		true,    // durable
-		false,   // delete when unused
-		false,   // exclusive
-		false,   // no-wait
-		nil,     // arguments (no further DLX for DLQ itself)
+	dlqCountriesName := "axiom.reference.countries.dlq"
+	dlqCountriesQueue, err := channel.QueueDeclare(
+		dlqCountriesName, // name
+		true,             // durable
+		false,            // delete when unused
+		false,            // exclusive
+		false,            // no-wait
+		nil,              // arguments (no further DLX for DLQ itself)
 	)
 	if err != nil {
-		log.Fatalf("Failed to declare DLQ: %v", err)
+		log.Fatalf("Failed to declare countries DLQ: %v", err)
 	}
 
-	// Bind DLQ to DLX
+	// Bind countries DLQ to DLX
 	err = channel.QueueBind(
-		dlqQueue.Name,         // queue name
-		"reference.countries", // routing key (must match the x-dead-letter-routing-key)
-		dlxName,               // exchange (the DLX)
+		dlqCountriesQueue.Name, // queue name
+		"reference.countries",  // routing key (must match the x-dead-letter-routing-key)
+		dlxName,                // exchange (the DLX)
 		false,
 		nil,
 	)
 	if err != nil {
-		log.Fatalf("Failed to bind DLQ to DLX: %v", err)
+		log.Fatalf("Failed to bind countries DLQ to DLX: %v", err)
 	}
-	logInfo("✓ Dead Letter Queue '%s' bound to DLX with routing key 'reference.countries'", dlqName)
+	logInfo("✓ Dead Letter Queue '%s' bound to DLX with routing key 'reference.countries'", dlqCountriesName)
 
-	// Declare queue for countries with DLX
-	queueName := "axiom.reference.countries"
-	queueArgs := amqp.Table{
-		"x-dead-letter-exchange":    "axiom.data.dlx",
+	// Declare main queue for countries with DLX
+	queueCountriesName := "axiom.reference.countries"
+	queueCountriesArgs := amqp.Table{
+		"x-dead-letter-exchange":    dlxName,
 		"x-dead-letter-routing-key": "reference.countries",
 	}
-	queue, err := channel.QueueDeclare(
-		queueName, // name
-		true,      // durable
-		false,     // delete when unused
-		false,     // exclusive
-		false,     // no-wait
-		queueArgs, // arguments with DLX
+	queueCountries, err := channel.QueueDeclare(
+		queueCountriesName, // name
+		true,               // durable
+		false,              // delete when unused
+		false,              // exclusive
+		false,              // no-wait
+		queueCountriesArgs, // arguments with DLX
 	)
 	if err != nil {
-		log.Fatalf("Failed to declare queue: %v", err)
+		log.Fatalf("Failed to declare countries queue: %v", err)
 	}
 
-	// Bind queue to exchange
+	// Bind countries queue to exchange
 	err = channel.QueueBind(
-		queue.Name,              // queue name
+		queueCountries.Name,     // queue name
 		"reference.countries",   // routing key
 		config.RabbitMQExchange, // exchange
 		false,
 		nil,
 	)
 	if err != nil {
-		log.Fatalf("Failed to bind queue: %v", err)
+		log.Fatalf("Failed to bind countries queue: %v", err)
 	}
 
 	logInfo("✓ Queue '%s' bound to exchange '%s' with routing key 'reference.countries'",
-		queueName, config.RabbitMQExchange)
+		queueCountriesName, config.RabbitMQExchange)
+
+	// ========================================
+	// Setup for CURRENCIES
+	// ========================================
+
+	// Declare Dead Letter Queue (DLQ) for currencies
+	dlqCurrenciesName := "axiom.reference.currencies.dlq"
+	dlqCurrenciesQueue, err := channel.QueueDeclare(
+		dlqCurrenciesName, // name
+		true,              // durable
+		false,             // delete when unused
+		false,             // exclusive
+		false,             // no-wait
+		nil,               // arguments
+	)
+	if err != nil {
+		log.Fatalf("Failed to declare currencies DLQ: %v", err)
+	}
+
+	// Bind currencies DLQ to DLX
+	err = channel.QueueBind(
+		dlqCurrenciesQueue.Name, // queue name
+		"reference.currencies",  // routing key
+		dlxName,                 // exchange
+		false,
+		nil,
+	)
+	if err != nil {
+		log.Fatalf("Failed to bind currencies DLQ to DLX: %v", err)
+	}
+	logInfo("✓ Dead Letter Queue '%s' bound to DLX with routing key 'reference.currencies'", dlqCurrenciesName)
+
+	// Declare main queue for currencies with DLX
+	queueCurrenciesName := "axiom.reference.currencies"
+	queueCurrenciesArgs := amqp.Table{
+		"x-dead-letter-exchange":    dlxName,
+		"x-dead-letter-routing-key": "reference.currencies",
+	}
+	queueCurrencies, err := channel.QueueDeclare(
+		queueCurrenciesName, // name
+		true,                // durable
+		false,               // delete when unused
+		false,               // exclusive
+		false,               // no-wait
+		queueCurrenciesArgs, // arguments with DLX
+	)
+	if err != nil {
+		log.Fatalf("Failed to declare currencies queue: %v", err)
+	}
+
+	// Bind currencies queue to exchange
+	err = channel.QueueBind(
+		queueCurrencies.Name,    // queue name
+		"reference.currencies",  // routing key
+		config.RabbitMQExchange, // exchange
+		false,
+		nil,
+	)
+	if err != nil {
+		log.Fatalf("Failed to bind currencies queue: %v", err)
+	}
+
+	logInfo("✓ Queue '%s' bound to exchange '%s' with routing key 'reference.currencies'",
+		queueCurrenciesName, config.RabbitMQExchange)
+
+	// ========================================
+	// Consumer Setup
+	// ========================================
 
 	// Set QoS
 	err = channel.Qos(
@@ -255,24 +327,39 @@ func main() {
 		log.Fatalf("Failed to set QoS: %v", err)
 	}
 
-	// Start consuming
-	msgs, err := channel.Consume(
-		queue.Name, // queue
-		"",         // consumer
-		false,      // auto-ack
-		false,      // exclusive
-		false,      // no-local
-		false,      // no-wait
-		nil,        // args
+	// Start consuming from countries queue
+	countriesMsgs, err := channel.Consume(
+		queueCountries.Name,  // queue
+		"countries-consumer", // consumer tag
+		false,                // auto-ack
+		false,                // exclusive
+		false,                // no-local
+		false,                // no-wait
+		nil,                  // args
 	)
 	if err != nil {
-		log.Fatalf("Failed to register consumer: %v", err)
+		log.Fatalf("Failed to register countries consumer: %v", err)
 	}
 
-	logInfo("✓ Canonicalizer ready - waiting for messages...")
+	// Start consuming from currencies queue
+	currenciesMsgs, err := channel.Consume(
+		queueCurrencies.Name,  // queue
+		"currencies-consumer", // consumer tag
+		false,                 // auto-ack
+		false,                 // exclusive
+		false,                 // no-local
+		false,                 // no-wait
+		nil,                   // args
+	)
+	if err != nil {
+		log.Fatalf("Failed to register currencies consumer: %v", err)
+	}
+
+	logInfo("✓ Canonicalizer ready - waiting for messages from countries and currencies queues...")
 
 	// Create repositories
-	repo := countryrepo.NewCountryRepository(db)
+	countryRepo := countryrepo.NewCountryRepository(db)
+	currencyRepo := currencyrepo.NewCurrencyRepository(db)
 
 	// Handle graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())
@@ -287,65 +374,59 @@ func main() {
 		cancel()
 	}()
 
-	// Process messages
-	processedCount := 0
-	skippedCount := 0
-	rejectedCount := 0
+	// Process messages from both queues
+	countriesProcessed := 0
+	countriesSkipped := 0
+	countriesRejected := 0
+	currenciesProcessed := 0
+	currenciesRejected := 0
 
 	for {
 		select {
 		case <-ctx.Done():
-			logInfo("Shutting down - processed: %d, skipped: %d, rejected: %d", processedCount, skippedCount, rejectedCount)
+			logInfo("Shutting down - countries: processed=%d, skipped=%d, rejected=%d; currencies: processed=%d, rejected=%d",
+				countriesProcessed, countriesSkipped, countriesRejected, currenciesProcessed, currenciesRejected)
 			return
 
-		case msg, ok := <-msgs:
+		case msg, ok := <-countriesMsgs:
 			if !ok {
-				logInfo("Channel closed")
+				logInfo("Countries channel closed")
 				return
 			}
 
-			result := processMessage(ctx, msg.Body, repo)
-			if result.Error != nil {
-				// Publish to DLQ with error information in headers
-				dlqHeaders := amqp.Table{
-					"x-original-exchange":    config.RabbitMQExchange,
-					"x-original-routing-key": "reference.countries",
-					"x-rejection-reason":     result.Error.Error(),
-					"x-rejected-at":          time.Now().UTC().Format(time.RFC3339),
-				}
+			result := processCountryMessage(ctx, msg.Body, countryRepo, channel, config.RabbitMQExchange)
+			msg.Ack(false)
 
-				// Publish directly to DLQ with error context
-				err := channel.Publish(
-					"axiom.data.dlx",      // exchange (DLX)
-					"reference.countries", // routing key
-					false,                 // mandatory
-					false,                 // immediate
-					amqp.Publishing{
-						ContentType:  "application/json",
-						Body:         msg.Body,
-						Headers:      dlqHeaders,
-						DeliveryMode: amqp.Persistent,
-					},
-				)
-				if err != nil {
-					logError("Failed to publish to DLQ: %v", err)
-					msg.Nack(false, true) // Requeue on publish failure
-				} else {
-					logError("✗ Rejected: %v", result.Error)
-					msg.Ack(false) // Ack original message after successful DLQ publish
-				}
-				rejectedCount++
+			if result.Error != nil {
+				countriesRejected++
 			} else if result.Skipped {
-				msg.Ack(false) // Ack skipped messages (not errors)
-				skippedCount++
+				countriesSkipped++
 				logWarn("⊘ Skipped: %s - %s", result.Alpha2, result.SkipReason)
 			} else {
-				msg.Ack(false)
-				processedCount++
+				countriesProcessed++
 			}
 
-			if (processedCount+skippedCount)%10 == 0 && (processedCount+skippedCount) > 0 {
-				logInfo("Progress: processed=%d, skipped=%d, rejected=%d", processedCount, skippedCount, rejectedCount)
+			if (countriesProcessed+countriesSkipped)%10 == 0 && (countriesProcessed+countriesSkipped) > 0 {
+				logInfo("Countries progress: processed=%d, skipped=%d, rejected=%d", countriesProcessed, countriesSkipped, countriesRejected)
+			}
+
+		case msg, ok := <-currenciesMsgs:
+			if !ok {
+				logInfo("Currencies channel closed")
+				return
+			}
+
+			result := processCurrencyMessage(ctx, msg.Body, currencyRepo, channel, config.RabbitMQExchange)
+			msg.Ack(false)
+
+			if result.Error != nil {
+				currenciesRejected++
+			} else {
+				currenciesProcessed++
+			}
+
+			if currenciesProcessed%10 == 0 && currenciesProcessed > 0 {
+				logInfo("Currencies progress: processed=%d, rejected=%d", currenciesProcessed, currenciesRejected)
 			}
 		}
 	}
