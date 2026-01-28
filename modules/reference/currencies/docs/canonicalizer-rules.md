@@ -463,3 +463,64 @@ if currency.EndDate != nil && *currency.EndDate != "" {
 ## Testing Requirements
 
 See [TESTING-RULES.md](TESTING-RULES.md) for comprehensive test cases.
+
+## Production Verification Results
+
+### Initial Load (January 28, 2026)
+
+**Source Data**: `currencies.csv` (449 entries + header)
+
+**Database Results**:
+
+```sql
+total_currencies | active | historical 
+------------------+--------+------------
+              294 |    157 |        129
+```
+
+**Audit Trail Results**:
+
+```sql
+total_audit_records | inserts | updates
+---------------------+---------+---------
+                 312 |     294 |      18
+```
+
+**Key Metrics**:
+
+- **CSV to Database Consolidation**: 449 CSV entries → 294 unique currencies
+  - Reason: Multiple CSV entries per currency code (e.g., RUR has 11 entries)
+  - Each unique code gets 1 INSERT + (n-1) potential UPDATEs
+- **Audit Record Distribution**:
+  - 294 INSERT operations (one per unique currency code)
+  - 18 UPDATE operations (currencies with multiple CSV entries that changed values)
+  - Average: 1.06 audit records per currency (very efficient)
+- **Data Quality**:
+  - 0 active currencies with NULL minor_units ✅
+  - 157 active currencies all properly validated ✅
+  - 129 historical currencies with end_date ✅
+  - 8 special currencies (fund/precious metals) ✅
+
+**Historical Override Protection**:
+
+8 duplicate historical entries blocked from overriding active records:
+
+- MWK "Kwacha" (historical) blocked from overriding "Malawi Kwacha" (active)
+- PEN "Nuevo Sol" (historical) blocked from overriding "Sol" (active)
+- RON "New Romanian Leu" (historical) blocked from overriding "Romanian Leu" (active)
+- EUR "Euro" SERBIA AND MONTENEGRO (historical) blocked from overriding 37 active EUR entities
+- SDG "Sudanese Pound" SOUTH SUDAN (historical) blocked from overriding SUDAN SDG (active)
+- SZL "Lilangeni" SWAZILAND (historical) blocked from overriding ESWATINI SZL (active)
+- IDR "Rupiah" TIMOR-LESTE (historical) blocked from overriding INDONESIA IDR (active)
+- TRY "New Turkish Lira" (historical) blocked from overriding "Turkish Lira" (active)
+
+**Example Audit Trail: RUR (Russian Ruble)**:
+
+11 CSV entries → 10 audit records:
+
+- 1 INSERT (first occurrence: ARMENIA, end_date=1994-08)
+- 9 UPDATEs (subsequent entries with different end dates)
+  - Changed field: `{end_date}` in all cases
+- 1 no-op skipped (AZERBAIJAN also had 1994-08, no change detected)
+
+**Validation**: All 5 CHECK constraints active and enforcing business rules at database level.
