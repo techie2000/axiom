@@ -45,7 +45,7 @@ func (r *CurrencyRepository) Upsert(ctx context.Context, currency *transform.Cur
 	if err == nil {
 		// Record exists - check if we're trying to override active with historical
 		if existingStatus == "active" && currency.Status == "historical" {
-			log.Printf("WARN: Ignored historical currency update for %s (%s) - would override active record. This typically indicates duplicate CSV entries where historical data appears after active data.", 
+			log.Printf("[CURRENCIES] WARN: Ignored historical currency update for %s (%s) - would override active record. This typically indicates duplicate CSV entries where historical data appears after active data.", 
 				currency.Code, currency.Name)
 			return nil // Skip this update silently
 		}

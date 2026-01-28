@@ -482,7 +482,7 @@ func processMessage(ctx context.Context, body []byte, repo *countryrepo.CountryR
 		return ProcessResult{Error: fmt.Errorf("database upsert failed: %w", err)}
 	}
 
-	logInfo("✓ Processed: %s (%s)", country.Alpha2, country.NameEnglish)
+	logInfo("[COUNTRIES] ✓ Processed: %s (%s)", country.Alpha2, country.NameEnglish)
 	return ProcessResult{}
 }
 
@@ -513,7 +513,7 @@ func processCountryMessage(ctx context.Context, body []byte, repo *countryrepo.C
 		if err != nil {
 			logError("Failed to publish to DLQ: %v", err)
 		} else {
-			logError("✗ Rejected: %v", result.Error)
+			logError("[COUNTRIES] ✗ Rejected: %v", result.Error)
 		}
 	}
 	return result
@@ -599,12 +599,12 @@ func processCurrencyMessage(ctx context.Context, body []byte, repo *currencyrepo
 		if pubErr != nil {
 			logError("Failed to publish to DLQ: %v", pubErr)
 		} else {
-			logError("✗ Rejected: %v", err)
+			logError("[CURRENCIES] ✗ Rejected: %v", err)
 		}
 		return ProcessResult{Error: fmt.Errorf("database upsert failed: %w", err)}
 	}
 
-	logInfo("✓ Processed: %s (%s)", currency.Code, currency.Name)
+	logInfo("[CURRENCIES] ✓ Processed: %s (%s)", currency.Code, currency.Name)
 	return ProcessResult{}
 }
 
