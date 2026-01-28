@@ -161,10 +161,17 @@ Write-Host "`n🔍 Querying database for countries..." -ForegroundColor Yellow
 $countries = Invoke-PostgresQuery -Query "SELECT alpha2, name_english, currency_code FROM reference.countries ORDER BY alpha2"
 Write-Host "  Found $($countries.Count) countries in database" -ForegroundColor Gray
 
-# Query database for valid currencies
+# Query database for valid currencies with status and end_date for prioritization
 Write-Host "`n🔍 Querying database for currencies..." -ForegroundColor Yellow
-$validCurrencies = Invoke-PostgresQuery -Query "SELECT code FROM reference.currencies WHERE status = 'active' ORDER BY code"
-$validCurrencyCodes = $validCurrencies | ForEach-Object { $_.code }
+$currencies = Invoke-PostgresQuery -Query "SELECT code, status, end_date FROM reference.currencies ORDER BY code"
+$currencyDetails = @{}
+foreach ($curr in $currencies) {
+    $currencyDetails[$curr.code] = @{
+        Status = $curr.status
+        EndDate = $curr.end_date
+    }
+}
+$validCurrencyCodes = $currencies | Where-Object { $_.status -eq 'active' } | ForEach-Object { $_.code }
 Write-Host "  Found $($validCurrencyCodes.Count) active currencies in database" -ForegroundColor Gray
 
 # Build country lookup by normalized name
@@ -173,6 +180,12 @@ $countryLookup = @{}
 foreach ($country in $countries) {
     $normalizedName = $country.name_english.ToUpper().Trim()
     $countryLookup[$normalizedName] = $country
+}
+
+# Manual overrides for ambiguous multi-currency cases
+# Used when multiple active currencies exist with no clear priority
+$currencyOverrides = @{
+    'VE' = 'VES'  # Venezuela: VES (Bolívar Soberano) is primary over VED (digital variant)
 }
 
 # Match ENTITY to countries and generate updates
@@ -188,19 +201,53 @@ foreach ($entity in $entityMappings.Keys) {
     if ($countryLookup.ContainsKey($normalizedEntity)) {
         $country = $countryLookup[$normalizedEntity]
         $currencyCodes = $entityMappings[$entity]
+        $currencyCode = $null  # Initialize
         
-        # Handle multiple currencies (rare, e.g., Bolivia has BOB and BOV)
-        if ($currencyCodes.Count -gt 1) {
-            # Use first non-fund currency
-            $primaryCurrency = $currencyCodes[0]
+        # Check for manual override first
+        if ($currencyOverrides.ContainsKey($country.alpha2)) {
+            $currencyCode = $currencyOverrides[$country.alpha2]
+            if ($currencyCodes -contains $currencyCode) {
+                # Override exists and is valid
+                if ($currencyCodes.Count -gt 1) {
+                    $multiCurrency += [PSCustomObject]@{
+                        Entity = $entity
+                        Alpha2 = $country.alpha2
+                        Currencies = $currencyCodes -join ', '
+                        Selected = $currencyCode
+                        Reason = 'manual-override'
+                    }
+                }
+            } else {
+                # Override currency not in list, fall through to normal logic
+                $currencyCode = $null
+            }
+        }
+        
+        # Handle multiple currencies - prioritize by status and end_date
+        if (-not $currencyCode -and $currencyCodes.Count -gt 1) {
+            # Prioritize: 1) active status, 2) no end_date, 3) first in list
+            $sortedCodes = $currencyCodes | Sort-Object {
+                $details = $currencyDetails[$_]
+                if (-not $details) { return 99 }  # Unknown currency - deprioritize
+                
+                $priority = 0
+                # Active currencies get priority 0, inactive get 10
+                if ($details.Status -ne 'active') { $priority += 10 }
+                # Currencies with end_date get +5 penalty
+                if ($details.EndDate) { $priority += 5 }
+                return $priority
+            }
+            
+            $primaryCurrency = $sortedCodes[0]
             $multiCurrency += [PSCustomObject]@{
                 Entity = $entity
                 Alpha2 = $country.alpha2
                 Currencies = $currencyCodes -join ', '
                 Selected = $primaryCurrency
+                Reason = if ($currencyDetails[$primaryCurrency].Status -eq 'active') { 'active' } else { 'historical' }
             }
             $currencyCode = $primaryCurrency
-        } else {
+        } elseif (-not $currencyCode) {
             $currencyCode = $currencyCodes[0]
         }
         
