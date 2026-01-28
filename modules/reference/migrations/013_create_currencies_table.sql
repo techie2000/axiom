@@ -38,37 +38,15 @@ CREATE TABLE IF NOT EXISTS reference.currencies (
     )                                                                           -- Active currencies cannot have end_date
 );
 
--- Create audit table for currencies
-CREATE TABLE IF NOT EXISTS reference.currencies_audit (
-    audit_id SERIAL PRIMARY KEY,
-    code TEXT NOT NULL,                       -- Currency code being audited
-    operation TEXT NOT NULL,                  -- 'INSERT', 'UPDATE', 'DELETE'
-    changed_fields TEXT[],                    -- Array of field names that changed (NULL for INSERT/DELETE)
-    old_number TEXT,
-    new_number TEXT,
-    old_name TEXT,
-    new_name TEXT,
-    old_alpha2 TEXT,
-    new_alpha2 TEXT,
-    old_minor_units INTEGER,
-    new_minor_units INTEGER,
-    old_start_date TEXT,
-    new_start_date TEXT,
-    old_end_date TEXT,
-    new_end_date TEXT,
-    old_remarks TEXT,
-    new_remarks TEXT,
-    old_status TEXT,
-    new_status TEXT,
-    old_created_at TIMESTAMP,
-    new_created_at TIMESTAMP,
-    old_updated_at TIMESTAMP,
-    new_updated_at TIMESTAMP,
-    changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    changed_by TEXT DEFAULT CURRENT_USER
-);
+-- Create audit table for currencies (following countries pattern)
+-- NOTE: Actual audit table and triggers are created in migration 015
+-- This ensures consistency with countries audit structure
+-- (Migration 015 restructures from old_*/new_* pattern to snapshot pattern)
 
--- NO foreign key constraint on audit table (principle: audit must be independent)
+-- Create indexes for currencies table
+CREATE INDEX IF NOT EXISTS idx_currencies_alpha2 ON reference.currencies(alpha2);
+CREATE INDEX IF NOT EXISTS idx_currencies_status ON reference.currencies(status);
+CREATE INDEX IF NOT EXISTS idx_currencies_number ON reference.currencies(number);
 -- Rationale: Must preserve audit history even after currency deleted from main table
 
 -- Create indexes for common queries
