@@ -13,7 +13,7 @@ services:
       - "5433:5432"  # Expose on host port 5433 to avoid conflict with local PostgreSQL
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
-      - ./modules/reference/countries/migrations:/docker-entrypoint-initdb.d
+      - ./modules/reference/migrations/init:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U axiom -d axiom_db"]
       interval: 5s

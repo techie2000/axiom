@@ -1,22 +1,59 @@
 # Database Migrations
 
-This directory contains SQL migration files for the Axiom countries module database schema.
+This directory contains SQL migration files for the Axiom reference schema (countries, currencies, etc.).
+
+## Directory Structure
+
+```
+migrations/
+├── init/                                        # Docker initialization (copies of .up.sql + standalone)
+│   ├── 000_create_migration_tracking.sql
+│   ├── 001_create_countries_table.up.sql
+│   ├── 002_create_countries_audit_table.up.sql
+│   └── ...
+├── 000_create_migration_tracking.sql            # Source of truth
+├── 001_create_countries_table.up.sql            # Forward migration (CREATE)
+├── 001_create_countries_table.down.sql          # Rollback migration (DROP)
+├── 002_create_countries_audit_table.up.sql
+├── 002_create_countries_audit_table.down.sql
+└── ...
+```
+
+**Key Points:**
+
+- **Parent folder**: Source of truth for all migrations
+- **init/ folder**: Hard links to forward migrations for Docker's automatic initialization
+  - **Hard links** (not copies) ensure files stay in sync - editing one updates both
+  - Only `.up.sql` and standalone `.sql` files are linked (NOT `.down.sql` files)
+- **`.up.sql` files**: Forward migrations (apply changes)
+- **`.down.sql` files**: Rollback migrations (undo changes) - NOT linked to init/
+- **Standalone `.sql` files**: Migrations without rollback versions
 
 ## Migration System
 
-Migrations are tracked in the `reference.schema_migrations` table and managed by the PowerShell migration runner script.
+Migrations are tracked in the `reference.schema_migrations` table.
 
-### Running Migrations
+### Fresh Database Initialization (Docker)
 
-```powershell
-# Apply all pending migrations
-.\scripts\run-migrations.ps1
+When PostgreSQL container starts with empty `data/postgres/`:
+1. PostgreSQL automatically runs all `.sql` files in `/docker-entrypoint-initdb.d/` (alphabetically)
+2. This is mapped to `./modules/reference/migrations/init/` in docker-compose.yml
+3. All migrations are applied automatically
 
-# Dry run to see what would be applied
-.\scripts\run-migrations.ps1 -DryRun
+**No manual action needed** - just start docker-compose with clean data folder.
 
-# Connect to remote database
-.\scripts\run-migrations.ps1 -DBHost "remote.server" -DBPort 5432
+### Applying Migrations to Existing Database
+
+For existing databases, apply migrations manually:
+
+```bash
+# Apply a single migration
+docker exec axiom-postgres psql -U axiom -d axiom_db -f /docker-entrypoint-initdb.d/005_fix_countries_exceptionally_reserved_validation.sql
+
+# Then record it in schema_migrations table
+docker exec axiom-postgres psql -U axiom -d axiom_db -c "
+INSERT INTO reference.schema_migrations (version, description, installed_by, installed_on, execution_time_ms) 
+VALUES ('005_fix_countries_exceptionally_reserved_validation', 'Fix exceptionally_reserved validation', 'axiom', NOW(), 0);"
 ```
 
 ### Migration Naming Convention
@@ -37,10 +74,27 @@ NNN_description_of_change.sql
 ### Creating New Migrations
 
 1. **Determine the next sequence number** by checking existing migrations
-2. **Create the migration file** with descriptive name
+2. **Create the migration file(s)** in the parent migrations/ folder:
+   - For reversible changes: Create both `.up.sql` and `.down.sql` files
+   - For one-way changes: Create standalone `.sql` file
 3. **Write idempotent SQL** when possible (use `IF EXISTS`, `IF NOT EXISTS`)
-4. **Test locally** before committing
-5. **Document rationale** in comments at top of file
+4. **Create hard link in init/ folder** for Docker initialization:
+
+   ```powershell
+   # For .up.sql files
+   New-Item -ItemType HardLink -Path ".\modules\reference\migrations\init\NNN_description.up.sql" -Target ".\modules\reference\migrations\NNN_description.up.sql"
+   
+   # For standalone .sql files
+   New-Item -ItemType HardLink -Path ".\modules\reference\migrations\init\NNN_description.sql" -Target ".\modules\reference\migrations\NNN_description.sql"
+   
+   # DO NOT link .down.sql files - rollbacks not needed for fresh DB initialization
+   ```
+
+   **Why hard links?** Changes to either file automatically reflect in both - they're the same file on disk with two directory entries. This prevents files from getting out of sync.
+
+5. **Test locally** before committing
+6. **Document rationale** in comments at top of file
+7. **Update this README** with the new migration in the Applied Migrations table
 
 **Migration Template:**
 
@@ -137,56 +191,79 @@ CHECK (field_value > 0);
 
 ## Applied Migrations
 
-| Version | Description | Applied |
-|---------|-------------|---------|
-| 000 | Create migration tracking table | 2026-01-27 |
-| 001 | Create countries table | 2026-01-27 |
-| 002 | Create countries audit table | 2026-01-27 |
-| 003 | Add remarks column and relax constraints | 2026-01-27 |
-| 004 | Add remarks to audit table | 2026-01-27 |
-| 005 | Fix exceptionally_reserved validation | 2026-01-27 |
-| 006 | Remove alpha4 column from countries table | 2026-01-27 |
-| 007 | Remove alpha4 from audit trigger function | 2026-01-27 |
-| 008 | Remove alpha4 from update trigger function | 2026-01-27 |
+| Version | Description | Applied | In init/ |
+|---------|-------------|---------|----------|
+| 000 | Create migration tracking table | 2026-01-27 | ✅ |
+| 001 | Create countries table | 2026-01-27 | ✅ |
+| 002 | Create countries audit table | 2026-01-27 | ✅ |
+| 003 | Add remarks column and relax constraints | 2026-01-27 | ✅ |
+| 004 | Add remarks to audit table | 2026-01-27 | ✅ |
+| 005 | Fix exceptionally_reserved validation | 2026-01-27 | ✅ |
+| 006 | Remove alpha4 column from countries table | 2026-01-27 | ✅ |
+| 007 | Remove alpha4 from audit trigger function | 2026-01-27 | ✅ |
+| 008 | Remove alpha4 from update trigger function | 2026-01-27 | ✅ |
+
+**Note**: "In init/" indicates the migration is included in Docker's automatic initialization for fresh databases.
 
 ## Troubleshooting
 
 ### Migration Failed
 
-If a migration fails:
-
-1. **Check the error message** in the script output
-2. **Verify database state** - what was partially applied?
-3. **Fix the migration file** or create a new one
-4. **Manually clean up** if needed:
-   ```sql
-   DELETE FROM reference.schema_migrations WHERE version = 'NNN_failed_migration';
+If a migration fails during Docker initialization:
+1. **Check container logs**: `docker logs axiom-postgres`
+2. **Fix the migration file** in migrations/ folder
+3. **Update init/ folder** with corrected file
+4. **Restart with clean database**:
+   ```bash
+   docker compose down
+   Remove-Item -Recurse -Force .\data\postgres\*
+   docker compose up -d
    ```
-5. **Re-run the migration**
 
-### Migration Already Applied
+### Manually Apply Migration to Running Database
 
-The runner automatically skips applied migrations. To force re-run:
+If you need to apply a migration to an existing database without restarting:
 
-```sql
-DELETE FROM reference.schema_migrations WHERE version = 'NNN_migration_name';
+```bash
+# 1. Copy migration to init/ if not already there
+Copy-Item .\modules\reference\migrations\NNN_migration.sql .\modules\reference\migrations\init\
+
+# 2. Apply the migration
+docker exec axiom-postgres psql -U axiom -d axiom_db -f /docker-entrypoint-initdb.d/NNN_migration.sql
+
+# 3. Record in schema_migrations table
+docker exec axiom-postgres psql -U axiom -d axiom_db -c "
+INSERT INTO reference.schema_migrations (version, description, installed_by, installed_on, execution_time_ms) 
+VALUES ('NNN_migration_name', 'Description of change', 'axiom', NOW(), 0);"
 ```
-
-Then run the migration script again.
 
 ### Check Migration Status
 
-```powershell
-# See what's pending
-.\scripts\run-migrations.ps1 -DryRun
+```sql
+-- View all applied migrations
+SELECT version, description, installed_on 
+FROM reference.schema_migrations 
+ORDER BY version;
+
+-- Count applied migrations
+SELECT COUNT(*) FROM reference.schema_migrations;
 ```
 
-```sql
--- In PostgreSQL
-SELECT COUNT(*) as applied_migrations 
-FROM reference.schema_migrations;
+### Rollback a Migration
+
+Use the corresponding `.down.sql` file (if it exists):
+
+```bash
+# Apply rollback
+docker exec axiom-postgres psql -U axiom -d axiom_db -f /path/to/NNN_migration.down.sql
+
+# Remove from tracking
+docker exec axiom-postgres psql -U axiom -d axiom_db -c "
+DELETE FROM reference.schema_migrations WHERE version = 'NNN_migration_name';"
 ```
+
+**Note**: Not all migrations have `.down.sql` files - migrations 005-008 are one-way only.
 
 ---
 
-**Last Updated:** January 27, 2026
+**Last Updated:** January 28, 2026
