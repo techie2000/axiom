@@ -78,11 +78,17 @@ func TransformToCurrency(raw RawCurrencyData) (*Currency, error) {
 	if raw.MinorUnit != "" {
 		trimmed := strings.TrimSpace(raw.MinorUnit)
 		if trimmed != "" {
-			minorUnits, err := strconv.Atoi(trimmed)
-			if err != nil {
-				return nil, fmt.Errorf("invalid minor unit: %s", trimmed)
+			// Handle "N.A." as 0 (common for precious metals and bond units)
+			if trimmed == "N.A." {
+				zero := 0
+				currency.MinorUnits = &zero
+			} else {
+				minorUnits, err := strconv.Atoi(trimmed)
+				if err != nil {
+					return nil, fmt.Errorf("invalid minor unit: %s", trimmed)
+				}
+				currency.MinorUnits = &minorUnits
 			}
-			currency.MinorUnits = &minorUnits
 		}
 	}
 
