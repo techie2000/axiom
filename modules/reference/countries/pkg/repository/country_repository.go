@@ -135,7 +135,7 @@ func (r *CountryRepository) Upsert(ctx context.Context, country *model.Country) 
 
 	if err != nil {
 		// Enhance error message with country details for easier debugging
-		return fmt.Errorf("failed to upsert country %s (alpha3=%s, numeric=%s, name=%s): %w", 
+		return fmt.Errorf("failed to upsert country %s (alpha3=%s, numeric=%s, name=%s): %w",
 			country.Alpha2, country.Alpha3, country.Numeric, country.NameEnglish, err)
 	}
 

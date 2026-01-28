@@ -85,6 +85,30 @@ source_system := current_setting('app.source_system', TRUE)
 source_user := current_setting('app.source_user', TRUE)
 ```
 
+### No-Op UPDATE Detection
+
+**Principle**: Only record UPDATE operations when field values actually change.
+
+UPSERT operations with `ON CONFLICT DO UPDATE` always execute the UPDATE clause, even when all values are identical. Without detection, this creates audit records with empty `changed_fields` arrays, cluttering the audit trail.
+
+**Implementation** (Migration 011):
+
+```sql
+-- In UPDATE trigger function
+IF array_length(changed_fields_array, 1) IS NULL THEN
+    RETURN NEW;  -- Skip audit record
+END IF;
+```
+
+**Rationale**:
+
+- **Signal vs noise**: Empty change records provide no value
+- **Storage efficiency**: Reduces audit table growth
+- **Query clarity**: Only meaningful changes in audit history
+- **Semantic correctness**: NULL changed_fields means "no comparison" (INSERT/DELETE), empty array means "compared but nothing changed"
+
+This pattern must be applied to all reference data audit triggers.
+
 ## Rationale
 
 ### Why Separate Audit Table (vs. is_current Pattern)?
