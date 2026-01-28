@@ -54,9 +54,9 @@ const (
 // Logf logs a message using the route-specific logger if available, otherwise uses standard log
 func (r *RouteConfig) Logf(format string, args ...interface{}) {
 	if r.logger != nil {
-		r.logger.Printf(format, args...)
+		r.logger.Printf("INFO: [%s] "+format, append([]interface{}{r.Name}, args...)...)
 	} else {
-		log.Printf("[%s] "+format, append([]interface{}{r.Name}, args...)...)
+		log.Printf("INFO: [%s] "+format, append([]interface{}{r.Name}, args...)...)
 	}
 }
 
@@ -64,9 +64,9 @@ func (r *RouteConfig) Logf(format string, args ...interface{}) {
 func (r *RouteConfig) LogWithLevel(level LogLevel, format string, args ...interface{}) {
 	msg := fmt.Sprintf(format, args...)
 	if r.logger != nil {
-		r.logger.Printf("%s: %s", level, msg)
+		r.logger.Printf("%s: [%s] %s", level, r.Name, msg)
 	} else {
-		log.Printf("[%s] %s: %s", r.Name, level, msg)
+		log.Printf("%s: [%s] %s", level, r.Name, msg)
 	}
 }
 
@@ -250,11 +250,12 @@ func startRouteMonitoring(route RouteConfig, globalConfig GlobalConfig) {
 		logFilePath := filepath.Join(route.Logging.LogFolder, fmt.Sprintf("%s.log", route.Name))
 		logFile, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 		if err != nil {
-			log.Printf("[%s] WARN: Failed to open log file %s: %v", route.Name, logFilePath, err)
+			log.Printf("WARN: [%s] Failed to open log file %s: %v", route.Name, logFilePath, err)
 		} else {
 			route.logFile = logFile
-			route.logger = log.New(io.MultiWriter(os.Stdout, logFile), fmt.Sprintf("[%s] ", route.Name), log.LstdFlags)
-			route.logger.Printf("INFO: File logging enabled: %s", logFilePath)
+			// No prefix - entity name will be in the message format: "timestamp LEVEL: [entity] message"
+			route.logger = log.New(io.MultiWriter(os.Stdout, logFile), "", log.LstdFlags)
+			route.logger.Printf("INFO: [%s] File logging enabled: %s", route.Name, logFilePath)
 			defer logFile.Close()
 		}
 	}
