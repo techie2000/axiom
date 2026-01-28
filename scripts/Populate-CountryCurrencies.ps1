@@ -83,12 +83,19 @@ function Invoke-PostgresQuery {
         $env:PGPASSWORD = "localdev123"
         $tempFile = [System.IO.Path]::GetTempFileName()
         try {
-            $output = docker exec -i axiom-postgres psql -U axiom axiom_db -c "COPY ($Query) TO STDOUT WITH CSV HEADER"
-            if ($LASTEXITCODE -ne 0) {
-                throw "psql command failed with exit code $LASTEXITCODE"
+            # Set output encoding to UTF-8 to handle special characters correctly
+            $previousEncoding = [Console]::OutputEncoding
+            [Console]::OutputEncoding = [Text.Encoding]::UTF8
+            try {
+                $output = docker exec -i axiom-postgres psql -U axiom axiom_db -c "COPY ($Query) TO STDOUT WITH CSV HEADER"
+                if ($LASTEXITCODE -ne 0) {
+                    throw "psql command failed with exit code $LASTEXITCODE"
+                }
+                $output | Set-Content -Path $tempFile -Encoding UTF8
+                return Import-Csv -Path $tempFile -Encoding UTF8
+            } finally {
+                [Console]::OutputEncoding = $previousEncoding
             }
-            $output | Set-Content -Path $tempFile -Encoding UTF8
-            return Import-Csv -Path $tempFile
         } finally {
             if (Test-Path $tempFile) {
                 Remove-Item $tempFile
@@ -129,7 +136,7 @@ if (-not (Test-Path $CurrenciesCsvPath)) {
 }
 
 Write-Host "📄 Reading currencies.csv..." -ForegroundColor Yellow
-$csvData = Import-Csv -Path $CurrenciesCsvPath
+$csvData = Import-Csv -Path $CurrenciesCsvPath -Encoding UTF8
 
 # Parse ENTITY → Currency Code mappings
 Write-Host "🔍 Parsing ENTITY field mappings..." -ForegroundColor Yellow
@@ -178,7 +185,8 @@ Write-Host "  Found $($validCurrencyCodes.Count) active currencies in database" 
 Write-Host "`n🔍 Building country name lookup..." -ForegroundColor Yellow
 $countryLookup = @{}
 foreach ($country in $countries) {
-    $normalizedName = $country.name_english.ToUpper().Trim()
+    # Normalize to NFC (composed form), then handle case and whitespace
+    $normalizedName = $country.name_english.Normalize([Text.NormalizationForm]::FormC).ToUpper().Trim()
     $countryLookup[$normalizedName] = $country
 }
 
@@ -196,7 +204,8 @@ $invalidCurrency = @()
 $multiCurrency = @()
 
 foreach ($entity in $entityMappings.Keys) {
-    $normalizedEntity = $entity.ToUpper().Trim()
+    # Normalize to NFC (composed form) to match database names with special characters
+    $normalizedEntity = $entity.Normalize([Text.NormalizationForm]::FormC).ToUpper().Trim()
     
     if ($countryLookup.ContainsKey($normalizedEntity)) {
         $country = $countryLookup[$normalizedEntity]
