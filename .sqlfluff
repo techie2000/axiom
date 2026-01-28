@@ -2,14 +2,14 @@
 dialect = postgres
 templater = raw
 sql_file_exts = .sql,.up.sql,.down.sql
+# Allow single-line comments
+max_line_length = 120
 
 [sqlfluff:indentation]
 indent_unit = space
 tab_space_size = 4
 
 [sqlfluff:rules]
-# Allow single-line comments
-max_line_length = 120
 
 [sqlfluff:rules:capitalisation.keywords]
 # Keywords should be uppercase
