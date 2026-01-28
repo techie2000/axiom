@@ -49,3 +49,6 @@ data/logs/
 data/output/
 data/postgres/
 data/rabbitmq/
+
+# CSV processing temporary folders
+modules/reference/*/data/input/
