@@ -100,12 +100,15 @@ currency.Name = strings.TrimSpace(input.Currency)
 
 **Rule**: Parse minor units (decimal places) as integer. **REQUIRED for active currencies**, NULL allowed only for special/historical currencies.
 
+**Special Handling**: ISO 4217 CSV uses `"N.A."` for currencies where minor units don't apply (precious metals, bond units). Transform converts `"N.A."` → `0`.
+
 **Examples**:
 
 - Input: `"2"` → Output: `2` (USD, EUR, GBP - cents/pence) **[REQUIRED for active]**
 - Input: `"0"` → Output: `0` (JPY, KRW - no subdivision) **[REQUIRED for active]**
 - Input: `"3"` → Output: `3` (BHD, KWD - fils) **[REQUIRED for active]**
-- Input: `""` → Output: `NULL` (XAU Gold - special currency, NULL allowed)
+- Input: `"N.A."` → Output: `0` (XAU Gold, XAG Silver - special currencies)
+- Input: `""` → Output: `NULL` (empty field)
 
 **Implementation**:
 
@@ -428,10 +431,20 @@ if currency.EndDate != nil && *currency.EndDate != "" {
 - `code` is empty or invalid format
 - `name` is empty
 - `number` is invalid format (must be numeric if present)
-- `minor_units` is non-numeric (if present)
+- `minor_units` is non-numeric (if present, excluding "N.A." which converts to 0)
 - `minor_units` is NULL when status='active' (REQUIRED for active currencies)
 - `alpha2` references non-existent country
 - `start_date` or `end_date` in invalid format
+
+### Expected Rejections
+
+**"No universal currency" rows** (3 entities in ISO 4217 CSV):
+
+- ANTARCTICA
+- PALESTINE, STATE OF  
+- SOUTH GEORGIA AND THE SOUTH SANDWICH ISLANDS
+
+These rows have empty `Alphabetic Code` and `Currency` = "No universal currency". They are correctly rejected as they don't represent actual currencies.
 
 ### Skip/Warn If
 
@@ -470,12 +483,18 @@ See [TESTING-RULES.md](TESTING-RULES.md) for comprehensive test cases.
 
 **Source Data**: `currencies.csv` (449 entries + header)
 
+**Processing Results**:
+
+- **Input**: 450 CSV rows (449 currencies + 1 header)
+- **Output**: 307 unique currencies loaded
+- **Rejections**: 3 (expected - "No universal currency" entities)
+
 **Database Results**:
 
 ```sql
-total_currencies | active | historical 
-------------------+--------+------------
-              294 |    157 |        129
+total_currencies | active | historical | special
+------------------+--------+------------+---------
+              307 |    159 |        129 |      19
 ```
 
 **Audit Trail Results**:
@@ -488,18 +507,20 @@ total_audit_records | inserts | updates
 
 **Key Metrics**:
 
-- **CSV to Database Consolidation**: 449 CSV entries → 294 unique currencies
+- **CSV to Database Consolidation**: 449 CSV entries → 307 unique currencies
   - Reason: Multiple CSV entries per currency code (e.g., RUR has 11 entries)
   - Each unique code gets 1 INSERT + (n-1) potential UPDATEs
+- **Special Currencies**: 19 loaded (precious metals: XAU, XAG, XPT, XPD + bond units: XBA-XBD + others)
+  - Note: "N.A." in CSV converted to minor_units=0 for these currencies
 - **Audit Record Distribution**:
   - 294 INSERT operations (one per unique currency code)
   - 18 UPDATE operations (currencies with multiple CSV entries that changed values)
   - Average: 1.06 audit records per currency (very efficient)
 - **Data Quality**:
   - 0 active currencies with NULL minor_units ✅
-  - 157 active currencies all properly validated ✅
+  - 159 active currencies all properly validated ✅
   - 129 historical currencies with end_date ✅
-  - 8 special currencies (fund/precious metals) ✅
+  - 19 special currencies (fund/precious metals/bond units) ✅
 
 **Historical Override Protection**:
 
