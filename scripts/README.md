@@ -2,6 +2,87 @@
 
 Maintenance and operational scripts for the Axiom reference data system.
 
+## Database Migration Scripts
+
+### Apply-Migration.ps1
+
+Applies a database migration with proper tracking (execution time and checksum).
+
+**Purpose**: Apply SQL migrations to the database while automatically recording:
+- Execution time in milliseconds
+- SHA-256 checksum for integrity verification
+- Installation timestamp and user
+
+**When to use**:
+- Apply new migrations instead of manual `psql` execution
+- Ensures proper metadata tracking in `schema_migrations` table
+- Provides rollback safety with checksum verification
+
+**Usage**:
+
+```powershell
+# Apply a migration
+.\scripts\Apply-Migration.ps1 -MigrationFile .\modules\reference\migrations\020_add_feature.sql
+
+# Dry run (preview without applying)
+.\scripts\Apply-Migration.ps1 -MigrationFile .\modules\reference\migrations\020_add_feature.sql -DryRun
+```
+
+**Features**:
+- ✅ Measures execution time automatically
+- ✅ Calculates SHA-256 checksum of migration file
+- ✅ Checks if migration already applied (prevents duplicates)
+- ✅ Color-coded output for errors, notices, and success
+- ✅ Creates complete audit record in `schema_migrations` table
+
+**Requirements**:
+- Migration filename must follow format: `NNN_description.sql` (e.g., `020_add_feature.sql`)
+- Database must have `reference.schema_migrations` table
+- Docker container `axiom-postgres` must be running
+
+### Backfill-MigrationChecksums.ps1
+
+Backfills checksums for migrations that were applied manually without checksum tracking.
+
+**Purpose**: Update existing `schema_migrations` records with file checksums for integrity verification.
+
+**When to run**:
+- After implementing checksum tracking (one-time operation)
+- When you want to add checksums to legacy migrations
+- Before implementing migration rollback features
+
+**Usage**:
+
+```powershell
+# Backfill all migrations in default path
+.\scripts\Backfill-MigrationChecksums.ps1
+
+# Specify custom migrations directory
+.\scripts\Backfill-MigrationChecksums.ps1 -MigrationsPath .\custom\migrations
+```
+
+**What it does**:
+1. Finds all migrations in `schema_migrations` with NULL checksum
+2. Locates corresponding `.sql` files
+3. Calculates SHA-256 checksum for each file
+4. Updates `schema_migrations` table with checksums
+
+**Output**:
+```powershell
+=== Backfill Migration Checksums ===
+Found 18 migrations without checksums
+
+💾 Processing...
+  ✓ 001_create_countries_table - checksum: 52fc45f9a2cfba6b...
+  ✓ 017_add_currency_to_countries - checksum: 02f14cd79893d1d5...
+  
+=== Summary ===
+Updated: 17
+Not found: 1
+```
+
+**Note**: Cannot backfill `execution_time_ms` for already-applied migrations (use `Apply-Migration.ps1` for new migrations).
+
 ## Data Maintenance Scripts
 
 ### Populate-CountryCurrencies.ps1
