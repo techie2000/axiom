@@ -88,6 +88,16 @@ func (r *leiRepository) FindAllLEI(limit, offset int) ([]*domain.LEIRecord, erro
 	return records, nil
 }
 
+// isAlphanumeric checks if string contains only letters and numbers
+func isAlphanumeric(s string) bool {
+	for _, char := range s {
+		if !((char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') || (char >= '0' && char <= '9')) {
+			return false
+		}
+	}
+	return true
+}
+
 // FindAllLEIWithFilters retrieves LEI records with search and filters
 func (r *leiRepository) FindAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder string) ([]*domain.LEIRecord, error) {
 	var records []*domain.LEIRecord
@@ -95,7 +105,16 @@ func (r *leiRepository) FindAllLEIWithFilters(limit, offset int, search, status,
 
 	// Apply search filter (LEI code or legal name)
 	if search != "" {
-		query = query.Where("lei ILIKE ? OR legal_name ILIKE ?", "%"+search+"%", "%"+search+"%")
+		// Optimize search based on pattern:
+		// 1. If exactly 20 chars (LEI format), use exact match on LEI only
+		// 2. Otherwise, search name fields only (never partial LEI search)
+		if len(search) == 20 && isAlphanumeric(search) {
+			// Exact LEI match - uses idx_lei_records_lei B-tree index (< 1ms)
+			query = query.Where("lei = ?", search)
+		} else {
+			// Name search only - uses idx_lei_records_legal_name_trgm GIN index (~20-50ms)
+			query = query.Where("legal_name ILIKE ? OR transliterated_legal_name ILIKE ?", "%"+search+"%", "%"+search+"%")
+		}
 	}
 
 	// Apply status filter
