@@ -83,16 +83,24 @@ const AVAILABLE_COLUMNS: ColumnConfig[] = [
   { key: 'entity_sub_category', label: 'Sub Category', group: 'Entity', defaultVisible: false, width: 'w-40' },
   { key: 'entity_legal_form', label: 'Legal Form', group: 'Entity', defaultVisible: false, width: 'w-40' },
   
-  // Legal Address
+  // Legal Address (natural order: address lines, then city/region/country/postal)
+  { key: 'legal_address_line_1', label: 'Address Line 1', group: 'Legal Address', defaultVisible: false, width: 'min-w-48' },
+  { key: 'legal_address_line_2', label: 'Address Line 2', group: 'Legal Address', defaultVisible: false, width: 'min-w-48' },
+  { key: 'legal_address_line_3', label: 'Address Line 3', group: 'Legal Address', defaultVisible: false, width: 'min-w-48' },
+  { key: 'legal_address_line_4', label: 'Address Line 4', group: 'Legal Address', defaultVisible: false, width: 'min-w-48' },
   { key: 'legal_address_city', label: 'City', group: 'Legal Address', defaultVisible: false, width: 'w-40' },
   { key: 'legal_address_region', label: 'Region', group: 'Legal Address', defaultVisible: false, width: 'w-32' },
   { key: 'legal_address_postal_code', label: 'Postal Code', group: 'Legal Address', defaultVisible: false, width: 'w-28' },
-  { key: 'legal_address_line_1', label: 'Address Line 1', group: 'Legal Address', defaultVisible: false, width: 'min-w-48' },
   
-  // HQ Address
+  // HQ Address (natural order: address lines, then city/region/country/postal)
+  { key: 'hq_address_line_1', label: 'HQ Address Line 1', group: 'HQ Address', defaultVisible: false, width: 'min-w-48' },
+  { key: 'hq_address_line_2', label: 'HQ Address Line 2', group: 'HQ Address', defaultVisible: false, width: 'min-w-48' },
+  { key: 'hq_address_line_3', label: 'HQ Address Line 3', group: 'HQ Address', defaultVisible: false, width: 'min-w-48' },
+  { key: 'hq_address_line_4', label: 'HQ Address Line 4', group: 'HQ Address', defaultVisible: false, width: 'min-w-48' },
   { key: 'hq_address_city', label: 'HQ City', group: 'HQ Address', defaultVisible: false, width: 'w-40' },
-  { key: 'hq_address_country', label: 'HQ Country', group: 'HQ Address', defaultVisible: false, width: 'w-24' },
   { key: 'hq_address_region', label: 'HQ Region', group: 'HQ Address', defaultVisible: false, width: 'w-32' },
+  { key: 'hq_address_country', label: 'HQ Country', group: 'HQ Address', defaultVisible: false, width: 'w-24' },
+  { key: 'hq_address_postal_code', label: 'HQ Postal Code', group: 'HQ Address', defaultVisible: false, width: 'w-28' },
   
   // Registration
   { key: 'registration_authority', label: 'Registration Authority', group: 'Registration', defaultVisible: false, width: 'w-48' },
@@ -467,6 +475,32 @@ export default function LEIRecordsPage() {
     return groups
   }
 
+  const toggleGroupColumns = (group: string) => {
+    const groupColumns = AVAILABLE_COLUMNS.filter(col => col.group === group)
+    const allGroupColumnsVisible = groupColumns.every(col => visibleColumns.has(col.key))
+    
+    const newVisibleColumns = new Set(visibleColumns)
+    if (allGroupColumnsVisible) {
+      // If all are visible, hide them all
+      groupColumns.forEach(col => newVisibleColumns.delete(col.key))
+    } else {
+      // If some or none are visible, show them all
+      groupColumns.forEach(col => newVisibleColumns.add(col.key))
+    }
+    setVisibleColumns(newVisibleColumns)
+  }
+
+  const isGroupFullySelected = (group: string) => {
+    const groupColumns = AVAILABLE_COLUMNS.filter(col => col.group === group)
+    return groupColumns.every(col => visibleColumns.has(col.key))
+  }
+
+  const isGroupPartiallySelected = (group: string) => {
+    const groupColumns = AVAILABLE_COLUMNS.filter(col => col.group === group)
+    const visibleCount = groupColumns.filter(col => visibleColumns.has(col.key)).length
+    return visibleCount > 0 && visibleCount < groupColumns.length
+  }
+
   const totalPages = Math.ceil(totalRecords / itemsPerPage)
   const hasActiveFilters = debouncedSearch || statusFilter || categoryFilter || countryFilter
 
@@ -554,8 +588,20 @@ export default function LEIRecordsPage() {
                   
                   {Object.entries(getColumnsByGroup()).map(([group, columns]) => (
                     <div key={group} className="border-b border-gray-200 dark:border-white/10 last:border-b-0">
-                      <div className="px-3 py-2 bg-gray-50 dark:bg-gray-700 font-semibold text-sm text-gray-700 dark:text-gray-300">
-                        {group}
+                      <div 
+                        onClick={() => toggleGroupColumns(group)}
+                        className="px-3 py-2.5 bg-gray-50 dark:bg-gray-700 font-semibold text-sm text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors flex items-center justify-between gap-3"
+                        title={`Click to toggle all ${group} columns`}
+                      >
+                        <span className="flex items-center gap-2.5">
+                          <span className="text-base leading-none">
+                            {isGroupFullySelected(group) ? '☑' : isGroupPartiallySelected(group) ? '◐' : '☐'}
+                          </span>
+                          <span>{group}</span>
+                        </span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">
+                          {columns.filter(c => visibleColumns.has(c.key)).length}/{columns.length}
+                        </span>
                       </div>
                       <div className="p-2">
                         {columns.map((column) => (
