@@ -50,7 +50,7 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       SERVER_PORT: ${SERVER_PORT}
       SERVER_MODE: ${SERVER_MODE}
-      LEI_DATA_DIR: ${LEI_DATA_DIR}
+      LEI_DATADIR: ${LEI_DATADIR}
     ports:
       - "${BACKEND_PORT}:8080"
     volumes:

@@ -338,16 +338,18 @@ func (s *schedulerService) dailyDeltaSyncLoop() {
 		log.Info().
 			Int("failed_files", len(failedFiles)).
 			Msg("Found retryable failed files, resetting to PENDING for retry")
-		for _, file := range failedFiles {
+		for i := range failedFiles {
+			file := failedFiles[i]
+			fileID := file.ID
 			log.Info().
-				Str("file_id", file.ID.String()).
+				Str("file_id", fileID.String()).
 				Str("file_name", file.FileName).
 				Str("failure_category", file.FailureCategory).
 				Int("retry_count", file.RetryCount).
 				Int("max_retries", file.MaxRetries).
 				Msg("Resetting failed file for retry")
-			if err := s.leiService.ResetFailedFileForRetry(file.ID); err != nil {
-				log.Error().Err(err).Str("file_id", file.ID.String()).Msg("Failed to reset file for retry")
+			if err := s.leiService.ResetFailedFileForRetry(fileID); err != nil {
+				log.Error().Err(err).Str("file_id", fileID.String()).Msg("Failed to reset file for retry")
 			}
 		}
 	}
@@ -359,18 +361,20 @@ func (s *schedulerService) dailyDeltaSyncLoop() {
 	} else if len(pendingFiles) > 0 {
 		// Abort old PENDING files (over 24 hours old) to prevent accumulation
 		now := time.Now()
-		for _, file := range pendingFiles {
+		for i := range pendingFiles {
+			oldFile := pendingFiles[i]
+			oldFileID := oldFile.ID
 			// If file is PENDING and created more than 24 hours ago, mark as FAILED
-			if file.ProcessingStatus == "PENDING" && now.Sub(file.CreatedAt) > 24*time.Hour {
+			if oldFile.ProcessingStatus == "PENDING" && now.Sub(oldFile.CreatedAt) > 24*time.Hour {
 				log.Warn().
-					Str("file_id", file.ID.String()).
-					Str("file_name", file.FileName).
-					Str("age", now.Sub(file.CreatedAt).String()).
+					Str("file_id", oldFileID.String()).
+					Str("file_name", oldFile.FileName).
+					Str("age", now.Sub(oldFile.CreatedAt).String()).
 					Msg("Marking old PENDING file as TIMED_OUT")
-				file.ProcessingStatus = "FAILED"
-				file.ProcessingError = "File pending for more than 24 hours - timed out"
-				file.FailureCategory = "TIMEOUT"
-				s.leiService.UpdateSourceFile(file)
+				oldFile.ProcessingStatus = "FAILED"
+				oldFile.ProcessingError = "File pending for more than 24 hours - timed out"
+				oldFile.FailureCategory = "TIMEOUT"
+				s.leiService.UpdateSourceFile(oldFile)
 			}
 		}
 
@@ -381,21 +385,22 @@ func (s *schedulerService) dailyDeltaSyncLoop() {
 		} else if len(pendingFiles) > 0 {
 			log.Info().Int("pending_files", len(pendingFiles)).Msg("Found incomplete source files, resuming processing")
 
-			// Update file_processing_status when retrying failed jobs
-			for _, file := range pendingFiles {
+			// Process pending files
+			for i := range pendingFiles {
+				file := pendingFiles[i]
+				fileID := file.ID // Capture ID to avoid loop variable reuse bug
 				// Determine job type from file type
 				jobType := "DAILY_FULL"
 				if file.FileType == "DELTA" {
 					jobType = "DAILY_DELTA"
 				}
-
 				// Update job status to RUNNING when resuming file processing
 				if jobStatus, err := s.leiService.GetProcessingStatus(jobType); err == nil {
 					jobStatus.Status = "RUNNING"
 					jobStatus.ErrorMessage = "" // Clear any previous error
 					now := time.Now()
 					jobStatus.LastRunAt = &now
-					jobStatus.CurrentSourceFileID = &file.ID
+					jobStatus.CurrentSourceFileID = &fileID
 					s.leiService.UpdateProcessingStatus(jobStatus)
 					log.Info().Str("job_type", jobType).Str("previous_status", jobStatus.Status).Msg("Updated job status to RUNNING for file resume")
 				}
@@ -405,7 +410,7 @@ func (s *schedulerService) dailyDeltaSyncLoop() {
 				if file.LastProcessedLEI != "" {
 					resumeLEI = file.LastProcessedLEI
 					log.Info().
-						Str("file_id", file.ID.String()).
+						Str("file_id", fileID.String()).
 						Str("file_name", file.FileName).
 						Str("resume_from", resumeLEI).
 						Int("processed", file.ProcessedRecords).
@@ -413,13 +418,13 @@ func (s *schedulerService) dailyDeltaSyncLoop() {
 						Msg("Resuming from checkpoint")
 				} else {
 					log.Info().
-						Str("file_id", file.ID.String()).
+						Str("file_id", fileID.String()).
 						Str("file_name", file.FileName).
 						Msg("Processing pending file from beginning")
 				}
 
-				if err := s.leiService.ProcessSourceFileWithResume(file.ID, resumeLEI); err != nil {
-					log.Error().Err(err).Str("file_id", file.ID.String()).Msg("Failed to process pending file")
+				if err := s.leiService.ProcessSourceFileWithResume(fileID, resumeLEI); err != nil {
+					log.Error().Err(err).Str("file_id", fileID.String()).Msg("Failed to process pending file")
 					// Update job status to FAILED
 					if jobStatus, getErr := s.leiService.GetProcessingStatus(jobType); getErr == nil {
 						jobStatus.Status = "FAILED"

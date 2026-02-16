@@ -50,7 +50,7 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       SERVER_PORT: ${SERVER_PORT}
       SERVER_MODE: ${SERVER_MODE}
-      LEI_DATA_DIR: ${LEI_DATA_DIR}
+      LEI_DATADIR: ${LEI_DATADIR}
       CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:13000,http://localhost:23000,http://localhost:33000"
       CORS_ALLOWED_METHODS: "GET,POST,PUT,DELETE,OPTIONS"
       CORS_ALLOWED_HEADERS: "Origin,Content-Type,Authorization,Accept"
