@@ -348,8 +348,6 @@ export default function LEIRecordsPage() {
       address.line3,
       address.line4,
       address.city,
-      address.region,
-      address.country,
       address.postalCode
     ].filter(Boolean)
     
