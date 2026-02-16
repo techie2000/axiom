@@ -120,7 +120,7 @@ export default function LEIRecordsPage() {
   const [countrySearch, setCountrySearch] = useState('')
   const [showCountryDropdown, setShowCountryDropdown] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
-  const [totalRecords] = useState(3211232)
+  const [totalRecords, setTotalRecords] = useState(0)
   const [countryOptions, setCountryOptions] = useState<Country[]>([])
   const [itemsPerPage, setItemsPerPage] = useState(50)
   const [hasMorePages, setHasMorePages] = useState(false)
@@ -164,6 +164,25 @@ export default function LEIRecordsPage() {
     }
     fetchCountries()
   }, [])
+
+  // Fetch total records count from API
+  useEffect(() => {
+    const fetchTotalRecords = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/v1/lei/status/DAILY_FULL`, { cache: 'no-store' })
+        if (response.ok) {
+          const data = await response.json()
+          setTotalRecords(data.current_source_file?.total_records || 0)
+        }
+      } catch (err) {
+        console.error('Failed to fetch total records:', err)
+      }
+    }
+    fetchTotalRecords()
+    // Refresh every 30 seconds to get live updates during sync
+    const interval = setInterval(fetchTotalRecords, 30000)
+    return () => clearInterval(interval)
+  }, [API_BASE_URL])
 
   // Debug logging for records array
   useEffect(() => {
