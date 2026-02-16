@@ -87,7 +87,7 @@ type LEIService interface {
 	GetLEIByCode(lei string) (*domain.LEIRecord, error)
 	GetLEIByID(id string) (*domain.LEIRecord, error)
 	GetAllLEI(limit, offset int) ([]*domain.LEIRecord, error)
-	GetAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder string) ([]*domain.LEIRecord, error)
+	GetAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string) ([]*domain.LEIRecord, error)
 	CountLEIRecords() (int64, error)
 	GetDistinctCountries() ([]domain.Country, error)
 	UpdateLEIRecord(record *domain.LEIRecord) error
@@ -995,8 +995,8 @@ func (s *leiService) GetAllLEI(limit, offset int) ([]*domain.LEIRecord, error) {
 }
 
 // GetAllLEIWithFilters retrieves LEI records with search and filters
-func (s *leiService) GetAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder string) ([]*domain.LEIRecord, error) {
-	return s.repo.FindAllLEIWithFilters(limit, offset, search, status, category, country, sortBy, sortOrder)
+func (s *leiService) GetAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string) ([]*domain.LEIRecord, error) {
+	return s.repo.FindAllLEIWithFilters(limit, offset, search, status, category, country, sortBy, sortOrder, columns)
 }
 
 // CountLEIRecords returns the total count of LEI records

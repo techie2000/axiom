@@ -203,12 +203,14 @@ Once started, each environment is accessible at:
 The development environment (`docker-compose.dev.yml`) includes hot reload for the frontend:
 
 **Features:**
+
 - ✅ Instant code changes (no rebuild required)
 - ✅ Next.js development mode with Fast Refresh
 - ✅ Source code mounted as volume
 - ✅ Native Next.js development workflow
 
 **Configuration:**
+
 ```yaml
 volumes:
   - ./frontend:/app          # Mount source code
@@ -218,6 +220,7 @@ command: npm run dev         # Development mode
 ```
 
 **Benefits:**
+
 - Frontend changes appear instantly in browser
 - No 2-3 minute Docker rebuild cycle
 - Standard Next.js hot module replacement (HMR)
@@ -324,7 +327,7 @@ server:
 
 **Environment Variables:** All config values can be set via environment variables using uppercase with underscores (e.g., `DATABASE_LOGLEVEL`, `LEI_DELTA_SYNC_INTERVAL`).
 
-See [LEI Configuration](docs/LEI_ACQUISITION.md#environment-variables) for detailed scheduler options.
+See [LEI Configuration](docs/lei/LEI_ACQUISITION.md#environment-variables) for detailed scheduler options.
 
 ## Performance Optimization
 

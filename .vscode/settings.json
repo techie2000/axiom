@@ -108,6 +108,7 @@
         "swaggo",
         "templater",
         "testdata",
+        "toggleable",
         "trgm",
         "Upserting",
         "VARCHAR",

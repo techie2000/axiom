@@ -323,8 +323,8 @@ docker-compose --env-file .env.dev -f docker-compose.dev.yml up -d
 ## References
 
 - **Architecture:** [docs/architecture.md](../architecture.md)
-- **LEI Acquisition:** [docs/LEI_ACQUISITION.md](../LEI_ACQUISITION.md)
-- **LEI Data Flow:** [docs/LEI_DATA_FLOW.md](../LEI_DATA_FLOW.md)
+- **LEI Acquisition:** [docs/lei/LEI_ACQUISITION.md](./LEI_ACQUISITION.md)
+- **LEI Data Flow:** [docs/lei/LEI_DATA_FLOW.md](./LEI_DATA_FLOW.md)
 - **Multi-Environment Setup:** [docs/environments/multi-environment-setup.md](../environments/multi-environment-setup.md)
 
 ## Known Issues & Future Improvements

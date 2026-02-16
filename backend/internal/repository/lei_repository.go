@@ -20,7 +20,7 @@ type LEIRepository interface {
 	FindLEIByLEI(lei string) (*domain.LEIRecord, error)
 	FindLEIByID(id string) (*domain.LEIRecord, error)
 	FindAllLEI(limit, offset int) ([]*domain.LEIRecord, error)
-	FindAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder string) ([]*domain.LEIRecord, error)
+	FindAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string) ([]*domain.LEIRecord, error)
 	CountLEIRecords() (int64, error)
 	GetDistinctCountries() ([]string, error)
 	UpdateLEIRecord(record *domain.LEIRecord) error
@@ -98,10 +98,97 @@ func isAlphanumeric(s string) bool {
 	return true
 }
 
+// validateColumns validates and filters requested columns against allowed LEI record fields
+// Returns validated comma-separated column string or default columns if invalid
+func validateColumns(columns string) string {
+	// Whitelist of allowed LEI record columns (prevents SQL injection)
+	validColumns := map[string]bool{
+		"id":                        true,
+		"lei":                       true,
+		"legal_name":                true,
+		"transliterated_legal_name": true,
+		"entity_status":             true,
+		"entity_category":           true,
+		"entity_sub_category":       true,
+		"entity_legal_form":         true,
+		"legal_address_line_1":      true,
+		"legal_address_line_2":      true,
+		"legal_address_line_3":      true,
+		"legal_address_line_4":      true,
+		"legal_address_city":        true,
+		"legal_address_region":      true,
+		"legal_address_country":     true,
+		"legal_address_postal_code": true,
+		"hq_address_line_1":         true,
+		"hq_address_line_2":         true,
+		"hq_address_line_3":         true,
+		"hq_address_line_4":         true,
+		"hq_address_city":           true,
+		"hq_address_region":         true,
+		"hq_address_country":        true,
+		"hq_address_postal_code":    true,
+		"registration_authority":    true,
+		"registration_authority_id": true,
+		"registration_number":       true,
+		"managing_lou":              true,
+		"successor_lei":             true,
+		"initial_registration_date": true,
+		"last_update_date":          true,
+		"next_renewal_date":         true,
+		"validation_authority":      true,
+		"created_at":                true,
+		"updated_at":                true,
+	}
+
+	if columns == "" {
+		// Default to core columns
+		return "id,lei,legal_name,entity_status,entity_category,legal_address_country,last_update_date"
+	}
+
+	// Split requested columns and validate each one
+	requestedCols := strings.Split(columns, ",")
+	validatedCols := make([]string, 0, len(requestedCols))
+
+	for _, col := range requestedCols {
+		trimmedCol := strings.TrimSpace(col)
+		if validColumns[trimmedCol] {
+			validatedCols = append(validatedCols, trimmedCol)
+		}
+	}
+
+	// If no valid columns found, return defaults
+	if len(validatedCols) == 0 {
+		return "id,lei,legal_name,entity_status,entity_category,legal_address_country,last_update_date"
+	}
+
+	// Always include id if not already present (needed for frontend row keys)
+	hasID := false
+	for _, col := range validatedCols {
+		if col == "id" {
+			hasID = true
+			break
+		}
+	}
+	if !hasID {
+		validatedCols = append([]string{"id"}, validatedCols...)
+	}
+
+	return strings.Join(validatedCols, ",")
+}
+
 // FindAllLEIWithFilters retrieves LEI records with search and filters
-func (r *leiRepository) FindAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder string) ([]*domain.LEIRecord, error) {
+// Uses dynamic SELECT based on requested columns for performance optimization
+func (r *leiRepository) FindAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string) ([]*domain.LEIRecord, error) {
 	var records []*domain.LEIRecord
-	query := r.db.Limit(limit).Offset(offset).Preload("SourceFile")
+	query := r.db.Limit(limit).Offset(offset)
+
+	// Dynamic SELECT optimization: only fetch requested columns
+	// Validates columns against whitelist to prevent SQL injection
+	validatedColumns := validateColumns(columns)
+	query = query.Select(validatedColumns)
+
+	// Remove Preload for list view - only needed for detail view
+	// Saves ~50-100ms per query by not fetching source_file records
 
 	// Apply search filter (LEI code or legal name)
 	if search != "" {
@@ -137,12 +224,32 @@ func (r *leiRepository) FindAllLEIWithFilters(limit, offset int, search, status,
 		query = query.Where("legal_address_country = ?", country)
 	}
 
-	// Apply sorting (default to legal_name ascending)
+	// Hybrid Approach for Sorting:
+	// - No search/filter: ORDER BY updated_at DESC (fast: ~50ms, shows recent updates)
+	// - With search/filter: ORDER BY legal_name ASC (fast: filtered result set is small)
+	// This eliminates the 1276ms slow query on initial page load (ORDER BY legal_name on 3.2M records)
+	hasSearchOrFilter := search != "" || status != "" || category != "" || country != ""
+
+	// Apply sorting
 	if sortBy == "" {
-		sortBy = "legal_name"
-	}
-	if sortOrder == "" || (sortOrder != "asc" && sortOrder != "desc") {
-		sortOrder = "asc"
+		if hasSearchOrFilter {
+			// Default to legal_name when user has narrowed results
+			sortBy = "legal_name"
+			if sortOrder == "" {
+				sortOrder = "asc"
+			}
+		} else {
+			// Default to updated_at for browsing all records (Hybrid Approach)
+			sortBy = "updated_at"
+			if sortOrder == "" {
+				sortOrder = "desc"
+			}
+		}
+	} else {
+		// sortBy was explicitly provided, validate sortOrder
+		if sortOrder == "" || (sortOrder != "asc" && sortOrder != "desc") {
+			sortOrder = "asc"
+		}
 	}
 
 	// Validate sortBy field to prevent SQL injection
@@ -153,13 +260,14 @@ func (r *leiRepository) FindAllLEIWithFilters(limit, offset int, search, status,
 		"entity_category":       true,
 		"legal_address_country": true,
 		"last_update_date":      true,
+		"updated_at":            true, // Added for Hybrid Approach
 	}
 
 	if validSortFields[sortBy] {
 		query = query.Order(sortBy + " " + sortOrder)
 	} else {
-		// Default to legal_name if invalid sort field
-		query = query.Order("legal_name " + sortOrder)
+		// Default to updated_at if invalid sort field (Hybrid Approach)
+		query = query.Order("updated_at desc")
 	}
 
 	if err := query.Find(&records).Error; err != nil {

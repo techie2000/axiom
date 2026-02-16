@@ -124,7 +124,7 @@ export default function LEIRecordsPage() {
   const [countryOptions, setCountryOptions] = useState<Country[]>([])
   const [itemsPerPage, setItemsPerPage] = useState(50)
   const [hasMorePages, setHasMorePages] = useState(false)
-  const [sortField, setSortField] = useState<keyof LEIRecord>('legal_name')
+  const [sortField, setSortField] = useState<keyof LEIRecord | ''>('')  // Empty: let backend decide (Hybrid Approach)
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const [filterBarHeight, setFilterBarHeight] = useState(0)
   const countryDropdownRef = useRef<HTMLDivElement>(null)
@@ -241,12 +241,12 @@ export default function LEIRecordsPage() {
     return () => clearTimeout(timer)
   }, [searchTerm])
 
-  // Fetch records when filters or page changes
+  // Fetch records when filters, page, or visible columns change
   useEffect(() => {
     if (typeof window !== 'undefined') {
       fetchRecords()
     }
-  }, [currentPage, debouncedSearch, statusFilter, categoryFilter, countryFilter, itemsPerPage, sortField, sortDirection])
+  }, [currentPage, debouncedSearch, statusFilter, categoryFilter, countryFilter, itemsPerPage, sortField, sortDirection, visibleColumns])
 
   const fetchRecords = async () => {
     try {
@@ -265,6 +265,11 @@ export default function LEIRecordsPage() {
       if (countryFilter) params.append('country', countryFilter)
       if (sortField) params.append('sortBy', sortField)
       if (sortDirection) params.append('sortOrder', sortDirection)
+      
+      // Send visible columns for dynamic SELECT optimization
+      // Backend will fetch only the columns requested
+      const columnsToFetch = Array.from(visibleColumns).join(',')
+      if (columnsToFetch) params.append('columns', columnsToFetch)
 
       const response = await fetch(
         `${API_BASE_URL}/api/v1/lei?${params.toString()}`,
@@ -390,6 +395,26 @@ export default function LEIRecordsPage() {
     
     const query = parts.join(', ')
     return `https://www.openstreetmap.org/search?query=${encodeURIComponent(query)}`
+  }
+
+  // Handler to fetch complete record for detail view
+  const handleRecordClick = async (partialRecord: LEIRecord) => {
+    try {
+      // Fetch complete record from API (not limited by columns parameter)
+      const response = await fetch(`${API_BASE_URL}/api/v1/lei/${partialRecord.lei}`)
+      if (response.ok) {
+        const fullRecord = await response.json()
+        setSelectedRecord(fullRecord)
+      } else {
+        // Fallback to partial record if fetch fails
+        console.warn('Failed to fetch complete record, using partial data')
+        setSelectedRecord(partialRecord)
+      }
+    } catch (err) {
+      console.error('Error fetching complete record:', err)
+      // Fallback to partial record if fetch fails
+      setSelectedRecord(partialRecord)
+    }
   }
 
   // Fetch managing LOU name when modal opens
@@ -590,6 +615,25 @@ export default function LEIRecordsPage() {
             </p>
           </div>
         </div>
+
+        {/* Info message about sorting behavior (Hybrid Approach) */}
+        {!hasActiveFilters && (
+          <div className="mb-6 bg-blue-50 border-2 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800/30 backdrop-blur-sm rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <svg className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div>
+                <p className="text-sm font-medium text-blue-900 dark:text-blue-200">
+                  Showing recently updated records
+                </p>
+                <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                  Results are sorted by most recent updates for fast browsing. Use search or filters to sort by name.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="mb-6 bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm rounded-lg p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
@@ -840,7 +884,7 @@ export default function LEIRecordsPage() {
                       key={record.id}
                       data-lei={record.lei}
                       data-row-index={index}
-                      onClick={() => setSelectedRecord(record)}
+                      onClick={() => handleRecordClick(record)}
                       className="hover:bg-blue-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
                       style={{ height: 'auto', minHeight: '48px' }}
                     >

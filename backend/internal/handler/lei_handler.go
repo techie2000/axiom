@@ -110,15 +110,19 @@ func (h *LEIHandler) ListLEI(c *gin.Context) {
 	status := c.Query("status")
 	category := c.Query("category")
 	country := c.Query("country")
-	sortBy := c.DefaultQuery("sortBy", "legal_name")
-	sortOrder := c.DefaultQuery("sortOrder", "asc")
+	sortBy := c.Query("sortBy")       // Empty if not provided - repository will use Hybrid Approach
+	sortOrder := c.Query("sortOrder") // Empty if not provided - repository will choose based on context
+
+	// Get visible columns from frontend for dynamic SELECT optimization
+	// Default to core columns if not specified
+	columns := c.DefaultQuery("columns", "id,lei,legal_name,entity_status,entity_category,legal_address_country,last_update_date")
 
 	// Allow up to 501 records (frontend requests itemsPerPage + 1 to detect more pages)
 	if limit > 501 {
 		limit = 501
 	}
 
-	records, err := h.leiService.GetAllLEIWithFilters(limit, offset, search, status, category, country, sortBy, sortOrder)
+	records, err := h.leiService.GetAllLEIWithFilters(limit, offset, search, status, category, country, sortBy, sortOrder, columns)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve LEI records"})
 		return
