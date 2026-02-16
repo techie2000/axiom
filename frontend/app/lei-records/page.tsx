@@ -709,7 +709,7 @@ export default function LEIRecordsPage() {
             {hasActiveFilters && (
               <button
                 onClick={clearFilters}
-                className="px-6 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 transition-colors font-medium"
+                className="px-6 py-2 rounded-lg bg-white hover:bg-gray-100 dark:bg-gray-600 dark:hover:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-transparent transition-colors font-medium shadow-sm"
               >
                 ✕ Clear Filters
               </button>
@@ -780,7 +780,7 @@ export default function LEIRecordsPage() {
               </div>
               <button
                 onClick={clearFilters}
-                className="px-3 py-1 text-xs rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors font-medium"
+                className="px-3 py-1 text-xs rounded-lg bg-white hover:bg-gray-100 dark:bg-blue-600 dark:hover:bg-blue-700 text-blue-900 dark:text-white border border-blue-300 dark:border-transparent transition-colors font-medium shadow-sm"
               >
                 ✕ Clear All
               </button>
