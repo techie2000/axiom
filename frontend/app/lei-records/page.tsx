@@ -801,28 +801,28 @@ export default function LEIRecordsPage() {
             )}
             
             <div 
-              className={`bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm shadow-lg overflow-x-auto transition-opacity duration-200 ${loading ? 'opacity-40 pointer-events-none' : 'opacity-100'}`} 
+              className={`bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm shadow-lg transition-opacity duration-200 ${loading ? 'opacity-40 pointer-events-none' : 'opacity-100'}`} 
               style={{ borderTopLeftRadius: hasActiveFilters ? 0 : undefined, borderTopRightRadius: hasActiveFilters ? 0 : undefined, borderBottomLeftRadius: '0.5rem', borderBottomRightRadius: '0.5rem' }}
             >
-            <table className="w-full" style={{ tableLayout: 'auto', borderCollapse: 'collapse' }}>
-              <thead className={hasActiveFilters ? 'bg-gray-100 dark:bg-gray-800' : 'sticky z-30 bg-gray-100 dark:bg-gray-800'} style={{ top: hasActiveFilters ? undefined : '0px' }}>
-                <tr>
-                  {AVAILABLE_COLUMNS.filter(col => visibleColumns.has(col.key)).map((column) => (
-                    <th 
-                      key={String(column.key)}
-                      onClick={() => handleSort(column.key)}
-                      className={`${column.width || 'min-w-40'} px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors`}
-                    >
-                      <div className="flex items-center gap-1">
-                        {column.label}
-                        {sortField === column.key && (
-                          <span className="text-blue-600 dark:text-blue-400">{sortDirection === 'asc' ? '↑' : '↓'}</span>
-                        )}
-                      </div>
-                    </th>
-                  ))}
-                </tr>
-                </thead>
+                <table className="w-full" style={{ tableLayout: 'auto', borderCollapse: 'collapse' }}>
+                  <thead className="bg-gray-100 dark:bg-gray-800" style={{ position: 'sticky', top: hasActiveFilters ? `${filterBarHeight}px` : '0px', zIndex: 100 }}>
+                    <tr>
+                      {AVAILABLE_COLUMNS.filter(col => visibleColumns.has(col.key)).map((column) => (
+                        <th 
+                          key={String(column.key)}
+                          onClick={() => handleSort(column.key)}
+                          className={`${column.width || 'min-w-40'} px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors`}
+                        >
+                          <div className="flex items-center gap-1">
+                            {column.label}
+                            {sortField === column.key && (
+                              <span className="text-blue-600 dark:text-blue-400">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                            )}
+                          </div>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-white/10">
                   {records.filter(r => r && r.id).map((record, index) => {
                     // Debug logging
@@ -874,7 +874,7 @@ export default function LEIRecordsPage() {
               </table>
             </div>
           </div>
-          ) : (
+        ) : (
             <div className="text-center py-12 bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm rounded-lg">
               <p className="text-xl text-gray-600 dark:text-gray-400">No records found with current filters</p>
             </div>
