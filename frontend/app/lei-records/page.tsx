@@ -177,7 +177,11 @@ export default function LEIRecordsPage() {
   useEffect(() => {
     const fetchTotalRecords = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/v1/lei/status/DAILY_FULL`, { cache: 'no-store' })
+        const response = await fetch(`${API_BASE_URL}/api/v1/lei/status/DAILY_FULL`, { 
+          method: 'GET',
+          cache: 'no-store',
+          next: { revalidate: 0 }
+        })
         if (response.ok) {
           const data = await response.json()
           setTotalRecords(data.current_source_file?.total_records || 0)
