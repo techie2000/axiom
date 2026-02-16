@@ -208,6 +208,83 @@ const API_BASE_URL = typeof window !== 'undefined'
 - Use `:focus` styles for focus indicators
 - Disable buttons appropriately with `disabled` attribute
 
+#### Keyboard Shortcuts (Required)
+**All popups, modals, dropdowns, and overlays MUST support ESC key to close.**
+
+Users should never be forced to use the mouse to close UI elements. Implement keyboard shortcuts for all interactive overlays:
+
+##### ✅ REQUIRED Implementation Pattern
+
+```typescript
+// ESC key handler to close popups/modals/dropdowns
+useEffect(() => {
+  const handleEscapeKey = (event: KeyboardEvent) => {
+    if (event.key === 'Escape') {
+      // Close in priority order: modal -> selector -> dropdown
+      if (selectedRecord) {
+        setSelectedRecord(null)  // Close modal
+      } else if (showColumnSelector) {
+        setShowColumnSelector(false)  // Close popup
+      } else if (showDropdown) {
+        setShowDropdown(false)  // Close dropdown
+      }
+    }
+  }
+  document.addEventListener('keydown', handleEscapeKey)
+  return () => document.removeEventListener('keydown', handleEscapeKey)
+}, [selectedRecord, showColumnSelector, showDropdown])
+```
+
+##### UI Elements Requiring ESC Key Support
+- ✅ Modals/Dialogs (highest priority)
+- ✅ Column selector popups
+- ✅ Dropdown menus
+- ✅ Search filters
+- ✅ Date pickers
+- ✅ Any overlay that obscures main content
+
+##### Priority Order
+When multiple overlays are open, close them in order of importance:
+1. Modal dialogs (most important)
+2. Popups and selectors
+3. Dropdowns (least important)
+
+This ensures users can progressively dismiss UI layers without confusion.
+
+##### Example: LEI Records Page Implementation
+```typescript
+// Full implementation from lei-records/page.tsx
+const [selectedRecord, setSelectedRecord] = useState<LEIRecord | null>(null)
+const [showColumnSelector, setShowColumnSelector] = useState(false)
+const [showCountryDropdown, setShowCountryDropdown] = useState(false)
+
+// Close popups with Escape key
+useEffect(() => {
+  const handleEscapeKey = (event: KeyboardEvent) => {
+    if (event.key === 'Escape') {
+      // Close in priority order: modal -> column selector -> country dropdown
+      if (selectedRecord) {
+        setSelectedRecord(null)
+      } else if (showColumnSelector) {
+        setShowColumnSelector(false)
+      } else if (showCountryDropdown) {
+        setShowCountryDropdown(false)
+      }
+    }
+  }
+  document.addEventListener('keydown', handleEscapeKey)
+  return () => document.removeEventListener('keydown', handleEscapeKey)
+}, [selectedRecord, showColumnSelector, showCountryDropdown])
+```
+
+##### Testing Checklist
+When implementing ESC key support:
+- [ ] ESC closes modal from any focused element inside it
+- [ ] ESC closes popup when focused anywhere on page
+- [ ] ESC works with multiple overlays (closes in correct order)
+- [ ] Event listener properly cleaned up on unmount
+- [ ] Dependencies array includes all state variables checked in handler
+
 ### Form Accessibility
 - Use `<label>` elements for all form inputs
 - Include placeholder text as guidance

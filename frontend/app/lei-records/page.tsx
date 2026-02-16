@@ -214,6 +214,24 @@ export default function LEIRecordsPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  // Close popups with Escape key
+  useEffect(() => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        // Close in priority order: modal -> column selector -> country dropdown
+        if (selectedRecord) {
+          setSelectedRecord(null)
+        } else if (showColumnSelector) {
+          setShowColumnSelector(false)
+        } else if (showCountryDropdown) {
+          setShowCountryDropdown(false)
+        }
+      }
+    }
+    document.addEventListener('keydown', handleEscapeKey)
+    return () => document.removeEventListener('keydown', handleEscapeKey)
+  }, [selectedRecord, showColumnSelector, showCountryDropdown])
+
   // Debounce search input (300ms delay)
   useEffect(() => {
     const timer = setTimeout(() => {
