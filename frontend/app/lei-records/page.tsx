@@ -937,7 +937,7 @@ export default function LEIRecordsPage() {
             )}
             
             <div 
-              className={`bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm shadow-lg transition-opacity duration-200 ${loading ? 'opacity-40 pointer-events-none' : 'opacity-100'}`} 
+              className={`overflow-x-auto bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm shadow-lg transition-opacity duration-200 ${loading ? 'opacity-40 pointer-events-none' : 'opacity-100'}`} 
               style={{ borderTopLeftRadius: hasActiveFilters ? 0 : undefined, borderTopRightRadius: hasActiveFilters ? 0 : undefined, borderBottomLeftRadius: '0.5rem', borderBottomRightRadius: '0.5rem' }}
             >
                 <table className="w-full" style={{ tableLayout: 'auto', borderCollapse: 'collapse' }}>
