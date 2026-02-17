@@ -62,7 +62,7 @@ export default function LEIStatusCard() {
       case 'FAILED':
         return { color: 'bg-red-500', label: 'Failed', icon: '❌' }
       case 'IDLE':
-        return { color: 'bg-yellow-500', label: 'Idle', icon: '⏸️' }
+        return { color: 'bg-gray-400', label: 'Idle', icon: '⏸️' }
       default:
         return { color: 'bg-gray-400', label: status.status, icon: '❓' }
     }
