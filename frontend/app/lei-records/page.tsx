@@ -146,6 +146,7 @@ export default function LEIRecordsPage() {
   const [selectedRecord, setSelectedRecord] = useState<LEIRecord | null>(null)
   const [showColumnSelector, setShowColumnSelector] = useState(false)
   const [managingLouName, setManagingLouName] = useState<string | null>(null)
+  const [managingLouNames, setManagingLouNames] = useState<Map<string, string>>(new Map())
   const [dateDisplayMode, setDateDisplayMode] = useState<'relative' | 'absolute'>('relative')
 
   const API_BASE_URL = typeof window !== 'undefined' 
@@ -458,6 +459,50 @@ export default function LEIRecordsPage() {
     
     fetchManagingLouName()
   }, [selectedRecord, API_BASE_URL])
+
+  // Fetch managing LOU names for visible records in the table
+  useEffect(() => {
+    const fetchManagingLouNamesForTable = async () => {
+      // Get unique managing LOU codes from current records
+      const uniqueLouCodes = Array.from(
+        new Set(
+          records
+            .filter(r => r.managing_lou && r.managing_lou.trim() !== '')
+            .map(r => r.managing_lou)
+        )
+      )
+
+      // Filter out codes we already have
+      const codesToFetch = uniqueLouCodes.filter(code => !managingLouNames.has(code))
+      
+      if (codesToFetch.length === 0) return
+
+      // Fetch names for all codes
+      const newNames = new Map(managingLouNames)
+      
+      await Promise.all(
+        codesToFetch.map(async (code) => {
+          try {
+            const response = await fetch(`${API_BASE_URL}/api/v1/lei/${code}`)
+            if (response.ok) {
+              const data = await response.json()
+              if (data.legal_name) {
+                newNames.set(code, data.legal_name)
+              }
+            }
+          } catch (err) {
+            console.error(`Failed to fetch LOU name for ${code}:`, err)
+          }
+        })
+      )
+      
+      setManagingLouNames(newNames)
+    }
+
+    if (records.length > 0) {
+      fetchManagingLouNamesForTable()
+    }
+  }, [records, API_BASE_URL, managingLouNames])
 
   // Parse other_names JSONB field
   interface OtherName {
@@ -984,6 +1029,7 @@ export default function LEIRecordsPage() {
                         const value = record[column.key]
                         const isStatus = column.key === 'entity_status'
                         const isLegalName = column.key === 'legal_name'
+                        const isManagingLou = column.key === 'managing_lou'
                         
                         return (
                           <td 
@@ -1020,6 +1066,15 @@ export default function LEIRecordsPage() {
                                     </div>
                                   )
                                 })()}
+                              </div>
+                            ) : isManagingLou ? (
+                              <div>
+                                <div className="font-mono">{formatCellValue(value, column.key)}</div>
+                                {value && managingLouNames.has(String(value)) && (
+                                  <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                    {managingLouNames.get(String(value))}
+                                  </div>
+                                )}
                               </div>
                             ) : (
                               formatCellValue(value, column.key)
