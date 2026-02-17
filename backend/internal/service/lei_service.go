@@ -118,6 +118,47 @@ func NewLEIService(repo repository.LEIRepository, countryRepo repository.Country
 	}
 }
 
+// progressWriter wraps an io.Writer to log extraction progress periodically
+type progressWriter struct {
+	writer      io.Writer
+	written     int64
+	total       int64
+	fileName    string
+	startTime   time.Time
+	lastLog     time.Time
+	logInterval time.Duration
+}
+
+func (pw *progressWriter) Write(p []byte) (int, error) {
+	n, err := pw.writer.Write(p)
+	pw.written += int64(n)
+
+	// Log progress at intervals
+	now := time.Now()
+	if now.Sub(pw.lastLog) >= pw.logInterval {
+		percentComplete := float64(pw.written) / float64(pw.total) * 100
+		mbWritten := float64(pw.written) / (1024 * 1024)
+		mbTotal := float64(pw.total) / (1024 * 1024)
+		elapsed := now.Sub(pw.startTime).Seconds()
+		mbPerSec := mbWritten / elapsed
+		remainingMB := mbTotal - mbWritten
+		estimatedSecondsRemaining := remainingMB / mbPerSec
+
+		log.Info().
+			Str("file", pw.fileName).
+			Float64("percent_complete", percentComplete).
+			Float64("mb_written", mbWritten).
+			Float64("mb_total", mbTotal).
+			Float64("mb_per_second", mbPerSec).
+			Float64("estimated_seconds_remaining", estimatedSecondsRemaining).
+			Msg("ZIP extraction progress")
+
+		pw.lastLog = now
+	}
+
+	return n, err
+}
+
 // getLatestFileURLs fetches the latest file URLs from GLEIF API
 func (s *leiService) getLatestFileURLs() (*GLEIFPublishesResponse, error) {
 	log.Info().Str("url", GLEIFLatestPublishesURL).Msg("Fetching latest file URLs from GLEIF")
@@ -435,7 +476,15 @@ func (s *leiService) extractZipFile(zipPath string) (string, error) {
 
 			// Copy content with progress tracking
 			startTime := time.Now()
-			written, err := io.Copy(outFile, rc)
+			progressWriter := &progressWriter{
+				writer:      outFile,
+				total:       int64(uncompressedSize),
+				fileName:    f.Name,
+				startTime:   startTime,
+				lastLog:     startTime,
+				logInterval: 10 * time.Second, // Log every 10 seconds
+			}
+			written, err := io.Copy(progressWriter, rc)
 			if err != nil {
 				return "", err
 			}
@@ -815,6 +864,7 @@ type LEIEntity struct {
 	EntityCategory                 LEIValueField            `json:"EntityCategory"`
 	LegalForm                      LEILegalForm             `json:"LegalForm"`
 	EntityStatus                   LEIValueField            `json:"EntityStatus"`
+	SuccessorEntity                []LEISuccessorEntity     `json:"SuccessorEntity"`
 }
 
 type LEILegalName struct {
@@ -850,6 +900,10 @@ type LEIRegistrationAuthority struct {
 type LEILegalForm struct {
 	EntityLegalFormCode LEIValueField `json:"EntityLegalFormCode"`
 	OtherLegalForm      LEIValueField `json:"OtherLegalForm"`
+}
+
+type LEISuccessorEntity struct {
+	SuccessorLEI LEIValueField `json:"SuccessorLEI"`
 }
 
 type LEIRegistration struct {
@@ -890,9 +944,16 @@ func (s *leiService) jsonToDomainRecord(jsonRecord *LEIJSONRecord, sourceFileID 
 		ChangedFields:     "{}",
 	}
 
+	// Extract SuccessorLEI from SuccessorEntity array (if present)
+	// Some entities have multiple successors (array), others have single or none
+	if len(jsonRecord.Entity.SuccessorEntity) > 0 && jsonRecord.Entity.SuccessorEntity[0].SuccessorLEI.Value != "" {
+		record.SuccessorLEI = jsonRecord.Entity.SuccessorEntity[0].SuccessorLEI.Value
+	}
+
 	// Extract transliterated legal name from TransliteratedOtherEntityNames
+	// Support both AUTO_ASCII_TRANSLITERATED_LEGAL_NAME and PREFERRED_ASCII_TRANSLITERATED_LEGAL_NAME
 	for _, name := range jsonRecord.Entity.TransliteratedOtherEntityNames.OtherEntityName {
-		if name.Type == "AUTO_ASCII_TRANSLITERATED_LEGAL_NAME" {
+		if name.Type == "AUTO_ASCII_TRANSLITERATED_LEGAL_NAME" || name.Type == "PREFERRED_ASCII_TRANSLITERATED_LEGAL_NAME" {
 			record.TransliteratedLegalName = name.Value
 			break
 		}
@@ -909,7 +970,7 @@ func (s *leiService) jsonToDomainRecord(jsonRecord *LEIJSONRecord, sourceFileID 
 			})
 		}
 		if otherNamesJSON, err := json.Marshal(otherNames); err == nil {
-			record.OtherNames = string(otherNamesJSON)
+			record.OtherNames = domain.JSONBString(otherNamesJSON)
 		} else {
 			log.Warn().Err(err).Str("lei", record.LEI).Msg("Failed to marshal other names to JSON")
 		}

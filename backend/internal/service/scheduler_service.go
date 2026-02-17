@@ -203,11 +203,27 @@ func (s *schedulerService) Start() error {
 	// CRITICAL: Initialize next_run_at for jobs that don't have it set
 	s.initializeNextRunTimes()
 
-	// Start goroutine for daily delta sync (runs every hour to check for updates)
-	go s.dailyDeltaSyncLoop()
+	// Check for initial data load on startup (one-time check)
+	count, err := s.leiService.CountLEIRecords()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to count LEI records during startup")
+	} else if count == 0 {
+		log.Info().Msg("Database is empty, triggering initial full sync")
+		go func() {
+			if err := s.RunDailyFullSync(); err != nil {
+				log.Error().Err(err).Msg("Failed to run initial full sync")
+			}
+		}()
+	} else {
+		log.Info().Int64("existing_records", count).Msg("Database has existing records, waiting for scheduled full sync")
+	}
 
-	// Start goroutine for weekly full sync (runs every Sunday at 2 AM)
-	go s.weeklyFullSyncLoop()
+	// DELTA SYNC DISABLED - Using FULL sync only strategy
+	// Delta files cause issues and don't provide enough benefit for daily operations
+	// go s.dailyDeltaSyncLoop()
+
+	// Start goroutine for daily full sync (runs every day at configured time)
+	go s.dailyFullSyncLoop()
 
 	// Start goroutine for daily cleanup (runs daily at 3 AM)
 	go s.dailyCleanupLoop()
@@ -446,21 +462,19 @@ func (s *schedulerService) dailyDeltaSyncLoop() {
 			}
 		}
 	} else {
-		// No incomplete files, check if database is empty for initial run decision
+		// No incomplete files - check if database is empty for initial run decision
 		count, err := s.leiService.CountLEIRecords()
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to count LEI records")
 		} else if count == 0 {
-			log.Info().Msg("Database is empty, running initial full sync instead of delta")
+			log.Info().Msg("Database is empty, running initial full sync")
 			if err := s.RunDailyFullSync(); err != nil {
 				log.Error().Err(err).Msg("Failed to run initial full sync")
 			}
 		} else {
-			log.Info().Int64("existing_records", count).Msg("Database has existing records, running delta sync")
-			if err := s.RunDailyDeltaSync(); err != nil {
-				log.Error().Err(err).Msg("Failed to run initial delta sync")
-			}
+			log.Info().Int64("existing_records", count).Msg("Database has existing records - delta sync disabled, waiting for scheduled full sync")
 		}
+		return // Exit function early since delta sync loop is disabled
 	}
 
 	for {
@@ -476,23 +490,16 @@ func (s *schedulerService) dailyDeltaSyncLoop() {
 	}
 }
 
-// weeklyFullSyncLoop runs full sync on configured day and time
-func (s *schedulerService) weeklyFullSyncLoop() {
+// dailyFullSyncLoop runs full sync every day at configured time (default 2:00 AM)
+func (s *schedulerService) dailyFullSyncLoop() {
 	for {
-		// Calculate next run at configured day/time
+		// Calculate next run at configured time today or tomorrow
 		now := time.Now()
 		nextRun := time.Date(now.Year(), now.Month(), now.Day(), s.fullSyncHour, s.fullSyncMinute, 0, 0, now.Location())
 
-		// Add days until configured weekday
-		daysUntilTarget := (int(s.fullSyncDay) - int(now.Weekday()) + 7) % 7
-		if daysUntilTarget == 0 && (now.Hour() > s.fullSyncHour || (now.Hour() == s.fullSyncHour && now.Minute() >= s.fullSyncMinute)) {
-			daysUntilTarget = 7 // Next week if we've already passed the time today
-		}
-		nextRun = nextRun.AddDate(0, 0, daysUntilTarget)
-
-		// If the next run is in the past, add a week
-		if nextRun.Before(now) {
-			nextRun = nextRun.AddDate(0, 0, 7)
+		// If we've already passed today's scheduled time, schedule for tomorrow
+		if nextRun.Before(now) || nextRun.Equal(now) {
+			nextRun = nextRun.AddDate(0, 0, 1)
 		}
 
 		duration := nextRun.Sub(now)

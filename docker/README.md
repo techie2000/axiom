@@ -7,9 +7,11 @@ This directory contains Dockerfiles for the Axiom application with environment-s
 ## Files
 
 ### Dockerfile.backend
+
 **Purpose:** Local development with corporate proxy/firewall workarounds  
 **Use in:** `docker-compose.dev.yml`  
 **Features:**
+
 - Disables SSL verification (`git config --global http.sslVerify false`)
 - Sets `GOINSECURE="*"` to bypass Go module proxy SSL checks
 - Sets `GOPRIVATE="*"` for private module handling
@@ -17,9 +19,11 @@ This directory contains Dockerfiles for the Axiom application with environment-s
 ⚠️ **Warning:** This file contains security workarounds for corporate firewalls and should **NEVER** be used in production.
 
 ### Dockerfile.backend.clean
+
 **Purpose:** Production/UAT/CI-CD deployments  
 **Use in:** `docker-compose.prod.yml`, `docker-compose.uat.yml`, CI/CD pipelines  
 **Features:**
+
 - Proper SSL certificate verification
 - Standard Go module download via official proxy
 - Production-ready security settings
@@ -27,14 +31,17 @@ This directory contains Dockerfiles for the Axiom application with environment-s
 ✅ **Use this for all non-local environments**
 
 ### Dockerfile.frontend
+
 **Purpose:** Frontend Next.js application for all environments  
 **Features:**
+
 - Uses `--legacy-peer-deps` flag to handle React 19 dependency conflicts with older packages
 - Multi-stage build for optimized production images
 - **Development mode:** Supports hot reload via volume mounts (see `docker-compose.dev.yml`)
 
 **Hot Reload in Development:**
 When using `docker-compose.dev.yml`, the frontend runs with:
+
 - Source code mounted as volume (`./frontend:/app`)
 - Node modules and .next preserved in container
 - `npm run dev` command for Next.js Fast Refresh
@@ -46,16 +53,19 @@ Uses `npm start` to run pre-built static assets from multi-stage build.
 ## Usage
 
 ### Local Development (with corporate proxy)
+
 ```bash
 docker-compose -f docker-compose.dev.yml --env-file .env.dev up
 ```
 
 ### Production
+
 ```bash
 docker-compose -f docker-compose.prod.yml --env-file .env.prod up
 ```
 
 ### UAT
+
 ```bash
 docker-compose -f docker-compose.uat.yml --env-file .env.uat up
 ```
@@ -81,12 +91,14 @@ docker-compose -f docker-compose.infra.yml --env-file .env.dev up -d
 Then run backend and frontend locally:
 
 **Backend:**
+
 ```bash
 cd backend
 go run cmd/api/main.go
 ```
 
 **Frontend:**
+
 ```bash
 cd frontend
 npm install --legacy-peer-deps
@@ -103,6 +115,7 @@ npm run dev
 ## CI/CD Configuration
 
 When setting up CI/CD pipelines (GitHub Actions, Azure DevOps, etc.), ensure:
+
 - Use `Dockerfile.backend.clean` for builds
 - Proper SSL certificates are configured
 - No `GOINSECURE` or SSL bypass flags are present

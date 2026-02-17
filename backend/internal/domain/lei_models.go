@@ -1,6 +1,9 @@
 package domain
 
 import (
+	"database/sql/driver"
+	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -14,9 +17,9 @@ type LEIRecord struct {
 	LEI string    `gorm:"uniqueIndex;size:20;not null" json:"lei" validate:"required,len=20"` // Legal Entity Identifier (unique)
 
 	// Entity information
-	LegalName               string `gorm:"size:500;not null" json:"legal_name"`
-	TransliteratedLegalName string `gorm:"size:500" json:"transliterated_legal_name"`
-	OtherNames              string `gorm:"type:jsonb" json:"other_names"` // Array of alternative names
+	LegalName               string      `gorm:"size:500;not null" json:"legal_name"`
+	TransliteratedLegalName string      `gorm:"size:500" json:"transliterated_legal_name"`
+	OtherNames              JSONBString `gorm:"type:jsonb" json:"other_names"` // Array of alternative names
 
 	// Legal address
 	LegalAddressLine1      string `gorm:"column:legal_address_line_1;size:500" json:"legal_address_line_1"`
@@ -57,13 +60,13 @@ type LEIRecord struct {
 	NextRenewalDate         time.Time `json:"next_renewal_date"`
 
 	// Validation
-	ValidationSources   string `gorm:"type:jsonb" json:"validation_sources"`
-	ValidationAuthority string `gorm:"size:255" json:"validation_authority"`
+	ValidationSources   JSONBString `gorm:"type:jsonb" json:"validation_sources"`
+	ValidationAuthority string      `gorm:"size:255" json:"validation_authority"`
 
 	// Audit and provenance
 	SourceFileID  *uuid.UUID  `gorm:"type:uuid" json:"source_file_id"`
 	SourceFile    *SourceFile `gorm:"foreignKey:SourceFileID" json:"source_file,omitempty"`
-	ChangedFields string      `gorm:"type:jsonb" json:"changed_fields"` // Last change details
+	ChangedFields JSONBString `gorm:"type:jsonb" json:"changed_fields"` // Last change details
 	CreatedBy     string      `gorm:"size:100;not null;default:'system'" json:"created_by"`
 	UpdatedBy     string      `gorm:"size:100;not null;default:'system'" json:"updated_by"`
 
@@ -78,6 +81,50 @@ func (LEIRecord) TableName() string {
 	return "lei_raw.lei_records"
 }
 
+// JSONBString is a custom type that handles PostgreSQL JSONB as a JSON string
+type JSONBString string
+
+// Scan implements the sql.Scanner interface for JSONBString
+func (j *JSONBString) Scan(value interface{}) error {
+	if value == nil {
+		*j = ""
+		return nil
+	}
+
+	switch v := value.(type) {
+	case []byte:
+		*j = JSONBString(v)
+		return nil
+	case string:
+		*j = JSONBString(v)
+		return nil
+	default:
+		return fmt.Errorf("failed to scan JSONBString: unsupported type %T", value)
+	}
+}
+
+// Value implements the driver.Valuer interface for JSONBString
+func (j JSONBString) Value() (driver.Value, error) {
+	if j == "" {
+		return nil, nil
+	}
+	// Validate it's valid JSON
+	var test interface{}
+	if err := json.Unmarshal([]byte(j), &test); err != nil {
+		return nil, err
+	}
+	return string(j), nil
+}
+
+// MarshalJSON implements json.Marshaler to ensure proper JSON serialization
+func (j JSONBString) MarshalJSON() ([]byte, error) {
+	if j == "" {
+		return []byte("null"), nil
+	}
+	// Marshal as a JSON string (with quotes and escaping)
+	return json.Marshal(string(j))
+}
+
 // LEIRecordAudit represents the complete audit history of LEI record changes
 type LEIRecordAudit struct {
 	ID          uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
@@ -86,10 +133,10 @@ type LEIRecordAudit struct {
 	Action      string    `gorm:"size:20;not null" json:"action"` // CREATE, UPDATE, DELETE
 
 	// Complete record snapshot
-	RecordSnapshot string `gorm:"type:jsonb;not null" json:"record_snapshot"`
+	RecordSnapshot JSONBString `gorm:"type:jsonb;not null" json:"record_snapshot"`
 
 	// Change details
-	ChangedFields string `gorm:"type:jsonb" json:"changed_fields"` // {"field": {"old": "value", "new": "value"}}
+	ChangedFields JSONBString `gorm:"type:jsonb" json:"changed_fields"` // {"field": {"old": "value", "new": "value"}}
 
 	// Source information
 	SourceFileID *uuid.UUID `gorm:"type:uuid" json:"source_file_id"`

@@ -130,7 +130,7 @@ export default function LEIStatusPage() {
     
     // Use job_type as primary indicator (more reliable than time calculation)
     if (status.job_type === 'DAILY_FULL') {
-      return 'Weekly'
+      return 'Daily'
     }
     
     if (status.job_type === 'DAILY_DELTA') {

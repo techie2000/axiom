@@ -7,12 +7,12 @@ processes Legal Entity Identifier (LEI) data from GLEIF (Global Legal Entity Ide
 
 ## Features
 
-- **Automated Data Acquisition**: Daily downloads of full and delta files from GLEIF
+- **Automated Data Acquisition**: Daily full downloads from GLEIF (delta sync disabled)
 - **Change Detection**: Only records updates when actual data changes occur
 - **Full Audit Trail**: Complete history of all changes with pre/post state tracking
 - **Resume Capability**: Can resume processing mid-file if interrupted
 - **Source Provenance**: Tracks which source file each record came from
-- **Scheduled Jobs**: Automatic hourly delta syncs and weekly full syncs
+- **Scheduled Jobs**: Automatic daily full sync at 2 AM (delta sync strategy disabled due to reliability issues)
 
 ## Architecture
 
@@ -37,8 +37,8 @@ processes Legal Entity Identifier (LEI) data from GLEIF (Global Legal Entity Ide
    - Resume-from-LEI functionality
 
 4. **Scheduler** (`internal/service/scheduler_service.go`)
-   - Hourly delta file synchronization
-   - Weekly full file synchronization
+   - Daily full file synchronization (runs at 2 AM daily)
+   - Delta sync disabled (caused reliability issues, minimal benefit for daily full sync)
    - Automatic retry on failure
 
 5. **HTTP Handlers** (`internal/handler/lei_handler.go`)

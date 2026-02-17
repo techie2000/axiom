@@ -114,8 +114,8 @@ func (h *LEIHandler) ListLEI(c *gin.Context) {
 	sortOrder := c.Query("sortOrder") // Empty if not provided - repository will choose based on context
 
 	// Get visible columns from frontend for dynamic SELECT optimization
-	// Default to core columns if not specified
-	columns := c.DefaultQuery("columns", "id,lei,legal_name,entity_status,entity_category,legal_address_country,last_update_date")
+	// Default to core columns including other_names for name search display
+	columns := c.DefaultQuery("columns", "id,lei,legal_name,other_names,entity_status,entity_category,legal_address_country,last_update_date")
 
 	// Allow up to 501 records (frontend requests itemsPerPage + 1 to detect more pages)
 	if limit > 501 {

@@ -107,6 +107,7 @@ func validateColumns(columns string) string {
 		"lei":                       true,
 		"legal_name":                true,
 		"transliterated_legal_name": true,
+		"other_names":               true,
 		"entity_status":             true,
 		"entity_category":           true,
 		"entity_sub_category":       true,
@@ -141,8 +142,8 @@ func validateColumns(columns string) string {
 	}
 
 	if columns == "" {
-		// Default to core columns
-		return "id,lei,legal_name,entity_status,entity_category,legal_address_country,last_update_date"
+		// Default to core columns including other_names for name search display
+		return "id,lei,legal_name,other_names,entity_status,entity_category,legal_address_country,last_update_date"
 	}
 
 	// Split requested columns and validate each one
@@ -194,13 +195,19 @@ func (r *leiRepository) FindAllLEIWithFilters(limit, offset int, search, status,
 	if search != "" {
 		// Optimize search based on pattern:
 		// 1. If exactly 20 chars (LEI format), use exact match on LEI only
-		// 2. Otherwise, search name fields only (never partial LEI search)
+		// 2. Otherwise, search name fields including other_names JSONB
 		if len(search) == 20 && isAlphanumeric(search) {
 			// Exact LEI match - uses idx_lei_records_lei B-tree index (< 1ms)
 			query = query.Where("lei = ?", search)
 		} else {
-			// Name search only - uses idx_lei_records_legal_name_trgm GIN index (~20-50ms)
-			query = query.Where("legal_name ILIKE ? OR transliterated_legal_name ILIKE ?", "%"+search+"%", "%"+search+"%")
+			// Name search across all name fields including other_names JSONB
+			// Uses idx_lei_records_legal_name_trgm GIN index (~20-50ms)
+			// JSONB search uses idx_lei_records_other_names_gin index
+			searchPattern := "%" + search + "%"
+			query = query.Where(
+				"legal_name ILIKE ? OR transliterated_legal_name ILIKE ? OR other_names::text ILIKE ?",
+				searchPattern, searchPattern, searchPattern,
+			)
 		}
 	}
 
@@ -357,7 +364,7 @@ func (r *leiRepository) UpsertLEIRecord(record *domain.LEIRecord) (bool, error) 
 	record.CreatedAt = existing.CreatedAt
 	record.CreatedBy = existing.CreatedBy
 	record.UpdatedBy = "system"
-	record.ChangedFields = string(changesJSON)
+	record.ChangedFields = domain.JSONBString(changesJSON)
 
 	if err := r.UpdateLEIRecord(record); err != nil {
 		return false, err
@@ -369,7 +376,7 @@ func (r *leiRepository) UpsertLEIRecord(record *domain.LEIRecord) (bool, error) 
 		LEI:            record.LEI,
 		Action:         "UPDATE",
 		RecordSnapshot: r.recordToJSON(record),
-		ChangedFields:  string(changesJSON),
+		ChangedFields:  domain.JSONBString(changesJSON),
 		SourceFileID:   record.SourceFileID,
 		ChangedBy:      "system",
 	}
@@ -633,7 +640,7 @@ func (r *leiRepository) BatchUpsertLEIRecords(records []*domain.LEIRecord) (int,
 						LEI:            record.LEI,
 						Action:         "UPDATE",
 						RecordSnapshot: r.recordToJSON(record),
-						ChangedFields:  string(changesJSON),
+						ChangedFields:  domain.JSONBString(changesJSON),
 						SourceFileID:   record.SourceFileID,
 						ChangedBy:      "system",
 					})
@@ -860,10 +867,10 @@ func (r *leiRepository) detectChanges(old, new *domain.LEIRecord) map[string]dom
 }
 
 // recordToJSON converts an LEI record to JSON string
-func (r *leiRepository) recordToJSON(record *domain.LEIRecord) string {
+func (r *leiRepository) recordToJSON(record *domain.LEIRecord) domain.JSONBString {
 	jsonBytes, err := json.Marshal(record)
 	if err != nil {
-		return "{}"
+		return domain.JSONBString("{}")
 	}
-	return string(jsonBytes)
+	return domain.JSONBString(jsonBytes)
 }

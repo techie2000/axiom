@@ -52,8 +52,9 @@ flowchart TD
     ParseLoop -->|All Records Processed| Complete[Mark SourceFile<br/>Status: COMPLETED]
     Complete --> Schedule{Scheduler}
     
-    Schedule -->|Delta: Every Hour| DeltaSync
-    Schedule -->|Full: Sunday 2 AM| FullSync
+    Schedule -->|Daily: 2 AM| FullSync
+    
+    Note over Schedule: Delta sync disabled - caused reliability issues,<br/>minimal benefit with daily full sync
 ```
 
 ## Detailed Component Interaction

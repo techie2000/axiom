@@ -280,8 +280,13 @@ export default function LEIRecordsPage() {
       
       // Send visible columns for dynamic SELECT optimization
       // Backend will fetch only the columns requested
-      const columnsToFetch = Array.from(visibleColumns).join(',')
-      if (columnsToFetch) params.append('columns', columnsToFetch)
+      // Always include other_names for search result display (shown inline with legal_name)
+      const columnsToFetch = Array.from(visibleColumns)
+      if (!columnsToFetch.includes('other_names')) {
+        columnsToFetch.push('other_names')
+      }
+      const columnsParam = columnsToFetch.join(',')
+      if (columnsParam) params.append('columns', columnsParam)
 
       const response = await fetch(
         `${API_BASE_URL}/api/v1/lei?${params.toString()}`,
@@ -453,6 +458,24 @@ export default function LEIRecordsPage() {
     
     fetchManagingLouName()
   }, [selectedRecord, API_BASE_URL])
+
+  // Parse other_names JSONB field
+  interface OtherName {
+    name: string
+    type: string
+    language?: string
+  }
+
+  const parseOtherNames = (otherNamesJson: string | null | undefined): OtherName[] => {
+    if (!otherNamesJson || otherNamesJson === '[]') return []
+    
+    try {
+      const parsed = JSON.parse(otherNamesJson)
+      return Array.isArray(parsed) ? parsed : []
+    } catch {
+      return []
+    }
+  }
 
   const formatCellValue = (value: any, key: keyof LEIRecord): string => {
     if (!value || value === 'null' || value === '0001-01-01T00:00:00Z') return '-'
@@ -960,6 +983,7 @@ export default function LEIRecordsPage() {
                       {AVAILABLE_COLUMNS.filter(col => visibleColumns.has(col.key)).map((column) => {
                         const value = record[column.key]
                         const isStatus = column.key === 'entity_status'
+                        const isLegalName = column.key === 'legal_name'
                         
                         return (
                           <td 
@@ -974,6 +998,29 @@ export default function LEIRecordsPage() {
                               }`}>
                                 {value || '-'}
                               </span>
+                            ) : isLegalName ? (
+                              <div>
+                                <div>{formatCellValue(value, column.key)}</div>
+                                {(() => {
+                                  const otherNames = parseOtherNames(record.other_names)
+                                  if (otherNames.length === 0) return null
+                                  return (
+                                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                      <div>Other names:</div>
+                                      {otherNames.map((n, i) => (
+                                        <div key={i} className="ml-2">
+                                          {n.name}
+                                          {n.type && (
+                                            <span className="ml-1 text-gray-400 dark:text-gray-500">
+                                              ({n.type.replace(/_/g, ' ')})
+                                            </span>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )
+                                })()}
+                              </div>
                             ) : (
                               formatCellValue(value, column.key)
                             )}
@@ -1128,6 +1175,27 @@ export default function LEIRecordsPage() {
                     </div>
                   )}
                 </div>
+                {(() => {
+                  const otherNames = parseOtherNames(selectedRecord.other_names)
+                  if (otherNames.length === 0) return null
+                  return (
+                    <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/10">
+                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Other Names</label>
+                      <div className="mt-2 space-y-1">
+                        {otherNames.map((n, i) => (
+                          <div key={i} className="text-sm text-gray-900 dark:text-white">
+                            {n.name}
+                            {n.type && (
+                              <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                                ({n.type.replace(/_/g, ' ')})
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })()}
               </section>
 
               {/* Addresses - Side by Side with Aligned Fields */}
