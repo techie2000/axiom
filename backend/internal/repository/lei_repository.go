@@ -200,13 +200,13 @@ func (r *leiRepository) FindAllLEIWithFilters(limit, offset int, search, status,
 			// Exact LEI match - uses idx_lei_records_lei B-tree index (< 1ms)
 			query = query.Where("lei = ?", search)
 		} else {
-			// Name search across all name fields including other_names JSONB
-			// Uses idx_lei_records_legal_name_trgm GIN index (~20-50ms)
-			// JSONB search uses idx_lei_records_other_names_gin index
-			searchPattern := "%" + search + "%"
+			// Full-text search using the composite search_vector column
+			// Uses idx_lei_records_search_vector GIN index for single efficient lookup
+			// Replaces OR ILIKE queries across 3 columns that caused sequential scans
+			// plainto_tsquery handles partial text and is user-friendly (no syntax required)
 			query = query.Where(
-				"legal_name ILIKE ? OR transliterated_legal_name ILIKE ? OR other_names::text ILIKE ?",
-				searchPattern, searchPattern, searchPattern,
+				"search_vector @@ plainto_tsquery('simple', ?)",
+				search,
 			)
 		}
 	}
