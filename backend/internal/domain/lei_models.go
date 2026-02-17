@@ -121,8 +121,9 @@ func (j JSONBString) MarshalJSON() ([]byte, error) {
 	if j == "" {
 		return []byte("null"), nil
 	}
-	// Marshal as a JSON string (with quotes and escaping)
-	return json.Marshal(string(j))
+	// Return the raw JSON directly (already stored as JSON in the database)
+	// This prevents double-encoding the JSON as a string
+	return []byte(j), nil
 }
 
 // LEIRecordAudit represents the complete audit history of LEI record changes

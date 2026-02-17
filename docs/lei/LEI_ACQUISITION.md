@@ -107,7 +107,7 @@ Overall status of scheduled jobs.
 Key fields:
 
 - `job_type`: DAILY_FULL or DAILY_DELTA
-- `status`: IDLE, RUNNING, COMPLETED, or FAILED
+- `status`: IDLE, RUNNING, or FAILED (COMPLETED is transient and immediately becomes IDLE)
 - `last_run_at`, `next_run_at`, `last_success_at`: Job timing
 - `current_source_file_id`: Currently processing file
 - `error_message`: Last error if any

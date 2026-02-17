@@ -292,7 +292,7 @@ func (s *schedulerService) initializeNextRunTimes() {
 			Str("job_type", "DAILY_FULL").
 			Str("status", fullStatus.Status).
 			Msg("Setting next_run_at for DAILY_FULL job")
-		fullStatus.NextRunAt = calculateNextWeeklyRun()
+		fullStatus.NextRunAt = s.calculateNextDailyFullRun()
 		if err := s.leiService.UpdateProcessingStatus(fullStatus); err != nil {
 			log.Error().Err(err).Msg("Failed to update DAILY_FULL next_run_at")
 		} else {
@@ -645,9 +645,9 @@ func (s *schedulerService) RunDailyFullSync() error {
 		if strings.Contains(err.Error(), "duplicate file already processed") {
 			// This is success - no new data to process
 			log.Info().Msg("No new full file available (duplicate hash detected)")
-			status.Status = "COMPLETED"
+			status.Status = "IDLE"
 			status.LastSuccessAt = &now
-			status.NextRunAt = calculateNextWeeklyRun()
+			status.NextRunAt = s.calculateNextDailyFullRun()
 			status.ErrorMessage = ""
 			s.leiService.UpdateProcessingStatus(status)
 			return nil
@@ -677,16 +677,17 @@ func (s *schedulerService) RunDailyFullSync() error {
 		return err
 	}
 
-	// Update status
-	status.Status = "COMPLETED"
+	// Update status - transition from RUNNING -> COMPLETED -> IDLE
+	// COMPLETED is transient and immediately becomes IDLE (waiting for next run)
+	status.Status = "IDLE"
 	status.LastSuccessAt = &now
-	status.NextRunAt = calculateNextWeeklyRun()
+	status.NextRunAt = s.calculateNextDailyFullRun()
 	status.ErrorMessage = ""
 	if err := s.leiService.UpdateProcessingStatus(status); err != nil {
 		log.Error().Err(err).Msg("Failed to update processing status")
 	}
 
-	log.Info().Msg("Daily full sync completed successfully")
+	log.Info().Msg("Daily full sync completed successfully, status set to IDLE")
 	return nil
 }
 
@@ -696,7 +697,21 @@ func calculateNextRun(interval time.Duration) *time.Time {
 	return &next
 }
 
-// calculateNextWeeklyRun calculates next Sunday at 2 AM
+// calculateNextDailyFullRun calculates next run at configured daily time (default 2 AM)
+func (s *schedulerService) calculateNextDailyFullRun() *time.Time {
+	now := time.Now()
+	nextRun := time.Date(now.Year(), now.Month(), now.Day(), s.fullSyncHour, s.fullSyncMinute, 0, 0, now.Location())
+
+	// If we've already passed today's scheduled time, schedule for tomorrow
+	if nextRun.Before(now) || nextRun.Equal(now) {
+		nextRun = nextRun.AddDate(0, 0, 1)
+	}
+
+	return &nextRun
+}
+
+// calculateNextWeeklyRun calculates next Sunday at 2 AM (DEPRECATED - kept for reference)
+// DEPRECATED: Use calculateNextDailyFullRun() instead for daily scheduling
 func calculateNextWeeklyRun() *time.Time {
 	now := time.Now()
 	nextRun := time.Date(now.Year(), now.Month(), now.Day(), 2, 0, 0, 0, now.Location())

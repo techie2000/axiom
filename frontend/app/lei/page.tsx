@@ -155,10 +155,14 @@ export default function LEIStatusPage() {
     return 'Unknown'
   }
 
-  const renderStatusCard = (title: string, status: ProcessingStatus | null) => {
+  const renderStatusCard = (title: string, status: ProcessingStatus | null, isDisabled: boolean = false) => {
     if (!status) {
       return (
-        <div className="bg-white/5 backdrop-blur-sm rounded-lg shadow-md p-6 border-2 border-white/10">
+        <div className={`rounded-lg shadow-md p-6 border-2 ${
+          isDisabled 
+            ? 'bg-gray-100 dark:bg-gray-800/30 border-gray-300 dark:border-gray-700 opacity-60' 
+            : 'bg-white/5 backdrop-blur-sm border-white/10'
+        }`}>
           <h2 className="text-2xl font-bold mb-4">{title}</h2>
           <p className="opacity-70">No status data available</p>
         </div>
@@ -169,7 +173,11 @@ export default function LEIStatusPage() {
     const file = status.current_source_file
 
     return (
-      <div className="bg-white/5 backdrop-blur-sm rounded-lg shadow-md p-6 border-2 border-white/10">
+      <div className={`rounded-lg shadow-md p-6 border-2 ${
+        isDisabled 
+          ? 'bg-gray-100 dark:bg-gray-800/30 border-gray-300 dark:border-gray-700 opacity-60' 
+          : 'bg-white/5 backdrop-blur-sm border-white/10'
+      }`}>
         <div className="flex justify-between items-start mb-4">
           <h2 className="text-2xl font-bold">{title}</h2>
           <span className={`px-3 py-1 rounded-full text-sm font-semibold border-2 ${getStatusColor(status.status)}`}>
@@ -203,11 +211,45 @@ export default function LEIStatusPage() {
                 </div>
               </div>
             )}
-            {file.failed_records > 0 && (
-              <p className="text-sm text-orange-600 dark:text-orange-400 mt-2">
-                ⚠️ Failed records: {file.failed_records.toLocaleString()}
-              </p>
-            )}
+          </div>
+        )}
+
+        {/* Processing Summary - Show for completed files or RUNNING files with failures */}
+        {file && (status.status === 'COMPLETED' || status.status === 'IDLE' || file.failed_records > 0) && (
+          <div className="mb-4 bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+            <h3 className="font-semibold mb-2 text-sm text-gray-700 dark:text-gray-200">Processing Summary</h3>
+            <div className="space-y-1 text-sm">
+              {file.total_records > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Total Records:</span>
+                  <span className="font-medium text-gray-900 dark:text-white">{file.total_records.toLocaleString()}</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span className="text-gray-600 dark:text-gray-400">Successfully Processed:</span>
+                <span className="font-medium text-green-600 dark:text-green-400">
+                  {(file.processed_records - file.failed_records).toLocaleString()}
+                  {file.total_records > 0 && (
+                    <span className="text-xs ml-1">
+                      ({((file.processed_records - file.failed_records) / file.total_records * 100).toFixed(1)}%)
+                    </span>
+                  )}
+                </span>
+              </div>
+              {file.failed_records > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Failed Records:</span>
+                  <span className="font-medium text-orange-600 dark:text-orange-400">
+                    ⚠️ {file.failed_records.toLocaleString()}
+                    {file.total_records > 0 && (
+                      <span className="text-xs ml-1">
+                        ({(file.failed_records / file.total_records * 100).toFixed(1)}%)
+                      </span>
+                    )}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -326,8 +368,13 @@ export default function LEIStatusPage() {
 
         {/* Status Cards */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {renderStatusCard(`Full Sync (${getFrequencyLabel(fullStatus)})`, fullStatus)}
-          {renderStatusCard(`Delta Sync (${getFrequencyLabel(deltaStatus)})`, deltaStatus)}
+          {renderStatusCard(`Full Sync (${getFrequencyLabel(fullStatus)})`, fullStatus, false)}
+          <div className="relative">
+            {renderStatusCard(`Delta Sync (${getFrequencyLabel(deltaStatus)})`, deltaStatus, true)}
+            <div className="absolute top-4 right-4 bg-gray-500 text-white text-xs px-2 py-1 rounded">
+              DISABLED
+            </div>
+          </div>
         </div>
 
         {/* Legend */}
@@ -343,12 +390,8 @@ export default function LEIStatusPage() {
               <span className="text-gray-600 dark:text-gray-400">Currently processing data</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className={`px-3 py-1 rounded-full font-semibold border-2 ${getStatusColor('COMPLETED')}`}>COMPLETED</span>
-              <span className="text-gray-600 dark:text-gray-400">Successfully finished</span>
-            </div>
-            <div className="flex items-center gap-2">
               <span className={`px-3 py-1 rounded-full font-semibold border-2 ${getStatusColor('FAILED')}`}>FAILED</span>
-              <span className="text-gray-600 dark:text-gray-400">Encountered an error</span>
+              <span className="text-gray-600 dark:text-gray-400">Encountered an error (requires manual intervention)</span>
             </div>
           </div>
         </div>
