@@ -377,9 +377,12 @@ When performing a code review, systematically verify:
 
 #### Go Backend (Gin, GORM, Fiber, Beego)
 When performing a code review of Go code:
-- **Package Declarations**: Verify NO duplicate `package` declarations in files - each file must have exactly ONE package declaration at the top
-- **Package Naming**: Verify package names match directory names (e.g., files in `handler/` must have `package handler`)
-- **Import Organization**: Check imports are grouped: standard library, external packages, internal packages (separated by blank lines)
+- **Package Declarations**: Verify NO duplicate `package` declarations in files - each file must have exactly ONE
+  package declaration at the top
+- **Package Naming**: Verify package names match directory names (e.g., files in `handler/` must have
+  `package handler`)
+- **Import Organization**: Check imports are grouped: standard library, external packages, internal packages
+  (separated by blank lines)
 - **Error Handling**: Verify all errors are checked and handled appropriately (no ignored errors)
 - **Context Usage**: Verify `context.Context` is the first parameter in functions that need it
 - **GORM Queries**: Check for proper `WHERE` clauses, pagination, and index usage to prevent N+1 queries
@@ -409,8 +412,10 @@ When performing a code review involving Docker:
 
 When performing a code review involving build/deployment:
 - **Database Migrations**: Verify all `.up.sql` migrations have corresponding `.down.sql` for reversibility
-- **Migration Naming**: Check migrations follow pattern `XXXXXX_description.up.sql` / `XXXXXX_description.down.sql`
-- **Multi-Environment Config**: Verify changes work across all environments (dev, uat, prod) using appropriate docker-compose files
+- **Migration Naming**: Check migrations follow pattern `XXXXXX_description.up.sql` /
+  `XXXXXX_description.down.sql`
+- **Multi-Environment Config**: Verify changes work across all environments (dev, uat, prod) using appropriate
+  docker-compose files
 - **Environment Variables**: Check all required env vars are documented and have sensible defaults where appropriate
 - **Port Assignments**: Verify ports follow the project's environment port reference (docs/environments/environment-port-reference.md)
 - **Service Dependencies**: Check docker-compose `depends_on` correctly reflects service startup order
@@ -491,7 +496,7 @@ When performing a code review, apply these prompt engineering principles from th
 
 ## Project Context
 
-**Axiom - Financial Services Static Data System**
+### Axiom - Financial Services Static Data System
 
 - **Tech Stack**: 
   - Backend: Go 1.24, Gin/Fiber/Beego, GORM, PostgreSQL, RabbitMQ

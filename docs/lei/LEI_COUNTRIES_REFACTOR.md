@@ -5,7 +5,8 @@
 
 ## Summary
 
-Refactored the LEI records country filter to fetch countries from the `countries` reference table (master data) instead of querying DISTINCT values from the 3.2M+ LEI records.
+Refactored the LEI records country filter to fetch countries from the `countries` reference table (master data)
+instead of querying DISTINCT values from the 3.2M+ LEI records.
 
 **Enhancements added:**
 - ✅ Country dropdown now displays **"CODE - Country Name"** format (e.g., "US - United States")
@@ -76,7 +77,8 @@ Refactored the LEI records country filter to fetch countries from the `countries
 - **Page navigation**: Preserves all active filters
 
 #### 3. **Searchable Country Dropdown (Enhancement)**
-- **Backend Change**: API now returns full `Country` objects with `code`, `name`, `alpha3_code`, `region`, and `active` fields (instead of just code strings)
+- **Backend Change**: API now returns full `Country` objects with `code`, `name`, `alpha3_code`, `region`, and
+  `active` fields (instead of just code strings)
 - **Frontend Implementation**:
   - Added `Country` interface with full country properties
   - Replaced standard `<select>` with custom searchable dropdown component
@@ -191,7 +193,7 @@ v1.GET("/lei/:lei", h.LEI.GetLEIByCode)
 ```
 
 ### Dependency Injection Flow
-```
+```text
 main.go
   ↓
 repos = repository.NewRepositories(db)

@@ -9,7 +9,9 @@
 
 ## Overview
 
-The Hybrid Sorting Approach fixes the performance bottleneck discovered after implementing dynamic SELECT optimization. While search queries improved 5-6x, the initial list load (without search/filter) was still taking 1276ms due to `ORDER BY legal_name` on 3.2M records.
+The Hybrid Sorting Approach fixes the performance bottleneck discovered after implementing dynamic SELECT optimization.
+While search queries improved 5-6x, the initial list load (without search/filter) was still taking 1276ms due to
+`ORDER BY legal_name` on 3.2M records.
 
 ### The Problem
 
@@ -68,11 +70,13 @@ WHERE deleted_at IS NULL;
 **Key Changes**:
 
 1. **Detect if user has applied filters**:
+
 ```go
 hasSearchOrFilter := search != "" || status != "" || category != "" || country != ""
 ```
 
-2. **Apply intelligent default sorting**:
+1. **Apply intelligent default sorting**:
+
 ```go
 if sortBy == "" {
     if hasSearchOrFilter {
@@ -87,7 +91,8 @@ if sortBy == "" {
 }
 ```
 
-3. **Add updated_at to valid sort fields**:
+1. **Add updated_at to valid sort fields**:
+
 ```go
 validSortFields := map[string]bool{
     // ... existing fields ...
@@ -95,7 +100,8 @@ validSortFields := map[string]bool{
 }
 ```
 
-4. **Update fallback default**:
+1. **Update fallback default**:
+
 ```go
 // Default to updated_at if invalid sort field (Hybrid Approach)
 query = query.Order("updated_at desc")
@@ -402,7 +408,8 @@ The `idx_lei_records_updated_at` index is updated on:
 
 ## Summary
 
-The Hybrid Sorting Approach successfully eliminates the last major performance bottleneck in the LEI Records list view. By intelligently choosing sort fields based on query context:
+The Hybrid Sorting Approach successfully eliminates the last major performance bottleneck in the LEI Records list view.
+By intelligently choosing sort fields based on query context:
 
 - ✅ Initial load: **25-60x faster** (1276ms → 20-50ms)
 - ✅ Search queries: **Unchanged** (still 80-97ms)

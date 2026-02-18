@@ -2,7 +2,8 @@
 
 ## Overview
 
-Axiom includes comprehensive master data for countries, currencies, continents, and languages that is automatically loaded into the database on application startup and kept synchronized through a daily scheduler.
+Axiom includes comprehensive master data for countries, currencies, continents, and languages that is automatically
+loaded into the database on application startup and kept synchronized through a daily scheduler.
 
 ## Data Files
 

@@ -3,7 +3,9 @@
 ## Issues Identified and Fixed
 
 ### 1. ✅ Resume from Checkpoint Not Working
-**Problem**: When retrying a failed file, processing restarted from the beginning instead of using `last_processed_lei` checkpoint, causing all 2.5M existing records to be re-processed (updated) instead of continuing from where it stopped.
+**Problem**: When retrying a failed file, processing restarted from the beginning instead of using
+`last_processed_lei` checkpoint, causing all 2.5M existing records to be re-processed (updated) instead of continuing
+from where it stopped.
 
 **Root Cause**: Line 322 in `scheduler_service.go` checked:
 ```go
@@ -26,9 +28,11 @@ if file.LastProcessedLEI != "" {
 ---
 
 ### 2. ✅ file_processing_status Not Updated on Retry
-**Problem**: The `file_processing_status` table (tracks scheduler job state) remained in FAILED status even after successful retry, causing confusion about system health.
+**Problem**: The `file_processing_status` table (tracks scheduler job state) remained in FAILED status even after
+successful retry, causing confusion about system health.
 
-**Root Cause**: When the scheduler's retry logic processed a failed file, it directly called `ProcessSourceFileWithResume` without updating the job status table. Only the `source_files` table was updated.
+**Root Cause**: When the scheduler's retry logic processed a failed file, it directly called
+`ProcessSourceFileWithResume` without updating the job status table. Only the `source_files` table was updated.
 
 **Fix**: Added code to update `file_processing_status` during retry:
 - Set to RUNNING when retry starts
@@ -60,7 +64,8 @@ WHERE job_type = 'DAILY_FULL'
 ---
 
 ### 3. ✅ total_records Grows Beyond Actual File Size During Resume
-**Problem**: When resuming from checkpoint, `total_records` continued incrementing for every record scanned (even skipped ones), causing the count to exceed the actual file size (processed 4M+ when file only had 3.8M records).
+**Problem**: When resuming from checkpoint, `total_records` continued incrementing for every record scanned
+(even skipped ones), causing the count to exceed the actual file size (processed 4M+ when file only had 3.8M records).
 
 **Root Cause**: Line 630 in `lei_service.go` incremented `totalRecords++` for EVERY record, including:
 - Records being skipped while scanning to find resume point
@@ -118,18 +123,22 @@ log.Info().
 ---
 
 ### 5. ⚠️ Future Improvement: Read total_records from Metadata Upfront
-**Current Behavior**: `total_records` is dynamically calculated during processing, starting at 0 and incrementing for each record.
+**Current Behavior**: `total_records` is dynamically calculated during processing, starting at 0 and incrementing
+for each record.
 
-**Desired Behavior**: Read the count from GLEIF API metadata when downloading the file, so progress percentage is accurate from the start.
+**Desired Behavior**: Read the count from GLEIF API metadata when downloading the file, so progress percentage is
+accurate from the start.
 
-**Challenge**: GLEIF bulk files are JSON arrays without a header containing record count. The API provides file size but not record count.
+**Challenge**: GLEIF bulk files are JSON arrays without a header containing record count. The API provides file size
+but not record count.
 
 **Options for Future Enhancement**:
 1. **Quick scan on download**: Count records when extracting the ZIP (single pass)
 2. **Estimate from file size**: Calculate approximate count from compressed/uncompressed size
 3. **Cache from previous FULL sync**: Store expected count from last successful full sync
 
-**Current Workaround**: On first processing attempt, percentage shows "unknown" until full file is scanned. On retry, accurate percentage is available from previous attempt's count.
+**Current Workaround**: On first processing attempt, percentage shows "unknown" until full file is scanned.
+On retry, accurate percentage is available from previous attempt's count.
 
 ---
 
@@ -197,7 +206,8 @@ After processing completes, verify all fixes:
   - `hq_address_city`
   - `hq_address_region`
 
-The 250/200 sizes were chosen based on analyzing the actual GLEIF data that caused truncation errors - international registration authorities and city names that exceeded VARCHAR(100).
+The 250/200 sizes were chosen based on analyzing the actual GLEIF data that caused truncation errors - international
+registration authorities and city names that exceeded VARCHAR(100).
 
 ---
 
