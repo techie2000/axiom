@@ -1,15 +1,1204 @@
-// Updated version of the UpdateSourceFile calls with error checking
+package service
 
-// Example for line 352
-if err := s.repo.UpdateSourceFile(sourceFile); err != nil {
-    log.Error().Err(err).Msg("Failed to update source file")
+import (
+	"archive/zip"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
+	"github.com/techie2000/axiom/internal/domain"
+	"github.com/techie2000/axiom/internal/repository"
+)
+
+// GLEIF API endpoints and data directory configuration
+const (
+	// Base URL for GLEIF golden copy API
+	GLEIFBaseURL = "https://goldencopy.gleif.org"
+
+	// Discovery endpoint to get latest file URLs
+	// Returns bulk file metadata - format differs from single LEI API queries
+	GLEIFLatestPublishesURL = "https://goldencopy.gleif.org/api/v2/golden-copies/publishes/latest"
+
+	// Data directory for downloaded files (relative to working directory)
+	DefaultDataDirectory = "./data/lei"
+)
+
+// GLEIFPublishesResponse represents the response from the GLEIF latest publishes endpoint
+type GLEIFPublishesResponse struct {
+	Data GLEIFPublishesData `json:"data"`
 }
 
-// Repeat for other lines mentioned
-
-// For each of the UpdateProcessingStatus calls
-if err := s.leiService.UpdateProcessingStatus(status); err != nil {
-    log.Error().Err(err).Msg("Failed to update processing status")
+type GLEIFPublishesData struct {
+	LEI2 GLEIFFileFormats `json:"lei2"`
 }
 
-// Repeat for all relevant calls
+type GLEIFFileFormats struct {
+	Type        string               `json:"type"`
+	PublishDate string               `json:"publish_date"`
+	FullFile    GLEIFFileGroup       `json:"full_file"`
+	DeltaFiles  GLEIFDeltaFileGroups `json:"delta_files"`
+}
+
+type GLEIFFileGroup struct {
+	JSON GLEIFJSONFileInfo `json:"json"`
+}
+
+type GLEIFDeltaFileGroups struct {
+	IntraDay  GLEIFFileGroup `json:"IntraDay"`
+	LastDay   GLEIFFileGroup `json:"LastDay"`
+	LastWeek  GLEIFFileGroup `json:"LastWeek"`
+	LastMonth GLEIFFileGroup `json:"LastMonth"`
+}
+
+type GLEIFJSONFileInfo struct {
+	URL         string `json:"url"`
+	Size        int64  `json:"size"`
+	RecordCount int    `json:"record_count"`
+	PublishedAt string `json:"published_at"`
+	DeltaType   string `json:"delta_type"`
+}
+
+// LEIService interface
+type LEIService interface {
+	// File download and management
+	DownloadFullFile() (*domain.SourceFile, error)
+	DownloadDeltaFile() (*domain.SourceFile, error)
+
+	// File processing
+	ProcessSourceFile(sourceFileID uuid.UUID) error
+	ProcessSourceFileWithResume(sourceFileID uuid.UUID, resumeFromLEI string) error
+	FindPendingSourceFiles() ([]*domain.SourceFile, error)
+	FindRetryableFailedFiles() ([]*domain.SourceFile, error)
+	ResetFailedFileForRetry(fileID uuid.UUID) error
+	UpdateSourceFile(file *domain.SourceFile) error
+
+	// Record management
+	CreateLEIRecord(record *domain.LEIRecord) error
+	GetLEIByCode(lei string) (*domain.LEIRecord, error)
+	GetLEIByID(id string) (*domain.LEIRecord, error)
+	GetAllLEI(limit, offset int) ([]*domain.LEIRecord, error)
+	GetAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string) ([]*domain.LEIRecord, error)
+	CountLEIRecords() (int64, error)
+	GetDistinctCountries() ([]domain.Country, error)
+	UpdateLEIRecord(record *domain.LEIRecord) error
+
+	// Audit and history
+	GetAuditHistory(lei string, limit int) ([]*domain.LEIRecordAudit, error)
+
+	// Processing status
+	GetProcessingStatus(jobType string) (*domain.FileProcessingStatus, error)
+	UpdateProcessingStatus(status *domain.FileProcessingStatus) error
+
+	// File cleanup
+	CleanupOldFiles(keepFullFiles, keepDeltaFiles int) error
+}
+
+type leiService struct {
+	repo        repository.LEIRepository
+	countryRepo repository.CountryRepository
+	dataDir     string // Directory to store downloaded files
+}
+
+// NewLEIService creates a new LEI service
+func NewLEIService(repo repository.LEIRepository, countryRepo repository.CountryRepository, dataDir string) LEIService {
+	return &leiService{
+		repo:        repo,
+		countryRepo: countryRepo,
+		dataDir:     dataDir,
+	}
+}
+
+// progressWriter wraps an io.Writer to log extraction progress periodically
+type progressWriter struct {
+	writer      io.Writer
+	written     int64
+	total       int64
+	fileName    string
+	startTime   time.Time
+	lastLog     time.Time
+	logInterval time.Duration
+}
+
+func (pw *progressWriter) Write(p []byte) (int, error) {
+	n, err := pw.writer.Write(p)
+	pw.written += int64(n)
+
+	// Log progress at intervals
+	now := time.Now()
+	if now.Sub(pw.lastLog) >= pw.logInterval {
+		percentComplete := float64(pw.written) / float64(pw.total) * 100
+		mbWritten := float64(pw.written) / (1024 * 1024)
+		mbTotal := float64(pw.total) / (1024 * 1024)
+		elapsed := now.Sub(pw.startTime).Seconds()
+		mbPerSec := mbWritten / elapsed
+		remainingMB := mbTotal - mbWritten
+		estimatedSecondsRemaining := remainingMB / mbPerSec
+
+		log.Info().
+			Str("file", pw.fileName).
+			Float64("percent_complete", percentComplete).
+			Float64("mb_written", mbWritten).
+			Float64("mb_total", mbTotal).
+			Float64("mb_per_second", mbPerSec).
+			Float64("estimated_seconds_remaining", estimatedSecondsRemaining).
+			Msg("ZIP extraction progress")
+
+		pw.lastLog = now
+	}
+
+	return n, err
+}
+
+// getLatestFileURLs fetches the latest file URLs from GLEIF API
+func (s *leiService) getLatestFileURLs() (*GLEIFPublishesResponse, error) {
+	log.Info().Str("url", GLEIFLatestPublishesURL).Msg("Fetching latest file URLs from GLEIF")
+
+	resp, err := http.Get(GLEIFLatestPublishesURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch latest publishes: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to fetch latest publishes: HTTP %d", resp.StatusCode)
+	}
+
+	// Read the response body for debugging
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	var publishesResp GLEIFPublishesResponse
+	if err := json.Unmarshal(body, &publishesResp); err != nil {
+		log.Error().Err(err).Str("body_preview", string(body[:500])).Msg("Failed to parse GLEIF API response")
+		return nil, fmt.Errorf("failed to decode publishes response: %w", err)
+	}
+
+	// Debug: Log the parsed structure to verify unmarshaling
+	fullURL := publishesResp.Data.LEI2.FullFile.JSON.URL
+	deltaURL := publishesResp.Data.LEI2.DeltaFiles.LastWeek.JSON.URL
+
+	log.Info().
+		Str("full_url", fullURL).
+		Int64("full_size", publishesResp.Data.LEI2.FullFile.JSON.Size).
+		Int("full_records", publishesResp.Data.LEI2.FullFile.JSON.RecordCount).
+		Str("delta_url", deltaURL).
+		Int64("delta_size", publishesResp.Data.LEI2.DeltaFiles.LastWeek.JSON.Size).
+		Int("delta_records", publishesResp.Data.LEI2.DeltaFiles.LastWeek.JSON.RecordCount).
+		Msgf("Retrieved latest file information (full empty: %v, delta empty: %v)", fullURL == "", deltaURL == "")
+
+	return &publishesResp, nil
+}
+
+// DownloadFullFile downloads the full LEI data file from GLEIF
+func (s *leiService) DownloadFullFile() (*domain.SourceFile, error) {
+	publishes, err := s.getLatestFileURLs()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get latest file URLs: %w", err)
+	}
+
+	url := publishes.Data.LEI2.FullFile.JSON.URL
+	publishedAt := publishes.Data.LEI2.PublishDate
+	return s.downloadFile(url, "FULL", publishedAt)
+}
+
+// DownloadDeltaFile downloads the delta LEI data file from GLEIF
+func (s *leiService) DownloadDeltaFile() (*domain.SourceFile, error) {
+	publishes, err := s.getLatestFileURLs()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get latest file URLs: %w", err)
+	}
+
+	url := publishes.Data.LEI2.DeltaFiles.LastWeek.JSON.URL
+	publishedAt := publishes.Data.LEI2.PublishDate
+	return s.downloadFile(url, "DELTA", publishedAt)
+}
+
+// downloadFile downloads a file from GLEIF and creates a SourceFile record
+func (s *leiService) downloadFile(url, fileType, publishedAt string) (*domain.SourceFile, error) {
+	log.Info().Str("url", url).Str("type", fileType).Msg("Starting file download from GLEIF")
+
+	// Create data directory if it doesn't exist
+	if err := os.MkdirAll(s.dataDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create data directory: %w", err)
+	}
+
+	// Download file
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("failed to download file: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to download file: HTTP %d", resp.StatusCode)
+	}
+
+	// Generate filename with timestamp
+	timestamp := time.Now().Format("20060102-150405")
+	fileName := fmt.Sprintf("lei-%s-%s.json.zip", fileType, timestamp)
+	filePath := filepath.Join(s.dataDir, fileName)
+
+	// Create file
+	out, err := os.Create(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create file: %w", err)
+	}
+	defer out.Close()
+
+	// Calculate hash while downloading
+	hash := sha256.New()
+	multiWriter := io.MultiWriter(out, hash)
+
+	// Copy data
+	fileSize, err := io.Copy(multiWriter, resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to save file: %w", err)
+	}
+
+	fileHash := hex.EncodeToString(hash.Sum(nil))
+
+	log.Info().
+		Str("file", fileName).
+		Int64("size", fileSize).
+		Str("hash", fileHash).
+		Msg("File downloaded successfully")
+
+	// Check if we already have a completed file with this hash
+	existingFile, err := s.repo.FindSourceFileByHash(fileHash)
+	if err != nil {
+		log.Error().Err(err).Str("hash", fileHash).Msg("Failed to check for duplicate file")
+		// Continue anyway - better to process duplicate than fail
+	} else if existingFile != nil {
+		// Duplicate found - delete newly downloaded file and skip
+		os.Remove(filePath)
+		log.Info().
+			Str("hash", fileHash).
+			Str("existing_file", existingFile.FileName).
+			Str("existing_id", existingFile.ID.String()).
+			Time("existing_completed", *existingFile.ProcessingCompletedAt).
+			Msg("Skipping duplicate file - already processed successfully")
+		return nil, fmt.Errorf("duplicate file already processed: %s", existingFile.FileName)
+	}
+
+	// Parse publication date
+	var publicationDate time.Time
+	if publishedAt != "" {
+		if t, err := time.Parse(time.RFC3339, publishedAt); err == nil {
+			publicationDate = t
+		} else {
+			publicationDate = time.Now()
+		}
+	} else {
+		publicationDate = time.Now()
+	}
+
+	// Create SourceFile record
+	sourceFile := &domain.SourceFile{
+		FileName:         fileName,
+		FileType:         fileType,
+		FileURL:          url,
+		FileSize:         fileSize,
+		FileHash:         fileHash,
+		DownloadedAt:     time.Now(),
+		PublicationDate:  publicationDate,
+		ProcessingStatus: "PENDING",
+	}
+
+	if err := s.repo.CreateSourceFile(sourceFile); err != nil {
+		return nil, fmt.Errorf("failed to create source file record: %w", err)
+	}
+
+	return sourceFile, nil
+}
+
+// ProcessSourceFile processes a downloaded source file
+func (s *leiService) ProcessSourceFile(sourceFileID uuid.UUID) error {
+	return s.ProcessSourceFileWithResume(sourceFileID, "")
+}
+
+// ProcessSourceFileWithResume processes a source file, optionally resuming from a specific LEI
+func (s *leiService) ProcessSourceFileWithResume(sourceFileID uuid.UUID, resumeFromLEI string) error {
+	log.Info().Str("source_file_id", sourceFileID.String()).Str("resume_from", resumeFromLEI).Msg("Starting file processing")
+
+	// Get source file
+	sourceFile, err := s.repo.FindSourceFileByID(sourceFileID.String())
+	if err != nil {
+		return fmt.Errorf("failed to find source file: %w", err)
+	}
+
+	// Update status to IN_PROGRESS and clear any historical failure data
+	sourceFile.ProcessingStatus = "IN_PROGRESS"
+	startTime := time.Now()
+	sourceFile.ProcessingStartedAt = &startTime
+	// Clear historical failure data from previous attempts
+	sourceFile.FailureCategory = ""
+	sourceFile.ProcessingError = ""
+	if err := s.repo.UpdateSourceFile(sourceFile); err != nil {
+		return fmt.Errorf("failed to update source file status: %w", err)
+	}
+
+	// Extract and process file
+	filePath := filepath.Join(s.dataDir, sourceFile.FileName)
+
+	// Check if already extracted (from previous run)
+	jsonPath := filePath + ".extracted.json"
+	if _, err := os.Stat(jsonPath); os.IsNotExist(err) {
+		// Extracted file doesn't exist, try to extract from zip
+		log.Info().
+			Str("source_file_id", sourceFileID.String()).
+			Str("file_path", filePath).
+			Msg("Extracted file not found, starting extraction from ZIP")
+
+		if _, err := os.Stat(filePath); os.IsNotExist(err) {
+			sourceFile.ProcessingStatus = "FAILED"
+			sourceFile.ProcessingError = fmt.Sprintf("source file not found: %s", filePath)
+			sourceFile.FailureCategory = "FILE_MISSING"
+			s.repo.UpdateSourceFile(sourceFile)
+			return fmt.Errorf("source file not found: %s", filePath)
+		}
+
+		// Unzip file
+		var extractErr error
+		jsonPath, extractErr = s.extractZipFile(filePath)
+		if extractErr != nil {
+			sourceFile.ProcessingStatus = "FAILED"
+			sourceFile.ProcessingError = extractErr.Error()
+			sourceFile.FailureCategory = "FILE_CORRUPTION"
+			s.repo.UpdateSourceFile(sourceFile)
+			return fmt.Errorf("failed to extract file: %w", extractErr)
+		}
+		log.Info().Str("json_path", jsonPath).Msg("File extracted successfully")
+	} else {
+		log.Info().Str("json_path", jsonPath).Msg("Using previously extracted file")
+	}
+	defer os.Remove(jsonPath) // Clean up extracted JSON
+
+	// Parse and process JSON
+	if err := s.processJSONFile(jsonPath, sourceFile, resumeFromLEI); err != nil {
+		sourceFile.ProcessingStatus = "FAILED"
+		sourceFile.ProcessingError = err.Error()
+
+		// Categorize the failure for retry logic (defensive: ensure always set)
+		errorMsg := err.Error()
+		if strings.Contains(errorMsg, "column") && strings.Contains(errorMsg, "does not exist") {
+			sourceFile.FailureCategory = "SCHEMA_ERROR"
+		} else if strings.Contains(errorMsg, "value too long") {
+			sourceFile.FailureCategory = "SCHEMA_ERROR"
+		} else if strings.Contains(errorMsg, "connection") || strings.Contains(errorMsg, "timeout") {
+			sourceFile.FailureCategory = "NETWORK_ERROR"
+		} else if strings.Contains(errorMsg, "invalid JSON") || strings.Contains(errorMsg, "unexpected EOF") {
+			sourceFile.FailureCategory = "FILE_CORRUPTION"
+		} else {
+			// Defensive: ensure category is always set for FAILED status
+			sourceFile.FailureCategory = "UNKNOWN"
+		}
+
+		// Defensive check: ensure failure_category is never empty when status is FAILED
+		if sourceFile.FailureCategory == "" {
+			sourceFile.FailureCategory = "UNKNOWN"
+		}
+
+		log.Warn().
+			Str("failure_category", sourceFile.FailureCategory).
+			Int("retry_count", sourceFile.RetryCount).
+			Int("max_retries", sourceFile.MaxRetries).
+			Bool("can_retry", sourceFile.RetryCount < sourceFile.MaxRetries).
+			Msg("File processing failed with categorized error")
+
+		s.repo.UpdateSourceFile(sourceFile)
+		return fmt.Errorf("failed to process JSON file: %w", err)
+	}
+
+	// Update status to COMPLETED and clear any failure fields from previous attempts
+	sourceFile.ProcessingStatus = "COMPLETED"
+	completedTime := time.Now()
+	sourceFile.ProcessingCompletedAt = &completedTime
+	sourceFile.FailureCategory = "" // Clear failure category from any previous failed attempts
+	sourceFile.ProcessingError = "" // Clear error message from any previous failed attempts
+	if err := s.repo.UpdateSourceFile(sourceFile); err != nil {
+		return fmt.Errorf("failed to update source file status: %w", err)
+	}
+
+	log.Info().
+		Str("source_file_id", sourceFileID.String()).
+		Int("total", sourceFile.TotalRecords).
+		Int("processed", sourceFile.ProcessedRecords).
+		Int("failed", sourceFile.FailedRecords).
+		Msg("File processing completed")
+
+	return nil
+}
+
+// extractZipFile extracts the JSON file from a ZIP archive
+func (s *leiService) extractZipFile(zipPath string) (string, error) {
+	r, err := zip.OpenReader(zipPath)
+	if err != nil {
+		return "", err
+	}
+	defer r.Close()
+
+	// Find the JSON file in the ZIP
+	for _, f := range r.File {
+		if filepath.Ext(f.Name) == ".json" || filepath.Ext(f.Name) == ".jsonl" {
+			rc, err := f.Open()
+			if err != nil {
+				return "", err
+			}
+			defer rc.Close()
+
+			// Create output file
+			jsonPath := zipPath + ".extracted.json"
+			outFile, err := os.Create(jsonPath)
+			if err != nil {
+				return "", err
+			}
+			defer outFile.Close()
+
+			// Log extraction start
+			uncompressedSize := f.UncompressedSize64
+			log.Info().
+				Str("file", f.Name).
+				Uint64("size_bytes", uncompressedSize).
+				Float64("size_mb", float64(uncompressedSize)/(1024*1024)).
+				Msg("Starting file extraction from ZIP")
+
+			// Copy content with progress tracking
+			startTime := time.Now()
+			progressWriter := &progressWriter{
+				writer:      outFile,
+				total:       int64(uncompressedSize),
+				fileName:    f.Name,
+				startTime:   startTime,
+				lastLog:     startTime,
+				logInterval: 10 * time.Second, // Log every 10 seconds
+			}
+			written, err := io.Copy(progressWriter, rc)
+			if err != nil {
+				return "", err
+			}
+			elapsed := time.Since(startTime).Seconds()
+
+			log.Info().
+				Int64("bytes_written", written).
+				Float64("mb_written", float64(written)/(1024*1024)).
+				Float64("duration_seconds", elapsed).
+				Float64("mb_per_second", float64(written)/(1024*1024)/elapsed).
+				Msg("File extraction completed")
+
+			return jsonPath, nil
+		}
+	}
+
+	return "", fmt.Errorf("no JSON file found in ZIP archive")
+}
+
+// FindPendingSourceFiles finds all source files that are pending or in-progress
+func (s *leiService) FindPendingSourceFiles() ([]*domain.SourceFile, error) {
+	return s.repo.FindPendingSourceFiles()
+}
+
+// FindRetryableFailedFiles finds failed files that can be retried
+func (s *leiService) FindRetryableFailedFiles() ([]*domain.SourceFile, error) {
+	return s.repo.FindRetryableFailedFiles()
+}
+
+// ResetFailedFileForRetry resets a failed file to PENDING for retry
+func (s *leiService) ResetFailedFileForRetry(fileID uuid.UUID) error {
+	return s.repo.ResetFailedFileForRetry(fileID)
+}
+
+// UpdateSourceFile updates a source file record
+func (s *leiService) UpdateSourceFile(file *domain.SourceFile) error {
+	return s.repo.UpdateSourceFile(file)
+}
+
+// processJSONFile parses and processes the LEI JSON file
+// GLEIF JSON format: {"records": [ {...}, {...}, ... ]}
+func (s *leiService) processJSONFile(jsonPath string, sourceFile *domain.SourceFile, resumeFromLEI string) error {
+	// Get file size for progress tracking
+	fileInfo, err := os.Stat(jsonPath)
+	if err != nil {
+		return err
+	}
+	fileSize := fileInfo.Size()
+
+	log.Info().
+		Str("file", jsonPath).
+		Int64("size_bytes", fileSize).
+		Float64("size_mb", float64(fileSize)/(1024*1024)).
+		Str("source_file_id", sourceFile.ID.String()).
+		Msg("Starting JSON file parsing")
+
+	file, err := os.Open(jsonPath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	// Create a JSON decoder
+	decoder := json.NewDecoder(file)
+
+	// Read the opening brace
+	token, err := decoder.Token()
+	if err != nil {
+		return fmt.Errorf("failed to read opening brace: %w", err)
+	}
+	if delim, ok := token.(json.Delim); !ok || delim != '{' {
+		return fmt.Errorf("expected '{', got %v", token)
+	}
+
+	log.Info().
+		Str("source_file_id", sourceFile.ID.String()).
+		Msg("JSON structure validated, searching for records array")
+
+	// Read until we find the "records" key
+	for decoder.More() {
+		token, err := decoder.Token()
+		if err != nil {
+			return fmt.Errorf("failed to read token: %w", err)
+		}
+
+		if key, ok := token.(string); ok && key == "records" {
+			log.Info().
+				Str("source_file_id", sourceFile.ID.String()).
+				Msg("Found records array, starting record processing")
+			// Found the records array, start processing
+			return s.processRecordsArray(decoder, sourceFile, resumeFromLEI)
+		}
+
+		// Skip the value for non-records keys
+		var skipValue interface{}
+		if err := decoder.Decode(&skipValue); err != nil {
+			return fmt.Errorf("failed to skip value: %w", err)
+		}
+	}
+
+	return fmt.Errorf("records array not found in JSON file")
+}
+
+// processRecordsArray processes the records array from the JSON decoder using batch processing
+func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *domain.SourceFile, resumeFromLEI string) (retErr error) {
+	// Panic recovery to catch any unhandled errors
+	defer func() {
+		if r := recover(); r != nil {
+			log.Error().Interface("panic", r).Str("source_file_id", sourceFile.ID.String()).Msg("PANIC in processRecordsArray")
+			retErr = fmt.Errorf("panic during processing: %v", r)
+		}
+	}()
+
+	// Read the opening bracket of the records array
+	token, err := decoder.Token()
+	if err != nil {
+		return fmt.Errorf("failed to read array opening: %w", err)
+	}
+	if delim, ok := token.(json.Delim); !ok || delim != '[' {
+		return fmt.Errorf("expected '[', got %v", token)
+	}
+
+	// Start counters based on whether we're resuming or starting fresh
+	var totalRecords int
+	var processedRecords int
+	var failedRecords int
+	var shouldProcess bool = (resumeFromLEI == "")
+	var lastProcessedLEI string
+
+	// Track checkpoint value separately from session progress
+	var checkpointProcessed int = 0
+
+	// Only load existing progress if resuming an interrupted file
+	// If starting fresh, reset all counters to avoid accumulation on reprocessing
+	if resumeFromLEI != "" {
+		// Resuming: initialize totalRecords at checkpoint to account for skipped records
+		// processedRecords tracks only NEW records processed in this session
+		checkpointProcessed = sourceFile.ProcessedRecords
+		totalRecords = sourceFile.ProcessedRecords // Start counting from checkpoint
+		processedRecords = 0                       // Track only new records in this session
+		failedRecords = sourceFile.FailedRecords
+	} else {
+		// Starting fresh: reset all counters
+		totalRecords = 0
+		processedRecords = 0
+		failedRecords = 0
+	}
+
+	log.Info().
+		Int("starting_total", totalRecords).
+		Int("checkpoint_processed", checkpointProcessed).
+		Int("session_processed", processedRecords).
+		Int("starting_failed", failedRecords).
+		Str("resume_from", resumeFromLEI).
+		Bool("is_resume", resumeFromLEI != "").
+		Msg("Starting array processing with counters")
+
+	// Start heartbeat ticker for progress monitoring (every 15 seconds)
+	heartbeatTicker := time.NewTicker(15 * time.Second)
+	defer heartbeatTicker.Stop()
+	lastHeartbeatTime := time.Now()
+	lastHeartbeatProcessed := processedRecords
+
+	// Goroutine for periodic heartbeat logging
+	go func() {
+		for range heartbeatTicker.C {
+			elapsed := time.Since(lastHeartbeatTime).Seconds()
+			recordsSinceLastHeartbeat := processedRecords - lastHeartbeatProcessed
+			rate := float64(recordsSinceLastHeartbeat) / elapsed
+
+			cumulativeProcessed := checkpointProcessed + processedRecords
+			remainingRecords := totalRecords - cumulativeProcessed
+			etaSeconds := 0.0
+			if rate > 0 {
+				etaSeconds = float64(remainingRecords) / rate
+			}
+
+			percentComplete := 0.0
+			if totalRecords > 0 {
+				percentComplete = (float64(cumulativeProcessed) / float64(totalRecords)) * 100
+			}
+
+			log.Info().
+				Int("total_records", totalRecords).
+				Int("checkpoint_processed", checkpointProcessed).
+				Int("session_processed", processedRecords).
+				Int("cumulative_processed", cumulativeProcessed).
+				Int("failed_records", failedRecords).
+				Float64("percent_complete", percentComplete).
+				Float64("records_per_sec", rate).
+				Float64("eta_seconds", etaSeconds).
+				Str("last_lei", lastProcessedLEI).
+				Msg("HEARTBEAT: LEI import in progress")
+
+			lastHeartbeatTime = time.Now()
+			lastHeartbeatProcessed = processedRecords
+		}
+	}()
+
+	const batchSize = 1000
+	batch := make([]*domain.LEIRecord, 0, batchSize)
+
+	// flushBatch processes accumulated records using batch upsert
+	flushBatch := func() error {
+		if len(batch) == 0 {
+			return nil
+		}
+
+		// Calculate progress for flush message
+		cumulativeProcessed := checkpointProcessed + processedRecords
+		flushPercent := 0.0
+		if totalRecords > 0 {
+			flushPercent = (float64(cumulativeProcessed) / float64(totalRecords)) * 100
+		}
+
+		log.Info().
+			Int("batch_size", len(batch)).
+			Int("checkpoint_processed", checkpointProcessed).
+			Int("session_processed", processedRecords).
+			Int("cumulative_processed", cumulativeProcessed).
+			Int("total_records", totalRecords).
+			Float64("percent_complete", flushPercent).
+			Str("last_lei", lastProcessedLEI).
+			Msg("Flushing batch to database")
+
+		created, updated, err := s.repo.BatchUpsertLEIRecords(batch)
+		if err != nil {
+			log.Error().
+				Err(err).
+				Int("batch_size", len(batch)).
+				Str("first_lei", batch[0].LEI).
+				Str("last_lei", batch[len(batch)-1].LEI).
+				Msg("CRITICAL: Failed to batch upsert LEI records")
+			failedRecords += len(batch)
+			// Return error to stop processing
+			return fmt.Errorf("batch upsert failed: %w", err)
+		} else {
+			// Track records processed in this session (use batch size, not DB results)
+			processedRecords += len(batch)
+
+			// Update source file with cumulative progress
+			cumulativeProcessed = checkpointProcessed + processedRecords
+			sourceFile.TotalRecords = totalRecords
+			sourceFile.ProcessedRecords = cumulativeProcessed
+			sourceFile.FailedRecords = failedRecords
+			sourceFile.LastProcessedLEI = lastProcessedLEI
+			if err := s.repo.UpdateSourceFile(sourceFile); err != nil {
+				log.Error().Err(err).Msg("Failed to update source file progress")
+			}
+
+			// Calculate progress percentage
+			percentComplete := 0.0
+			if totalRecords > 0 {
+				percentComplete = (float64(cumulativeProcessed) / float64(totalRecords)) * 100
+			}
+
+			log.Info().
+				Int("total_scanned", totalRecords).
+				Int("cumulative_processed", cumulativeProcessed).
+				Int("session_processed", processedRecords).
+				Int("created", created).
+				Int("updated", updated).
+				Int("failed", failedRecords).
+				Float64("percent_complete", percentComplete).
+				Str("last_lei", lastProcessedLEI).
+				Msg("Batch processing progress")
+		}
+
+		// Clear batch for next iteration
+		batch = make([]*domain.LEIRecord, 0, batchSize)
+		return nil
+	}
+
+	// Process each record in the array
+	recordCount := 0
+	for decoder.More() {
+		recordCount++
+		var jsonRecord LEIJSONRecord
+		if err := decoder.Decode(&jsonRecord); err != nil {
+			log.Error().
+				Err(err).
+				Int("record_number", recordCount).
+				Msg("Failed to decode LEI JSON record")
+			failedRecords++
+			continue
+		}
+
+		// Check if we should start processing (resume logic)
+		if !shouldProcess {
+			lei := s.extractLEI(&jsonRecord)
+			if lei == resumeFromLEI {
+				shouldProcess = true
+				log.Info().
+					Str("resume_lei", resumeFromLEI).
+					Int("records_scanned_to_resume", recordCount).
+					Msg("Found resume checkpoint, starting processing from next record")
+				// Skip the checkpoint record itself (already processed)
+				continue
+			} else {
+				// Scanning to find resume point - skip record
+				// Don't increment totalRecords during skip phase (already counted in checkpoint)
+				continue
+			}
+		}
+
+		// Count records only after we start processing (or if not resuming)
+		totalRecords++
+
+		// Convert JSON record to domain model
+		record := s.jsonToDomainRecord(&jsonRecord, sourceFile.ID)
+		lastProcessedLEI = record.LEI
+
+		// Add to batch
+		batch = append(batch, record)
+
+		// Flush batch when it reaches batch size
+		if len(batch) >= batchSize {
+			if err := flushBatch(); err != nil {
+				return err
+			}
+		}
+	}
+
+	// Flush any remaining records in the batch
+	if err := flushBatch(); err != nil {
+		return err
+	}
+
+	// Final update
+	cumulativeProcessed := checkpointProcessed + processedRecords
+	sourceFile.TotalRecords = totalRecords
+	sourceFile.ProcessedRecords = cumulativeProcessed
+	sourceFile.FailedRecords = failedRecords
+	if err := s.repo.UpdateSourceFile(sourceFile); err != nil {
+		log.Error().Err(err).Msg("Failed to update final source file status")
+	}
+
+	log.Info().
+		Int("total_records", totalRecords).
+		Int("checkpoint_processed", checkpointProcessed).
+		Int("session_processed", processedRecords).
+		Int("cumulative_processed", cumulativeProcessed).
+		Int("total_failed", failedRecords).
+		Msg("File processing completed")
+
+	return nil
+}
+
+// extractLEI extracts the LEI string from a JSON record (handles nested $ structure)
+func (s *leiService) extractLEI(jsonRecord *LEIJSONRecord) string {
+	return jsonRecord.LEI.Value
+}
+
+// LEIJSONRecord represents the JSON structure from GLEIF bulk files
+// NOTE: This is the BULK FILE FORMAT. The single LEI API query format is different.
+// Bulk files use nested objects with $ properties for values.
+// Single LEI queries return a different structure - implement separately if needed.
+type LEIJSONRecord struct {
+	LEI          LEIValueField   `json:"LEI"`
+	Entity       LEIEntity       `json:"Entity"`
+	Registration LEIRegistration `json:"Registration"`
+}
+
+// LEIValueField represents a simple value field with $ property
+type LEIValueField struct {
+	Value string `json:"$"`
+}
+
+type LEIEntity struct {
+	LegalName                      LEILegalName             `json:"LegalName"`
+	OtherEntityNames               LEIOtherEntityNames      `json:"OtherEntityNames"`
+	TransliteratedOtherEntityNames LEIOtherEntityNames      `json:"TransliteratedOtherEntityNames"`
+	LegalAddress                   LEIAddress               `json:"LegalAddress"`
+	HeadquartersAddress            LEIAddress               `json:"HeadquartersAddress"`
+	RegistrationAuthority          LEIRegistrationAuthority `json:"RegistrationAuthority"`
+	LegalJurisdiction              LEIValueField            `json:"LegalJurisdiction"`
+	EntityCategory                 LEIValueField            `json:"EntityCategory"`
+	LegalForm                      LEILegalForm             `json:"LegalForm"`
+	EntityStatus                   LEIValueField            `json:"EntityStatus"`
+	SuccessorEntity                []LEISuccessorEntity     `json:"SuccessorEntity"`
+}
+
+type LEILegalName struct {
+	Value    string `json:"$"`
+	Language string `json:"@xml:lang"`
+}
+
+type LEIOtherEntityNames struct {
+	OtherEntityName []LEIOtherName `json:"OtherEntityName"`
+}
+
+type LEIOtherName struct {
+	Value    string `json:"$"`
+	Type     string `json:"@type"`
+	Language string `json:"@xml:lang"`
+}
+
+type LEIAddress struct {
+	FirstAddressLine      LEIValueField   `json:"FirstAddressLine"`
+	AdditionalAddressLine []LEIValueField `json:"AdditionalAddressLine"`
+	City                  LEIValueField   `json:"City"`
+	Region                LEIValueField   `json:"Region"`
+	Country               LEIValueField   `json:"Country"`
+	PostalCode            LEIValueField   `json:"PostalCode"`
+	Language              string          `json:"@xml:lang"`
+}
+
+type LEIRegistrationAuthority struct {
+	RegistrationAuthorityID       LEIValueField `json:"RegistrationAuthorityID"`
+	RegistrationAuthorityEntityID LEIValueField `json:"RegistrationAuthorityEntityID"`
+}
+
+type LEILegalForm struct {
+	EntityLegalFormCode LEIValueField `json:"EntityLegalFormCode"`
+	OtherLegalForm      LEIValueField `json:"OtherLegalForm"`
+}
+
+type LEISuccessorEntity struct {
+	SuccessorLEI LEIValueField `json:"SuccessorLEI"`
+}
+
+type LEIRegistration struct {
+	InitialRegistrationDate LEIValueField          `json:"InitialRegistrationDate"`
+	LastUpdateDate          LEIValueField          `json:"LastUpdateDate"`
+	RegistrationStatus      LEIValueField          `json:"RegistrationStatus"`
+	NextRenewalDate         LEIValueField          `json:"NextRenewalDate"`
+	ManagingLOU             LEIValueField          `json:"ManagingLOU"`
+	ValidationSources       LEIValueField          `json:"ValidationSources"`
+	ValidationAuthority     LEIValidationAuthority `json:"ValidationAuthority"`
+}
+
+type LEIValidationAuthority struct {
+	ValidationAuthorityID       LEIValueField `json:"ValidationAuthorityID"`
+	ValidationAuthorityEntityID LEIValueField `json:"ValidationAuthorityEntityID"`
+}
+
+// jsonToDomainRecord converts a JSON record to a domain.LEIRecord
+func (s *leiService) jsonToDomainRecord(jsonRecord *LEIJSONRecord, sourceFileID uuid.UUID) *domain.LEIRecord {
+	record := &domain.LEIRecord{
+		LEI:                    jsonRecord.LEI.Value,
+		LegalName:              jsonRecord.Entity.LegalName.Value,
+		LegalAddressLine1:      jsonRecord.Entity.LegalAddress.FirstAddressLine.Value,
+		LegalAddressCity:       jsonRecord.Entity.LegalAddress.City.Value,
+		LegalAddressRegion:     jsonRecord.Entity.LegalAddress.Region.Value,
+		LegalAddressCountry:    jsonRecord.Entity.LegalAddress.Country.Value,
+		LegalAddressPostalCode: jsonRecord.Entity.LegalAddress.PostalCode.Value,
+		RegistrationAuthority:  jsonRecord.Entity.RegistrationAuthority.RegistrationAuthorityID.Value,
+		RegistrationNumber:     jsonRecord.Entity.RegistrationAuthority.RegistrationAuthorityEntityID.Value,
+		EntityCategory:         jsonRecord.Entity.EntityCategory.Value,
+		EntityLegalForm:        jsonRecord.Entity.LegalForm.EntityLegalFormCode.Value,
+		EntityStatus:           jsonRecord.Entity.EntityStatus.Value,
+		ManagingLOU:            jsonRecord.Registration.ManagingLOU.Value,
+		SourceFileID:           &sourceFileID,
+		// Initialize JSONB fields with valid JSON
+		OtherNames:        "[]",
+		ValidationSources: "{}",
+		ChangedFields:     "{}",
+	}
+
+	// Extract SuccessorLEI from SuccessorEntity array (if present)
+	// Some entities have multiple successors (array), others have single or none
+	if len(jsonRecord.Entity.SuccessorEntity) > 0 && jsonRecord.Entity.SuccessorEntity[0].SuccessorLEI.Value != "" {
+		record.SuccessorLEI = jsonRecord.Entity.SuccessorEntity[0].SuccessorLEI.Value
+	}
+
+	// Extract transliterated legal name from TransliteratedOtherEntityNames
+	// Support both AUTO_ASCII_TRANSLITERATED_LEGAL_NAME and PREFERRED_ASCII_TRANSLITERATED_LEGAL_NAME
+	for _, name := range jsonRecord.Entity.TransliteratedOtherEntityNames.OtherEntityName {
+		if name.Type == "AUTO_ASCII_TRANSLITERATED_LEGAL_NAME" || name.Type == "PREFERRED_ASCII_TRANSLITERATED_LEGAL_NAME" {
+			record.TransliteratedLegalName = name.Value
+			break
+		}
+	}
+
+	// Extract other entity names and serialize as JSON array
+	if len(jsonRecord.Entity.OtherEntityNames.OtherEntityName) > 0 {
+		otherNames := make([]map[string]string, 0, len(jsonRecord.Entity.OtherEntityNames.OtherEntityName))
+		for _, name := range jsonRecord.Entity.OtherEntityNames.OtherEntityName {
+			otherNames = append(otherNames, map[string]string{
+				"name":     name.Value,
+				"type":     name.Type,
+				"language": name.Language,
+			})
+		}
+		if otherNamesJSON, err := json.Marshal(otherNames); err == nil {
+			record.OtherNames = domain.JSONBString(otherNamesJSON)
+		} else {
+			log.Warn().Err(err).Str("lei", record.LEI).Msg("Failed to marshal other names to JSON")
+		}
+	}
+
+	// Handle additional address lines
+	if len(jsonRecord.Entity.LegalAddress.AdditionalAddressLine) > 0 {
+		record.LegalAddressLine2 = jsonRecord.Entity.LegalAddress.AdditionalAddressLine[0].Value
+	}
+	if len(jsonRecord.Entity.LegalAddress.AdditionalAddressLine) > 1 {
+		record.LegalAddressLine3 = jsonRecord.Entity.LegalAddress.AdditionalAddressLine[1].Value
+	}
+	if len(jsonRecord.Entity.LegalAddress.AdditionalAddressLine) > 2 {
+		record.LegalAddressLine4 = jsonRecord.Entity.LegalAddress.AdditionalAddressLine[2].Value
+	}
+
+	// Handle headquarters address
+	if jsonRecord.Entity.HeadquartersAddress.FirstAddressLine.Value != "" {
+		record.HQAddressLine1 = jsonRecord.Entity.HeadquartersAddress.FirstAddressLine.Value
+		record.HQAddressCity = jsonRecord.Entity.HeadquartersAddress.City.Value
+		record.HQAddressRegion = jsonRecord.Entity.HeadquartersAddress.Region.Value
+		record.HQAddressCountry = jsonRecord.Entity.HeadquartersAddress.Country.Value
+		record.HQAddressPostalCode = jsonRecord.Entity.HeadquartersAddress.PostalCode.Value
+
+		if len(jsonRecord.Entity.HeadquartersAddress.AdditionalAddressLine) > 0 {
+			record.HQAddressLine2 = jsonRecord.Entity.HeadquartersAddress.AdditionalAddressLine[0].Value
+		}
+		if len(jsonRecord.Entity.HeadquartersAddress.AdditionalAddressLine) > 1 {
+			record.HQAddressLine3 = jsonRecord.Entity.HeadquartersAddress.AdditionalAddressLine[1].Value
+		}
+		if len(jsonRecord.Entity.HeadquartersAddress.AdditionalAddressLine) > 2 {
+			record.HQAddressLine4 = jsonRecord.Entity.HeadquartersAddress.AdditionalAddressLine[2].Value
+		}
+	}
+
+	// Parse dates (ISO 8601 format)
+	if jsonRecord.Registration.InitialRegistrationDate.Value != "" {
+		if t, err := time.Parse("2006-01-02T15:04:05Z", jsonRecord.Registration.InitialRegistrationDate.Value); err == nil {
+			record.InitialRegistrationDate = t
+		} else if t, err := time.Parse("2006-01-02", jsonRecord.Registration.InitialRegistrationDate.Value); err == nil {
+			record.InitialRegistrationDate = t
+		}
+	}
+	if jsonRecord.Registration.LastUpdateDate.Value != "" {
+		if t, err := time.Parse("2006-01-02T15:04:05Z", jsonRecord.Registration.LastUpdateDate.Value); err == nil {
+			record.LastUpdateDate = t
+		} else if t, err := time.Parse("2006-01-02", jsonRecord.Registration.LastUpdateDate.Value); err == nil {
+			record.LastUpdateDate = t
+		}
+	}
+	if jsonRecord.Registration.NextRenewalDate.Value != "" {
+		if t, err := time.Parse("2006-01-02T15:04:05Z", jsonRecord.Registration.NextRenewalDate.Value); err == nil {
+			record.NextRenewalDate = t
+		} else if t, err := time.Parse("2006-01-02T17:00:00Z", jsonRecord.Registration.NextRenewalDate.Value); err == nil {
+			// Handle the specific format with 17:00:00 timezone
+			record.NextRenewalDate = t
+		} else if t, err := time.Parse("2006-01-02", jsonRecord.Registration.NextRenewalDate.Value); err == nil {
+			record.NextRenewalDate = t
+		}
+	}
+
+	return record
+}
+
+// CreateLEIRecord creates a new LEI record
+func (s *leiService) CreateLEIRecord(record *domain.LEIRecord) error {
+	return s.repo.CreateLEIRecord(record)
+}
+
+// GetLEIByCode retrieves an LEI record by LEI code
+func (s *leiService) GetLEIByCode(lei string) (*domain.LEIRecord, error) {
+	return s.repo.FindLEIByLEI(lei)
+}
+
+// GetLEIByID retrieves an LEI record by ID
+func (s *leiService) GetLEIByID(id string) (*domain.LEIRecord, error) {
+	return s.repo.FindLEIByID(id)
+}
+
+// GetAllLEI retrieves all LEI records with pagination
+func (s *leiService) GetAllLEI(limit, offset int) ([]*domain.LEIRecord, error) {
+	return s.repo.FindAllLEI(limit, offset)
+}
+
+// GetAllLEIWithFilters retrieves LEI records with search and filters
+func (s *leiService) GetAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string) ([]*domain.LEIRecord, error) {
+	return s.repo.FindAllLEIWithFilters(limit, offset, search, status, category, country, sortBy, sortOrder, columns)
+}
+
+// CountLEIRecords returns the total count of LEI records
+func (s *leiService) CountLEIRecords() (int64, error) {
+	return s.repo.CountLEIRecords()
+}
+
+// GetDistinctCountries returns a sorted list of active countries from the countries reference table
+func (s *leiService) GetDistinctCountries() ([]domain.Country, error) {
+	// Fetch all countries from master data table (more efficient than DISTINCT on LEI records)
+	countries, err := s.countryRepo.FindAll(1000, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	// Filter to active countries only
+	activeCountries := make([]domain.Country, 0, len(countries))
+	for _, country := range countries {
+		if country.Active {
+			activeCountries = append(activeCountries, *country)
+		}
+	}
+
+	return activeCountries, nil
+}
+
+// UpdateLEIRecord updates an LEI record
+func (s *leiService) UpdateLEIRecord(record *domain.LEIRecord) error {
+	return s.repo.UpdateLEIRecord(record)
+}
+
+// GetAuditHistory retrieves audit history for an LEI
+func (s *leiService) GetAuditHistory(lei string, limit int) ([]*domain.LEIRecordAudit, error) {
+	return s.repo.FindAuditHistoryByLEI(lei, limit)
+}
+
+// GetProcessingStatus retrieves processing status for a job type
+func (s *leiService) GetProcessingStatus(jobType string) (*domain.FileProcessingStatus, error) {
+	return s.repo.FindProcessingStatus(jobType)
+}
+
+// UpdateProcessingStatus updates processing status
+func (s *leiService) UpdateProcessingStatus(status *domain.FileProcessingStatus) error {
+	return s.repo.UpdateProcessingStatus(status)
+}
+
+// CleanupOldFiles removes old LEI files to free disk space
+// Keeps the most recent N full files and N delta files
+func (s *leiService) CleanupOldFiles(keepFullFiles, keepDeltaFiles int) error {
+	log.Info().
+		Int("keep_full", keepFullFiles).
+		Int("keep_delta", keepDeltaFiles).
+		Msg("Starting LEI file cleanup")
+
+	// Read all files in data directory
+	files, err := os.ReadDir(s.dataDir)
+	if err != nil {
+		return fmt.Errorf("failed to read data directory: %w", err)
+	}
+
+	// Separate files by type
+	var fullFiles, deltaFiles []os.DirEntry
+	for _, file := range files {
+		if file.IsDir() {
+			continue
+		}
+		name := file.Name()
+		if strings.Contains(name, "FULL") {
+			fullFiles = append(fullFiles, file)
+		} else if strings.Contains(name, "DELTA") {
+			deltaFiles = append(deltaFiles, file)
+		}
+	}
+
+	// Sort by modification time (newest first)
+	sortByModTimeDesc := func(files []os.DirEntry) {
+		sort.Slice(files, func(i, j int) bool {
+			infoI, _ := files[i].Info()
+			infoJ, _ := files[j].Info()
+			return infoI.ModTime().After(infoJ.ModTime())
+		})
+	}
+
+	sortByModTimeDesc(fullFiles)
+	sortByModTimeDesc(deltaFiles)
+
+	// Remove old full files
+	removedCount := 0
+	var totalSize int64
+
+	for i, file := range fullFiles {
+		if i < keepFullFiles {
+			continue // Keep recent files
+		}
+		filePath := filepath.Join(s.dataDir, file.Name())
+		info, err := file.Info()
+		if err != nil {
+			log.Warn().Err(err).Str("file", file.Name()).Msg("Failed to get file info")
+			continue
+		}
+		if err := os.Remove(filePath); err != nil {
+			log.Warn().Err(err).Str("file", file.Name()).Msg("Failed to remove old file")
+		} else {
+			log.Info().
+				Str("file", file.Name()).
+				Int64("size_mb", info.Size()/1024/1024).
+				Msg("Removed old full file")
+			removedCount++
+			totalSize += info.Size()
+		}
+	}
+
+	// Remove old delta files
+	for i, file := range deltaFiles {
+		if i < keepDeltaFiles {
+			continue // Keep recent files
+		}
+		filePath := filepath.Join(s.dataDir, file.Name())
+		info, err := file.Info()
+		if err != nil {
+			log.Warn().Err(err).Str("file", file.Name()).Msg("Failed to get file info")
+			continue
+		}
+		if err := os.Remove(filePath); err != nil {
+			log.Warn().Err(err).Str("file", file.Name()).Msg("Failed to remove old file")
+		} else {
+			log.Info().
+				Str("file", file.Name()).
+				Int64("size_mb", info.Size()/1024/1024).
+				Msg("Removed old delta file")
+			removedCount++
+			totalSize += info.Size()
+		}
+	}
+
+	log.Info().
+		Int("removed_count", removedCount).
+		Int64("freed_mb", totalSize/1024/1024).
+		Int("full_remaining", len(fullFiles)-removedCount).
+		Int("delta_remaining", len(deltaFiles)).
+		Msg("Cleanup completed successfully")
+
+	return nil
+}
