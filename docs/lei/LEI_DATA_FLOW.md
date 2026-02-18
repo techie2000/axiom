@@ -238,14 +238,15 @@ All schedules are configurable via environment variables. Defaults shown below:
 
 | Job Type           | Frequency         | Environment Variable      | Default Value |
 |--------------------|-------------------|---------------------------|---------------|
+| File Cleanup       | Midnight daily    | `LEI_CLEANUP_TIME`        | `00:00`       |
 | Delta Sync         | Every 1 hour      | `LEI_DELTA_SYNC_INTERVAL` | `1h`          |
 | Full Sync          | Weekly (Sunday)   | `LEI_FULL_SYNC_DAY`       | `Sunday`      |
 | Full Sync Time     | 2:00 AM           | `LEI_FULL_SYNC_TIME`      | `02:00`       |
-| File Cleanup       | 3:00 AM daily     | `LEI_CLEANUP_TIME`        | `03:00`       |
 | Retain Full Files  | Last 2 files      | `LEI_KEEP_FULL_FILES`     | `2`           |
 | Retain Delta Files | Last 5 files      | `LEI_KEEP_DELTA_FILES`    | `5`           |
 
-**Note:** Invalid values fall back to defaults.
+**Note**: File cleanup runs at midnight (before all syncs) to prevent interference with long-running LEI syncs.
+Invalid values fall back to defaults.
 See [LEI_ACQUISITION.md](LEI_ACQUISITION.md#environment-variables) for detailed format specifications.
 
 ## Performance Metrics

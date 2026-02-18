@@ -323,9 +323,10 @@ The following environment variables configure LEI data acquisition and schedulin
   - Format: `HH:MM` in 24-hour format
   - Example: `LEI_FULL_SYNC_TIME=01:30` for 1:30 AM
 
-- `LEI_CLEANUP_TIME` - Time of day for daily file cleanup (default: `03:00`)
+- `LEI_CLEANUP_TIME` - Time of day for daily file cleanup (default: `00:00`)
   - Format: `HH:MM` in 24-hour format
-  - Example: `LEI_CLEANUP_TIME=04:00` for 4:00 AM
+  - Example: `LEI_CLEANUP_TIME=00:00` for midnight (runs BEFORE all syncs)
+  - **Note**: Cleanup runs at midnight to ensure old files are removed before downloads start
 
 #### File Retention
 

@@ -103,15 +103,15 @@ func (s *schedulerService) parseScheduleConfig(cfg *config.Config) {
 			Msg("Full sync time configured")
 	}
 
-	// Parse cleanup time (e.g., "03:00")
+	// Parse cleanup time (e.g., "00:00" for midnight)
 	hour, minute, err = parseTimeOfDay(cfg.LEI.CleanupTime)
 	if err != nil {
 		log.Warn().
 			Str("value", cfg.LEI.CleanupTime).
-			Str("default", "03:00").
+			Str("default", "00:00").
 			Err(err).
 			Msg("Invalid cleanup time, using default")
-		s.cleanupHour = 3
+		s.cleanupHour = 0 // Midnight - runs BEFORE all syncs
 		s.cleanupMinute = 0
 	} else {
 		s.cleanupHour = hour

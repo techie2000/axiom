@@ -178,15 +178,23 @@ Example startup log:
 
 ### Daily Synchronization
 
-The scheduler service runs a daily sync at **1:00 AM** (before LEI sync at 2:00 AM) to check for updates:
+The scheduler service runs daily syncs in the following order to prevent conflicts:
 
-1. **Check for changes**: Compares file timestamps or checksums
-2. **Reload if needed**: If files have changed, reloads affected data
-3. **Log status**: Reports sync status and any updates
+1. **12:00 AM (Midnight)** - File cleanup removes old LEI files
+2. **1:00 AM** - Master data sync checks for updates
+3. **2:00 AM** - LEI full sync downloads and processes data
+
+**Schedule rationale:**
+- File cleanup runs FIRST to free disk space before downloads
+- Master data sync runs BEFORE LEI sync to ensure foreign key integrity
+- LEI sync has clean slate with no risk of cleanup interference
+
+The scheduler checks for updates by comparing file timestamps or checksums, reloads data if needed, and logs all actions.
 
 The sync is designed to be:
-- **Non-disruptive**: Runs during low-traffic hours
-- **Properly ordered**: Runs at 1:00 AM, **before** LEI sync at 2:00 AM to ensure countries and currencies exist before LEI data references them
+- **Non-disruptive**: Runs during low-traffic hours (midnight to 2 AM)
+- **Properly ordered**: File cleanup → Master data → LEI sync ensures no conflicts
+- **Safe**: Cleanup completes before any sync starts, preventing file deletion during processing
 - **Idempotent**: Safe to run multiple times
 - **Logged**: All actions are recorded for audit
 
