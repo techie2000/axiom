@@ -85,7 +85,8 @@ if resumeFromLEI == "" {
 ---
 
 ### 4. ✅ Missing Progress Percentage in Logs
-**Problem**: Log messages showed absolute counts (`total_scanned: 3425000`) but no percentage, making it hard to estimate completion time.
+**Problem**: Log messages showed absolute counts (`total_scanned: 3425000`) but no percentage, making it hard to
+estimate completion time.
 
 **User Request**: Add percentage to help users understand "how far through/to go".
 

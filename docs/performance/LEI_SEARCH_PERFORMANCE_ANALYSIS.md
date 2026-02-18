@@ -274,8 +274,6 @@ For common searches (like "stores", "bank", etc.), cache results for 5-10 minute
 | **Maintenance** | Moderate | Easy ✅ | Moderate |
 | **Meets <200ms Target** | Yes ✅ | Maybe ⚠️ | Yes ✅ |
 
-## Recommended Approach
-
 ## Performance Targets
 
 | Scenario | Current | Target | Status |
