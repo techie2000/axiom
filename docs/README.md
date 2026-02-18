@@ -19,6 +19,11 @@ Located in [adr/](./adr/):
 - [ADR-0005: RabbitMQ Async Processing](./adr/adr-0005-rabbitmq-async-processing.md)
 - [ADR-0006: Next.js + Tailwind Frontend](./adr/adr-0006-nextjs-tailwind-frontend.md)
 - [ADR-0007: Docker Compose Local Development](./adr/adr-0007-docker-compose-local-dev.md)
+- [ADR-0008: Sticky Headers with Smooth Transitions](./adr/adr-0008-sticky-headers-with-smooth-transitions.md)
+
+### 🎨 Frontend Patterns
+
+- [**UI Patterns Guide**](./ui-patterns.md) - Reusable frontend patterns and component templates ⭐ **For UI development**
 
 ### 🌍 Environment Configuration
 
@@ -73,7 +78,8 @@ Located in [performance/](./performance/):
 1. **New to the project?** → [Architecture Overview](./architecture.md)
 2. **Setting up environments?** → [Multi-Environment Quickstart](./environments/multi-environment-quickstart.md)
 3. **Working on LEI feature?** → [LEI Quickstart](./lei/LEI_QUICKSTART.md)
-4. **Performance tuning?** → [LEI Search Performance Analysis](./performance/LEI_SEARCH_PERFORMANCE_ANALYSIS.md)
+4. **Building UI components?** → [UI Patterns Guide](./ui-patterns.md) ⭐ **New!**
+5. **Performance tuning?** → [LEI Search Performance Analysis](./performance/LEI_SEARCH_PERFORMANCE_ANALYSIS.md)
 
 ### For System Administrators
 
@@ -128,4 +134,5 @@ When adding new documentation:
 
 ---
 
-*Last Updated: February 16, 2026*
+*Last Updated: February 18, 2026*
+

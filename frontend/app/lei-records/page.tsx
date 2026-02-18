@@ -137,6 +137,10 @@ export default function LEIRecordsPage() {
   const [filterBarHeight, setFilterBarHeight] = useState(0)
   const countryDropdownRef = useRef<HTMLDivElement>(null)
   const filterBarRef = useRef<HTMLDivElement>(null)
+  const tableHeaderRef = useRef<HTMLTableSectionElement>(null)
+  const tableContainerRef = useRef<HTMLDivElement>(null)
+  const [showStickyHeader, setShowStickyHeader] = useState(false)
+  const [stickyHeaderStyle, setStickyHeaderStyle] = useState<{left: number, width: number}>({left: 0, width: 0})
   
   // New features
   const [visibleColumns, setVisibleColumns] = useState<Set<keyof LEIRecord>>(
@@ -460,7 +464,7 @@ export default function LEIRecordsPage() {
     fetchManagingLouName()
   }, [selectedRecord, API_BASE_URL])
 
-  // Fetch managing LOU names for visible records in the table
+  // Fetch managing LOU names for all records in table
   useEffect(() => {
     const fetchManagingLouNamesForTable = async () => {
       // Get unique managing LOU codes from current records
@@ -471,15 +475,15 @@ export default function LEIRecordsPage() {
             .map(r => r.managing_lou)
         )
       )
-
-      // Filter out codes we already have
+      
+      if (uniqueLouCodes.length === 0) return
+      
+      // Only fetch codes we don't have yet
       const codesToFetch = uniqueLouCodes.filter(code => !managingLouNames.has(code))
-      
       if (codesToFetch.length === 0) return
-
-      // Fetch names for all codes
-      const newNames = new Map(managingLouNames)
       
+      // Fetch names for missing codes
+      const newNames = new Map(managingLouNames)
       await Promise.all(
         codesToFetch.map(async (code) => {
           try {
@@ -498,11 +502,11 @@ export default function LEIRecordsPage() {
       
       setManagingLouNames(newNames)
     }
-
+    
     if (records.length > 0) {
       fetchManagingLouNamesForTable()
     }
-  }, [records, API_BASE_URL, managingLouNames])
+  }, [records, API_BASE_URL])
 
   // Parse other_names JSONB field
   interface OtherName {
@@ -511,15 +515,32 @@ export default function LEIRecordsPage() {
     language?: string
   }
 
-  const parseOtherNames = (otherNamesJson: string | null | undefined): OtherName[] => {
-    if (!otherNamesJson || otherNamesJson === '[]') return []
+  const parseOtherNames = (otherNamesData: any): OtherName[] => {
+    // Handle null/undefined
+    if (!otherNamesData) return []
     
-    try {
-      const parsed = JSON.parse(otherNamesJson)
-      return Array.isArray(parsed) ? parsed : []
-    } catch {
-      return []
+    // If it's already an array (fetch() auto-parsed JSON), use it directly
+    if (Array.isArray(otherNamesData)) {
+      return otherNamesData
     }
+    
+    // If it's a string, try to parse it
+    if (typeof otherNamesData === 'string') {
+      if (otherNamesData === '[]' || otherNamesData === 'null' || otherNamesData === '') return []
+      if (otherNamesData.startsWith('Array(')) return [] // Handle "Array(0)" etc
+      
+      try {
+        const parsed = JSON.parse(otherNamesData)
+        return Array.isArray(parsed) ? parsed : []
+      } catch (e) {
+        console.error('Failed to parse other_names string:', otherNamesData, e)
+        return []
+      }
+    }
+    
+    // Unknown type
+    console.error('Unexpected other_names type:', typeof otherNamesData, otherNamesData)
+    return []
   }
 
   const formatCellValue = (value: any, key: keyof LEIRecord): string => {
@@ -594,6 +615,35 @@ export default function LEIRecordsPage() {
 
   const totalPages = Math.ceil(totalRecords / itemsPerPage)
   const hasActiveFilters = debouncedSearch || statusFilter || categoryFilter || countryFilter
+
+  // Handle sticky header on scroll and update dimensions
+  useEffect(() => {
+    const updateDimensionsAndCheckScroll = () => {
+      if (!tableContainerRef.current) return
+      
+      const containerRect = tableContainerRef.current.getBoundingClientRect()
+      
+      // Update dimensions every time we check scroll position
+      setStickyHeaderStyle({
+        left: containerRect.left,
+        width: containerRect.width
+      })
+      
+      // Check if we should show sticky header
+      const topOffset = hasActiveFilters ? filterBarHeight : 0
+      setShowStickyHeader(containerRect.top < topOffset)
+    }
+
+    // Call immediately and on every scroll
+    updateDimensionsAndCheckScroll()
+    
+    window.addEventListener('scroll', updateDimensionsAndCheckScroll)
+    window.addEventListener('resize', updateDimensionsAndCheckScroll)
+    return () => {
+      window.removeEventListener('scroll', updateDimensionsAndCheckScroll)
+      window.removeEventListener('resize', updateDimensionsAndCheckScroll)
+    }
+  }, [hasActiveFilters, filterBarHeight, expandedWidth])
 
   // Measure filter bar height dynamically
   useEffect(() => {
@@ -980,13 +1030,58 @@ export default function LEIRecordsPage() {
                 </div>
               </div>
             )}
+
+            {/* Fixed sticky header that appears on scroll */}
+            <div 
+              className={`fixed z-30 overflow-x-auto bg-white border-b-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm shadow-lg transition-all duration-300 ease-in-out ${
+                showStickyHeader ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4 pointer-events-none'
+              }`}
+              style={{ 
+                top: hasActiveFilters ? `${filterBarHeight}px` : '0px',
+                left: `${stickyHeaderStyle.left}px`,
+                width: `${stickyHeaderStyle.width}px`
+              }}
+            >
+                <div className="max-w-full">
+                  <table className="w-full" style={{ tableLayout: 'auto', borderCollapse: 'collapse' }}>
+                    <thead className="bg-gray-100 dark:bg-gray-800">
+                      <tr>
+                        {AVAILABLE_COLUMNS.filter(col => visibleColumns.has(col.key)).map((column) => (
+                          <th 
+                            key={String(column.key)}
+                            onClick={() => handleSort(column.key)}
+                            className={`${column.width || 'min-w-40'} px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors`}
+                          >
+                            <div className="flex items-center gap-1">
+                              {column.label}
+                              {sortField === column.key && (
+                                <span className="text-blue-600 dark:text-blue-400">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                              )}
+                            </div>
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                  </table>
+                </div>
+              </div>
             
             <div 
+              ref={tableContainerRef}
               className={`overflow-x-auto bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm shadow-lg transition-opacity duration-200 ${loading ? 'opacity-40 pointer-events-none' : 'opacity-100'}`} 
-              style={{ borderTopLeftRadius: hasActiveFilters ? 0 : undefined, borderTopRightRadius: hasActiveFilters ? 0 : undefined, borderBottomLeftRadius: '0.5rem', borderBottomRightRadius: '0.5rem' }}
+              style={{ 
+                borderTopLeftRadius: hasActiveFilters ? 0 : '0.5rem',
+                borderTopRightRadius: hasActiveFilters ? 0 : '0.5rem',
+                borderBottomLeftRadius: '0.5rem',
+                borderBottomRightRadius: '0.5rem',
+                borderTop: hasActiveFilters ? 'none' : undefined
+              }}
             >
                 <table className="w-full" style={{ tableLayout: 'auto', borderCollapse: 'collapse' }}>
-                  <thead className="bg-gray-100 dark:bg-gray-800" style={{ position: 'sticky', top: hasActiveFilters ? `${filterBarHeight}px` : '0px', zIndex: 100 }}>
+                  <thead 
+                    ref={tableHeaderRef}
+                    className="bg-gray-100 dark:bg-gray-800"
+                  >
                     <tr>
                       {AVAILABLE_COLUMNS.filter(col => visibleColumns.has(col.key)).map((column) => (
                         <th 
@@ -1044,6 +1139,15 @@ export default function LEIRecordsPage() {
                               }`}>
                                 {value || '-'}
                               </span>
+                            ) : isManagingLou ? (
+                              <div>
+                                <div className="font-mono">{formatCellValue(value, column.key)}</div>
+                                {value && managingLouNames.has(String(value)) && (
+                                  <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                    {managingLouNames.get(String(value))}
+                                  </div>
+                                )}
+                              </div>
                             ) : isLegalName ? (
                               <div>
                                 <div>{formatCellValue(value, column.key)}</div>
@@ -1066,15 +1170,6 @@ export default function LEIRecordsPage() {
                                     </div>
                                   )
                                 })()}
-                              </div>
-                            ) : isManagingLou ? (
-                              <div>
-                                <div className="font-mono">{formatCellValue(value, column.key)}</div>
-                                {value && managingLouNames.has(String(value)) && (
-                                  <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                    {managingLouNames.get(String(value))}
-                                  </div>
-                                )}
                               </div>
                             ) : (
                               formatCellValue(value, column.key)

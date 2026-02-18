@@ -11,6 +11,7 @@
 Some LEI records in the GLEIF dataset have `SuccessorEntity` as an **array** instead of a single object, causing JSON unmarshaling failures.
 
 **Error Message**:
+
 ```
 json: cannot unmarshal array into Go struct field LEIEntity.Entity.SuccessorEntity of type service.LEISuccessorEntity
 ```
@@ -23,6 +24,7 @@ json: cannot unmarshal array into Go struct field LEIEntity.Entity.SuccessorEnti
 - Processing continues with remaining records
 
 ### Example Failure Log
+
 ```json
 {
   "level": "error",
@@ -37,6 +39,7 @@ json: cannot unmarshal array into Go struct field LEIEntity.Entity.SuccessorEnti
 ### Root Cause
 
 **Expected Data Structure (Our Code)**:
+
 ```go
 type LEIEntity struct {
     SuccessorEntity LEISuccessorEntity `json:"SuccessorEntity"`
@@ -50,6 +53,7 @@ type LEISuccessorEntity struct {
 ```
 
 **Actual GLEIF Data (Some Records)**:
+
 ```json
 {
   "Entity": {
@@ -80,6 +84,7 @@ type LEIEntity struct {
 ```
 
 **Implementation Steps**:
+
 1. Update `LEISuccessorEntity` field to accept array in `internal/service/lei_service.go`
 2. Update database schema to store JSON array in `lei_records.successor_entity` (currently VARCHAR)
 3. Update parsing logic to handle multiple successors
@@ -90,7 +95,8 @@ type LEIEntity struct {
 
 Current workaround: None - records with array successors are skipped.
 
-**Business Impact**: 
+**Business Impact**:
+
 - Entities with multiple successors are not tracked
 - Represents ~3% of total LEI database
 - Most entities have single or no successors, so impact is limited
@@ -98,6 +104,7 @@ Current workaround: None - records with array successors are skipped.
 ### Tracking
 
 - Database query to check failed records:
+
   ```sql
   SELECT file_name, total_records, processed_records, failed_records 
   FROM lei_raw.source_files 
@@ -106,6 +113,7 @@ Current workaround: None - records with array successors are skipped.
   ```
 
 - Log pattern to search:
+
   ```bash
   docker logs axiom-dev-backend 2>&1 | grep "SuccessorEntity"
   ```
