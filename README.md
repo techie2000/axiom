@@ -41,6 +41,9 @@ Architecture decisions are documented as ADRs in [docs/adr](docs/adr).
 - Comprehensive Logging
 - Prometheus Metrics
 - Swagger API Documentation
+- **Master Data Management** - Pre-populated countries, currencies, continents, and languages
+- **LEI Data Acquisition** - Automated Legal Entity Identifier data acquisition from GLEIF
+- **Daily Synchronization** - Automated daily sync for LEI and master data updates
 
 ## Project Structure
 
