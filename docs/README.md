@@ -1,6 +1,7 @@
 # Axiom Documentation
 
-Welcome to the Axiom project documentation. This directory contains comprehensive documentation for the Financial Services Static Data Management System.
+Welcome to the Axiom project documentation. This directory contains comprehensive documentation
+for the Financial Services Static Data Management System.
 
 ## 📚 Documentation Structure
 
@@ -61,13 +62,17 @@ Located in [performance/](./performance/):
 
 #### Analysis & Results
 
-- [**LEI Search Performance Analysis**](./performance/LEI_SEARCH_PERFORMANCE_ANALYSIS.md) - Complete performance journey (3 phases)
-- [**Performance Verification Results**](./performance/PERFORMANCE_VERIFICATION_RESULTS.md) - Test results and metrics
+- [**LEI Search Performance Analysis**](./performance/LEI_SEARCH_PERFORMANCE_ANALYSIS.md) - Performance journey
+  (3 phases)
+- [**Performance Verification Results**](./performance/PERFORMANCE_VERIFICATION_RESULTS.md) - Test results and
+  metrics
 
 #### Implementation Guides
 
-- [**Dynamic SELECT Implementation**](./performance/DYNAMIC_SELECT_IMPLEMENTATION.md) - Phase 2: Column selection optimization (5-6x improvement)
-- [**Hybrid Sorting Implementation**](./performance/HYBRID_SORTING_IMPLEMENTATION.md) - Phase 3: Smart sorting strategy (44x improvement)
+- [**Dynamic SELECT Implementation**](./performance/DYNAMIC_SELECT_IMPLEMENTATION.md)
+  - Phase 2: Column selection (5-6x improvement)
+- [**Hybrid Sorting Implementation**](./performance/HYBRID_SORTING_IMPLEMENTATION.md)
+  - Phase 3: Smart sorting strategy (44x improvement)
 
 ---
 
@@ -134,5 +139,6 @@ When adding new documentation:
 
 ---
 
-*Last Updated: February 18, 2026*
+## Last Updated
 
+February 18, 2026

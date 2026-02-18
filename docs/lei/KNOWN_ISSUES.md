@@ -13,7 +13,7 @@ unmarshaling failures.
 
 **Error Message**:
 
-```
+```text
 json: cannot unmarshal array into Go struct field LEIEntity.Entity.SuccessorEntity of type service.LEISuccessorEntity
 ```
 

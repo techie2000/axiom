@@ -236,16 +236,17 @@ stateDiagram-v2
 
 All schedules are configurable via environment variables. Defaults shown below:
 
-| Job Type           | Frequency         | Environment Variable      | Default Value | Status     |
-|--------------------|-------------------|---------------------------|---------------|------------|
-| File Cleanup       | Midnight daily    | `LEI_CLEANUP_TIME`        | `00:00`       | Active     |
-| Master Data Sync   | 1:00 AM daily     | N/A (hardcoded)           | `01:00`       | Active     |
-| Full Sync          | 2:00 AM daily     | `LEI_FULL_SYNC_TIME`      | `02:00`       | Active     |
-| Delta Sync         | N/A (disabled)    | `LEI_DELTA_SYNC_INTERVAL` | `1h`          | **Disabled** |
-| Retain Full Files  | Last 2 files      | `LEI_KEEP_FULL_FILES`     | `2`           | Active     |
-| Retain Delta Files | Last 5 files      | `LEI_KEEP_DELTA_FILES`    | `5`           | Active     |
+| Job Type            | Frequency         | Environment Variable      | Default Value | Status       |
+|---------------------|-------------------|---------------------------|---------------|--------------|
+| File Cleanup        | Midnight daily    | `LEI_CLEANUP_TIME`        | `00:00`       | Active       |
+| Master Data Sync    | 1:00 AM daily     | N/A (hardcoded)           | `01:00`       | Active       |
+| Full Sync           | 2:00 AM daily     | `LEI_FULL_SYNC_TIME`      | `02:00`       | Active       |
+| Delta Sync          | N/A (disabled)    | `LEI_DELTA_SYNC_INTERVAL` | `1h`          | **Disabled** |
+| Retain Full Files   | Last 2 files      | `LEI_KEEP_FULL_FILES`     | `2`           | Active       |
+| Retain Delta Files  | Last 5 files      | `LEI_KEEP_DELTA_FILES`    | `5`           | Active       |
 
-**Notes**: 
+**Notes**:
+
 - **Delta sync is currently disabled** - Using full sync daily strategy for reliability
 - File cleanup runs at midnight (before all syncs) to prevent interference with long-running LEI syncs
 - Master data sync runs at 1:00 AM to ensure countries/currencies exist before LEI sync
