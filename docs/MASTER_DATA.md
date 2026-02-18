@@ -10,7 +10,7 @@ Master data is stored in JSON format at `backend/data/masterdata/`:
 
 - **continents.json** - 7 continents (AF, AN, AS, EU, NA, OC, SA)
 - **languages.json** - 184 languages with ISO 639-1 codes, native names, and RTL flags
-- **currencies.json** - 60 major world currencies with ISO 4217 codes
+- **currencies.json** - 180 currencies with ISO 4217 codes (all active global currencies)
 - **countries.json** - 196 countries with ISO 3166-1 codes and relationships
 
 ## Data Standards
@@ -46,8 +46,8 @@ Coverage includes:
 - African languages (30+): Swahili, Hausa, Yoruba, Amharic, Zulu, etc.
 - Indigenous languages (15+): Navajo, Quechua, Guarani, Maori, etc.
 
-#### Currencies (60 entries)
-Major world currencies with detailed attributes:
+#### Currencies (180 entries)
+All active ISO 4217 currencies with detailed attributes:
 - **Code**: ISO 4217 three-letter code (e.g., "USD", "EUR")
 - **Name**: English name ("US Dollar")
 - **Symbol**: International symbol ("$")
@@ -60,12 +60,13 @@ Major world currencies with detailed attributes:
 - **Name Plural**: Plural form ("US dollars", "euros")
 
 Coverage by region:
-- Americas: USD, CAD, BRL, MXN, ARS, CLP, COP, PEN, etc.
-- Europe: EUR, GBP, CHF, SEK, NOK, DKK, PLN, CZK, RUB, etc.
-- Asia: JPY, CNY, INR, SGD, HKD, KRW, THB, MYR, IDR, PHP, etc.
-- Middle East: SAR, AED, ILS, QAR, KWD, BHD, OMR, JOD
-- Africa: ZAR, EGP, NGN, KES, GHS, MAD, TND, etc.
-- Oceania: AUD, NZD
+- **Americas**: USD, CAD, BRL, MXN, ARS, CLP, COP, PEN, TTD, JMD, BBD, XCD, etc. (25+ currencies)
+- **Europe**: EUR, GBP, CHF, SEK, NOK, DKK, PLN, CZK, RUB, HUF, RON, BGN, HRK, etc. (30+ currencies)
+- **Asia**: JPY, CNY, INR, SGD, HKD, KRW, THB, MYR, IDR, PHP, VND, PKR, BDT, NPR, etc. (40+ currencies)
+- **Middle East**: SAR, AED, ILS, QAR, KWD, BHD, OMR, JOD, IQD, IRR, LBP, SYP, YER (13+ currencies)
+- **Africa**: ZAR, EGP, NGN, KES, GHS, MAD, TND, DZD, AOA, MZN, ZMW, BWP, etc. (45+ currencies)
+- **Oceania**: AUD, NZD, FJD, TOP, WST, PGK, SBD, VUV (8+ currencies)
+- **Special**: Precious metals (XAU, XAG, XPT, XPD), supranational units (XDR, XSU), investment units
 
 #### Countries (196 entries)
 Comprehensive country data including:
@@ -177,7 +178,7 @@ Example startup log:
 
 ### Daily Synchronization
 
-The scheduler service runs a daily sync at **4:00 AM** to check for updates:
+The scheduler service runs a daily sync at **1:00 AM** (before LEI sync at 2:00 AM) to check for updates:
 
 1. **Check for changes**: Compares file timestamps or checksums
 2. **Reload if needed**: If files have changed, reloads affected data
@@ -185,8 +186,14 @@ The scheduler service runs a daily sync at **4:00 AM** to check for updates:
 
 The sync is designed to be:
 - **Non-disruptive**: Runs during low-traffic hours
+- **Properly ordered**: Runs at 1:00 AM, **before** LEI sync at 2:00 AM to ensure countries and currencies exist before LEI data references them
 - **Idempotent**: Safe to run multiple times
 - **Logged**: All actions are recorded for audit
+
+**Important**: Master data must be loaded before LEI data because:
+- LEI records reference countries via foreign keys
+- Countries reference currencies via foreign keys
+- Loading order: Currencies → Countries → LEI data ensures referential integrity
 
 ## Manual Operations
 

@@ -17,11 +17,11 @@ Language reference data (184 entries)
 - Coverage: European, Asian, African, Middle Eastern, and Indigenous languages
 
 ### currencies.json
-Currency reference data (60 entries)
+Currency reference data (180 entries)
 - ISO 4217 three-letter currency codes
 - Currency symbols (international and native)
 - Decimal places and rounding information
-- Coverage: Major currencies from all continents
+- Coverage: All active currencies from all continents, plus precious metals and special codes
 
 ### countries.json
 Country reference data (196 entries)
@@ -35,16 +35,23 @@ Country reference data (196 entries)
 
 All data follows international ISO standards:
 - **ISO 3166-1**: Country codes
-- **ISO 4217**: Currency codes
+- **ISO 4217**: Currency codes (all 180 active currencies)
 - **ISO 639-1**: Language codes
 
 ## Loading
 
 These files are automatically loaded into the database:
 1. **At application startup** - if tables are empty
-2. **Daily at 4 AM** - checks for updates and reloads if changed
+2. **Daily at 1 AM** - checks for updates and reloads if changed (runs BEFORE LEI sync at 2 AM)
 
 The loading process is idempotent (safe to run multiple times) and logs all actions.
+
+**Loading Order**: 
+1. Continents (no dependencies)
+2. Languages (no dependencies)
+3. **Currencies** (no dependencies - loaded first)
+4. **Countries** (depends on currencies and continents)
+5. LEI data (depends on countries - loaded at 2 AM)
 
 ## Updating
 

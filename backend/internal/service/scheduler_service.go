@@ -778,9 +778,9 @@ func (s *schedulerService) RunDailyCleanup() error {
 	return nil
 }
 
-// dailyMasterDataSyncLoop runs master data sync at 4 AM daily
+// dailyMasterDataSyncLoop runs master data sync at 1 AM daily (before LEI sync at 2 AM)
 func (s *schedulerService) dailyMasterDataSyncLoop() {
-	masterDataSyncHour := 4 // 4 AM
+	masterDataSyncHour := 1 // 1 AM - runs BEFORE LEI sync to ensure countries/currencies exist first
 	masterDataSyncMinute := 0
 
 	for {
