@@ -295,11 +295,10 @@ func (s *schedulerService) initializeNextRunTimes() {
 		fullStatus.NextRunAt = s.calculateNextDailyFullRun()
 		if err := s.leiService.UpdateProcessingStatus(fullStatus); err != nil {
 			log.Error().Err(err).Msg("Failed to update DAILY_FULL next_run_at")
-		} else {
-			log.Info().
-				Time("next_run", *fullStatus.NextRunAt).
-				Msg("DAILY_FULL next_run_at initialized")
 		}
+		log.Info().
+			Time("next_run", *fullStatus.NextRunAt).
+			Msg("DAILY_FULL next_run_at initialized")
 	}
 
 	// Initialize DAILY_DELTA (runs hourly but named DAILY_DELTA)
@@ -312,11 +311,10 @@ func (s *schedulerService) initializeNextRunTimes() {
 		deltaStatus.NextRunAt = calculateNextRun(s.deltaSyncInterval)
 		if err := s.leiService.UpdateProcessingStatus(deltaStatus); err != nil {
 			log.Error().Err(err).Msg("Failed to update DAILY_DELTA next_run_at")
-		} else {
-			log.Info().
-				Time("next_run", *deltaStatus.NextRunAt).
-				Msg("DAILY_DELTA next_run_at initialized")
 		}
+		log.Info().
+			Time("next_run", *deltaStatus.NextRunAt).
+			Msg("DAILY_DELTA next_run_at initialized")
 	} else if err != nil {
 		// DAILY_DELTA job doesn't exist - create it
 		log.Info().Msg("DAILY_DELTA job status doesn't exist, creating...")
@@ -331,11 +329,10 @@ func (s *schedulerService) initializeNextRunTimes() {
 		}
 		if err := s.leiService.UpdateProcessingStatus(newStatus); err != nil {
 			log.Error().Err(err).Msg("Failed to create DAILY_DELTA job status")
-		} else {
-			log.Info().
-				Time("next_run", *nextRun).
-				Msg("DAILY_DELTA job status created")
 		}
+		log.Info().
+			Time("next_run", *nextRun).
+			Msg("DAILY_DELTA job status created")
 	}
 
 	log.Info().Msg("Next_run_at initialization completed")
