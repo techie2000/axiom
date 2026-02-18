@@ -4,7 +4,7 @@ FROM golang:1.24-alpine3.21 AS builder
 WORKDIR /app
 
 # Install specific versions for reproducibility
-RUN apk add --no-cache git=2.47.1-r0 make=4.4.1-r2 ca-certificates=20241125-r0 && update-ca-certificates
+RUN apk add --no-cache git=2.47.1-r0 make=4.4.1-r2 ca-certificates=20250105-r0 && update-ca-certificates
 
 # Copy go mod files
 COPY go.mod ./
