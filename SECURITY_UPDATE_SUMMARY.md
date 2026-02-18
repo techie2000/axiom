@@ -47,7 +47,7 @@ docker/Dockerfile.frontend             - Node 22-alpine3.21 (both stages)
 frontend/package.json                  - Node 22 engine, @types/node ^22
 backend/go.mod                         - Updated dependencies
 backend/go.sum                         - Updated checksums
-docs/SECURITY_UPDATES_2026-02.md      - Comprehensive documentation (NEW)
+docs/security/SECURITY_UPDATES_2026-02.md      - Comprehensive documentation (NEW)
 ```
 
 ## Security Issues Resolved
@@ -154,7 +154,7 @@ docker compose --env-file .env.dev -f docker-compose.dev.yml up -d
 ## Documentation
 
 Comprehensive documentation available in:
-- **[docs/SECURITY_UPDATES_2026-02.md](docs/SECURITY_UPDATES_2026-02.md)** - Complete guide including:
+- **[docs/security/SECURITY_UPDATES_2026-02.md](docs/security/SECURITY_UPDATES_2026-02.md)** - Complete guide including:
   - Detailed component updates
   - Security vulnerabilities addressed
   - Verification procedures
@@ -165,7 +165,7 @@ Comprehensive documentation available in:
 ## Support & Questions
 
 If you encounter issues:
-1. Check `docs/SECURITY_UPDATES_2026-02.md` for troubleshooting
+1. Check `docs/security/SECURITY_UPDATES_2026-02.md` for troubleshooting
 2. Review Docker logs: `docker compose logs -f`
 3. Verify base image availability
 4. Check network access for apk/npm/go package downloads
