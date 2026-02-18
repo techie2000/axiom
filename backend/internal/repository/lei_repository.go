@@ -91,7 +91,7 @@ func (r *leiRepository) FindAllLEI(limit, offset int) ([]*domain.LEIRecord, erro
 // isAlphanumeric checks if string contains only letters and numbers
 func isAlphanumeric(s string) bool {
 	for _, char := range s {
-		if !((char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') || (char >= '0' && char <= '9')) {
+		if (char < 'a' || char > 'z') && (char < 'A' || char > 'Z') && (char < '0' || char > '9') {
 			return false
 		}
 	}
