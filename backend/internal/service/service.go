@@ -3,6 +3,7 @@ package service
 import (
 	"github.com/techie2000/axiom/internal/domain"
 	"github.com/techie2000/axiom/internal/repository"
+	"gorm.io/gorm"
 )
 
 // Services holds all service interfaces
@@ -14,10 +15,11 @@ type Services struct {
 	Account    AccountService
 	SSI        SSIService
 	LEI        LEIService
+	MasterData MasterDataService
 }
 
 // NewServices creates a new services instance
-func NewServices(repos *repository.Repositories, leiDataDir string) *Services {
+func NewServices(repos *repository.Repositories, db *gorm.DB, leiDataDir string, masterDataDir string) *Services {
 	return &Services{
 		Country:    NewCountryService(repos.Country),
 		Currency:   NewCurrencyService(repos.Currency),
@@ -26,6 +28,7 @@ func NewServices(repos *repository.Repositories, leiDataDir string) *Services {
 		Account:    NewAccountService(repos.Account),
 		SSI:        NewSSIService(repos.SSI),
 		LEI:        NewLEIService(repos.LEI, repos.Country, leiDataDir),
+		MasterData: NewMasterDataService(db, masterDataDir),
 	}
 }
 
