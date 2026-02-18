@@ -1,7 +1,7 @@
 # Dockerfile for LOCAL DEVELOPMENT with corporate proxy/firewall workarounds
 # For production builds, use Dockerfile.backend.clean which has proper SSL verification
 # Build stage
-FROM golang:1.24-alpine AS builder
+FROM golang:1.24-alpine3.21 AS builder
 
 WORKDIR /app
 
@@ -24,10 +24,10 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main cmd/api/main.go
 
 # Runtime stage
-FROM alpine:3.19
+FROM alpine:3.21
 
 RUN apk --no-cache add ca-certificates wget && \
-    wget --no-check-certificate -O migrate.tar.gz https://github.com/golang-migrate/migrate/releases/download/v4.17.0/migrate.linux-amd64.tar.gz && \
+    wget --no-check-certificate -O migrate.tar.gz https://github.com/golang-migrate/migrate/releases/download/v4.18.1/migrate.linux-amd64.tar.gz && \
     tar xvzf migrate.tar.gz && \
     mv migrate /usr/local/bin/migrate && \
     chmod +x /usr/local/bin/migrate && \

@@ -1,10 +1,10 @@
 # Build stage
-FROM golang:1.24-alpine AS builder
+FROM golang:1.24-alpine3.21 AS builder
 
 WORKDIR /app
 
-# Install specific versions for reproducibility
-RUN apk add --no-cache git=2.45.4-r0 make=4.4.1-r2 ca-certificates=20240705-r0 && update-ca-certificates
+# Install dependencies without pinning versions for latest security patches
+RUN apk add --no-cache git make ca-certificates && update-ca-certificates
 
 # Copy go mod files
 COPY go.mod ./
@@ -19,7 +19,7 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main cmd/api/main.go
 
 # Runtime stage
-FROM alpine:3.19
+FROM alpine:3.21
 
 RUN apk --no-cache add ca-certificates
 
