@@ -1,16 +1,23 @@
+# Backend image for UAT/PRODUCTION-style deployments.
+# This variant is used by docker-compose.uat.yml and docker-compose.prod.yml.
+# Runtime behavior: starts app directly (`./main`) and does not install/use migrate startup script.
+# Note: builder stage still includes corporate network TLS workarounds for module download.
 # Build stage
 FROM golang:1.24-alpine3.21 AS builder
 
 WORKDIR /app
 
-# Install specific versions for reproducibility
-RUN apk add --no-cache git=2.47.1-r0 make=4.4.1-r2 ca-certificates=20250105-r0 && update-ca-certificates
+# Install build dependencies and ca-certificates
+RUN apk add --no-cache git=2.47.3-r0 make=4.4.1-r2 ca-certificates=20250911-r0 && update-ca-certificates
 
 # Copy go mod files
 COPY go.mod ./
 # Copy go.sum if it exists
 COPY go.sum* ./
-RUN go mod download
+# Corporate network workaround for module download in restricted TLS environments
+ENV GOINSECURE="*"
+ENV GOPRIVATE="*"
+RUN git config --global http.sslVerify false && go mod download
 
 # Copy source code
 COPY . .
@@ -21,7 +28,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main cmd/api/main
 # Runtime stage
 FROM alpine:3.21
 
-RUN apk --no-cache add ca-certificates
+RUN apk --no-cache add ca-certificates=20250911-r0
 
 WORKDIR /root/
 

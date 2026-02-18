@@ -38,6 +38,7 @@ services:
   backend:
     build:
       context: ./backend
+      # Prod uses clean image variant (no migrate startup script)
       dockerfile: ../docker/Dockerfile.backend.clean
     container_name: ${COMPOSE_PROJECT_NAME}-backend
     environment:

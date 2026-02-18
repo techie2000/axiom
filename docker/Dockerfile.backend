@@ -1,18 +1,19 @@
-# Dockerfile for LOCAL DEVELOPMENT with corporate proxy/firewall workarounds
-# For production builds, use Dockerfile.backend.clean which has proper SSL verification
+# Backend image for LOCAL DEVELOPMENT.
+# This variant is used by docker-compose.dev.yml and includes corporate network TLS workarounds.
+# Runtime behavior: installs `migrate` and starts via /root/start.sh (runs DB migrations, then starts app).
 # Build stage
 FROM golang:1.24-alpine3.21 AS builder
 
 WORKDIR /app
 
 # Install dependencies and ca-certificates for TLS
-RUN apk add --no-cache git=2.47.1-r0 make=4.4.1-r2 ca-certificates=20250105-r0 && update-ca-certificates
+RUN apk add --no-cache git=2.47.3-r0 make=4.4.1-r2 ca-certificates=20250911-r0 && update-ca-certificates
 
 # Copy go mod files
 COPY go.mod ./
 # Copy go.sum if it exists
 COPY go.sum* ./
-# Disable Go proxy and skip SSL verification for corporate proxies
+# Corporate network workaround for module download in restricted TLS environments
 ENV GOINSECURE="*"
 ENV GOPRIVATE="*"
 RUN git config --global http.sslVerify false && go mod download
@@ -26,7 +27,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main cmd/api/main
 # Runtime stage
 FROM alpine:3.21
 
-RUN apk --no-cache add ca-certificates=20250105-r0 wget=1.24.5-r0 && \
+# Install migrate binary for startup migration step in /root/start.sh
+RUN apk --no-cache add ca-certificates=20250911-r0 wget=1.25.0-r0 && \
     wget --progress=dot:giga --no-check-certificate -O migrate.tar.gz https://github.com/golang-migrate/migrate/releases/download/v4.18.1/migrate.linux-amd64.tar.gz && \
     tar xvzf migrate.tar.gz && \
     mv migrate /usr/local/bin/migrate && \

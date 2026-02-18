@@ -38,6 +38,7 @@ services:
   backend:
     build:
       context: ./backend
+      # Dev image with migration startup script and corporate TLS workarounds
       dockerfile: ../docker/Dockerfile.backend
     container_name: ${COMPOSE_PROJECT_NAME}-backend
     environment:

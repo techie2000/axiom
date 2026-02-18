@@ -5,8 +5,8 @@ WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
-# Use npm ci if lockfile exists, otherwise use npm install
-RUN if [ -f package-lock.json ]; then npm ci --legacy-peer-deps; else npm install --legacy-peer-deps; fi
+# Prefer npm ci for reproducibility; fallback to npm install when lockfile is out of sync
+RUN if [ -f package-lock.json ]; then npm ci --legacy-peer-deps || npm install --legacy-peer-deps; else npm install --legacy-peer-deps; fi
 
 # Copy source code
 COPY . .
