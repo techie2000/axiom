@@ -6,7 +6,9 @@
 
 ## Overview
 
-Implemented performance optimization for LEI Records list view by implementing dynamic SELECT based on user's visible columns. This reduces GORM overhead from ~475ms to ~50-200ms depending on visible columns (7-10x improvement for default view).
+Implemented performance optimization for LEI Records list view by implementing dynamic SELECT based on user's visible
+columns. This reduces GORM overhead from ~475ms to ~50-200ms depending on visible columns (7-10x improvement for
+default view).
 
 ## Problem Statement
 
@@ -15,7 +17,8 @@ The LEI Records list view was experiencing slow query performance (489ms):
 - **GORM overhead**: ~475ms (97% of total time)
 - **Root cause**: `SELECT *` + `Preload("SourceFile")` fetching 50+ records with all 25+ columns + JSONB fields
 
-Additional constraint: Frontend allows users to toggle 24 different columns (6 visible by default), so optimization must support dynamic column selection.
+Additional constraint: Frontend allows users to toggle 24 different columns (6 visible by default), so optimization
+must support dynamic column selection.
 
 ##Implementation Details
 
@@ -120,14 +123,14 @@ const fetchRecords = async () => {
 ## Performance Impact
 
 ### Before Optimization
-```
+```text
 Database: 14ms
 GORM overhead: ~475ms
 Total: 489ms ❌ Exceeds 200ms threshold
 ```
 
 ### After Optimization
-```
+```text
 Default view (6 columns):
   Database: 14ms
   GORM overhead: ~50-70ms
@@ -161,7 +164,7 @@ This prevents SQL injection even if a malicious actor attempts to send crafted c
 ## API Contract
 
 ### Request
-```
+```text
 GET /api/v1/lei?columns=lei,legal_name,entity_status&search=stores&status=ACTIVE
 ```
 

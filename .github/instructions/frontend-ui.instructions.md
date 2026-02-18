@@ -10,7 +10,8 @@ applyTo: 'frontend/**/*.tsx,frontend/**/*.ts,frontend/**/*.jsx,frontend/**/*.js'
 ### ISO 8601 Date Format (Required)
 **Always use ISO 8601 date format (yyyy-mm-dd) for displaying dates to users.**
 
-This international standard is unambiguous and widely recognized globally, avoiding confusion between DD/MM/YYYY (European) and MM/DD/YYYY (American) formats.
+This international standard is unambiguous and widely recognized globally, avoiding confusion between DD/MM/YYYY
+(European) and MM/DD/YYYY (American) formats.
 
 #### ✅ CORRECT Examples
 
@@ -107,7 +108,8 @@ const API_BASE_URL = typeof window !== 'undefined'
   ```
 
 ### UI Element Visibility Checklist
-**CRITICAL**: Always verify visibility when implementing or modifying UI elements. Complete this checklist for EVERY visual change:
+**CRITICAL**: Always verify visibility when implementing or modifying UI elements. Complete this checklist for
+EVERY visual change:
 
 #### Mandatory Visibility Checks
 - [ ] **Light Mode Visibility** - Verify all elements are clearly visible with sufficient contrast

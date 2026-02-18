@@ -81,7 +81,8 @@ WHERE entity_status = 'ACTIVE' AND deleted_at IS NULL;
 
 To reduce GORM overhead from ~475ms to <100ms:
 
-⚠️ **IMPORTANT CONSTRAINT**: The frontend allows users to toggle visibility for 24 different columns (6 visible by default). Any optimization must handle dynamic column selection.
+⚠️ **IMPORTANT CONSTRAINT**: The frontend allows users to toggle visibility for 24 different columns (6 visible by
+default). Any optimization must handle dynamic column selection.
 
 #### Option 1: Dynamic SELECT Based on Visible Columns (Best Approach)
 
@@ -225,8 +226,6 @@ func (r *leiRepository) FindAllLEIWithFilters(...) ([]*domain.LEIRecord, error) 
 
 #### Option 3: Hybrid Approach (Pragmatic)
 
-#### Option 3: Hybrid Approach (Pragmatic)
-
 **Strategy**: Always fetch "core" fields + additional fields based on query parameter.
 
 ```go
@@ -275,8 +274,6 @@ For common searches (like "stores", "bank", etc.), cache results for 5-10 minute
 | **Maintenance** | Moderate | Easy ✅ | Moderate |
 | **Meets <200ms Target** | Yes ✅ | Maybe ⚠️ | Yes ✅ |
 
-## Recommended Approach
-
 ## Performance Targets
 
 | Scenario | Current | Target | Status |
@@ -284,8 +281,6 @@ For common searches (like "stores", "bank", etc.), cache results for 5-10 minute
 | Database execution | 14ms | <20ms | ✅ Achieved |
 | GORM overhead | ~475ms | <100ms | 🟡 Requires code changes |
 | Total query time | 489ms | <120ms | 🟡 Pending |
-
-## Recommendations
 
 ## Recommended Approach
 
@@ -392,7 +387,7 @@ WHERE deleted_at IS NULL;
 
 ### Before Optimization
 
-```
+```text
 Database: 36ms
 GORM: ~453ms
 Total: 489ms
@@ -400,7 +395,7 @@ Total: 489ms
 
 ### After Database Optimization
 
-```
+```text
 Database: 14ms (60% improvement)
 GORM: ~475ms (no change)
 Total: 489ms
@@ -408,7 +403,7 @@ Total: 489ms
 
 ### After Full Optimization (Option 1 - Recommended)
 
-```
+```text
 Database: 14ms
 GORM (6 default columns): ~50-70ms
 Total (default view): ~70-100ms ✅ Under 200ms target
@@ -419,7 +414,7 @@ Total (max columns): ~170-200ms ✅ Still under target
 
 ### After Cached Queries (Option 4 - Future Enhancement)
 
-```
+```text
 Redis cache hit: <10ms ✅✅✅
 ```
 
@@ -446,9 +441,11 @@ docker exec axiom-dev-postgres psql -U axiom -d axiom_dev -c \
 
 ## Conclusion
 
-The **trigram indexes are working correctly**. The performance issue is primarily **GORM overhead** from fetching too much data. Database optimization reduced query time from 36ms to 14ms.
+The **trigram indexes are working correctly**. The performance issue is primarily **GORM overhead** from fetching
+too much data. Database optimization reduced query time from 36ms to 14ms.
 
-**Critical Discovery**: The frontend allows users to toggle visibility for 24 different columns (6 visible by default). This constraint significantly impacts optimization strategy.
+**Critical Discovery**: The frontend allows users to toggle visibility for 24 different columns (6 visible by default).
+This constraint significantly impacts optimization strategy.
 
 **Recommended Two-Phase Approach:**
 
