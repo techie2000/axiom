@@ -90,8 +90,8 @@ func main() {
 		logger.Warn().Err(err).Msg("Failed to load master data, continuing anyway...")
 	}
 
-	// Initialize scheduler service for LEI data acquisition (with config for schedules)
-	schedulerService := service.NewSchedulerService(services.LEI, cfg)
+	// Initialize scheduler service for LEI data acquisition and master data sync (with config for schedules)
+	schedulerService := service.NewSchedulerService(services.LEI, services.MasterData, cfg)
 
 	// Start scheduler
 	if err := schedulerService.Start(); err != nil {
