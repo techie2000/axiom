@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -73,11 +74,24 @@ func main() {
 		log.Fatalf("Failed to create LEI data directory: %v", err)
 	}
 
-	// Initialize services
-	services := service.NewServices(repos, leiDataDir)
+	// Master data directory (backend/data/masterdata)
+	masterDataDir := filepath.Join("backend", "data", "masterdata")
+	// Check if running from backend directory already
+	if _, err := os.Stat("data/masterdata"); err == nil {
+		masterDataDir = "data/masterdata"
+	}
 
-	// Initialize scheduler service for LEI data acquisition (with config for schedules)
-	schedulerService := service.NewSchedulerService(services.LEI, cfg)
+	// Initialize services with both data directories
+	services := service.NewServices(repos, db, leiDataDir, masterDataDir)
+
+	// Load master data on startup (idempotent - only loads if tables are empty)
+	logger.Info().Msg("Checking master data...")
+	if err := services.MasterData.LoadAllMasterData(); err != nil {
+		logger.Warn().Err(err).Msg("Failed to load master data, continuing anyway...")
+	}
+
+	// Initialize scheduler service for LEI data acquisition and master data sync (with config for schedules)
+	schedulerService := service.NewSchedulerService(services.LEI, services.MasterData, cfg)
 
 	// Start scheduler
 	if err := schedulerService.Start(); err != nil {

@@ -18,11 +18,17 @@ type BaseModel struct {
 // Country represents a country entity
 type Country struct {
 	BaseModel
-	Code       string `gorm:"uniqueIndex;size:2;not null" json:"code" validate:"required,len=2"`
-	Name       string `gorm:"not null" json:"name" validate:"required"`
-	Alpha3Code string `gorm:"size:3" json:"alpha3_code" validate:"len=3"`
-	Region     string `json:"region"`
-	Active     bool   `gorm:"default:true" json:"active"`
+	Code          string `gorm:"uniqueIndex;size:2;not null" json:"code" validate:"required,len=2"`
+	Name          string `gorm:"not null" json:"name" validate:"required"`
+	NativeName    string `json:"native_name"`
+	Alpha3Code    string `gorm:"size:3" json:"alpha3_code" validate:"len=3"`
+	PhoneCodes    string `gorm:"type:jsonb" json:"phone_codes"`                   // JSON array of phone codes
+	Continent     string `gorm:"size:2" json:"continent"`                         // AF, AN, AS, EU, NA, OC, SA
+	Capital       string `json:"capital"`
+	CurrencyCodes string `gorm:"type:jsonb" json:"currency_codes"`                // JSON array of currency codes
+	Languages     string `gorm:"type:jsonb" json:"languages"`                     // JSON array of language codes
+	Region        string `json:"region"`
+	Active        bool   `gorm:"default:true" json:"active"`
 }
 
 // TableName overrides the table name
@@ -36,13 +42,44 @@ type Currency struct {
 	Code          string `gorm:"uniqueIndex;size:3;not null" json:"code" validate:"required,len=3"`
 	Name          string `gorm:"not null" json:"name" validate:"required"`
 	Symbol        string `json:"symbol"`
-	DecimalPlaces int    `gorm:"default:2" json:"decimal_places"`
+	SymbolNative  string `json:"symbol_native"`
+	DecimalDigits int    `gorm:"default:2" json:"decimal_digits"`
+	Rounding      int    `gorm:"default:0" json:"rounding"`
+	NamePlural    string `json:"name_plural"`
 	Active        bool   `gorm:"default:true" json:"active"`
 }
 
 // TableName overrides the table name
 func (Currency) TableName() string {
 	return "currencies"
+}
+
+// Continent represents a continent reference entity
+type Continent struct {
+	Code      string    `gorm:"primaryKey;size:2" json:"code"`
+	Name      string    `gorm:"not null" json:"name"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// TableName overrides the table name
+func (Continent) TableName() string {
+	return "continents"
+}
+
+// Language represents a language reference entity
+type Language struct {
+	Code      string    `gorm:"primaryKey;size:2" json:"code"`
+	Name      string    `gorm:"not null" json:"name"`
+	Native    string    `gorm:"not null" json:"native"`
+	RTL       bool      `gorm:"default:false" json:"rtl"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// TableName overrides the table name
+func (Language) TableName() string {
+	return "languages"
 }
 
 // Address represents a physical address (ISO20022 compliant)

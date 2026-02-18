@@ -167,7 +167,11 @@ func (s *leiService) getLatestFileURLs() (*GLEIFPublishesResponse, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch latest publishes: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Error().Err(err).Msg("Failed to close response body")
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to fetch latest publishes: HTTP %d", resp.StatusCode)
@@ -239,7 +243,11 @@ func (s *leiService) downloadFile(url, fileType, publishedAt string) (*domain.So
 	if err != nil {
 		return nil, fmt.Errorf("failed to download file: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Error().Err(err).Msg("Failed to close response body")
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to download file: HTTP %d", resp.StatusCode)
@@ -255,7 +263,11 @@ func (s *leiService) downloadFile(url, fileType, publishedAt string) (*domain.So
 	if err != nil {
 		return nil, fmt.Errorf("failed to create file: %w", err)
 	}
-	defer out.Close()
+	defer func() {
+		if err := out.Close(); err != nil {
+			log.Error().Err(err).Msg("Failed to close output file")
+		}
+	}()
 
 	// Calculate hash while downloading
 	hash := sha256.New()
@@ -282,7 +294,9 @@ func (s *leiService) downloadFile(url, fileType, publishedAt string) (*domain.So
 		// Continue anyway - better to process duplicate than fail
 	} else if existingFile != nil {
 		// Duplicate found - delete newly downloaded file and skip
-		os.Remove(filePath)
+		if err := os.Remove(filePath); err != nil {
+			log.Error().Err(err).Str("file", filePath).Msg("Failed to remove duplicate file")
+		}
 		log.Info().
 			Str("hash", fileHash).
 			Str("existing_file", existingFile.FileName).
@@ -365,7 +379,9 @@ func (s *leiService) ProcessSourceFileWithResume(sourceFileID uuid.UUID, resumeF
 			sourceFile.ProcessingStatus = "FAILED"
 			sourceFile.ProcessingError = fmt.Sprintf("source file not found: %s", filePath)
 			sourceFile.FailureCategory = "FILE_MISSING"
-			s.repo.UpdateSourceFile(sourceFile)
+			if err := s.repo.UpdateSourceFile(sourceFile); err != nil {
+				log.Error().Err(err).Msg("Failed to update source file status")
+			}
 			return fmt.Errorf("source file not found: %s", filePath)
 		}
 
@@ -376,14 +392,20 @@ func (s *leiService) ProcessSourceFileWithResume(sourceFileID uuid.UUID, resumeF
 			sourceFile.ProcessingStatus = "FAILED"
 			sourceFile.ProcessingError = extractErr.Error()
 			sourceFile.FailureCategory = "FILE_CORRUPTION"
-			s.repo.UpdateSourceFile(sourceFile)
+			if err := s.repo.UpdateSourceFile(sourceFile); err != nil {
+				log.Error().Err(err).Msg("Failed to update source file status")
+			}
 			return fmt.Errorf("failed to extract file: %w", extractErr)
 		}
 		log.Info().Str("json_path", jsonPath).Msg("File extracted successfully")
 	} else {
 		log.Info().Str("json_path", jsonPath).Msg("Using previously extracted file")
 	}
-	defer os.Remove(jsonPath) // Clean up extracted JSON
+	defer func() {
+		if err := os.Remove(jsonPath); err != nil {
+			log.Error().Err(err).Str("file", jsonPath).Msg("Failed to remove extracted JSON file")
+		}
+	}() // Clean up extracted JSON
 
 	// Parse and process JSON
 	if err := s.processJSONFile(jsonPath, sourceFile, resumeFromLEI); err != nil {
@@ -417,7 +439,9 @@ func (s *leiService) ProcessSourceFileWithResume(sourceFileID uuid.UUID, resumeF
 			Bool("can_retry", sourceFile.RetryCount < sourceFile.MaxRetries).
 			Msg("File processing failed with categorized error")
 
-		s.repo.UpdateSourceFile(sourceFile)
+		if err := s.repo.UpdateSourceFile(sourceFile); err != nil {
+			log.Error().Err(err).Msg("Failed to update source file status")
+		}
 		return fmt.Errorf("failed to process JSON file: %w", err)
 	}
 
@@ -447,7 +471,11 @@ func (s *leiService) extractZipFile(zipPath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer r.Close()
+	defer func() {
+		if err := r.Close(); err != nil {
+			log.Error().Err(err).Msg("Failed to close ZIP reader")
+		}
+	}()
 
 	// Find the JSON file in the ZIP
 	for _, f := range r.File {
@@ -456,7 +484,11 @@ func (s *leiService) extractZipFile(zipPath string) (string, error) {
 			if err != nil {
 				return "", err
 			}
-			defer rc.Close()
+			defer func() {
+				if err := rc.Close(); err != nil {
+					log.Error().Err(err).Msg("Failed to close ZIP file entry")
+				}
+			}()
 
 			// Create output file
 			jsonPath := zipPath + ".extracted.json"
@@ -464,7 +496,11 @@ func (s *leiService) extractZipFile(zipPath string) (string, error) {
 			if err != nil {
 				return "", err
 			}
-			defer outFile.Close()
+			defer func() {
+				if err := outFile.Close(); err != nil {
+					log.Error().Err(err).Msg("Failed to close output file")
+				}
+			}()
 
 			// Log extraction start
 			uncompressedSize := f.UncompressedSize64
@@ -545,7 +581,11 @@ func (s *leiService) processJSONFile(jsonPath string, sourceFile *domain.SourceF
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			log.Error().Err(err).Msg("Failed to close JSON file")
+		}
+	}()
 
 	// Create a JSON decoder
 	decoder := json.NewDecoder(file)
@@ -611,11 +651,11 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 	var totalRecords int
 	var processedRecords int
 	var failedRecords int
-	var shouldProcess bool = (resumeFromLEI == "")
+	shouldProcess := resumeFromLEI == ""
 	var lastProcessedLEI string
 
 	// Track checkpoint value separately from session progress
-	var checkpointProcessed int = 0
+	checkpointProcessed := 0
 
 	// Only load existing progress if resuming an interrupted file
 	// If starting fresh, reset all counters to avoid accumulation on reprocessing
@@ -1023,9 +1063,7 @@ func (s *leiService) jsonToDomainRecord(jsonRecord *LEIJSONRecord, sourceFileID 
 	}
 	if jsonRecord.Registration.NextRenewalDate.Value != "" {
 		if t, err := time.Parse("2006-01-02T15:04:05Z", jsonRecord.Registration.NextRenewalDate.Value); err == nil {
-			record.NextRenewalDate = t
-		} else if t, err := time.Parse("2006-01-02T17:00:00Z", jsonRecord.Registration.NextRenewalDate.Value); err == nil {
-			// Handle the specific format with 17:00:00 timezone
+			// Handle standard ISO 8601 format with time
 			record.NextRenewalDate = t
 		} else if t, err := time.Parse("2006-01-02", jsonRecord.Registration.NextRenewalDate.Value); err == nil {
 			record.NextRenewalDate = t

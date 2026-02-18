@@ -1,12 +1,12 @@
 # Dockerfile for LOCAL DEVELOPMENT with corporate proxy/firewall workarounds
 # For production builds, use Dockerfile.backend.clean which has proper SSL verification
 # Build stage
-FROM golang:1.24-alpine AS builder
+FROM golang:1.24-alpine3.21 AS builder
 
 WORKDIR /app
 
 # Install dependencies and ca-certificates for TLS
-RUN apk add --no-cache git make ca-certificates && update-ca-certificates
+RUN apk add --no-cache git=2.47.1-r0 make=4.4.1-r2 ca-certificates=20250105-r0 && update-ca-certificates
 
 # Copy go mod files
 COPY go.mod ./
@@ -24,10 +24,10 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main cmd/api/main.go
 
 # Runtime stage
-FROM alpine:3.19
+FROM alpine:3.21
 
-RUN apk --no-cache add ca-certificates wget && \
-    wget --no-check-certificate -O migrate.tar.gz https://github.com/golang-migrate/migrate/releases/download/v4.17.0/migrate.linux-amd64.tar.gz && \
+RUN apk --no-cache add ca-certificates=20250105-r0 wget=1.24.5-r0 && \
+    wget --progress=dot:giga --no-check-certificate -O migrate.tar.gz https://github.com/golang-migrate/migrate/releases/download/v4.18.1/migrate.linux-amd64.tar.gz && \
     tar xvzf migrate.tar.gz && \
     mv migrate /usr/local/bin/migrate && \
     chmod +x /usr/local/bin/migrate && \
@@ -42,10 +42,10 @@ COPY --from=builder /app/migrations ./migrations
 
 # Create startup script that runs migrations first
 RUN echo '#!/bin/sh' > /root/start.sh && \
-    echo 'echo "Running database migrations..."' >> /root/start.sh && \
-    echo 'migrate -path /root/migrations -database "postgres://${DATABASE_USER}:${DATABASE_PASSWORD}@${DATABASE_HOST}:${DATABASE_PORT}/${DATABASE_NAME}?sslmode=disable" -verbose up' >> /root/start.sh && \
-    echo 'echo "Starting application..."' >> /root/start.sh && \
-    echo 'exec ./main' >> /root/start.sh && \
+    echo "echo \"Running database migrations...\"" >> /root/start.sh && \
+    echo "migrate -path /root/migrations -database \"postgres://\${DATABASE_USER}:\${DATABASE_PASSWORD}@\${DATABASE_HOST}:\${DATABASE_PORT}/\${DATABASE_NAME}?sslmode=disable\" -verbose up" >> /root/start.sh && \
+    echo "echo \"Starting application...\"" >> /root/start.sh && \
+    echo "exec ./main" >> /root/start.sh && \
     chmod +x /root/start.sh
 
 EXPOSE 8080

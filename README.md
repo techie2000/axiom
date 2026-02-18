@@ -41,6 +41,9 @@ Architecture decisions are documented as ADRs in [docs/adr](docs/adr).
 - Comprehensive Logging
 - Prometheus Metrics
 - Swagger API Documentation
+- **Master Data Management** - Pre-populated countries, currencies, continents, and languages
+- **LEI Data Acquisition** - Automated Legal Entity Identifier data acquisition from GLEIF
+- **Daily Synchronization** - Automated daily sync for LEI and master data updates
 
 ## Project Structure
 
@@ -226,7 +229,8 @@ command: npm run dev         # Development mode
 - Standard Next.js hot module replacement (HMR)
 - Ideal for active frontend development
 
-**Note:** Backend still requires rebuild for Go code changes. For backend hot reload, consider using `air` (Go live reload tool).
+**Note:** Backend still requires rebuild for Go code changes. For backend hot reload, consider using `air`
+(Go live reload tool).
 
 ### Local Development with Docker Compose (Legacy)
 
@@ -325,7 +329,8 @@ server:
       - http://localhost:3000
 ```
 
-**Environment Variables:** All config values can be set via environment variables using uppercase with underscores (e.g., `DATABASE_LOGLEVEL`, `LEI_DELTA_SYNC_INTERVAL`).
+**Environment Variables:** All config values can be set via environment variables using uppercase with underscores
+(e.g., `DATABASE_LOGLEVEL`, `LEI_DELTA_SYNC_INTERVAL`).
 
 See [LEI Configuration](docs/lei/LEI_ACQUISITION.md#environment-variables) for detailed scheduler options.
 

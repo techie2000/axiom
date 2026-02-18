@@ -68,7 +68,7 @@ SELECT * FROM "lei_raw"."lei_records" ...
 ### ⚠️ Non-Search List Queries Still Slow
 
 **Slow Query Log Entry** (February 16, 2026 15:51:14):
-```
+```text
 SLOW SQL >= 200ms
 [1276.131ms] [rows:51] 
 SELECT id,lei,legal_name,entity_status,entity_category,legal_address_country,last_update_date 
@@ -201,9 +201,13 @@ Measure-Command { curl -s "http://localhost:18080/api/v1/lei?search=bank&status=
 
 ## Conclusion
 
-The dynamic SELECT optimization successfully achieved its goal of improving search query performance by **5-6x**, bringing all search queries under the 200ms slow query threshold. The implementation is secure (SQL injection prevention via whitelist), backward compatible, and well-documented.
+The dynamic SELECT optimization successfully achieved its goal of improving search query performance by **5-6x**,
+bringing all search queries under the 200ms slow query threshold. The implementation is secure (SQL injection
+prevention via whitelist), backward compatible, and well-documented.
 
-The initial load bottleneck (1276ms for unfiltered queries) **has been successfully resolved with the Hybrid Sorting Approach (Option D)**, which shows recently updated records by default (fast: ~29ms) and only sorts alphabetically when users apply search/filters. Search queries also saw an additional **1.5x improvement** to ~56ms.
+The initial load bottleneck (1276ms for unfiltered queries) **has been successfully resolved with the Hybrid Sorting
+Approach (Option D)**, which shows recently updated records by default (fast: ~29ms) and only sorts alphabetically
+when users apply search/filters. Search queries also saw an additional **1.5x improvement** to ~56ms.
 
 **Final Status**: ✅ Both optimizations deployed and verified
 - **Phase 2**: Dynamic SELECT (search queries 5-6x faster: 489ms → 80-97ms)

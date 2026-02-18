@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
 	"github.com/techie2000/axiom/internal/service"
 )
 
@@ -167,7 +168,7 @@ func (h *LEIHandler) GetAuditHistory(c *gin.Context) {
 func (h *LEIHandler) TriggerFullSync(c *gin.Context) {
 	go func() {
 		if err := h.schedulerService.RunDailyFullSync(); err != nil {
-			// Log error but don't fail the request
+			log.Error().Err(err).Msg("Failed to run daily full sync")
 		}
 	}()
 
@@ -186,7 +187,7 @@ func (h *LEIHandler) TriggerFullSync(c *gin.Context) {
 func (h *LEIHandler) TriggerDeltaSync(c *gin.Context) {
 	go func() {
 		if err := h.schedulerService.RunDailyDeltaSync(); err != nil {
-			// Log error but don't fail the request
+			log.Error().Err(err).Msg("Failed to run daily delta sync")
 		}
 	}()
 
@@ -238,7 +239,7 @@ func (h *LEIHandler) ResumeProcessing(c *gin.Context) {
 
 	go func() {
 		if err := h.leiService.ProcessSourceFile(id); err != nil {
-			// Log error but don't fail the request
+			log.Error().Err(err).Str("file_id", id.String()).Msg("Failed to process source file")
 		}
 	}()
 

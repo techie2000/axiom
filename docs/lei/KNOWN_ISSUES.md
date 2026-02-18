@@ -8,7 +8,8 @@
 
 ### Issue Description
 
-Some LEI records in the GLEIF dataset have `SuccessorEntity` as an **array** instead of a single object, causing JSON unmarshaling failures.
+Some LEI records in the GLEIF dataset have `SuccessorEntity` as an **array** instead of a single object, causing JSON
+unmarshaling failures.
 
 **Error Message**:
 
@@ -134,4 +135,5 @@ Current workaround: None - records with array successors are skipped.
 
 ---
 
-**Note**: This issue does not block processing and the system continues to function correctly for 96.8% of records. However, fixing this would provide complete LEI coverage including entities with multiple successors.
+**Note**: This issue does not block processing and the system continues to function correctly for 96.8% of records.
+However, fixing this would provide complete LEI coverage including entities with multiple successors.

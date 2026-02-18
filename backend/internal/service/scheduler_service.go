@@ -11,19 +11,21 @@ import (
 	"github.com/techie2000/axiom/internal/domain"
 )
 
-// SchedulerService handles scheduled jobs for LEI data acquisition
+// SchedulerService handles scheduled jobs for LEI data acquisition and master data sync
 type SchedulerService interface {
 	Start() error
 	Stop()
 	RunDailyFullSync() error
 	RunDailyDeltaSync() error
 	RunDailyCleanup() error
+	RunDailyMasterDataSync() error
 }
 
 type schedulerService struct {
-	leiService LEIService
-	stopChan   chan struct{}
-	running    bool
+	leiService        LEIService
+	masterDataService MasterDataService
+	stopChan          chan struct{}
+	running           bool
 	// Parsed schedule configuration
 	deltaSyncInterval time.Duration
 	fullSyncDay       time.Weekday
@@ -36,11 +38,12 @@ type schedulerService struct {
 }
 
 // NewSchedulerService creates a new scheduler service
-func NewSchedulerService(leiService LEIService, cfg *config.Config) SchedulerService {
+func NewSchedulerService(leiService LEIService, masterDataService MasterDataService, cfg *config.Config) SchedulerService {
 	s := &schedulerService{
-		leiService: leiService,
-		stopChan:   make(chan struct{}),
-		running:    false,
+		leiService:        leiService,
+		masterDataService: masterDataService,
+		stopChan:          make(chan struct{}),
+		running:           false,
 	}
 
 	// Parse and validate schedule configuration
@@ -100,15 +103,15 @@ func (s *schedulerService) parseScheduleConfig(cfg *config.Config) {
 			Msg("Full sync time configured")
 	}
 
-	// Parse cleanup time (e.g., "03:00")
+	// Parse cleanup time (e.g., "00:00" for midnight)
 	hour, minute, err = parseTimeOfDay(cfg.LEI.CleanupTime)
 	if err != nil {
 		log.Warn().
 			Str("value", cfg.LEI.CleanupTime).
-			Str("default", "03:00").
+			Str("default", "00:00").
 			Err(err).
 			Msg("Invalid cleanup time, using default")
-		s.cleanupHour = 3
+		s.cleanupHour = 0 // Midnight - runs BEFORE all syncs
 		s.cleanupMinute = 0
 	} else {
 		s.cleanupHour = hour
@@ -228,6 +231,9 @@ func (s *schedulerService) Start() error {
 	// Start goroutine for daily cleanup (runs daily at 3 AM)
 	go s.dailyCleanupLoop()
 
+	// Start goroutine for daily master data sync (runs daily at 4 AM)
+	go s.dailyMasterDataSyncLoop()
+
 	return nil
 }
 
@@ -295,11 +301,10 @@ func (s *schedulerService) initializeNextRunTimes() {
 		fullStatus.NextRunAt = s.calculateNextDailyFullRun()
 		if err := s.leiService.UpdateProcessingStatus(fullStatus); err != nil {
 			log.Error().Err(err).Msg("Failed to update DAILY_FULL next_run_at")
-		} else {
-			log.Info().
-				Time("next_run", *fullStatus.NextRunAt).
-				Msg("DAILY_FULL next_run_at initialized")
 		}
+		log.Info().
+			Time("next_run", *fullStatus.NextRunAt).
+			Msg("DAILY_FULL next_run_at initialized")
 	}
 
 	// Initialize DAILY_DELTA (runs hourly but named DAILY_DELTA)
@@ -312,11 +317,10 @@ func (s *schedulerService) initializeNextRunTimes() {
 		deltaStatus.NextRunAt = calculateNextRun(s.deltaSyncInterval)
 		if err := s.leiService.UpdateProcessingStatus(deltaStatus); err != nil {
 			log.Error().Err(err).Msg("Failed to update DAILY_DELTA next_run_at")
-		} else {
-			log.Info().
-				Time("next_run", *deltaStatus.NextRunAt).
-				Msg("DAILY_DELTA next_run_at initialized")
 		}
+		log.Info().
+			Time("next_run", *deltaStatus.NextRunAt).
+			Msg("DAILY_DELTA next_run_at initialized")
 	} else if err != nil {
 		// DAILY_DELTA job doesn't exist - create it
 		log.Info().Msg("DAILY_DELTA job status doesn't exist, creating...")
@@ -331,17 +335,20 @@ func (s *schedulerService) initializeNextRunTimes() {
 		}
 		if err := s.leiService.UpdateProcessingStatus(newStatus); err != nil {
 			log.Error().Err(err).Msg("Failed to create DAILY_DELTA job status")
-		} else {
-			log.Info().
-				Time("next_run", *nextRun).
-				Msg("DAILY_DELTA job status created")
 		}
+		log.Info().
+			Time("next_run", *nextRun).
+			Msg("DAILY_DELTA job status created")
 	}
 
 	log.Info().Msg("Next_run_at initialization completed")
 }
 
-// dailyDeltaSyncLoop runs delta sync at configured interval
+// DISABLED: dailyDeltaSyncLoop runs delta sync at configured interval
+// Delta sync is currently disabled - using full sync only strategy
+// Delta files cause issues and don't provide enough benefit for daily operations
+// This function is kept for reference but is not called (see line 223)
+/*
 func (s *schedulerService) dailyDeltaSyncLoop() {
 	ticker := time.NewTicker(s.deltaSyncInterval)
 	defer ticker.Stop()
@@ -390,7 +397,9 @@ func (s *schedulerService) dailyDeltaSyncLoop() {
 				oldFile.ProcessingStatus = "FAILED"
 				oldFile.ProcessingError = "File pending for more than 24 hours - timed out"
 				oldFile.FailureCategory = "TIMEOUT"
-				s.leiService.UpdateSourceFile(oldFile)
+				if err := s.leiService.UpdateSourceFile(oldFile); err != nil {
+					log.Error().Err(err).Str("file_id", oldFileID.String()).Msg("Failed to update timed out file status")
+				}
 			}
 		}
 
@@ -417,7 +426,9 @@ func (s *schedulerService) dailyDeltaSyncLoop() {
 					now := time.Now()
 					jobStatus.LastRunAt = &now
 					jobStatus.CurrentSourceFileID = &fileID
-					s.leiService.UpdateProcessingStatus(jobStatus)
+					if err := s.leiService.UpdateProcessingStatus(jobStatus); err != nil {
+						log.Error().Err(err).Str("job_type", jobType).Msg("Failed to update job status to RUNNING")
+					}
 					log.Info().Str("job_type", jobType).Str("previous_status", jobStatus.Status).Msg("Updated job status to RUNNING for file resume")
 				}
 
@@ -445,7 +456,9 @@ func (s *schedulerService) dailyDeltaSyncLoop() {
 					if jobStatus, getErr := s.leiService.GetProcessingStatus(jobType); getErr == nil {
 						jobStatus.Status = "FAILED"
 						jobStatus.ErrorMessage = err.Error()
-						s.leiService.UpdateProcessingStatus(jobStatus)
+						if updateErr := s.leiService.UpdateProcessingStatus(jobStatus); updateErr != nil {
+							log.Error().Err(updateErr).Str("job_type", jobType).Msg("Failed to update job status to FAILED")
+						}
 					}
 				} else {
 					// Update job status to COMPLETED on success
@@ -455,7 +468,9 @@ func (s *schedulerService) dailyDeltaSyncLoop() {
 						jobStatus.LastSuccessAt = &now
 						jobStatus.ErrorMessage = ""
 						jobStatus.CurrentSourceFileID = nil
-						s.leiService.UpdateProcessingStatus(jobStatus)
+						if updateErr := s.leiService.UpdateProcessingStatus(jobStatus); updateErr != nil {
+							log.Error().Err(updateErr).Str("job_type", jobType).Msg("Failed to update job status to COMPLETED")
+						}
 						log.Info().Str("job_type", jobType).Msg("Updated job status to COMPLETED after retry success")
 					}
 				}
@@ -489,6 +504,7 @@ func (s *schedulerService) dailyDeltaSyncLoop() {
 		}
 	}
 }
+*/
 
 // dailyFullSyncLoop runs full sync every day at configured time (default 2:00 AM)
 func (s *schedulerService) dailyFullSyncLoop() {
@@ -567,25 +583,33 @@ func (s *schedulerService) RunDailyDeltaSync() error {
 			status.LastSuccessAt = &now
 			status.NextRunAt = calculateNextRun(s.deltaSyncInterval)
 			status.ErrorMessage = ""
-			s.leiService.UpdateProcessingStatus(status)
+			if updateErr := s.leiService.UpdateProcessingStatus(status); updateErr != nil {
+				log.Error().Err(updateErr).Msg("Failed to update delta sync status to COMPLETED")
+			}
 			return nil
 		}
 		// Real error
 		status.Status = "FAILED"
 		status.ErrorMessage = err.Error()
-		s.leiService.UpdateProcessingStatus(status)
+		if updateErr := s.leiService.UpdateProcessingStatus(status); updateErr != nil {
+			log.Error().Err(updateErr).Msg("Failed to update delta sync status to FAILED")
+		}
 		return err
 	}
 
 	// Update status with current file
 	status.CurrentSourceFileID = &sourceFile.ID
-	s.leiService.UpdateProcessingStatus(status)
+	if updateErr := s.leiService.UpdateProcessingStatus(status); updateErr != nil {
+		log.Error().Err(updateErr).Msg("Failed to update delta sync current file")
+	}
 
 	// Process file
 	if err := s.leiService.ProcessSourceFile(sourceFile.ID); err != nil {
 		status.Status = "FAILED"
 		status.ErrorMessage = err.Error()
-		s.leiService.UpdateProcessingStatus(status)
+		if updateErr := s.leiService.UpdateProcessingStatus(status); updateErr != nil {
+			log.Error().Err(updateErr).Msg("Failed to update delta sync processing status to FAILED")
+		}
 		return err
 	}
 
@@ -649,19 +673,25 @@ func (s *schedulerService) RunDailyFullSync() error {
 			status.LastSuccessAt = &now
 			status.NextRunAt = s.calculateNextDailyFullRun()
 			status.ErrorMessage = ""
-			s.leiService.UpdateProcessingStatus(status)
+			if updateErr := s.leiService.UpdateProcessingStatus(status); updateErr != nil {
+				log.Error().Err(updateErr).Msg("Failed to update full sync status to IDLE")
+			}
 			return nil
 		}
 		// Real error
 		status.Status = "FAILED"
 		status.ErrorMessage = err.Error()
-		s.leiService.UpdateProcessingStatus(status)
+		if updateErr := s.leiService.UpdateProcessingStatus(status); updateErr != nil {
+			log.Error().Err(updateErr).Msg("Failed to update full sync status to FAILED")
+		}
 		return err
 	}
 
 	// Update status with current file
 	status.CurrentSourceFileID = &sourceFile.ID
-	s.leiService.UpdateProcessingStatus(status)
+	if updateErr := s.leiService.UpdateProcessingStatus(status); updateErr != nil {
+		log.Error().Err(updateErr).Msg("Failed to update full sync current file")
+	}
 
 	// Process file (can resume if interrupted)
 	var resumeLEI string
@@ -673,7 +703,9 @@ func (s *schedulerService) RunDailyFullSync() error {
 	if err := s.leiService.ProcessSourceFileWithResume(sourceFile.ID, resumeLEI); err != nil {
 		status.Status = "FAILED"
 		status.ErrorMessage = err.Error()
-		s.leiService.UpdateProcessingStatus(status)
+		if updateErr := s.leiService.UpdateProcessingStatus(status); updateErr != nil {
+			log.Error().Err(updateErr).Msg("Failed to update full sync processing status to FAILED")
+		}
 		return err
 	}
 
@@ -710,8 +742,10 @@ func (s *schedulerService) calculateNextDailyFullRun() *time.Time {
 	return &nextRun
 }
 
-// calculateNextWeeklyRun calculates next Sunday at 2 AM (DEPRECATED - kept for reference)
-// DEPRECATED: Use calculateNextDailyFullRun() instead for daily scheduling
+// DEPRECATED: calculateNextWeeklyRun calculates next Sunday at 2 AM
+// This function is no longer used - use calculateNextDailyFullRun() instead for daily scheduling
+// Kept for reference only
+/*
 func calculateNextWeeklyRun() *time.Time {
 	now := time.Now()
 	nextRun := time.Date(now.Year(), now.Month(), now.Day(), 2, 0, 0, 0, now.Location())
@@ -728,6 +762,7 @@ func calculateNextWeeklyRun() *time.Time {
 
 	return &nextRun
 }
+*/
 
 // dailyCleanupLoop runs cleanup at configured time daily
 func (s *schedulerService) dailyCleanupLoop() {
@@ -769,5 +804,64 @@ func (s *schedulerService) RunDailyCleanup() error {
 	}
 
 	log.Info().Msg("Daily cleanup completed successfully")
+	return nil
+}
+
+// dailyMasterDataSyncLoop runs master data sync at 1 AM daily (before LEI sync at 2 AM)
+func (s *schedulerService) dailyMasterDataSyncLoop() {
+	masterDataSyncHour := 1 // 1 AM - runs BEFORE LEI sync to ensure countries/currencies exist first
+	masterDataSyncMinute := 0
+
+	for {
+		// Calculate next run time (daily at 4:00 AM)
+		now := time.Now()
+		nextRun := time.Date(now.Year(), now.Month(), now.Day(), masterDataSyncHour, masterDataSyncMinute, 0, 0, now.Location())
+		if nextRun.Before(now) {
+			nextRun = nextRun.AddDate(0, 0, 1)
+		}
+
+		duration := nextRun.Sub(now)
+		log.Info().
+			Time("next_run", nextRun).
+			Dur("wait_duration", duration).
+			Msg("Scheduled next master data sync")
+
+		select {
+		case <-time.After(duration):
+			if err := s.RunDailyMasterDataSync(); err != nil {
+				log.Error().Err(err).Msg("Failed to run scheduled master data sync")
+			}
+		case <-s.stopChan:
+			log.Info().Msg("Stopping master data sync loop")
+			return
+		}
+	}
+}
+
+// RunDailyMasterDataSync checks for master data updates and reloads if needed
+func (s *schedulerService) RunDailyMasterDataSync() error {
+	log.Info().Msg("Starting daily master data sync check")
+
+	// Check if master data files have been updated
+	hasUpdates, err := s.masterDataService.CheckForUpdates()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to check for master data updates")
+		return err
+	}
+
+	if !hasUpdates {
+		log.Info().Msg("No master data updates detected")
+		return nil
+	}
+
+	log.Info().Msg("Master data updates detected, reloading...")
+
+	// Reload all master data
+	if err := s.masterDataService.LoadAllMasterData(); err != nil {
+		log.Error().Err(err).Msg("Failed to reload master data")
+		return err
+	}
+
+	log.Info().Msg("Daily master data sync completed successfully")
 	return nil
 }

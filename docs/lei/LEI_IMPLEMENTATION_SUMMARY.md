@@ -82,8 +82,10 @@ GLEIF Integration:
 
 Implemented automatic scheduler with:
 
-- **Delta Sync**: Runs every hour to capture incremental changes
-- **Full Sync**: Runs weekly (Sunday at 2:00 AM) for complete refresh
+- **Delta Sync**: **Disabled** (commented out due to reliability issues)
+- **Full Sync**: Runs **daily at 2:00 AM** for complete refresh
+- **Master Data Sync**: Runs daily at 1:00 AM (before LEI sync)
+- **File Cleanup**: Runs daily at midnight (before all syncs)
 - **Concurrent Loops**: Separate goroutines for each job type
 - **Status Tracking**: Updates file_processing_status table
 - **Error Handling**: Captures and logs errors without stopping scheduler
