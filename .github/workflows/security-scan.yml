@@ -340,7 +340,7 @@ jobs:
                 issueBody += `Update \\`package.json\` and \\`docker/Dockerfile.frontend\`:\n\n`;
                 issueBody += `\`dockerfile\n`;
                 issueBody += `# In docker/Dockerfile.frontend builder stage\n`;
-                issueBody += `FROM node:${data.fixed}-alpine\n`;
+                issueBody += `FROM node:${data.fixed}-alpine3.21\n`;
                 issueBody += `\`\n\n`;
                 issueBody += `Run \\`npm update\` or update specific package in \\`package.json\`\n\n`;
               } else if (pkgName.includes('alpine')) {
