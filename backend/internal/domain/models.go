@@ -43,7 +43,6 @@ type Currency struct {
 	Name          string `gorm:"not null" json:"name" validate:"required"`
 	Symbol        string `json:"symbol"`
 	SymbolNative  string `json:"symbol_native"`
-	DecimalPlaces int    `gorm:"default:2" json:"decimal_places"` // Keep for backward compatibility
 	DecimalDigits int    `gorm:"default:2" json:"decimal_digits"`
 	Rounding      int    `gorm:"default:0" json:"rounding"`
 	NamePlural    string `json:"name_plural"`

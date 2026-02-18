@@ -219,7 +219,6 @@ func (s *masterDataService) LoadCurrencies() error {
 			Name:          curr.Name,
 			Symbol:        curr.Symbol,
 			SymbolNative:  curr.SymbolNative,
-			DecimalPlaces: curr.DecimalDigits, // Keep for backward compatibility
 			DecimalDigits: curr.DecimalDigits,
 			Rounding:      curr.Rounding,
 			NamePlural:    curr.NamePlural,
