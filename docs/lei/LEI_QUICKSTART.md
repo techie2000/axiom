@@ -159,12 +159,14 @@ curl -X GET "http://localhost:8080/api/v1/lei/5493001KJTIIGC8Y1R12/audit?limit=5
 
 ### Default Schedule
 
-- **Delta Sync**: Every hour
-- **Full Sync**: Weekly on Sunday at 2:00 AM
+- **Delta Sync**: Disabled (commented out in code)
+- **Full Sync**: Daily at 2:00 AM
+- **Master Data Sync**: Daily at 1:00 AM (runs before LEI sync)
+- **File Cleanup**: Daily at midnight (runs before all syncs)
 
 ### Manual Triggers
 
-Trigger delta sync:
+Trigger delta sync (still available as manual endpoint):
 
 ```bash
 curl -X POST http://localhost:8080/api/v1/lei/sync/delta \

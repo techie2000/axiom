@@ -219,19 +219,20 @@ Response:
 
 ## Scheduler Configuration
 
-### Delta Sync
+### Delta Sync (Currently Disabled)
 
-- **Frequency**: Every hour
+- **Status**: **DISABLED** (commented out in scheduler service)
+- **Reason**: Delta files caused issues and didn't provide enough benefit for daily operations
+- **Frequency** (when enabled): Every hour
 - **Source**: GLEIF Level 1 Delta files (JSON format)
 - **Purpose**: Capture incremental changes
-- **Runs immediately on startup**, then hourly
 
 ### Full Sync
 
-- **Frequency**: Weekly (Sunday at 2:00 AM)
+- **Frequency**: **Daily at 2:00 AM** (changed from weekly)
 - **Source**: GLEIF Level 1 Full files (JSON format)
 - **Purpose**: Complete refresh of all data
-- **First run**: Calculated to next Sunday at 2 AM
+- **First run**: On startup if database is empty, otherwise next scheduled time
 
 ## Data Flow
 
@@ -310,18 +311,21 @@ The following environment variables configure LEI data acquisition and schedulin
 
 #### Scheduler Configuration
 
-- `LEI_DELTA_SYNC_INTERVAL` - How often to run delta sync (default: `1h`)
+- `LEI_DELTA_SYNC_INTERVAL` - How often to run delta sync (default: `1h`, **currently disabled**)
   - Format: Go duration (e.g., `30m`, `1h`, `2h`)
   - Example: `LEI_DELTA_SYNC_INTERVAL=2h` for every 2 hours
+  - **Note**: Delta sync is currently disabled in the code; full sync runs daily instead
 
-- `LEI_FULL_SYNC_DAY` - Day of week for full sync (default: `Sunday`)
+- `LEI_FULL_SYNC_DAY` - Day of week for full sync (default: `Sunday`, **not used - runs daily**)
   - Format: Day name (case-insensitive)
   - Valid: `Sunday`, `Monday`, `Tuesday`, `Wednesday`, `Thursday`, `Friday`, `Saturday`
   - Short forms accepted: `Sun`, `Mon`, `Tue`, `Wed`, `Thu`, `Fri`, `Sat`
+  - **Note**: This setting is present but not used; full sync runs **daily** at configured time
 
 - `LEI_FULL_SYNC_TIME` - Time of day for full sync (default: `02:00`)
   - Format: `HH:MM` in 24-hour format
   - Example: `LEI_FULL_SYNC_TIME=01:30` for 1:30 AM
+  - **Note**: Full sync now runs **daily** at this time (not weekly)
 
 - `LEI_CLEANUP_TIME` - Time of day for daily file cleanup (default: `00:00`)
   - Format: `HH:MM` in 24-hour format
