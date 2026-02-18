@@ -11,19 +11,21 @@ import (
 	"github.com/techie2000/axiom/internal/domain"
 )
 
-// SchedulerService handles scheduled jobs for LEI data acquisition
+// SchedulerService handles scheduled jobs for LEI data acquisition and master data sync
 type SchedulerService interface {
 	Start() error
 	Stop()
 	RunDailyFullSync() error
 	RunDailyDeltaSync() error
 	RunDailyCleanup() error
+	RunDailyMasterDataSync() error
 }
 
 type schedulerService struct {
-	leiService LEIService
-	stopChan   chan struct{}
-	running    bool
+	leiService        LEIService
+	masterDataService MasterDataService
+	stopChan          chan struct{}
+	running           bool
 	// Parsed schedule configuration
 	deltaSyncInterval time.Duration
 	fullSyncDay       time.Weekday
@@ -36,11 +38,12 @@ type schedulerService struct {
 }
 
 // NewSchedulerService creates a new scheduler service
-func NewSchedulerService(leiService LEIService, cfg *config.Config) SchedulerService {
+func NewSchedulerService(leiService LEIService, masterDataService MasterDataService, cfg *config.Config) SchedulerService {
 	s := &schedulerService{
-		leiService: leiService,
-		stopChan:   make(chan struct{}),
-		running:    false,
+		leiService:        leiService,
+		masterDataService: masterDataService,
+		stopChan:          make(chan struct{}),
+		running:           false,
 	}
 
 	// Parse and validate schedule configuration
@@ -100,15 +103,15 @@ func (s *schedulerService) parseScheduleConfig(cfg *config.Config) {
 			Msg("Full sync time configured")
 	}
 
-	// Parse cleanup time (e.g., "03:00")
+	// Parse cleanup time (e.g., "00:00" for midnight)
 	hour, minute, err = parseTimeOfDay(cfg.LEI.CleanupTime)
 	if err != nil {
 		log.Warn().
 			Str("value", cfg.LEI.CleanupTime).
-			Str("default", "03:00").
+			Str("default", "00:00").
 			Err(err).
 			Msg("Invalid cleanup time, using default")
-		s.cleanupHour = 3
+		s.cleanupHour = 0 // Midnight - runs BEFORE all syncs
 		s.cleanupMinute = 0
 	} else {
 		s.cleanupHour = hour
@@ -227,6 +230,9 @@ func (s *schedulerService) Start() error {
 
 	// Start goroutine for daily cleanup (runs daily at 3 AM)
 	go s.dailyCleanupLoop()
+
+	// Start goroutine for daily master data sync (runs daily at 4 AM)
+	go s.dailyMasterDataSyncLoop()
 
 	return nil
 }
@@ -769,5 +775,64 @@ func (s *schedulerService) RunDailyCleanup() error {
 	}
 
 	log.Info().Msg("Daily cleanup completed successfully")
+	return nil
+}
+
+// dailyMasterDataSyncLoop runs master data sync at 1 AM daily (before LEI sync at 2 AM)
+func (s *schedulerService) dailyMasterDataSyncLoop() {
+	masterDataSyncHour := 1 // 1 AM - runs BEFORE LEI sync to ensure countries/currencies exist first
+	masterDataSyncMinute := 0
+
+	for {
+		// Calculate next run time (daily at 4:00 AM)
+		now := time.Now()
+		nextRun := time.Date(now.Year(), now.Month(), now.Day(), masterDataSyncHour, masterDataSyncMinute, 0, 0, now.Location())
+		if nextRun.Before(now) {
+			nextRun = nextRun.AddDate(0, 0, 1)
+		}
+
+		duration := nextRun.Sub(now)
+		log.Info().
+			Time("next_run", nextRun).
+			Dur("wait_duration", duration).
+			Msg("Scheduled next master data sync")
+
+		select {
+		case <-time.After(duration):
+			if err := s.RunDailyMasterDataSync(); err != nil {
+				log.Error().Err(err).Msg("Failed to run scheduled master data sync")
+			}
+		case <-s.stopChan:
+			log.Info().Msg("Stopping master data sync loop")
+			return
+		}
+	}
+}
+
+// RunDailyMasterDataSync checks for master data updates and reloads if needed
+func (s *schedulerService) RunDailyMasterDataSync() error {
+	log.Info().Msg("Starting daily master data sync check")
+
+	// Check if master data files have been updated
+	hasUpdates, err := s.masterDataService.CheckForUpdates()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to check for master data updates")
+		return err
+	}
+
+	if !hasUpdates {
+		log.Info().Msg("No master data updates detected")
+		return nil
+	}
+
+	log.Info().Msg("Master data updates detected, reloading...")
+
+	// Reload all master data
+	if err := s.masterDataService.LoadAllMasterData(); err != nil {
+		log.Error().Err(err).Msg("Failed to reload master data")
+		return err
+	}
+
+	log.Info().Msg("Daily master data sync completed successfully")
 	return nil
 }
