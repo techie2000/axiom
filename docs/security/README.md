@@ -18,8 +18,7 @@ Comprehensive security update documentation for February 2026 updates covering:
 
 ## Quick Reference
 
-For a high-level summary of security updates, see [SECURITY_UPDATE_SUMMARY.md](../../SECURITY_UPDATE_SUMMARY.md) in
-the repository root.
+For a high-level summary of security updates, see [SECURITY_UPDATE_SUMMARY.md](SECURITY_UPDATE_SUMMARY.md).
 
 ## Related Documentation
 
