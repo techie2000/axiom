@@ -24,13 +24,6 @@ updates:
     commit-message:
       prefix: "build(docker)"
       include: "scope"
-    # Group Docker updates together for easier review
-    groups:
-      docker-security:
-        patterns:
-          - "*"
-        update-types:
-          - "security"
     pull-request-branch-name:
       separator: "/"
 
@@ -56,11 +49,6 @@ updates:
       include: "scope"
     # Group Go module updates by type
     groups:
-      go-security:
-        patterns:
-          - "*"
-        update-types:
-          - "security"
       go-framework:
         patterns:
           - "github.com/gin-gonic/*"
@@ -96,11 +84,6 @@ updates:
       include: "scope"
     # Group npm updates by type
     groups:
-      npm-security:
-        patterns:
-          - "*"
-        update-types:
-          - "security"
       npm-framework:
         patterns:
           - "next"
