@@ -1,0 +1,25 @@
+github.com/golang-jwt/jwt/v4:v4.4.2:4.5.2:HIGH
+github.com/jackc/pgx/v5:v5.4.3:5.5.2:MEDIUM
+github.com/jackc/pgx/v5:v5.4.3:5.5.4:HIGH
+golang.org/x/crypto:v0.27.0:0.31.0:CRITICAL
+golang.org/x/crypto:v0.27.0:0.35.0:HIGH
+golang.org/x/crypto:v0.27.0:0.45.0:MEDIUM
+golang.org/x/net:v0.29.0:0.36.0:MEDIUM
+golang.org/x/net:v0.29.0:0.38.0:MEDIUM
+golang.org/x/oauth2:v0.18.0:0.27.0:HIGH
+stdlib:v1.23.1:1.22.11, 1.23.5, 1.24.0-rc.2:MEDIUM
+stdlib:v1.23.1:1.22.12, 1.23.6, 1.24.0-rc.3:MEDIUM
+stdlib:v1.23.1:1.23.10, 1.24.4:MEDIUM
+stdlib:v1.23.1:1.23.12, 1.24.6:HIGH
+stdlib:v1.23.1:1.23.12, 1.24.6:MEDIUM
+stdlib:v1.23.1:1.23.8, 1.24.2:MEDIUM
+stdlib:v1.23.1:1.23.9, 1.24.3:MEDIUM
+stdlib:v1.23.1:1.24.11, 1.25.5:HIGH
+stdlib:v1.23.1:1.24.11, 1.25.5:MEDIUM
+stdlib:v1.23.1:1.24.12, 1.25.6:HIGH
+stdlib:v1.23.1:1.24.13, 1.25.7, 1.26.0-rc.3:CRITICAL
+stdlib:v1.23.1:1.24.8, 1.25.2:HIGH
+stdlib:v1.23.1:1.24.8, 1.25.2:MEDIUM
+stdlib:v1.23.1:1.24.9, 1.25.3:MEDIUM
+stdlib:v1.24.11:1.24.12, 1.25.6:HIGH
+stdlib:v1.24.11:1.24.13, 1.25.7, 1.26.0-rc.3:CRITICAL
