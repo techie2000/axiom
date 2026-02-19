@@ -269,6 +269,21 @@ make migrate-uat-down
 make migrate-prod-down
 ```
 
+On Windows (without `make`), use the PowerShell helper:
+
+```powershell
+# Run migrations
+./scripts/migrate-env.ps1 -Environment dev -Direction up
+./scripts/migrate-env.ps1 -Environment uat -Direction up
+./scripts/migrate-env.ps1 -Environment prod -Direction up
+
+# Roll back one migration
+./scripts/migrate-env.ps1 -Environment dev -Direction down
+
+# Force migration version
+./scripts/migrate-env.ps1 -Environment uat -Direction force -ForceVersion 17
+```
+
 ### Running Tests
 
 ```bash

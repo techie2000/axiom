@@ -41,6 +41,7 @@ WORKDIR /root/
 COPY --from=builder /app/main .
 COPY --from=builder /app/config.yaml ./config/config.yaml
 COPY --from=builder /app/migrations ./migrations
+COPY --from=builder /app/data/masterdata ./backend/data/masterdata
 
 # Create startup script that runs migrations first
 RUN echo '#!/bin/sh' > /root/start.sh && \

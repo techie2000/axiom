@@ -36,6 +36,7 @@ WORKDIR /root/
 COPY --from=builder /app/main .
 COPY --from=builder /app/config.yaml ./config/config.yaml
 COPY --from=builder /app/migrations ./migrations
+COPY --from=builder /app/data/masterdata ./backend/data/masterdata
 
 EXPOSE 8080
 
