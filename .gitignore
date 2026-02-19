@@ -66,3 +66,11 @@ compose-output.txt
 
 # Documentation
 /docs/*.pdf
+
+# Security scanning - transient output files
+trivy-*.json
+trivy-*.sarif
+*_updates.txt
+pr_description.md
+backend_full_logs.txt
+.cache/
