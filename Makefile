@@ -135,6 +135,16 @@ migrate-prod-up: ## Run migrations on production database
 migrate-prod-down: ## Rollback migrations on production database
 	migrate -path backend/migrations -database "postgresql://axiom:axiom_prod_pass@localhost:35432/axiom_prod?sslmode=disable" down
 
+# PostgreSQL major-version upgrade (data migration)
+pg-upgrade-dev: ## Migrate dev PostgreSQL data to the current major version
+	@bash scripts/upgrade-postgres.sh dev
+
+pg-upgrade-uat: ## Migrate UAT PostgreSQL data to the current major version
+	@bash scripts/upgrade-postgres.sh uat
+
+pg-upgrade-prod: ## Migrate production PostgreSQL data to the current major version
+	@bash scripts/upgrade-postgres.sh prod
+
 swagger: ## Generate Swagger documentation
 	cd backend && swag init -g cmd/api/main.go -o docs
 

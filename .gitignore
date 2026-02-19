@@ -55,6 +55,9 @@ docker-compose.override.yml
 compose-output.txt
 *-output.txt
 
+# Backups created by upgrade-postgres scripts
+/backups/
+
 # Temporary files
 /tmp/
 *.tmp
