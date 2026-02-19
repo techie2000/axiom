@@ -52,4 +52,3 @@ security guidelines
 - [Security Scan Enhanced Workflow](../../.github/workflows/security-scan-enhanced.yml) - Automated security scanning
 - [Dependabot Configuration](../../.github/dependabot.yml) - Dependency monitoring
 - [Security Version Tracking](../../.github/security-versions.yml) - Pinned versions audit trail
-

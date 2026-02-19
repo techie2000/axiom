@@ -155,6 +155,7 @@ RUN apk update && apk add --no-cache --upgrade libssl3=3.3.6-r0
 ```
 
 This ensures:
+
 - libssl3 is always upgraded to the secure version
 - Clear documentation of why the upgrade is needed
 - Version pinning for reproducibility
@@ -186,6 +187,7 @@ When a security updates PR is created:
    - Note the severity levels (Critical, High, Medium)
 
 2. **Verify the changes**
+
    ```bash
    # Checkout the PR branch
    gh pr checkout <PR-NUMBER>
@@ -203,11 +205,13 @@ When a security updates PR is created:
    ```
 
 3. **Check for breaking changes**
+
    - Review Go module updates for API changes
    - Check npm package updates for breaking changes
    - Test affected functionality
 
 4. **Approve and merge**
+
    - If all checks pass, approve the PR
    - Merge using squash merge to keep history clean
    - PR branch will be automatically deleted
@@ -265,6 +269,7 @@ Weekly (Monday 9 AM UTC):
 ### PR Labels
 
 Security update PRs are labeled with:
+
 - `security` - Security-related changes
 - `dependencies` - Dependency updates
 - `automated` - Automated by workflow
@@ -278,11 +283,13 @@ Security update PRs are labeled with:
 **Symptom:** Workflow runs successfully but no PR is created
 
 **Possible causes:**
+
 1. No fixable vulnerabilities found (expected behavior)
 2. PR with same updates already exists
 3. GitHub token permissions issue
 
 **Solution:**
+
 ```bash
 # Check workflow logs for "No fixable vulnerabilities found"
 # If token issue, verify workflow permissions in .github/workflows/security-scan-enhanced.yml
@@ -297,11 +304,13 @@ permissions:
 **Symptom:** Workflow reports errors when updating packages
 
 **Possible causes:**
+
 1. Version conflicts in Go modules
 2. Breaking changes in npm packages
 3. Alpine package not available in repository
 
 **Solution:**
+
 ```bash
 # For Go modules
 cd backend
@@ -321,11 +330,13 @@ npm install package@version --legacy-peer-deps
 **Symptom:** Docker build fails after applying security updates
 
 **Possible causes:**
+
 1. Incompatible package versions
 2. Missing dependencies
 3. API changes in updated libraries
 
 **Solution:**
+
 ```bash
 # Build with verbose output
 docker build --no-cache --progress=plain -f docker/Dockerfile.backend ./backend
@@ -342,11 +353,13 @@ git revert <commit>
 **Symptom:** GitHub Security tab shows alerts but workflow finds none
 
 **Possible causes:**
+
 1. Alerts for vulnerabilities without fixes yet
 2. Alerts in code not scanned by Trivy (source code issues)
 3. Workflow scanning different images than production
 
 **Solution:**
+
 1. Check if fixes are available in Alpine/npm/Go repos
 2. Review CodeQL alerts separately (not handled by this workflow)
 3. Ensure workflow builds from latest code
