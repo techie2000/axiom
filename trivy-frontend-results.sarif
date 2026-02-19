@@ -1128,10 +1128,10 @@
         }
       },
       "properties": {
-        "imageID": "sha256:24cc5f81d35d714aafcb01eae42265b56b99fdc257ffa6bec0db4d0f14b09826",
+        "imageID": "sha256:b58835c59912dc81bcc0868bbbe188613b52f210e7f793c2e5c09cb6d2e0a88d",
         "imageName": "axiom-frontend:latest",
         "repoDigests": [
-          "axiom-frontend@sha256:24cc5f81d35d714aafcb01eae42265b56b99fdc257ffa6bec0db4d0f14b09826"
+          "axiom-frontend@sha256:b58835c59912dc81bcc0868bbbe188613b52f210e7f793c2e5c09cb6d2e0a88d"
         ],
         "repoTags": [
           "axiom-frontend:latest"

@@ -5,8 +5,8 @@ This PR contains automated security updates for vulnerable dependencies.
 ### 📊 Summary
 
 - 🔴 Critical: 3
-- 🟡 High: 9
-- 🟠 Medium: 13
+- 🟡 High: 8
+- 🟠 Medium: 12
 
 ### 🏔️ Alpine Package Updates
 
@@ -23,8 +23,6 @@ This PR contains automated security updates for vulnerable dependencies.
 | Module | Current | Fixed | Severity |
 |--------|---------|-------|----------|
 | `github.com/golang-jwt/jwt/v4` | v4.4.2 | 4.5.2 | HIGH |
-| `github.com/jackc/pgx/v5` | v5.4.3 | 5.5.2 | MEDIUM |
-| `github.com/jackc/pgx/v5` | v5.4.3 | 5.5.4 | HIGH |
 | `golang.org/x/crypto` | v0.27.0 | 0.31.0 | CRITICAL |
 | `golang.org/x/crypto` | v0.27.0 | 0.35.0 | HIGH |
 | `golang.org/x/crypto` | v0.27.0 | 0.45.0 | MEDIUM |
