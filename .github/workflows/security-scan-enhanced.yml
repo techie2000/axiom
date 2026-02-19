@@ -56,7 +56,7 @@ jobs:
           docker build -f docker/Dockerfile.frontend -t axiom-frontend:latest ./frontend
 
       - name: Run Trivy scan on Backend (JSON output)
-        uses: aquasecurity/trivy-action@0.34.0
+        uses: aquasecurity/trivy-action@master
         with:
           image-ref: 'axiom-backend:latest'
           format: 'json'
@@ -65,7 +65,7 @@ jobs:
           exit-code: 0
 
       - name: Run Trivy scan on Frontend (JSON output)
-        uses: aquasecurity/trivy-action@0.34.0
+        uses: aquasecurity/trivy-action@master
         with:
           image-ref: 'axiom-frontend:latest'
           format: 'json'
@@ -74,7 +74,7 @@ jobs:
           exit-code: 0
 
       - name: Upload Trivy results (Backend SARIF)
-        uses: aquasecurity/trivy-action@0.34.0
+        uses: aquasecurity/trivy-action@master
         with:
           image-ref: 'axiom-backend:latest'
           format: 'sarif'
@@ -88,7 +88,7 @@ jobs:
           category: 'trivy-backend-scan'
 
       - name: Upload Trivy results (Frontend SARIF)
-        uses: aquasecurity/trivy-action@0.34.0
+        uses: aquasecurity/trivy-action@master
         with:
           image-ref: 'axiom-frontend:latest'
           format: 'sarif'

@@ -115,6 +115,8 @@ updates:
       separator: "/"
     # Use lockfile-only updates when possible
     versioning-strategy: increase
+    # Handle peer dependencies
+    insecure-external-code-execution: allow
 
 # Security advisories
 # Dependabot will automatically create PRs for security vulnerabilities
