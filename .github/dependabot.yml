@@ -1,0 +1,128 @@
+# Dependabot configuration for automated dependency updates
+# Documentation: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+
+version: 2
+
+updates:
+  # Docker base images in /docker directory
+  - package-ecosystem: "docker"
+    directory: "/docker"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "techie2000"
+    assignees:
+      - "techie2000"
+    labels:
+      - "dependencies"
+      - "docker"
+      - "security"
+    commit-message:
+      prefix: "build(docker)"
+      include: "scope"
+    # Group Docker updates together for easier review
+    groups:
+      docker-base-images:
+        patterns:
+          - "alpine"
+          - "golang"
+          - "node"
+      docker-security:
+        patterns:
+          - "*"
+        update-types:
+          - "security"
+    pull-request-branch-name:
+      separator: "/"
+
+  # Go modules in /backend directory
+  - package-ecosystem: "gomod"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "techie2000"
+    assignees:
+      - "techie2000"
+    labels:
+      - "dependencies"
+      - "go"
+      - "backend"
+    commit-message:
+      prefix: "build(go)"
+      include: "scope"
+    # Group Go module updates by type
+    groups:
+      go-security:
+        patterns:
+          - "*"
+        update-types:
+          - "security"
+      go-framework:
+        patterns:
+          - "github.com/gin-gonic/*"
+          - "gorm.io/*"
+      go-stdlib:
+        patterns:
+          - "golang.org/x/*"
+          - "github.com/golang/*"
+    pull-request-branch-name:
+      separator: "/"
+    # Increase version requirements strategy
+    versioning-strategy: increase
+
+  # npm packages in /frontend directory
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "techie2000"
+    assignees:
+      - "techie2000"
+    labels:
+      - "dependencies"
+      - "npm"
+      - "frontend"
+    commit-message:
+      prefix: "build(npm)"
+      include: "scope"
+    # Group npm updates by type
+    groups:
+      npm-security:
+        patterns:
+          - "*"
+        update-types:
+          - "security"
+      npm-framework:
+        patterns:
+          - "next"
+          - "react"
+          - "react-dom"
+      npm-dev:
+        patterns:
+          - "@types/*"
+          - "typescript"
+        dependency-type: "development"
+    pull-request-branch-name:
+      separator: "/"
+    # Use lockfile-only updates when possible
+    versioning-strategy: increase
+    # Handle peer dependencies
+    insecure-external-code-execution: allow
+
+# Security advisories
+# Dependabot will automatically create PRs for security vulnerabilities
+# found in dependencies, regardless of the schedule above.
