@@ -284,6 +284,40 @@ On Windows (without `make`), use the PowerShell helper:
 ./scripts/migrate-env.ps1 -Environment uat -Direction force -ForceVersion 17
 ```
 
+### Upgrading PostgreSQL
+
+When the PostgreSQL major version changes (e.g. v15 → v17), Docker cannot reuse the existing data volume
+as-is — a data migration is required. The `upgrade-postgres` scripts handle this automatically:
+
+1. Detect the PostgreSQL version stored in the existing volume
+2. Back up all databases to `./backups/` with a timestamped filename
+3. Remove the old volume
+4. Start the new PostgreSQL container (which initialises a fresh volume)
+5. Restore the backup
+
+**Linux / macOS:**
+
+```bash
+# Upgrade development environment
+make pg-upgrade-dev
+
+# Or call the script directly
+bash scripts/upgrade-postgres.sh dev
+
+# Upgrade without confirmation prompt (CI/CD)
+bash scripts/upgrade-postgres.sh prod --yes
+```
+
+**Windows (PowerShell):**
+
+```powershell
+.\scripts\upgrade-postgres.ps1 -Environment dev
+.\scripts\upgrade-postgres.ps1 -Environment prod -Yes
+```
+
+If the volume does not exist yet (fresh install) the scripts exit immediately — no action needed.
+The backup file is retained in `./backups/` after the migration completes.
+
 ### Running Tests
 
 ```bash
