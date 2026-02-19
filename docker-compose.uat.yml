@@ -27,6 +27,9 @@ services:
     ports:
       - "${RABBITMQ_PORT}:5672"
       - "${RABBITMQ_MGMT_PORT}:15672"
+    volumes:
+      - rabbitmq_data_uat:/var/lib/rabbitmq
+      - rabbitmq_log_uat:/var/log/rabbitmq
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
       interval: 5s
@@ -85,6 +88,8 @@ volumes:
   postgres_data_uat:
   lei_data_uat:
   log_data_uat:
+  rabbitmq_data_uat:
+  rabbitmq_log_uat:
 
 networks:
   axiom-uat:
