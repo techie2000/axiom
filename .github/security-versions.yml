@@ -1,0 +1,232 @@
+# Security Versions Tracking
+# This file documents all pinned versions for security and reproducibility
+# Last updated: 2026-02-19
+
+version_tracking:
+  last_updated: "2026-02-19T11:38:00Z"
+  automated_updates_enabled: true
+  
+alpine_packages:
+  # Alpine Linux 3.21 base image packages
+  description: "Alpine packages with pinned versions for reproducibility"
+  base_image: "alpine:3.21"
+  packages:
+    libssl3:
+      version: "3.3.6-r0"
+      reason: "Security fix for CVE vulnerabilities (Alert #117)"
+      updated: "2026-02-19"
+      severity: "CRITICAL"
+      files:
+        - docker/Dockerfile.frontend (build & runtime stages)
+        - docker/Dockerfile.backend (build & runtime stages)
+        - docker/Dockerfile.backend.clean (build & runtime stages)
+    
+    ca-certificates:
+      version: "20250911-r0"
+      reason: "Required for HTTPS/TLS certificate validation"
+      updated: "2026-02-15"
+      severity: "HIGH"
+      files:
+        - docker/Dockerfile.backend
+        - docker/Dockerfile.backend.clean
+    
+    git:
+      version: "2.47.3-r0"
+      reason: "Build dependency for Go module downloads"
+      updated: "2026-02-15"
+      severity: "MEDIUM"
+      files:
+        - docker/Dockerfile.backend
+        - docker/Dockerfile.backend.clean
+    
+    make:
+      version: "4.4.1-r2"
+      reason: "Build dependency for compilation"
+      updated: "2026-02-15"
+      severity: "LOW"
+      files:
+        - docker/Dockerfile.backend
+        - docker/Dockerfile.backend.clean
+    
+    wget:
+      version: "1.25.0-r0"
+      reason: "Used to download golang-migrate binary"
+      updated: "2026-02-15"
+      severity: "MEDIUM"
+      files:
+        - docker/Dockerfile.backend
+
+go_modules:
+  # Go module dependencies
+  description: "Go dependencies tracked in backend/go.mod"
+  go_version: "1.24.0"
+  toolchain: "go1.24.12"
+  
+  direct_dependencies:
+    gin:
+      module: "github.com/gin-gonic/gin"
+      version: "v1.11.0"
+      reason: "Web framework - security and feature updates"
+      updated: "2026-02-15"
+      severity: "HIGH"
+    
+    jwt:
+      module: "github.com/golang-jwt/jwt/v5"
+      version: "v5.2.2"
+      reason: "JWT authentication library"
+      updated: "2025-12-01"
+      severity: "HIGH"
+    
+    uuid:
+      module: "github.com/google/uuid"
+      version: "v1.6.0"
+      reason: "UUID generation"
+      updated: "2025-11-01"
+      severity: "LOW"
+    
+    zerolog:
+      module: "github.com/rs/zerolog"
+      version: "v1.31.0"
+      reason: "Structured logging"
+      updated: "2025-10-01"
+      severity: "LOW"
+    
+    viper:
+      module: "github.com/spf13/viper"
+      version: "v1.18.2"
+      reason: "Configuration management"
+      updated: "2025-11-15"
+      severity: "MEDIUM"
+    
+    gorm:
+      module: "gorm.io/gorm"
+      version: "v1.25.5"
+      reason: "ORM for database operations"
+      updated: "2025-10-20"
+      severity: "MEDIUM"
+    
+    postgres_driver:
+      module: "gorm.io/driver/postgres"
+      version: "v1.5.4"
+      reason: "PostgreSQL driver for GORM"
+      updated: "2025-10-20"
+      severity: "MEDIUM"
+  
+  indirect_dependencies:
+    pgx:
+      module: "github.com/jackc/pgx/v5"
+      version: "v5.4.3"
+      reason: "PostgreSQL driver - security vulnerability (Alert #42)"
+      updated: "2025-12-01"
+      severity: "HIGH"
+      note: "Indirect dependency, update via postgres driver"
+
+nodejs_packages:
+  # Node.js and npm package dependencies
+  description: "Frontend dependencies tracked in frontend/package.json"
+  node_version: "22"
+  npm_version: ">=10.0.0"
+  base_image: "node:22-alpine3.21"
+  
+  dependencies:
+    next:
+      package: "next"
+      version: "15.2.9"
+      reason: "Next.js framework - security and feature updates"
+      updated: "2026-01-15"
+      severity: "HIGH"
+    
+    react:
+      package: "react"
+      version: "^19.0.0"
+      reason: "React framework - major version update"
+      updated: "2026-01-10"
+      severity: "HIGH"
+    
+    react_dom:
+      package: "react-dom"
+      version: "^19.0.0"
+      reason: "React DOM library - matches React version"
+      updated: "2026-01-10"
+      severity: "HIGH"
+    
+    tailwindcss:
+      package: "tailwindcss"
+      version: "^3.4.0"
+      reason: "CSS framework"
+      updated: "2025-12-01"
+      severity: "LOW"
+  
+  dev_dependencies:
+    typescript:
+      package: "typescript"
+      version: "^5.3.3"
+      reason: "TypeScript compiler"
+      updated: "2025-12-15"
+      severity: "LOW"
+    
+    types_node:
+      package: "@types/node"
+      version: "^22.10.0"
+      reason: "Node.js type definitions"
+      updated: "2026-01-05"
+      severity: "LOW"
+
+external_tools:
+  # External tools and binaries
+  golang_migrate:
+    version: "v4.18.1"
+    url: "https://github.com/golang-migrate/migrate/releases/download/v4.18.1/migrate.linux-amd64.tar.gz"
+    reason: "Database migration tool"
+    updated: "2026-02-15"
+    severity: "MEDIUM"
+    files:
+      - docker/Dockerfile.backend
+
+update_schedule:
+  # Automated update schedule
+  security_scan:
+    workflow: ".github/workflows/security-scan-enhanced.yml"
+    schedule: "Weekly on Mondays at 9 AM UTC (cron: '0 9 * * 1')"
+    manual_trigger: "workflow_dispatch"
+    actions:
+      - "Scan Docker images for vulnerabilities"
+      - "Automatically update vulnerable packages"
+      - "Create consolidated PR with all updates"
+  
+  dependabot:
+    config: ".github/dependabot.yml"
+    schedule: "Weekly on Mondays"
+    actions:
+      - "Monitor Docker base images"
+      - "Monitor Go modules"
+      - "Monitor npm packages"
+      - "Create individual PRs for updates"
+
+security_contacts:
+  primary_reviewer: "techie2000"
+  security_team: ["techie2000"]
+  emergency_contact: "techie2000"
+
+notes:
+  version_pinning_philosophy: |
+    We maintain explicit version pinning for all dependencies to ensure:
+    1. Reproducible builds across all environments
+    2. Controlled updates with proper testing
+    3. Clear audit trail of security patches
+    4. Prevention of unexpected breaking changes
+  
+  update_process: |
+    1. Automated security scan runs weekly on Mondays at 9 AM UTC
+    2. Trivy scans Docker images for vulnerabilities
+    3. Workflow automatically updates versions in Dockerfiles and dependency files
+    4. Consolidated PR created with all updates and CVE details
+    5. Manual review and approval required before merge
+    6. Dependabot creates separate PRs for base image updates
+  
+  manual_updates: |
+    To manually trigger security scan:
+    1. Go to Actions tab in GitHub
+    2. Select "Security Scan Enhanced" workflow
+    3. Click "Run workflow" button
+    4. Select branch and click "Run workflow"
