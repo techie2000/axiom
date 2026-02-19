@@ -46,9 +46,9 @@ See [AUTOMATED_UPDATES.md](AUTOMATED_UPDATES.md) for complete documentation.
 ## Related Documentation
 
 - [GitHub Security Scanning Dashboard](https://github.com/techie2000/axiom/security/code-scanning) - Current
-vulnerability scan results
-- [Docker Best Practices](.github/instructions/containerization-docker-best-practices.instructions.md) - Container
-security guidelines
+  vulnerability scan results
+- [Docker Best Practices](../../.github/instructions/containerization-docker-best-practices.instructions.md) -
+  Container security guidelines
 - [Security Scan Enhanced Workflow](../../.github/workflows/security-scan-enhanced.yml) - Automated security scanning
 - [Dependabot Configuration](../../.github/dependabot.yml) - Dependency monitoring
 - [Security Version Tracking](../../.github/security-versions.yml) - Pinned versions audit trail
