@@ -11,6 +11,9 @@ templater = raw
 # SQL file encoding
 encoding = utf-8
 
+# Do not skip large SQL files during linting
+large_file_skip_byte_limit = 0
+
 # Maximum line length (default: 80)
 max_line_length = 120
 

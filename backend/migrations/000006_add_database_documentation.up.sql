@@ -11,7 +11,7 @@ COMMENT ON TABLE countries IS
 
 COMMENT ON COLUMN countries.id IS 'Unique identifier (UUID v4)';
 COMMENT ON COLUMN countries.code IS 'ISO 3166-1 alpha-2 country code (2 letters). Primary identifier for countries (US, GB, JP, etc.)';
-COMMENT ON COLUMN countries.name IS 'Official country name in English';
+COMMENT ON COLUMN countries."name" IS 'Official country name in English';
 COMMENT ON COLUMN countries.alpha3_code IS 'ISO 3166-1 alpha-3 country code (3 letters). Alternative identifier (USA, GBR, JPN, etc.)';
 COMMENT ON COLUMN countries.region IS 'Geographic region or continent (Europe, Asia, Americas, etc.)';
 COMMENT ON COLUMN countries.active IS 'Whether this country is currently active for use. FALSE for deprecated entries.';
@@ -25,7 +25,7 @@ COMMENT ON TABLE currencies IS
 
 COMMENT ON COLUMN currencies.id IS 'Unique identifier (UUID v4)';
 COMMENT ON COLUMN currencies.code IS 'ISO 4217 currency code (3 letters). Primary identifier (USD, EUR, GBP, JPY, etc.)';
-COMMENT ON COLUMN currencies.name IS 'Official currency name in English';
+COMMENT ON COLUMN currencies."name" IS 'Official currency name in English';
 COMMENT ON COLUMN currencies.symbol IS 'Currency symbol for display ($, €, £, ¥, etc.)';
 COMMENT ON COLUMN currencies.decimal_places IS 'Number of decimal places for this currency (2 for USD/EUR, 0 for JPY, 3 for BHD)';
 COMMENT ON COLUMN currencies.active IS 'Whether this currency is currently active. FALSE for discontinued currencies.';
@@ -69,9 +69,9 @@ COMMENT ON TABLE entities IS
 'Legal entities (companies, organizations, counterparties). Core master data for business relationships and settlements.';
 
 COMMENT ON COLUMN entities.id IS 'Unique identifier (UUID v4)';
-COMMENT ON COLUMN entities.name IS 'Legal entity name (max 255 chars)';
+COMMENT ON COLUMN entities."name" IS 'Legal entity name (max 255 chars)';
 COMMENT ON COLUMN entities.registration_number IS 'Government registration or tax ID number. Must be unique. Optional for non-registered entities.';
-COMMENT ON COLUMN entities.type IS 'Entity type classification. Examples: CORPORATION, PARTNERSHIP, SOLE_PROPRIETOR, GOVERNMENT, etc.';
+COMMENT ON COLUMN entities."type" IS 'Entity type classification. Examples: CORPORATION, PARTNERSHIP, SOLE_PROPRIETOR, GOVERNMENT, etc.';
 COMMENT ON COLUMN entities.active IS 'Whether entity is currently active for business operations. FALSE for closed/inactive entities.';
 COMMENT ON COLUMN entities.created_at IS 'Timestamp when record was first created';
 COMMENT ON COLUMN entities.updated_at IS 'Timestamp when record was last modified (auto-updated by trigger)';
@@ -178,7 +178,7 @@ COMMENT ON TABLE lei_raw.lei_records_audit IS
 COMMENT ON COLUMN lei_raw.lei_records_audit.id IS 'Unique identifier (UUID v4) for this audit entry';
 COMMENT ON COLUMN lei_raw.lei_records_audit.lei_record_id IS 'Foreign key to lei_records.id. Links to current record (not enforced as FK to allow orphan audits).';
 COMMENT ON COLUMN lei_raw.lei_records_audit.lei IS '20-character LEI code. Denormalized for fast querying without joins.';
-COMMENT ON COLUMN lei_raw.lei_records_audit.action IS 'Type of change: CREATE (new record), UPDATE (modified), DELETE (removed). Max 20 chars.';
+COMMENT ON COLUMN lei_raw.lei_records_audit."action" IS 'Type of change: CREATE (new record), UPDATE (modified), DELETE (removed). Max 20 chars.';
 COMMENT ON COLUMN lei_raw.lei_records_audit.record_snapshot IS 'JSONB snapshot of complete record state at time of change. Contains all fields for point-in-time recovery.';
 COMMENT ON COLUMN lei_raw.lei_records_audit.changed_fields IS 'JSONB object of changed fields only. Format: {"field": {"old": "prev_value", "new": "new_value"}}. NULL for CREATE actions.';
 COMMENT ON COLUMN lei_raw.lei_records_audit.source_file_id IS 'Foreign key to source_files table. Identifies which GLEIF file triggered this change.';

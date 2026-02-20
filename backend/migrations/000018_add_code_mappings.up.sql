@@ -3,7 +3,7 @@
 -- The first 5 fields together form a unique key
 
 CREATE TABLE IF NOT EXISTS code_mappings (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY DEFAULT GEN_RANDOM_UUID(),
     from_system VARCHAR(100) NOT NULL,
     to_system VARCHAR(100) NOT NULL,
     from_code_type VARCHAR(100) NOT NULL,
@@ -22,8 +22,8 @@ CREATE TABLE IF NOT EXISTS code_mappings (
 -- from_system, to_system, from_code_type, to_code_type, from_code
 -- cannot map to more than one to_code
 CREATE UNIQUE INDEX uq_code_mappings_key
-    ON code_mappings (from_system, to_system, from_code_type, to_code_type, from_code)
-    WHERE deleted_at IS NULL;
+ON code_mappings (from_system, to_system, from_code_type, to_code_type, from_code)
+WHERE deleted_at IS NULL;
 
 -- Indexes for common lookup patterns
 CREATE INDEX idx_code_mappings_from_system ON code_mappings (from_system);
@@ -70,7 +70,7 @@ COMMENT ON COLUMN code_mappings.deleted_at IS
 
 -- Audit table for code mappings
 CREATE TABLE IF NOT EXISTS code_mappings_audit (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY DEFAULT GEN_RANDOM_UUID(),
     code_mapping_id UUID NOT NULL,
     from_system VARCHAR(100) NOT NULL,
     to_system VARCHAR(100) NOT NULL,
@@ -78,7 +78,7 @@ CREATE TABLE IF NOT EXISTS code_mappings_audit (
     to_code_type VARCHAR(100) NOT NULL,
     from_code VARCHAR(255) NOT NULL,
     to_code VARCHAR(255) NOT NULL,
-    action VARCHAR(20) NOT NULL,
+    "action" VARCHAR(20) NOT NULL,
     record_snapshot JSONB NOT NULL,
     changed_fields JSONB,
     changed_by VARCHAR(100) NOT NULL DEFAULT 'system',
@@ -92,7 +92,7 @@ CREATE INDEX idx_code_mappings_audit_from_code_type ON code_mappings_audit (from
 COMMENT ON TABLE code_mappings_audit IS
 'Complete audit history of code mapping record changes. '
 'Records every CREATE, UPDATE, and DELETE operation with full before/after snapshots.';
-COMMENT ON COLUMN code_mappings_audit.action IS
+COMMENT ON COLUMN code_mappings_audit."action" IS
 'Audit action type: CREATE, UPDATE, or DELETE';
 COMMENT ON COLUMN code_mappings_audit.record_snapshot IS
 'Full JSON snapshot of the code mapping record at the time of the action';
