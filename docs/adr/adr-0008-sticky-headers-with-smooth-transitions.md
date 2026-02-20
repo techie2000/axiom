@@ -23,9 +23,13 @@ Accepted
 
 ## Context
 
-Data-heavy tables in Axiom (e.g., LEI Records) require fixed headers that remain visible during vertical scrolling to maintain column context. Initial implementations using `position: sticky` CSS failed due to conflicts with horizontal scrolling containers (`overflow-x: auto`). The CSS specification prevents sticky positioning from working across different scrolling contexts.
+Data-heavy tables in Axiom (e.g., LEI Records) require fixed headers that remain visible during vertical scrolling to
+maintain column context. Initial implementations using `position: sticky` CSS failed due to conflicts with horizontal
+scrolling containers (`overflow-x: auto`). The CSS specification prevents sticky positioning from working across different
+scrolling contexts.
 
-Additionally, conditional rendering (`{condition && <div>}`) caused jarring visual flashes when headers appeared/disappeared during scroll events.
+Additionally, conditional rendering (`{condition && <div>}`) caused jarring visual flashes when headers
+appeared/disappeared during scroll events.
 
 ## Decision Drivers
 
@@ -38,7 +42,8 @@ Additionally, conditional rendering (`{condition && <div>}`) caused jarring visu
 
 ## Decision
 
-Use **JavaScript-based scroll detection with always-in-DOM sticky headers** that transition smoothly using CSS opacity and transform properties.
+Use **JavaScript-based scroll detection with always-in-DOM sticky headers** that transition smoothly using CSS opacity and
+transform properties.
 
 ### Key Components
 
@@ -193,3 +198,4 @@ useEffect(() => {
 ## Changelog
 
 - 2026-02-18: Initial ADR documenting sticky header pattern
+
