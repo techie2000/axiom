@@ -49,13 +49,15 @@ type LanguageData map[string]struct {
 
 // CurrencyData represents the JSON structure for currencies
 type CurrencyData map[string]struct {
-	Code          string `json:"code"`
-	Name          string `json:"name"`
-	Symbol        string `json:"symbol"`
-	SymbolNative  string `json:"symbol_native"`
-	DecimalDigits int    `json:"decimal_digits"`
-	Rounding      int    `json:"rounding"`
-	NamePlural    string `json:"name_plural"`
+	Code               string `json:"code"`
+	Name               string `json:"name"`
+	Symbol             string `json:"symbol"`
+	SymbolNative       string `json:"symbol_native"`
+	DecimalDigits      int    `json:"decimal_digits"`
+	Rounding           int    `json:"rounding"`
+	NamePlural         string `json:"name_plural"`
+	IsAlertClsAllowed  bool   `json:"is_alert_cls_allowed"`
+	IsOfacSanctioned   bool   `json:"is_ofac_sanctioned"`
 }
 
 // CodeMappingData represents the JSON structure for a code mapping entry
@@ -231,14 +233,16 @@ func (s *masterDataService) LoadCurrencies() error {
 	// Insert into database
 	for _, curr := range currenciesData {
 		currency := &domain.Currency{
-			Code:          curr.Code,
-			Name:          curr.Name,
-			Symbol:        curr.Symbol,
-			SymbolNative:  curr.SymbolNative,
-			DecimalDigits: curr.DecimalDigits,
-			Rounding:      curr.Rounding,
-			NamePlural:    curr.NamePlural,
-			Active:        true,
+			Code:              curr.Code,
+			Name:              curr.Name,
+			Symbol:            curr.Symbol,
+			SymbolNative:      curr.SymbolNative,
+			DecimalDigits:     curr.DecimalDigits,
+			Rounding:          curr.Rounding,
+			NamePlural:        curr.NamePlural,
+			Active:            true,
+			IsAlertClsAllowed: curr.IsAlertClsAllowed,
+			IsOfacSanctioned:  curr.IsOfacSanctioned,
 		}
 		if err := s.db.Create(currency).Error; err != nil {
 			log.Warn().Err(err).Str("code", curr.Code).Msg("Failed to insert currency, skipping")
