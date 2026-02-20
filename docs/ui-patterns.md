@@ -4,8 +4,196 @@ Reusable UI patterns and components for the Axiom frontend. These patterns have 
 
 ## Table of Contents
 
+- [Reusable Components](#reusable-components)
 - [Sticky Headers with Smooth Transitions](#sticky-headers-with-smooth-transitions)
 - [Best Practices](#best-practices)
+
+---
+
+## Reusable Components
+
+All Axiom pages **must** use the shared components found in `frontend/app/components/` rather than
+writing inline one-off markup. This keeps presentation consistent and makes colour-scheme changes a
+single-file operation.
+
+### Badge
+
+Coloured label chip for codes, status values, and classification tags.
+
+```tsx
+import Badge from '../components/Badge'
+
+// Code chip (mono font, blue)
+<Badge variant="blue" mono>{country.alpha2}</Badge>
+
+// Status pill (pill shape, green)
+<Badge variant="green" shape="pill">✓ Active</Badge>
+
+// Inactive state
+<Badge variant="gray">Inactive</Badge>
+```
+
+#### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `variant` | `blue \| green \| red \| yellow \| orange \| purple \| gray \| default` | `default` | Colour theme |
+| `shape` | `rounded \| pill` | `rounded` | Border radius |
+| `mono` | `boolean` | `false` | Use monospace font |
+| `className` | `string` | `''` | Extra Tailwind classes |
+
+#### Variant guide
+
+| Variant | Use for |
+|---------|---------|
+| `blue` | Identifiers, ISO codes, system names |
+| `green` | Active / allowed / success states |
+| `red` | Error states, source codes, sanctioned |
+| `yellow` | Warning, caution |
+| `orange` | External system identifiers |
+| `purple` | Coming-soon / future features |
+| `gray` | Inactive / neutral |
+
+---
+
+### Alert
+
+Notification banner for informational, warning, or error messages.
+
+```tsx
+import Alert from '../components/Alert'
+
+// Info (default)
+<Alert variant="info" title="💡 About Code Mappings:" className="mb-6">
+  This table maps codes from external systems to internal identifiers.
+</Alert>
+
+// Error
+<Alert variant="error" title="⚠️ Error:" className="mb-6">
+  {error}
+</Alert>
+
+// Warning with conditional rendering
+{error && (
+  <Alert
+    variant={error.includes('No data') ? 'warning' : 'error'}
+    title={error.includes('No data') ? '📋 Notice:' : '⚠️ Error:'}
+    className="mb-6"
+  >
+    {error}
+  </Alert>
+)}
+```
+
+#### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `variant` | `info \| warning \| error \| success` | `info` | Colour and meaning |
+| `title` | `string` | — | Bold prefix text |
+| `children` | `ReactNode` | — | Message body (supports JSX) |
+| `className` | `string` | `''` | Extra Tailwind classes |
+
+---
+
+### LoadingSpinner
+
+Full-page centred loading indicator. Use at the top of a page component whenever data is still
+being fetched and there is nothing to show yet.
+
+```tsx
+import LoadingSpinner from '../components/LoadingSpinner'
+
+if (loading && records.length === 0) {
+  return <LoadingSpinner message="Loading LEI records..." />
+}
+```
+
+#### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `message` | `string` | `'Loading...'` | Text shown below spinner |
+
+---
+
+### StatCard
+
+Metric display card. Use in a responsive grid to show summary statistics at a glance.
+
+```tsx
+import StatCard from '../components/StatCard'
+
+<div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+  <StatCard title="Total Mappings" value={mappings.length} />
+  <StatCard title="Active Mappings" value={activeMappings.length} accent="green" />
+  <StatCard title="Source Systems" value={uniqueSystems.length} />
+  <StatCard title="Filtered Results" value={filteredMappings.length} />
+</div>
+```
+
+#### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `title` | `string` | — | Label above the value |
+| `value` | `string \| number` | — | Large display value |
+| `accent` | `green \| red \| blue \| yellow \| default` | `default` | Border and text colour |
+
+---
+
+### PageHeader
+
+Standard page header — includes back link, page title, subtitle, `ThemeToggle`, and an optional
+`actions` slot for per-page controls (e.g. refresh buttons, toggles).
+
+```tsx
+import PageHeader from '../components/PageHeader'
+
+// Minimal
+<PageHeader
+  title="Countries"
+  subtitle="Browse ISO 3166 country codes and reference data"
+/>
+
+// With custom actions
+<PageHeader
+  title="LEI Records"
+  subtitle="GLEIF Legal Entity Identifiers (ISO 17442)"
+  actions={
+    <>
+      <button onClick={refresh} className="px-4 py-2 bg-blue-600 text-white rounded-lg ...">
+        🔄 Refresh
+      </button>
+    </>
+  }
+/>
+```
+
+#### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `title` | `string` | — | Page heading (rendered as `h1`) |
+| `subtitle` | `string` | — | Descriptive subtext below the heading |
+| `backHref` | `string` | `'/'` | Destination of the back link |
+| `backLabel` | `string` | `'← Back to Home'` | Back link label |
+| `actions` | `ReactNode` | — | Extra controls rendered left of `ThemeToggle` |
+
+> **Note:** `ThemeToggle` is always included in `PageHeader`. Do **not** import it separately on
+> pages that use `PageHeader`.
+
+---
+
+### Adding New Pages — Checklist
+
+When creating a new Axiom page always use the shared components:
+
+- [ ] Import and use `<PageHeader>` — do **not** repeat the header div/back-link/ThemeToggle pattern
+- [ ] Use `<LoadingSpinner>` for the initial load state — do **not** copy the spinner div
+- [ ] Use `<Alert>` for error and notice banners — do **not** inline the coloured `div/p` pattern
+- [ ] Use `<StatCard>` for metric grids — do **not** repeat the card `div` markup
+- [ ] Use `<Badge>` for coloured labels — do **not** use raw `<span className="px-2 py-1 bg-... text-...">` chips
 
 ---
 

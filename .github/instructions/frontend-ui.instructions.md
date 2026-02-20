@@ -374,6 +374,119 @@ export default function MyComponent() {
 - Include authentication headers in protected API calls
 - Handle token expiration gracefully
 
+## Reusable Components (REQUIRED)
+
+**Always** use the shared components from `frontend/app/components/` — do **not** duplicate inline
+markup that already exists as a component. See the full reference in
+[docs/ui-patterns.md](../../docs/ui-patterns.md).
+
+### PageHeader
+
+Every page must use `PageHeader`. It includes the back link, `ThemeToggle`, title, and subtitle.
+Do **not** import `ThemeToggle` separately on pages that use `PageHeader`.
+
+```tsx
+import PageHeader from '../components/PageHeader'
+
+<PageHeader
+  title="Countries"
+  subtitle="Browse ISO 3166 country codes and reference data"
+/>
+
+// With extra controls
+<PageHeader
+  title="LEI Records"
+  actions={<button onClick={refresh}>🔄 Refresh</button>}
+/>
+```
+
+### LoadingSpinner
+
+Use instead of the inline spinner div:
+
+```tsx
+import LoadingSpinner from '../components/LoadingSpinner'
+
+// ✅ CORRECT
+if (loading && records.length === 0) {
+  return <LoadingSpinner message="Loading records..." />
+}
+
+// ❌ WRONG — do not copy this pattern
+if (loading) {
+  return (
+    <div className="text-center py-20">
+      <div className="inline-block animate-spin ..."></div>
+    </div>
+  )
+}
+```
+
+### Alert
+
+Use instead of the inline coloured `div/p` pattern for errors and notices:
+
+```tsx
+import Alert from '../components/Alert'
+
+// ✅ CORRECT
+{error && (
+  <Alert variant="error" title="⚠️ Error:" className="mb-6">
+    {error}
+  </Alert>
+)}
+
+// ❌ WRONG — do not copy this pattern
+{error && (
+  <div className="mb-6 p-4 rounded-lg border bg-red-50 border-red-200 ...">
+    <p className="text-red-800 ...">...</p>
+  </div>
+)}
+```
+
+Variants: `info | warning | error | success`
+
+### Badge
+
+Use instead of raw `<span>` chips for codes and status labels:
+
+```tsx
+import Badge from '../components/Badge'
+
+// ✅ CORRECT
+<Badge variant="blue" mono>{country.alpha2}</Badge>
+<Badge variant="green" shape="pill">✓ Active</Badge>
+
+// ❌ WRONG — do not copy this pattern
+<span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 ... rounded font-mono">
+  {country.alpha2}
+</span>
+```
+
+Variants: `blue | green | red | yellow | orange | purple | gray`
+
+### StatCard
+
+Use instead of the repeated metric card `div` pattern:
+
+```tsx
+import StatCard from '../components/StatCard'
+
+// ✅ CORRECT
+<div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+  <StatCard title="Total" value={records.length} />
+  <StatCard title="Active" value={activeCount} accent="green" />
+</div>
+
+// ❌ WRONG — do not copy this pattern
+<div className="bg-white dark:bg-white/5 rounded-lg shadow p-6 border-2 border-gray-200 ...">
+  <h3 className="text-sm font-medium text-gray-600 ...">Total</h3>
+  <p className="text-3xl font-bold text-gray-900 ... mt-2">{records.length}</p>
+</div>
+```
+
+---
+
 ## Common Patterns
 
 ### Pagination
@@ -400,18 +513,6 @@ useEffect(() => {
 }, [currentPage, searchTerm, filters])  // Re-fetch when filters change
 ```
 
-### Loading States
-```typescript
-if (loading && records.length === 0) {
-  return (
-    <div className="text-center py-20">
-      <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      <p className="mt-4 opacity-70">Loading...</p>
-    </div>
-  )
-}
-```
-
 ## References
 
 - [Next.js Documentation](https://nextjs.org/docs)
@@ -419,6 +520,7 @@ if (loading && records.length === 0) {
 - [Tailwind CSS Documentation](https://tailwindcss.com/docs)
 - [ISO 8601 Date Format](https://en.wikipedia.org/wiki/ISO_8601)
 - [Web Content Accessibility Guidelines (WCAG)](https://www.w3.org/WAI/WCAG21/quickref/)
+- [Axiom UI Patterns Guide](../../docs/ui-patterns.md)
 
 ---
 
@@ -429,3 +531,4 @@ if (loading && records.length === 0) {
 - **TypeScript**: Strong typing for all data structures
 - **Accessibility**: Semantic HTML and keyboard navigation
 - **Performance**: Pagination and lazy loading for large datasets
+- **Components**: Always use shared components — never duplicate inline markup
