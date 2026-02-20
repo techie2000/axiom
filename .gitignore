@@ -19,6 +19,7 @@ go.work
 /frontend/build/
 /frontend/.env*.local
 /frontend/.vercel
+/frontend/tsconfig.tsbuildinfo
 
 # IDEs
 .idea/

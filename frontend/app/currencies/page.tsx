@@ -9,14 +9,23 @@ interface Currency {
   code: string
   name: string
   symbol: string
-  numeric_code: string
+  symbol_native: string
+  decimal_digits: number
+  rounding: number
+  name_plural: string
+  active: boolean
+  is_alert_cls_allowed: boolean
+  is_ofac_sanctioned: boolean
 }
+
+type ComplianceFilter = 'all' | 'alert_cls' | 'ofac'
 
 export default function CurrenciesPage() {
   const [currencies, setCurrencies] = useState<Currency[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [complianceFilter, setComplianceFilter] = useState<ComplianceFilter>('all')
 
   const API_BASE_URL = typeof window !== 'undefined'
     ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080')
@@ -56,11 +65,22 @@ export default function CurrenciesPage() {
     }
   }
 
-  const filteredCurrencies = currencies.filter(currency =>
-    currency.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    currency.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    currency.symbol.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const alertClsCount = currencies.filter(c => c.is_alert_cls_allowed).length
+  const ofacCount = currencies.filter(c => c.is_ofac_sanctioned).length
+
+  const filteredCurrencies = currencies.filter(currency => {
+    const matchesSearch =
+      currency.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      currency.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (currency.symbol && currency.symbol.toLowerCase().includes(searchTerm.toLowerCase()))
+
+    const matchesCompliance =
+      complianceFilter === 'all' ||
+      (complianceFilter === 'alert_cls' && currency.is_alert_cls_allowed) ||
+      (complianceFilter === 'ofac' && currency.is_ofac_sanctioned)
+
+    return matchesSearch && matchesCompliance
+  })
 
   if (loading) {
     return (
@@ -85,7 +105,7 @@ export default function CurrenciesPage() {
               ← Back to Home
             </Link>
             <h1 className="text-4xl font-bold mb-2">Currencies</h1>
-            <p className="opacity-70">Browse ISO 4217 currency codes and reference data</p>
+            <p className="opacity-70">Browse ISO 4217 currency codes and compliance reference data</p>
           </div>
           <ThemeToggle />
         </div>
@@ -93,8 +113,8 @@ export default function CurrenciesPage() {
         {/* Info/Error Alert */}
         {error && (
           <div className={`mb-6 p-4 rounded-lg border ${
-            error.includes('No currencies data') 
-              ? 'bg-yellow-50 border-yellow-200' 
+            error.includes('No currencies data')
+              ? 'bg-yellow-50 border-yellow-200'
               : 'bg-red-50 border-red-200'
           }`}>
             <p className={error.includes('No currencies data') ? 'text-yellow-800' : 'text-red-800'}>
@@ -110,19 +130,8 @@ export default function CurrenciesPage() {
           </div>
         )}
 
-        {/* Search */}
-        <div className="mb-6">
-          <input
-            type="text"
-            placeholder="Search by name, code, or symbol..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-        </div>
-
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-white dark:bg-white/5 rounded-lg shadow p-6 border-2 border-gray-200 dark:border-white/10">
             <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Currencies</h3>
             <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">{currencies.length}</p>
@@ -131,66 +140,123 @@ export default function CurrenciesPage() {
             <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Filtered Results</h3>
             <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">{filteredCurrencies.length}</p>
           </div>
-          <div className="bg-white dark:bg-white/5 rounded-lg shadow p-6 border-2 border-gray-200 dark:border-white/10">
-            <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Data Standard</h3>
-            <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">ISO 4217</p>
+          <div className="bg-white dark:bg-white/5 rounded-lg shadow p-6 border-2 border-green-200 dark:border-green-500/30">
+            <h3 className="text-sm font-medium text-green-700 dark:text-green-400">ALERT CLS Allowed</h3>
+            <p className="text-3xl font-bold text-green-700 dark:text-green-400 mt-2">{alertClsCount}</p>
           </div>
+          <div className="bg-white dark:bg-white/5 rounded-lg shadow p-6 border-2 border-red-200 dark:border-red-500/30">
+            <h3 className="text-sm font-medium text-red-700 dark:text-red-400">OFAC Sanctioned</h3>
+            <p className="text-3xl font-bold text-red-700 dark:text-red-400 mt-2">{ofacCount}</p>
+          </div>
+        </div>
+
+        {/* Search and compliance filter */}
+        <div className="flex flex-col sm:flex-row gap-3 mb-6">
+          <input
+            type="text"
+            placeholder="Search by name, code, or symbol..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="flex-1 px-4 py-2 border border-gray-300 dark:border-white/20 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-white/5 text-gray-900 dark:text-white"
+          />
+          <select
+            value={complianceFilter}
+            onChange={(e) => setComplianceFilter(e.target.value as ComplianceFilter)}
+            className="px-4 py-2 border border-gray-300 dark:border-white/20 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+          >
+            <option className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white" value="all">All Currencies</option>
+            <option className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white" value="alert_cls">ALERT CLS Allowed</option>
+            <option className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white" value="ofac">OFAC Sanctioned</option>
+          </select>
         </div>
 
         {/* Currencies Table */}
         <div className="bg-white dark:bg-white/5 rounded-lg shadow overflow-hidden border-2 border-gray-200 dark:border-white/10">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-white/10">
-            <thead className="bg-gray-50 dark:bg-white/5">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Name
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Code
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Symbol
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Numeric
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white dark:bg-white/5 divide-y divide-gray-200 dark:divide-white/10">
-              {filteredCurrencies.length > 0 ? (
-                filteredCurrencies.map((currency) => (
-                  <tr key={currency.id} className="hover:bg-gray-50 dark:hover:bg-white/10">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                      {currency.name}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded font-mono">
-                        {currency.code}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-xl">
-                      {currency.symbol}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 font-mono">
-                      {currency.numeric_code}
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-white/10">
+              <thead className="bg-gray-50 dark:bg-white/5">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Name
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Code
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Symbol
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Decimals
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    ALERT CLS
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    OFAC
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-white/5 divide-y divide-gray-200 dark:divide-white/10">
+                {filteredCurrencies.length > 0 ? (
+                  filteredCurrencies.map((currency) => (
+                    <tr key={currency.id} className="hover:bg-gray-50 dark:hover:bg-white/10">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                        {currency.name}
+                        {currency.name_plural && currency.name_plural !== currency.name && (
+                          <span className="ml-1 text-xs text-gray-400 dark:text-gray-500">
+                            ({currency.name_plural})
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded font-mono">
+                          {currency.code}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        <span className="text-lg">{currency.symbol}</span>
+                        {currency.symbol_native && currency.symbol_native !== currency.symbol && (
+                          <span className="ml-2 text-xs text-gray-400 dark:text-gray-500">{currency.symbol_native}</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 font-mono text-center">
+                        {currency.decimal_digits}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        {currency.is_alert_cls_allowed ? (
+                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300">
+                            ✓ Allowed
+                          </span>
+                        ) : (
+                          <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        {currency.is_ofac_sanctioned ? (
+                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-300">
+                            ⚠ Sanctioned
+                          </span>
+                        ) : (
+                          <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                      No currencies found matching your search
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={4} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
-                    No currencies found matching your search
-                  </td>
-                </tr>
-              )}
-
-            </tbody>
-          </table>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* Footer Note */}
         <div className="mt-6 text-center text-sm text-gray-500">
-          <p>Data source: ISO 4217 Currency Codes • Public reference data</p>
+          <p>Data source: ISO 4217 Currency Codes • ALERT CLS permitted currencies • OFAC sanctions list</p>
         </div>
       </div>
     </div>
