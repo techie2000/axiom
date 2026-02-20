@@ -41,8 +41,8 @@ COMMENT ON COLUMN currencies.name_plural IS 'Plural form of currency name (e.g.,
 CREATE TABLE IF NOT EXISTS continents (
     code VARCHAR(2) PRIMARY KEY,  -- AF, AN, AS, EU, NA, OC, SA
     continent_name VARCHAR(50) NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 COMMENT ON TABLE continents IS 'Continent reference data';
@@ -55,8 +55,8 @@ CREATE TABLE IF NOT EXISTS languages (
     language_name VARCHAR(100) NOT NULL,
     native_name VARCHAR(100) NOT NULL,
     rtl BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_languages_language_name ON languages (language_name);

@@ -9,9 +9,9 @@ CREATE TABLE IF NOT EXISTS countries (
     alpha3_code VARCHAR(3),
     region VARCHAR(255),
     active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMP
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ
 );
 
 CREATE INDEX idx_countries_code ON countries (code);
@@ -25,9 +25,9 @@ CREATE TABLE IF NOT EXISTS currencies (
     symbol VARCHAR(10),
     decimal_places INTEGER DEFAULT 2,
     active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMP
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ
 );
 
 CREATE INDEX idx_currencies_code ON currencies (code);
@@ -60,9 +60,9 @@ CREATE TABLE IF NOT EXISTS addresses (
     address_line_5 VARCHAR(70),
     address_line_6 VARCHAR(70),
     address_line_7 VARCHAR(70),
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMP
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ
 );
 
 CREATE INDEX idx_addresses_country_id ON addresses (country_id);
@@ -77,9 +77,9 @@ CREATE TABLE IF NOT EXISTS entities (
     registration_number VARCHAR(255) UNIQUE,
     "type" VARCHAR(50),
     active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMP
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ
 );
 
 CREATE INDEX idx_entities_registration_number ON entities (registration_number);
@@ -93,9 +93,9 @@ CREATE TABLE IF NOT EXISTS entity_addresses (
     address_id UUID NOT NULL REFERENCES addresses (id) ON DELETE CASCADE,
     address_type VARCHAR(50),  -- e.g., 'REGISTERED', 'TRADING', 'BILLING', 'CORRESPONDENCE'
     is_primary BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMP,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ,
     UNIQUE (entity_id, address_id)
 );
 
@@ -111,9 +111,9 @@ CREATE TABLE IF NOT EXISTS instruments (
     issue_currency_id UUID REFERENCES currencies (id),  -- Currency in which the instrument is issued
     primary_exchange VARCHAR(100),  -- Primary exchange where instrument trades (can trade on multiple)
     active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMP
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ
 );
 
 CREATE INDEX idx_instruments_type ON instruments ("type");
@@ -129,9 +129,9 @@ CREATE TABLE IF NOT EXISTS instrument_codes (
     identifier_level VARCHAR(50),  -- 'INTERNATIONAL', 'REGIONAL', 'LOCAL'
     market_identifier_code VARCHAR(10),  -- MIC code for local identifiers (e.g., 'XNAS', 'XFRA')
     region VARCHAR(50),  -- For regional identifiers (e.g., 'US', 'DE')
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMP,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ,
     UNIQUE (instrument_id, code_type, code_value, market_identifier_code),
     CONSTRAINT check_mic_only_for_local CHECK (
         (identifier_level = 'LOCAL' AND market_identifier_code IS NOT NULL)
@@ -160,11 +160,11 @@ CREATE TABLE IF NOT EXISTS "accounts" ( -- noqa: RF06
     account_currency_id UUID REFERENCES currencies (id),  -- Currency of the account
     "type" VARCHAR(50),
     balance DECIMAL(19, 4) DEFAULT 0,
-    opened_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    opened_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMP
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ
 );
 
 CREATE INDEX idx_accounts_account_number ON "accounts" (account_number); -- noqa: RF06
@@ -186,12 +186,12 @@ CREATE TABLE IF NOT EXISTS ssis (
     intermediary_bank VARCHAR(255),
     intermediary_bank_bic VARCHAR(11),
     settlement_type VARCHAR(50),
-    valid_from TIMESTAMP NOT NULL DEFAULT NOW(),
-    valid_to TIMESTAMP,
+    valid_from TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    valid_to TIMESTAMPTZ,
     active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMP
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ
 );
 
 CREATE INDEX idx_ssis_entity_id ON ssis (entity_id);
@@ -208,9 +208,9 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     user_id UUID,
     changed_data JSONB,
     previous_data JSONB,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMP
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ
 );
 
 CREATE INDEX idx_audit_logs_entity_type ON audit_logs (entity_type);
@@ -230,7 +230,7 @@ CREATE TABLE IF NOT EXISTS countries_audit (
     record_snapshot JSONB NOT NULL,
     changed_fields JSONB,
     changed_by VARCHAR(100) NOT NULL DEFAULT 'system',
-    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_countries_audit_country_id ON countries_audit (country_id);
@@ -247,7 +247,7 @@ CREATE TABLE IF NOT EXISTS currencies_audit (
     record_snapshot JSONB NOT NULL,
     changed_fields JSONB,
     changed_by VARCHAR(100) NOT NULL DEFAULT 'system',
-    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_currencies_audit_currency_id ON currencies_audit (currency_id);
@@ -263,7 +263,7 @@ CREATE TABLE IF NOT EXISTS addresses_audit (
     record_snapshot JSONB NOT NULL,
     changed_fields JSONB,
     changed_by VARCHAR(100) NOT NULL DEFAULT 'system',
-    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_addresses_audit_address_id ON addresses_audit (address_id);
@@ -279,7 +279,7 @@ CREATE TABLE IF NOT EXISTS entities_audit (
     record_snapshot JSONB NOT NULL,
     changed_fields JSONB,
     changed_by VARCHAR(100) NOT NULL DEFAULT 'system',
-    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_entities_audit_entity_id ON entities_audit (entity_id);
@@ -297,7 +297,7 @@ CREATE TABLE IF NOT EXISTS entity_addresses_audit (
     record_snapshot JSONB NOT NULL,
     changed_fields JSONB,
     changed_by VARCHAR(100) NOT NULL DEFAULT 'system',
-    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_entity_addresses_audit_entity_address_id ON entity_addresses_audit (entity_address_id);
@@ -315,7 +315,7 @@ CREATE TABLE IF NOT EXISTS instruments_audit (
     record_snapshot JSONB NOT NULL,
     changed_fields JSONB,
     changed_by VARCHAR(100) NOT NULL DEFAULT 'system',
-    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_instruments_audit_instrument_id ON instruments_audit (instrument_id);
@@ -333,7 +333,7 @@ CREATE TABLE IF NOT EXISTS instrument_codes_audit (
     record_snapshot JSONB NOT NULL,
     changed_fields JSONB,
     changed_by VARCHAR(100) NOT NULL DEFAULT 'system',
-    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_instrument_codes_audit_instrument_code_id ON instrument_codes_audit (instrument_code_id);
@@ -350,7 +350,7 @@ CREATE TABLE IF NOT EXISTS accounts_audit (
     record_snapshot JSONB NOT NULL,
     changed_fields JSONB,
     changed_by VARCHAR(100) NOT NULL DEFAULT 'system',
-    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_accounts_audit_account_id ON accounts_audit (account_id);
@@ -367,7 +367,7 @@ CREATE TABLE IF NOT EXISTS ssis_audit (
     record_snapshot JSONB NOT NULL,
     changed_fields JSONB,
     changed_by VARCHAR(100) NOT NULL DEFAULT 'system',
-    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_ssis_audit_ssi_id ON ssis_audit (ssi_id);
