@@ -45,6 +45,12 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
 - [Docker Compose UAT](docker-compose.uat.yml): User Acceptance Testing environment
 - [Docker Compose Prod](docker-compose.prod.yml): Production environment configuration
 
+## Security
+
+- [Automated Security Updates](docs/security/AUTOMATED_UPDATES.md): Comprehensive guide to automated security update system
+- [Security Updates 2026-02](docs/security/SECURITY_UPDATES_2026-02.md): February 2026 security updates documentation
+- [Security Documentation](docs/security/README.md): Security overview and related documentation
+
 ## Optional
 
 - [Makefile](Makefile): Build automation, testing, linting, and development commands

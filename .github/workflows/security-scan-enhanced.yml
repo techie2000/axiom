@@ -1,0 +1,423 @@
+name: Security Scan Enhanced
+
+on:
+  schedule:
+    # Run weekly on Mondays at 9 AM UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+    inputs:
+      create_pr:
+        description: 'Create PR with updates'
+        required: false
+        default: true
+        type: boolean
+  push:
+    branches: [main, develop]
+    paths:
+      - 'docker/**'
+      - 'backend/go.mod'
+      - 'frontend/package.json'
+      - '.github/workflows/security-scan-enhanced.yml'
+
+permissions:
+  contents: write
+  pull-requests: write
+  security-events: write
+
+jobs:
+  security-scan-and-update:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache-dependency-path: backend/go.sum
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install jq for JSON parsing
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Build Backend Docker image
+        run: |
+          docker build -f docker/Dockerfile.backend -t axiom-backend:latest ./backend
+
+      - name: Build Frontend Docker image
+        run: |
+          docker build -f docker/Dockerfile.frontend -t axiom-frontend:latest ./frontend
+
+      - name: Run Trivy scan on Backend (JSON output)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'axiom-backend:latest'
+          format: 'json'
+          output: 'trivy-backend-results.json'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+          exit-code: 0
+
+      - name: Run Trivy scan on Frontend (JSON output)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'axiom-frontend:latest'
+          format: 'json'
+          output: 'trivy-frontend-results.json'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+          exit-code: 0
+
+      - name: Upload Trivy results (Backend SARIF)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'axiom-backend:latest'
+          format: 'sarif'
+          output: 'trivy-backend-results.sarif'
+          severity: 'CRITICAL,HIGH'
+      
+      - name: Upload Backend scan to GitHub Security
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: 'trivy-backend-results.sarif'
+          category: 'trivy-backend-scan'
+
+      - name: Upload Trivy results (Frontend SARIF)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'axiom-frontend:latest'
+          format: 'sarif'
+          output: 'trivy-frontend-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Frontend scan to GitHub Security
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: 'trivy-frontend-results.sarif'
+          category: 'trivy-frontend-scan'
+
+      - name: Parse vulnerabilities and prepare updates
+        id: parse-vulns
+        run: |
+          #!/bin/bash
+          set -e
+          
+          echo "Parsing Trivy scan results..."
+          
+          # Initialize update tracking
+          ALPINE_UPDATES=""
+          GO_UPDATES=""
+          NPM_UPDATES=""
+          CRITICAL_COUNT=0
+          HIGH_COUNT=0
+          MEDIUM_COUNT=0
+          
+          # Parse Backend vulnerabilities
+          if [ -f trivy-backend-results.json ]; then
+            echo "Processing backend vulnerabilities..."
+            
+            # Extract Alpine package vulnerabilities
+            ALPINE_VULNS=$(jq -r '
+              .Results[]? | 
+              select(.Type == "alpine") |
+              .Vulnerabilities[]? |
+              select(.FixedVersion != "" and .FixedVersion != null) |
+              "\(.PkgName):\(.InstalledVersion):\(.FixedVersion):\(.Severity)"
+            ' trivy-backend-results.json | sort -u || echo "")
+            
+            if [ -n "$ALPINE_VULNS" ]; then
+              echo "Alpine vulnerabilities found:"
+              echo "$ALPINE_VULNS"
+              ALPINE_UPDATES="$ALPINE_VULNS"
+              
+              # Count severities
+              CRITICAL_COUNT=$((CRITICAL_COUNT + $(echo "$ALPINE_VULNS" | grep -c "CRITICAL" || true)))
+              HIGH_COUNT=$((HIGH_COUNT + $(echo "$ALPINE_VULNS" | grep -c "HIGH" || true)))
+              MEDIUM_COUNT=$((MEDIUM_COUNT + $(echo "$ALPINE_VULNS" | grep -c "MEDIUM" || true)))
+            fi
+            
+            # Extract Go module vulnerabilities
+            GO_VULNS=$(jq -r '
+              .Results[]? |
+              select(.Type == "gobinary" or .Type == "gomod") |
+              .Vulnerabilities[]? |
+              select(.FixedVersion != "" and .FixedVersion != null) |
+              "\(.PkgName):\(.InstalledVersion):\(.FixedVersion):\(.Severity)"
+            ' trivy-backend-results.json | sort -u || echo "")
+            
+            if [ -n "$GO_VULNS" ]; then
+              echo "Go module vulnerabilities found:"
+              echo "$GO_VULNS"
+              GO_UPDATES="$GO_VULNS"
+              
+              CRITICAL_COUNT=$((CRITICAL_COUNT + $(echo "$GO_VULNS" | grep -c "CRITICAL" || true)))
+              HIGH_COUNT=$((HIGH_COUNT + $(echo "$GO_VULNS" | grep -c "HIGH" || true)))
+              MEDIUM_COUNT=$((MEDIUM_COUNT + $(echo "$GO_VULNS" | grep -c "MEDIUM" || true)))
+            fi
+          fi
+          
+          # Parse Frontend vulnerabilities
+          if [ -f trivy-frontend-results.json ]; then
+            echo "Processing frontend vulnerabilities..."
+            
+            # Extract npm package vulnerabilities
+            NPM_VULNS=$(jq -r '
+              .Results[]? |
+              select(.Type == "npm") |
+              .Vulnerabilities[]? |
+              select(.FixedVersion != "" and .FixedVersion != null) |
+              "\(.PkgName):\(.InstalledVersion):\(.FixedVersion):\(.Severity)"
+            ' trivy-frontend-results.json | sort -u || echo "")
+            
+            if [ -n "$NPM_VULNS" ]; then
+              echo "npm vulnerabilities found:"
+              echo "$NPM_VULNS"
+              NPM_UPDATES="$NPM_VULNS"
+              
+              CRITICAL_COUNT=$((CRITICAL_COUNT + $(echo "$NPM_VULNS" | grep -c "CRITICAL" || true)))
+              HIGH_COUNT=$((HIGH_COUNT + $(echo "$NPM_VULNS" | grep -c "HIGH" || true)))
+              MEDIUM_COUNT=$((MEDIUM_COUNT + $(echo "$NPM_VULNS" | grep -c "MEDIUM" || true)))
+            fi
+          fi
+          
+          # Save results for next steps
+          echo "$ALPINE_UPDATES" > alpine_updates.txt
+          echo "$GO_UPDATES" > go_updates.txt
+          echo "$NPM_UPDATES" > npm_updates.txt
+          
+          # Set outputs
+          echo "has_alpine_updates=$([ -n "$ALPINE_UPDATES" ] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
+          echo "has_go_updates=$([ -n "$GO_UPDATES" ] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
+          echo "has_npm_updates=$([ -n "$NPM_UPDATES" ] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
+          echo "critical_count=$CRITICAL_COUNT" >> $GITHUB_OUTPUT
+          echo "high_count=$HIGH_COUNT" >> $GITHUB_OUTPUT
+          echo "medium_count=$MEDIUM_COUNT" >> $GITHUB_OUTPUT
+          
+          # Set has_updates flag
+          if [ -n "$ALPINE_UPDATES" ] || [ -n "$GO_UPDATES" ] || [ -n "$NPM_UPDATES" ]; then
+            echo "has_updates=true" >> $GITHUB_OUTPUT
+            echo "✅ Vulnerabilities found that can be fixed"
+          else
+            echo "has_updates=false" >> $GITHUB_OUTPUT
+            echo "✅ No fixable vulnerabilities found"
+          fi
+
+      - name: Update Alpine packages in Dockerfiles
+        if: steps.parse-vulns.outputs.has_alpine_updates == 'true'
+        run: |
+          #!/bin/bash
+          set -e
+          
+          echo "Updating Alpine packages in Dockerfiles..."
+          
+          while IFS=: read -r pkg current fixed severity; do
+            if [ -n "$pkg" ] && [ -n "$fixed" ]; then
+              echo "Updating $pkg from $current to $fixed (Severity: $severity)"
+              
+              # Update all Dockerfiles
+              for dockerfile in docker/Dockerfile.backend docker/Dockerfile.backend.clean docker/Dockerfile.frontend; do
+                if [ -f "$dockerfile" ]; then
+                  # Update existing pinned version
+                  sed -i "s/${pkg}=[0-9][0-9.]*-r[0-9]*/${pkg}=${fixed}/g" "$dockerfile"
+                  
+                  # If package not found, add it to apk add commands marked with security-scan-managed
+                  if ! grep -q "${pkg}=" "$dockerfile"; then
+                    # Add to existing apk add commands with security-scan-managed marker
+                    sed -i "/apk.*add.*--no-cache.*# security-scan-managed/s/$/ ${pkg}=${fixed}/" "$dockerfile"
+                  fi
+                  
+                  echo "  ✓ Updated $dockerfile"
+                fi
+              done
+            fi
+          done < alpine_updates.txt
+
+      - name: Update Go modules
+        if: steps.parse-vulns.outputs.has_go_updates == 'true'
+        run: |
+          #!/bin/bash
+          set -e
+          
+          echo "Updating Go modules..."
+          cd backend
+          
+          while IFS=: read -r pkg current fixed severity; do
+            if [ -n "$pkg" ] && [ -n "$fixed" ]; then
+              echo "Updating Go module $pkg from $current to $fixed (Severity: $severity)"
+              
+              # Try to update the specific module
+              if go get "$pkg@$fixed" 2>/dev/null; then
+                echo "  ✓ Updated $pkg to $fixed"
+              elif go get "$pkg@latest" 2>/dev/null; then
+                echo "  ✓ Updated $pkg to latest"
+              else
+                echo "  ⚠ Could not update $pkg, may need manual intervention"
+              fi
+            fi
+          done < ../go_updates.txt
+          
+          # Clean up go.mod and go.sum
+          go mod tidy
+          
+          echo "Go modules updated successfully"
+
+      - name: Update npm packages
+        if: steps.parse-vulns.outputs.has_npm_updates == 'true'
+        run: |
+          #!/bin/bash
+          set -e
+          
+          echo "Updating npm packages..."
+          cd frontend
+          
+          while IFS=: read -r pkg current fixed severity; do
+            if [ -n "$pkg" ] && [ -n "$fixed" ]; then
+              echo "Updating npm package $pkg from $current to $fixed (Severity: $severity)"
+              
+              # Try to install the specific version
+              if npm install "$pkg@$fixed" --legacy-peer-deps 2>/dev/null; then
+                echo "  ✓ Updated $pkg to $fixed"
+              elif npm install "$pkg@latest" --legacy-peer-deps 2>/dev/null; then
+                echo "  ✓ Updated $pkg to latest"
+              else
+                echo "  ⚠ Could not update $pkg, may need manual intervention"
+              fi
+            fi
+          done < ../npm_updates.txt
+          
+          echo "npm packages updated successfully"
+
+      - name: Generate PR description
+        if: steps.parse-vulns.outputs.has_updates == 'true'
+        id: generate-pr-desc
+        run: |
+          #!/bin/bash
+          set -e
+          
+          PR_BODY="## 🔒 Automated Security Updates\n\n"
+          PR_BODY+="This PR contains automated security updates for vulnerable dependencies.\n\n"
+          PR_BODY+="### 📊 Summary\n\n"
+          PR_BODY+="- 🔴 Critical: ${{ steps.parse-vulns.outputs.critical_count }}\n"
+          PR_BODY+="- 🟡 High: ${{ steps.parse-vulns.outputs.high_count }}\n"
+          PR_BODY+="- 🟠 Medium: ${{ steps.parse-vulns.outputs.medium_count }}\n\n"
+          
+          # Alpine updates
+          if [ -s alpine_updates.txt ]; then
+            PR_BODY+="### 🏔️ Alpine Package Updates\n\n"
+            PR_BODY+="| Package | Current | Fixed | Severity |\n"
+            PR_BODY+="|---------|---------|-------|----------|\n"
+            while IFS=: read -r pkg current fixed severity; do
+              if [ -n "$pkg" ]; then
+                PR_BODY+="| \`$pkg\` | $current | $fixed | $severity |\n"
+              fi
+            done < alpine_updates.txt
+            PR_BODY+="\n**Files Updated:**\n"
+            PR_BODY+="- \`docker/Dockerfile.frontend\`\n"
+            PR_BODY+="- \`docker/Dockerfile.backend\`\n"
+            PR_BODY+="- \`docker/Dockerfile.backend.clean\`\n\n"
+          fi
+          
+          # Go updates
+          if [ -s go_updates.txt ]; then
+            PR_BODY+="### 🐹 Go Module Updates\n\n"
+            PR_BODY+="| Module | Current | Fixed | Severity |\n"
+            PR_BODY+="|--------|---------|-------|----------|\n"
+            while IFS=: read -r pkg current fixed severity; do
+              if [ -n "$pkg" ]; then
+                PR_BODY+="| \`$pkg\` | $current | $fixed | $severity |\n"
+              fi
+            done < go_updates.txt
+            PR_BODY+="\n**Files Updated:**\n"
+            PR_BODY+="- \`backend/go.mod\`\n"
+            PR_BODY+="- \`backend/go.sum\`\n\n"
+          fi
+          
+          # npm updates
+          if [ -s npm_updates.txt ]; then
+            PR_BODY+="### 📦 npm Package Updates\n\n"
+            PR_BODY+="| Package | Current | Fixed | Severity |\n"
+            PR_BODY+="|---------|---------|-------|----------|\n"
+            while IFS=: read -r pkg current fixed severity; do
+              if [ -n "$pkg" ]; then
+                PR_BODY+="| \`$pkg\` | $current | $fixed | $severity |\n"
+              fi
+            done < npm_updates.txt
+            PR_BODY+="\n**Files Updated:**\n"
+            PR_BODY+="- \`frontend/package.json\`\n"
+            PR_BODY+="- \`frontend/package-lock.json\`\n\n"
+          fi
+          
+          PR_BODY+="### ✅ Verification Steps\n\n"
+          PR_BODY+="\`\`\`bash\n"
+          PR_BODY+="# Build Docker images\n"
+          PR_BODY+="docker compose --env-file .env.dev -f docker-compose.dev.yml build --no-cache\n\n"
+          PR_BODY+="# Run tests\n"
+          PR_BODY+="cd backend && go test ./... -v\n"
+          PR_BODY+="cd frontend && npm test\n\n"
+          PR_BODY+="# Verify no new vulnerabilities\n"
+          PR_BODY+="docker build -f docker/Dockerfile.backend -t axiom-backend:test ./backend\n"
+          PR_BODY+="docker build -f docker/Dockerfile.frontend -t axiom-frontend:test ./frontend\n"
+          PR_BODY+="trivy image --severity CRITICAL,HIGH axiom-backend:test\n"
+          PR_BODY+="trivy image --severity CRITICAL,HIGH axiom-frontend:test\n"
+          PR_BODY+="\`\`\`\n\n"
+          
+          PR_BODY+="### 📚 References\n\n"
+          PR_BODY+="- Security scan workflow: \`.github/workflows/security-scan-enhanced.yml\`\n"
+          PR_BODY+="- Version tracking: \`.github/security-versions.yml\` (⚠️ **Requires manual update after PR merge**)\n"
+          PR_BODY+="- Documentation: \`docs/security/AUTOMATED_UPDATES.md\`\n\n"
+          PR_BODY+="### ⚠️ Post-Merge Actions Required\n\n"
+          PR_BODY+="After merging this PR, manually update \`.github/security-versions.yml\` with:\n"
+          PR_BODY+="- New package versions from this update\n"
+          PR_BODY+="- Updated timestamps\n"
+          PR_BODY+="- Rationale for each version change\n\n"
+          
+          PR_BODY+="---\n"
+          PR_BODY+="*🤖 This PR was automatically generated by the Security Scan Enhanced workflow*\n"
+          PR_BODY+="*📅 Scan date: $(date -u +%Y-%m-%d)*"
+          
+          # Save to file for PR creation
+          echo -e "$PR_BODY" > pr_description.md
+          cat pr_description.md
+
+      - name: Create Pull Request
+        if: steps.parse-vulns.outputs.has_updates == 'true' && (github.event.inputs.create_pr == 'true' || github.event_name != 'workflow_dispatch')
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'security: automated dependency updates for security vulnerabilities'
+          title: '🔒 Automated Security Updates - ${{ steps.parse-vulns.outputs.critical_count }} Critical, ${{ steps.parse-vulns.outputs.high_count }} High'
+          body-path: 'pr_description.md'
+          branch: 'security/automated-updates-${{ github.run_number }}'
+          delete-branch: true
+          labels: |
+            security
+            dependencies
+            automated
+          assignees: techie2000
+          reviewers: techie2000
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### 🔒 Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Vulnerabilities Found:**" >> $GITHUB_STEP_SUMMARY
+          echo "- 🔴 Critical: ${{ steps.parse-vulns.outputs.critical_count }}" >> $GITHUB_STEP_SUMMARY
+          echo "- 🟡 High: ${{ steps.parse-vulns.outputs.high_count }}" >> $GITHUB_STEP_SUMMARY
+          echo "- 🟠 Medium: ${{ steps.parse-vulns.outputs.medium_count }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ steps.parse-vulns.outputs.has_updates }}" == "true" ]; then
+            echo "✅ **Updates Applied:**" >> $GITHUB_STEP_SUMMARY
+            [ "${{ steps.parse-vulns.outputs.has_alpine_updates }}" == "true" ] && echo "- Alpine packages updated" >> $GITHUB_STEP_SUMMARY
+            [ "${{ steps.parse-vulns.outputs.has_go_updates }}" == "true" ] && echo "- Go modules updated" >> $GITHUB_STEP_SUMMARY
+            [ "${{ steps.parse-vulns.outputs.has_npm_updates }}" == "true" ] && echo "- npm packages updated" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ No fixable vulnerabilities found" >> $GITHUB_STEP_SUMMARY
+          fi

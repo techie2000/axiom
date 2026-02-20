@@ -1,6 +1,11 @@
 # Build stage
 FROM node:22-alpine3.21 AS builder
 
+# Security: Upgrade libssl3 to address CVE vulnerabilities (Alert #117)
+# Version 3.3.6-r0 addresses critical SSL/TLS vulnerabilities
+# security-scan-managed
+RUN apk add --no-cache --upgrade libssl3=3.3.6-r0
+
 WORKDIR /app
 
 # Copy package files
@@ -17,6 +22,11 @@ RUN npm run build
 
 # Runtime stage
 FROM node:22-alpine3.21
+
+# Security: Upgrade libssl3 to address CVE vulnerabilities (Alert #117)
+# Version 3.3.6-r0 addresses critical SSL/TLS vulnerabilities
+# security-scan-managed
+RUN apk add --no-cache --upgrade libssl3=3.3.6-r0
 
 WORKDIR /app
 
