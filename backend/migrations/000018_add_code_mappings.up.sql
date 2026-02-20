@@ -13,9 +13,9 @@ CREATE TABLE IF NOT EXISTS code_mappings (
     description VARCHAR(500),
     active BOOLEAN NOT NULL DEFAULT TRUE,
     created_by VARCHAR(100) NOT NULL DEFAULT 'system',
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMP
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ
 );
 
 -- Unique constraint on the first 5 fields: the same combination of
@@ -82,7 +82,7 @@ CREATE TABLE IF NOT EXISTS code_mappings_audit (
     record_snapshot JSONB NOT NULL,
     changed_fields JSONB,
     changed_by VARCHAR(100) NOT NULL DEFAULT 'system',
-    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_code_mappings_audit_mapping_id ON code_mappings_audit (code_mapping_id);

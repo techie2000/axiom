@@ -12,8 +12,8 @@ CREATE TABLE IF NOT EXISTS lei_raw.source_files (
     file_url VARCHAR(1000) NOT NULL,
     file_size BIGINT,
     file_hash VARCHAR(64),  -- SHA-256 hash
-    downloaded_at TIMESTAMP,
-    publication_date TIMESTAMP,
+    downloaded_at TIMESTAMPTZ,
+    publication_date TIMESTAMPTZ,
 
     -- Processing status
     processing_status VARCHAR(20) NOT NULL DEFAULT 'PENDING',  -- PENDING, IN_PROGRESS, COMPLETED, FAILED
@@ -22,13 +22,13 @@ CREATE TABLE IF NOT EXISTS lei_raw.source_files (
     failed_records INTEGER DEFAULT 0,
     last_processed_lei VARCHAR(20),  -- For resumption
 
-    processing_started_at TIMESTAMP,
-    processing_completed_at TIMESTAMP,
+    processing_started_at TIMESTAMPTZ,
+    processing_completed_at TIMESTAMPTZ,
     processing_error TEXT,
 
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMP
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ
 );
 
 -- Create indexes for source_files
@@ -82,9 +82,9 @@ CREATE TABLE IF NOT EXISTS lei_raw.lei_records (
     successor_lei VARCHAR(20),
 
     -- Dates
-    initial_registration_date TIMESTAMP,
-    last_update_date TIMESTAMP,
-    next_renewal_date TIMESTAMP,
+    initial_registration_date TIMESTAMPTZ,
+    last_update_date TIMESTAMPTZ,
+    next_renewal_date TIMESTAMPTZ,
 
     -- Validation
     validation_sources JSONB,
@@ -97,9 +97,9 @@ CREATE TABLE IF NOT EXISTS lei_raw.lei_records (
     updated_by VARCHAR(100) NOT NULL DEFAULT 'system',
 
     -- Standard fields
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMP
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ
 );
 
 -- Create indexes for lei_records
@@ -129,7 +129,7 @@ CREATE TABLE IF NOT EXISTS lei_raw.lei_records_audit (
     source_file_id UUID REFERENCES lei_raw.source_files (id),
     changed_by VARCHAR(100) NOT NULL DEFAULT 'system',
 
-    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Create indexes for lei_records_audit
@@ -144,16 +144,16 @@ CREATE TABLE IF NOT EXISTS lei_raw.file_processing_status (
     id UUID PRIMARY KEY DEFAULT GEN_RANDOM_UUID(),
     job_type VARCHAR(50) NOT NULL,  -- DAILY_FULL, DAILY_DELTA, MANUAL
     status VARCHAR(20) NOT NULL,  -- IDLE, RUNNING, COMPLETED, FAILED
-    last_run_at TIMESTAMP,
-    next_run_at TIMESTAMP,
-    last_success_at TIMESTAMP,
+    last_run_at TIMESTAMPTZ,
+    next_run_at TIMESTAMPTZ,
+    last_success_at TIMESTAMPTZ,
 
     current_source_file_id UUID REFERENCES lei_raw.source_files (id),
 
     error_message TEXT,
 
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Create indexes for file_processing_status
