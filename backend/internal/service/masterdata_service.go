@@ -19,6 +19,7 @@ type MasterDataService interface {
 	LoadLanguages() error
 	LoadCurrencies() error
 	LoadCountries() error
+	LoadCodeMappings() error
 	CheckForUpdates() (bool, error)
 }
 
@@ -57,6 +58,17 @@ type CurrencyData map[string]struct {
 	NamePlural    string `json:"name_plural"`
 }
 
+// CodeMappingData represents the JSON structure for a code mapping entry
+type CodeMappingData struct {
+	FromSystem   string `json:"from_system"`
+	ToSystem     string `json:"to_system"`
+	FromCodeType string `json:"from_code_type"`
+	ToCodeType   string `json:"to_code_type"`
+	FromCode     string `json:"from_code"`
+	ToCode       string `json:"to_code"`
+	Description  string `json:"description"`
+}
+
 // CountryData represents the JSON structure for countries
 type CountryData struct {
 	Code          string   `json:"code"`
@@ -90,6 +102,10 @@ func (s *masterDataService) LoadAllMasterData() error {
 
 	if err := s.LoadCountries(); err != nil {
 		return fmt.Errorf("failed to load countries: %w", err)
+	}
+
+	if err := s.LoadCodeMappings(); err != nil {
+		return fmt.Errorf("failed to load code mappings: %w", err)
 	}
 
 	log.Info().Msg("Master data loaded successfully")
@@ -285,6 +301,59 @@ func (s *masterDataService) LoadCountries() error {
 	}
 
 	log.Info().Int("count", len(countriesData)).Msg("Countries loaded successfully")
+	return nil
+}
+
+// LoadCodeMappings loads ALERT Direct country code mappings from JSON file
+func (s *masterDataService) LoadCodeMappings() error {
+	// Check if ALERT Direct country code mappings already exist
+	var count int64
+	if err := s.db.Model(&domain.CodeMapping{}).
+		Where("from_system = ? AND from_code_type = ?", "ALERT", "ALERT_DIRECT_COUNTRY_CODE").
+		Count(&count).Error; err != nil {
+		return fmt.Errorf("failed to check code mappings: %w", err)
+	}
+
+	if count > 0 {
+		log.Info().Int64("count", count).Msg("ALERT Direct country code mappings already loaded, skipping")
+		return nil
+	}
+
+	// Read JSON file
+	filePath := filepath.Join(s.dataDir, "alert_country_codes.json")
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return fmt.Errorf("failed to read alert_country_codes.json: %w", err)
+	}
+
+	// Parse JSON
+	var mappingsData []CodeMappingData
+	if err := json.Unmarshal(data, &mappingsData); err != nil {
+		return fmt.Errorf("failed to parse alert_country_codes.json: %w", err)
+	}
+
+	// Insert into database
+	for _, m := range mappingsData {
+		mapping := &domain.CodeMapping{
+			FromSystem:   m.FromSystem,
+			ToSystem:     m.ToSystem,
+			FromCodeType: m.FromCodeType,
+			ToCodeType:   m.ToCodeType,
+			FromCode:     m.FromCode,
+			ToCode:       m.ToCode,
+			Description:  m.Description,
+			Active:       true,
+			CreatedBy:    "system",
+		}
+		if err := s.db.Create(mapping).Error; err != nil {
+			log.Warn().Err(err).
+				Str("from_code", m.FromCode).
+				Str("to_code", m.ToCode).
+				Msg("Failed to insert code mapping, skipping")
+		}
+	}
+
+	log.Info().Int("count", len(mappingsData)).Msg("ALERT Direct country code mappings loaded successfully")
 	return nil
 }
 

@@ -32,6 +32,15 @@ Country reference data (196 entries)
 - Relationships to currencies, languages, and continents
 - Coverage: All recognized countries worldwide
 
+### alert_country_codes.json
+ALERT Direct to ISO country code mappings (62 entries)
+- Maps proprietary ALERT Direct country codes to ISO 3166-1 alpha-2 codes
+- Only includes entries where the ALERT Direct code differs from the ISO code
+- ALERT Web and ALERT Plus use standard ISO codes and do not require mapping
+- Source: DTCC ALERT documentation (al1016_crd_20260113.pdf, Table 2.1)
+- `from_system`: ALERT, `from_code_type`: ALERT_DIRECT_COUNTRY_CODE
+- `to_system`: ISO, `to_code_type`: COUNTRY_CODE
+
 ## Data Standards
 
 All data follows international ISO standards:
@@ -52,7 +61,8 @@ The loading process is idempotent (safe to run multiple times) and logs all acti
 2. Languages (no dependencies)
 3. **Currencies** (no dependencies - loaded first)
 4. **Countries** (depends on currencies and continents)
-5. LEI data (depends on countries - loaded at 2 AM)
+5. **Code Mappings** (depends on countries - ALERT Direct country codes loaded here)
+6. LEI data (depends on countries - loaded at 2 AM)
 
 ## Updating
 
@@ -120,7 +130,20 @@ To update master data:
 }
 ```
 
-## Validation
+### Code Mapping Entry
+```json
+{
+    "from_system": "ALERT",
+    "to_system": "ISO",
+    "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+    "to_code_type": "COUNTRY_CODE",
+    "from_code": "ARG",
+    "to_code": "AR",
+    "description": "Argentina: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+}
+```
+
+
 
 Files are validated during loading:
 - JSON syntax must be valid
