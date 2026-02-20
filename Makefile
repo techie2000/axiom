@@ -2,6 +2,7 @@
 .PHONY: docker-dev-up docker-dev-down docker-uat-up docker-uat-down docker-prod-up docker-prod-down
 .PHONY: docker-all-up docker-all-down docker-all-status validate-env
 .PHONY: lint lint-docs lint-docs-fix lint-all install-hooks
+.PHONY: smoke-api
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
@@ -243,3 +244,6 @@ install-hooks: ## Install git hooks for pre-commit validation
 
 validate-env: ## Validate multi-environment setup
 	@bash scripts/validate-multi-env.sh
+
+smoke-api: ## Run API smoke checks (usage: make smoke-api [env=dev|uat|prod|all] [check_login=1])
+	@pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/smoke-api.ps1 -Environment $${env:-all} $$( [ "$${check_login:-0}" = "1" ] && echo "-CheckLogin" )

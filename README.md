@@ -187,11 +187,25 @@ Use the PowerShell smoke test script to quickly validate API health and auth beh
 # Run smoke tests for all environments (dev, uat, prod)
 ./scripts/smoke-api.ps1
 
+# Same via Makefile shortcut
+make smoke-api
+
 # Run only UAT
 ./scripts/smoke-api.ps1 -Environment uat
 
+# Makefile variant
+make smoke-api env=uat
+
 # Include login endpoint check (informational)
 ./scripts/smoke-api.ps1 -Environment prod -CheckLogin
+
+# Makefile variant
+make smoke-api env=prod check_login=1
+
+# Windows CMD wrapper (for environments without make)
+scripts\smoke-api.cmd
+scripts\smoke-api.cmd uat
+scripts\smoke-api.cmd prod --check-login
 ```
 
 The script validates:

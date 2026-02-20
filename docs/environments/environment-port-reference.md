@@ -116,6 +116,11 @@ make migrate-uat-up
 make migrate-prod-up
 ```
 
+## Related Runbooks
+
+- API smoke checks: [docs/environments/README.md](README.md#quick-command-reference)
+- Quick-start command guide: [docs/environments/multi-environment-quickstart.md](multi-environment-quickstart.md)
+
 ## Default Credentials
 
 **PostgreSQL:**

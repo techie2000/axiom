@@ -42,8 +42,17 @@ make docker-all-up
 # Check status
 make docker-all-status
 
+# Run API smoke checks (all environments)
+make smoke-api
+
+# Run API smoke checks for one environment
+make smoke-api env=uat
+
 # Validate setup
 make validate-env
+
+# Windows (no make): run smoke checks via CMD wrapper
+scripts\smoke-api.cmd all
 ```
 
 ## Port Prefixes

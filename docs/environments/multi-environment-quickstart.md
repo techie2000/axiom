@@ -48,6 +48,24 @@ make docker-prod-logs
 make docker-all-status
 ```
 
+### API Smoke Checks
+
+```bash
+# Run smoke checks for all environments
+make smoke-api
+
+# Run smoke checks for one environment
+make smoke-api env=uat
+
+# Include login endpoint check (informational)
+make smoke-api env=prod check_login=1
+
+# Windows (no make)
+scripts\smoke-api.cmd all
+scripts\smoke-api.cmd uat
+scripts\smoke-api.cmd prod --check-login
+```
+
 ### Database Migrations
 
 ```bash
