@@ -1,8 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
-import ThemeToggle from '../components/ThemeToggle'
+import Alert from '../components/Alert'
+import Badge from '../components/Badge'
+import LoadingSpinner from '../components/LoadingSpinner'
+import PageHeader from '../components/PageHeader'
+import StatCard from '../components/StatCard'
 
 interface Currency {
   id: string
@@ -83,71 +86,40 @@ export default function CurrenciesPage() {
   })
 
   if (loading) {
-    return (
-      <div className="min-h-screen p-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center py-20">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            <p className="mt-4 opacity-70">Loading currencies...</p>
-          </div>
-        </div>
-      </div>
-    )
+    return <LoadingSpinner message="Loading currencies..." />
   }
 
   return (
     <div className="min-h-screen p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8 flex justify-between items-start">
-          <div>
-            <Link href="/" className="text-blue-400 hover:text-blue-300 mb-4 inline-block">
-              ← Back to Home
-            </Link>
-            <h1 className="text-4xl font-bold mb-2">Currencies</h1>
-            <p className="opacity-70">Browse ISO 4217 currency codes and compliance reference data</p>
-          </div>
-          <ThemeToggle />
-        </div>
+        <PageHeader
+          title="Currencies"
+          subtitle="Browse ISO 4217 currency codes and compliance reference data"
+        />
 
         {/* Info/Error Alert */}
         {error && (
-          <div className={`mb-6 p-4 rounded-lg border ${
-            error.includes('No currencies data')
-              ? 'bg-yellow-50 border-yellow-200'
-              : 'bg-red-50 border-red-200'
-          }`}>
-            <p className={error.includes('No currencies data') ? 'text-yellow-800' : 'text-red-800'}>
-              <span className="font-semibold">
-                {error.includes('No currencies data') ? '📋 Notice:' : '⚠️ Error:'}
-              </span> {error}
-            </p>
+          <Alert
+            variant={error.includes('No currencies data') ? 'warning' : 'error'}
+            title={error.includes('No currencies data') ? '📋 Notice:' : '⚠️ Error:'}
+            className="mb-6"
+          >
+            {error}
             {error.includes('No currencies data') && (
-              <p className="text-sm text-yellow-700 mt-2">
+              <p className="text-sm mt-2 opacity-80">
                 💡 Tip: Currencies data is typically loaded during initial system setup. Contact your administrator if this data should be available.
               </p>
             )}
-          </div>
+          </Alert>
         )}
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white dark:bg-white/5 rounded-lg shadow p-6 border-2 border-gray-200 dark:border-white/10">
-            <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Currencies</h3>
-            <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">{currencies.length}</p>
-          </div>
-          <div className="bg-white dark:bg-white/5 rounded-lg shadow p-6 border-2 border-gray-200 dark:border-white/10">
-            <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Filtered Results</h3>
-            <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">{filteredCurrencies.length}</p>
-          </div>
-          <div className="bg-white dark:bg-white/5 rounded-lg shadow p-6 border-2 border-green-200 dark:border-green-500/30">
-            <h3 className="text-sm font-medium text-green-700 dark:text-green-400">ALERT CLS Allowed</h3>
-            <p className="text-3xl font-bold text-green-700 dark:text-green-400 mt-2">{alertClsCount}</p>
-          </div>
-          <div className="bg-white dark:bg-white/5 rounded-lg shadow p-6 border-2 border-red-200 dark:border-red-500/30">
-            <h3 className="text-sm font-medium text-red-700 dark:text-red-400">OFAC Sanctioned</h3>
-            <p className="text-3xl font-bold text-red-700 dark:text-red-400 mt-2">{ofacCount}</p>
-          </div>
+          <StatCard title="Total Currencies" value={currencies.length} />
+          <StatCard title="Filtered Results" value={filteredCurrencies.length} />
+          <StatCard title="ALERT CLS Allowed" value={alertClsCount} accent="green" />
+          <StatCard title="OFAC Sanctioned" value={ofacCount} accent="red" />
         </div>
 
         {/* Search and compliance filter */}
@@ -209,9 +181,7 @@ export default function CurrenciesPage() {
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded font-mono">
-                          {currency.code}
-                        </span>
+                        <Badge variant="blue" mono>{currency.code}</Badge>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                         <span className="text-lg">{currency.symbol}</span>
@@ -224,18 +194,14 @@ export default function CurrenciesPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         {currency.is_alert_cls_allowed ? (
-                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300">
-                            ✓ Allowed
-                          </span>
+                          <Badge variant="green" shape="pill">✓ Allowed</Badge>
                         ) : (
                           <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         {currency.is_ofac_sanctioned ? (
-                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-300">
-                            ⚠ Sanctioned
-                          </span>
+                          <Badge variant="red" shape="pill">⚠ Sanctioned</Badge>
                         ) : (
                           <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>
                         )}

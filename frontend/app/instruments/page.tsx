@@ -1,23 +1,16 @@
 'use client'
 
-import Link from 'next/link'
-import ThemeToggle from '../components/ThemeToggle'
+import PageHeader from '../components/PageHeader'
 
 export default function InstrumentsPage() {
   return (
     <div className="min-h-screen p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8 flex justify-between items-start">
-          <div>
-            <Link href="/" className="text-blue-400 hover:text-blue-300 mb-4 inline-block">
-              ← Back to Home
-            </Link>
-            <h1 className="text-4xl font-bold mb-2">Instruments</h1>
-            <p className="opacity-70">Financial instruments and securities reference data</p>
-          </div>
-          <ThemeToggle />
-        </div>
+        <PageHeader
+          title="Instruments"
+          subtitle="Financial instruments and securities reference data"
+        />
 
         {/* Coming Soon Card */}
         <div className="bg-white/5 backdrop-blur-sm rounded-lg shadow-lg p-12 text-center border-2 border-white/10">

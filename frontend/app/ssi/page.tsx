@@ -1,16 +1,17 @@
 'use client'
 
+import Link from 'next/link'
+import PageHeader from '../components/PageHeader'
+
 export default function SSIPage() {
   return (
     <div className="min-h-screen p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-4">Standard Settlement Instructions (SSI)</h1>
-          <p className="text-xl opacity-70">
-            Manage settlement instructions for securities trading counterparties
-          </p>
-        </div>
+        <PageHeader
+          title="Standard Settlement Instructions (SSI)"
+          subtitle="Manage settlement instructions for securities trading counterparties"
+        />
 
         {/* Coming Soon Notice */}
         <div className="bg-purple-500/10 border-2 border-purple-500/30 rounded-lg p-8 mb-8">
@@ -78,12 +79,12 @@ export default function SSIPage() {
 
         {/* Back Button */}
         <div className="mt-8">
-          <a 
+          <Link
             href="/"
             className="inline-block bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 px-6 py-3 rounded-lg transition-colors border-2 border-purple-500/30"
           >
             ← Back to Home
-          </a>
+          </Link>
         </div>
       </div>
     </div>

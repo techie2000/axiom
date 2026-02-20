@@ -2,7 +2,10 @@
 
 import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
-import ThemeToggle from '../components/ThemeToggle'
+import Alert from '../components/Alert'
+import LoadingSpinner from '../components/LoadingSpinner'
+import PageHeader from '../components/PageHeader'
+import StatCard from '../components/StatCard'
 
 interface LEIRecord {
   id: string
@@ -657,150 +660,125 @@ export default function LEIRecordsPage() {
   const isLastPage = !hasMorePages
 
   if (loading && records.length === 0) {
-    return (
-      <div className="min-h-screen p-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center py-20">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            <p className="mt-4 opacity-70">Loading LEI records...</p>
-          </div>
-        </div>
-      </div>
-    )
+    return <LoadingSpinner message="Loading LEI records..." />
   }
 
   return (
     <div className="min-h-screen p-8">
       <div className={`${expandedWidth ? 'max-w-full' : 'max-w-7xl'} mx-auto transition-all duration-300`}>
-        <div className="mb-8 flex justify-between items-start">
-          <div>
-            <Link href="/" className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 mb-4 inline-block">
-              ← Back to Home
-            </Link>
-            <h1 className="text-4xl font-bold mb-2 text-gray-900 dark:text-white">LEI Records</h1>
-            <p className="text-gray-600 dark:text-gray-400">GLEIF Legal Entity Identifiers (ISO 17442)</p>
-          </div>
-          <div className="flex items-center gap-3">
-            {/* Expanded Width Toggle */}
-            <button
-              onClick={() => setExpandedWidth(!expandedWidth)}
-              className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 transition-colors text-white text-sm font-medium flex items-center gap-2"
-              title={expandedWidth ? 'Normal Width' : 'Expanded Width'}
-            >
-              {expandedWidth ? '⬅️ Normal' : '↔️ Expand'}
-            </button>
-            
-            {/* Column Selector */}
-            <div className="relative">
+        <PageHeader
+          title="LEI Records"
+          subtitle="GLEIF Legal Entity Identifiers (ISO 17442)"
+          actions={
+            <>
+              {/* Expanded Width Toggle */}
               <button
-                onClick={() => setShowColumnSelector(!showColumnSelector)}
-                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 transition-colors text-white text-sm font-medium flex items-center gap-2"
+                onClick={() => setExpandedWidth(!expandedWidth)}
+                className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 transition-colors text-white text-sm font-medium flex items-center gap-2"
+                title={expandedWidth ? 'Normal Width' : 'Expanded Width'}
               >
-                ⚙️ Columns ({visibleColumns.size})
+                {expandedWidth ? '⬅️ Normal' : '↔️ Expand'}
               </button>
               
-              {showColumnSelector && (
-                <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-white/20 rounded-lg shadow-xl z-50">
-                  <div className="sticky top-0 bg-white dark:bg-gray-800 border-b-2 border-gray-200 dark:border-white/10 p-3">
-                    <div className="flex justify-between items-center mb-2">
-                      <h3 className="font-semibold text-gray-900 dark:text-white">Select Columns</h3>
-                      <button
-                        onClick={() => setShowColumnSelector(false)}
-                        className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                      >
-                        ✕
-                      </button>
+              {/* Column Selector */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowColumnSelector(!showColumnSelector)}
+                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 transition-colors text-white text-sm font-medium flex items-center gap-2"
+                >
+                  ⚙️ Columns ({visibleColumns.size})
+                </button>
+                
+                {showColumnSelector && (
+                  <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-white/20 rounded-lg shadow-xl z-50">
+                    <div className="sticky top-0 bg-white dark:bg-gray-800 border-b-2 border-gray-200 dark:border-white/10 p-3">
+                      <div className="flex justify-between items-center mb-2">
+                        <h3 className="font-semibold text-gray-900 dark:text-white">Select Columns</h3>
+                        <button
+                          onClick={() => setShowColumnSelector(false)}
+                          className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      <div className="flex gap-2 text-xs">
+                        <button
+                          onClick={() => setVisibleColumns(new Set(AVAILABLE_COLUMNS.map(c => c.key)))}
+                          className="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded hover:bg-blue-200 dark:hover:bg-blue-800"
+                        >
+                          Select All
+                        </button>
+                        <button
+                          onClick={() => setVisibleColumns(new Set(AVAILABLE_COLUMNS.filter(c => c.defaultVisible).map(c => c.key)))}
+                          className="px-2 py-1 bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                        >
+                          Reset to Default
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex gap-2 text-xs">
-                      <button
-                        onClick={() => setVisibleColumns(new Set(AVAILABLE_COLUMNS.map(c => c.key)))}
-                        className="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded hover:bg-blue-200 dark:hover:bg-blue-800"
-                      >
-                        Select All
-                      </button>
-                      <button
-                        onClick={() => setVisibleColumns(new Set(AVAILABLE_COLUMNS.filter(c => c.defaultVisible).map(c => c.key)))}
-                        className="px-2 py-1 bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-                      >
-                        Reset to Default
-                      </button>
-                    </div>
-                  </div>
-                  
-                  {Object.entries(getColumnsByGroup()).map(([group, columns]) => (
-                    <div key={group} className="border-b border-gray-200 dark:border-white/10 last:border-b-0">
-                      <div 
-                        onClick={() => toggleGroupColumns(group)}
-                        className="px-3 py-2.5 bg-gray-50 dark:bg-gray-700 font-semibold text-sm text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors flex items-center justify-between gap-3"
-                        title={`Click to toggle all ${group} columns`}
-                      >
-                        <span className="flex items-center gap-2.5">
-                          <span className="text-base leading-none">
-                            {isGroupFullySelected(group) ? '☑' : isGroupPartiallySelected(group) ? '◐' : '☐'}
+                    
+                    {Object.entries(getColumnsByGroup()).map(([group, columns]) => (
+                      <div key={group} className="border-b border-gray-200 dark:border-white/10 last:border-b-0">
+                        <div 
+                          onClick={() => toggleGroupColumns(group)}
+                          className="px-3 py-2.5 bg-gray-50 dark:bg-gray-700 font-semibold text-sm text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors flex items-center justify-between gap-3"
+                          title={`Click to toggle all ${group} columns`}
+                        >
+                          <span className="flex items-center gap-2.5">
+                            <span className="text-base leading-none">
+                              {isGroupFullySelected(group) ? '☑' : isGroupPartiallySelected(group) ? '◐' : '☐'}
+                            </span>
+                            <span>{group}</span>
                           </span>
-                          <span>{group}</span>
-                        </span>
-                        <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">
-                          {columns.filter(c => visibleColumns.has(c.key)).length}/{columns.length}
-                        </span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">
+                            {columns.filter(c => visibleColumns.has(c.key)).length}/{columns.length}
+                          </span>
+                        </div>
+                        <div className="p-2">
+                          {columns.map((column) => (
+                            <label
+                              key={String(column.key)}
+                              className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700 rounded cursor-pointer text-sm"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={visibleColumns.has(column.key)}
+                                onChange={() => toggleColumn(column.key)}
+                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                              />
+                              <span className="text-gray-900 dark:text-white">{column.label}</span>
+                            </label>
+                          ))}
+                        </div>
                       </div>
-                      <div className="p-2">
-                        {columns.map((column) => (
-                          <label
-                            key={String(column.key)}
-                            className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700 rounded cursor-pointer text-sm"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={visibleColumns.has(column.key)}
-                              onChange={() => toggleColumn(column.key)}
-                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                            />
-                            <span className="text-gray-900 dark:text-white">{column.label}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            
-            <ThemeToggle />
-          </div>
-        </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          }
+        />
 
         {error && (
-          <div className={`mb-6 p-4 rounded-lg border ${
-            error.includes('No LEI data matches') 
-              ? 'bg-yellow-50 border-yellow-200' 
-              : 'bg-red-50 border-red-200'
-          }`}>
-            <p className={error.includes('No LEI data matches') ? 'text-yellow-800' : 'text-red-800'}>
-              <span className="font-semibold">
-                {error.includes('No LEI data matches') ? '📋 Notice:' : '⚠️ Error:'}
-              </span> {error}
-            </p>
-          </div>
+          <Alert
+            variant={error.includes('No LEI data matches') ? 'warning' : 'error'}
+            title={error.includes('No LEI data matches') ? '📋 Notice:' : '⚠️ Error:'}
+            className="mb-6"
+          >
+            {error}
+          </Alert>
         )}
 
         <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm rounded-lg p-4">
-            <p className="text-sm text-gray-600 dark:text-gray-400">Total Records</p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">{totalRecords.toLocaleString()}</p>
-          </div>
-          <div className="bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm rounded-lg p-4">
-            <p className="text-sm text-gray-600 dark:text-gray-400">Current Page</p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">
-              {currentPage} {hasActiveFilters ? '(filtered)' : `of ${totalPages.toLocaleString()}`}
-            </p>
-          </div>
-          <div className="bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm rounded-lg p-4">
-            <p className="text-sm text-gray-600 dark:text-gray-400">Showing</p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">
-              {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, totalRecords)}
-            </p>
-          </div>
+          <StatCard title="Total Records" value={totalRecords.toLocaleString()} />
+          <StatCard
+            title="Current Page"
+            value={`${currentPage}${hasActiveFilters ? ' (filtered)' : ` of ${totalPages.toLocaleString()}`}`}
+          />
+          <StatCard
+            title="Showing"
+            value={`${((currentPage - 1) * itemsPerPage) + 1}-${Math.min(currentPage * itemsPerPage, totalRecords)}`}
+          />
         </div>
 
         {/* Info message about sorting behavior (Hybrid Approach) */}

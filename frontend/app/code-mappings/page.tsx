@@ -1,8 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
-import ThemeToggle from '../components/ThemeToggle'
+import Alert from '../components/Alert'
+import Badge from '../components/Badge'
+import LoadingSpinner from '../components/LoadingSpinner'
+import PageHeader from '../components/PageHeader'
+import StatCard from '../components/StatCard'
 
 interface CodeMapping {
   id: string
@@ -78,62 +81,35 @@ export default function CodeMappingsPage() {
   const uniqueSystems = [...new Set(mappings.map(m => m.from_system))]
 
   if (loading) {
-    return (
-      <div className="min-h-screen p-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center py-20">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            <p className="mt-4 opacity-70">Loading code mappings...</p>
-          </div>
-        </div>
-      </div>
-    )
+    return <LoadingSpinner message="Loading code mappings..." />
   }
 
   return (
     <div className="min-h-screen p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8 flex justify-between items-start">
-          <div>
-            <Link href="/" className="text-blue-400 hover:text-blue-300 mb-4 inline-block">
-              ← Back to Home
-            </Link>
-            <h1 className="text-4xl font-bold mb-2">Code Mappings</h1>
-            <p className="opacity-70">
-              Cross-system code translation — map external codes (e.g., ALERT) to internal AXIOM identifiers
-            </p>
-          </div>
-          <ThemeToggle />
-        </div>
+        <PageHeader
+          title="Code Mappings"
+          subtitle="Cross-system code translation — map external codes (e.g., ALERT) to internal AXIOM identifiers"
+        />
 
         {/* Info box explaining the feature */}
-        <div className="mb-6 p-4 rounded-lg border bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800">
-          <p className="text-blue-800 dark:text-blue-200 text-sm">
-            <span className="font-semibold">💡 About Code Mappings:</span> This table maps codes from external systems
-            (e.g., ALERT currency code &quot;SWE&quot;) to standardised AXIOM identifiers (e.g., ISO country code
-            &quot;SE&quot;). The combination of <em>from_system</em>, <em>to_system</em>, <em>from_code_type</em>,
-            <em> to_code_type</em>, and <em>from_code</em> must be unique.
-          </p>
-        </div>
+        <Alert variant="info" title="💡 About Code Mappings:" className="mb-6">
+          This table maps codes from external systems (e.g., ALERT currency code &quot;SWE&quot;) to standardised
+          AXIOM identifiers (e.g., ISO country code &quot;SE&quot;). The combination of{' '}
+          <em>from_system</em>, <em>to_system</em>, <em>from_code_type</em>,{' '}
+          <em>to_code_type</em>, and <em>from_code</em> must be unique.
+        </Alert>
 
         {/* Error/Notice Alert */}
         {error && (
-          <div className={`mb-6 p-4 rounded-lg border ${
-            error.includes('No code mappings')
-              ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800'
-              : 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800'
-          }`}>
-            <p className={
-              error.includes('No code mappings')
-                ? 'text-yellow-800 dark:text-yellow-200'
-                : 'text-red-800 dark:text-red-200'
-            }>
-              <span className="font-semibold">
-                {error.includes('No code mappings') ? '📋 Notice:' : '⚠️ Error:'}
-              </span> {error}
-            </p>
-          </div>
+          <Alert
+            variant={error.includes('No code mappings') ? 'warning' : 'error'}
+            title={error.includes('No code mappings') ? '📋 Notice:' : '⚠️ Error:'}
+            className="mb-6"
+          >
+            {error}
+          </Alert>
         )}
 
         {/* Search */}
@@ -151,22 +127,10 @@ export default function CodeMappingsPage() {
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white dark:bg-white/5 rounded-lg shadow p-6 border-2 border-gray-200 dark:border-white/10">
-            <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Mappings</h3>
-            <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">{mappings.length}</p>
-          </div>
-          <div className="bg-white dark:bg-white/5 rounded-lg shadow p-6 border-2 border-gray-200 dark:border-white/10">
-            <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Active Mappings</h3>
-            <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">{activeMappings.length}</p>
-          </div>
-          <div className="bg-white dark:bg-white/5 rounded-lg shadow p-6 border-2 border-gray-200 dark:border-white/10">
-            <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Source Systems</h3>
-            <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">{uniqueSystems.length}</p>
-          </div>
-          <div className="bg-white dark:bg-white/5 rounded-lg shadow p-6 border-2 border-gray-200 dark:border-white/10">
-            <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Filtered Results</h3>
-            <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">{filteredMappings.length}</p>
-          </div>
+          <StatCard title="Total Mappings" value={mappings.length} />
+          <StatCard title="Active Mappings" value={activeMappings.length} accent="green" />
+          <StatCard title="Source Systems" value={uniqueSystems.length} />
+          <StatCard title="Filtered Results" value={filteredMappings.length} />
         </div>
 
         {/* Mappings Table */}
@@ -206,41 +170,27 @@ export default function CodeMappingsPage() {
                   filteredMappings.map((mapping) => (
                     <tr key={mapping.id} className="hover:bg-gray-50 dark:hover:bg-white/10">
                       <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                        <span className="px-2 py-1 bg-orange-100 dark:bg-orange-900/40 text-orange-800 dark:text-orange-300 rounded font-mono text-xs">
-                          {mapping.from_system}
-                        </span>
+                        <Badge variant="orange" mono>{mapping.from_system}</Badge>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 font-mono text-xs">
                         {mapping.from_code_type}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                        <span className="px-2 py-1 bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300 rounded font-mono text-xs font-semibold">
-                          {mapping.from_code}
-                        </span>
+                        <Badge variant="red" mono>{mapping.from_code}</Badge>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                        <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 rounded font-mono text-xs">
-                          {mapping.to_system}
-                        </span>
+                        <Badge variant="blue" mono>{mapping.to_system}</Badge>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 font-mono text-xs">
                         {mapping.to_code_type}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                        <span className="px-2 py-1 bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300 rounded font-mono text-xs font-semibold">
-                          {mapping.to_code}
-                        </span>
+                        <Badge variant="green" mono>{mapping.to_code}</Badge>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm">
-                        {mapping.active ? (
-                          <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded text-xs">
-                            Active
-                          </span>
-                        ) : (
-                          <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded text-xs">
-                            Inactive
-                          </span>
-                        )}
+                        <Badge variant={mapping.active ? 'green' : 'gray'}>
+                          {mapping.active ? 'Active' : 'Inactive'}
+                        </Badge>
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate">
                         {mapping.description || '—'}

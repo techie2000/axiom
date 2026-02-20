@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
-import ThemeToggle from '../components/ThemeToggle'
+import Alert from '../components/Alert'
+import LoadingSpinner from '../components/LoadingSpinner'
+import PageHeader from '../components/PageHeader'
 
 interface SourceFile {
   id: string
@@ -310,60 +311,45 @@ export default function LEIStatusPage() {
   }
 
   if (loading && !fullStatus && !deltaStatus) {
-    return (
-      <div className="min-h-screen p-8">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center py-20">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            <p className="mt-4 opacity-70">Loading LEI processing status...</p>
-          </div>
-        </div>
-      </div>
-    )
+    return <LoadingSpinner message="Loading LEI processing status..." />
   }
 
   return (
     <div className="min-h-screen p-8">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="flex justify-between items-start mb-8">
-          <div>
-            <Link href="/" className="text-blue-400 hover:text-blue-300 mb-4 inline-block">
-              ← Back to Home
-            </Link>
-            <h1 className="text-4xl font-bold mb-2">LEI Data Processing</h1>
-            <p className="text-lg opacity-70">Real-time monitoring of GLEIF data synchronization</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <ThemeToggle />
-            <button
-              onClick={fetchStatus}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              🔄 Refresh Now
-            </button>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={autoRefresh}
-                onChange={(e) => setAutoRefresh(e.target.checked)}
-                className="w-4 h-4"
-              />
-              <span className="text-sm opacity-70">Auto-refresh (5s)</span>
-            </label>
-          </div>
-        </div>
+        <PageHeader
+          title="LEI Data Processing"
+          subtitle="Real-time monitoring of GLEIF data synchronization"
+          actions={
+            <>
+              <button
+                onClick={fetchStatus}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                🔄 Refresh Now
+              </button>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={autoRefresh}
+                  onChange={(e) => setAutoRefresh(e.target.checked)}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm opacity-70">Auto-refresh (5s)</span>
+              </label>
+            </>
+          }
+        />
 
         {/* Error Alert */}
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-red-800">
-              <span className="font-semibold">Connection Error:</span> {error}
-            </p>
-            <p className="text-sm text-red-600 mt-1">
+          <Alert variant="error" title="Connection Error:" className="mb-6">
+            {error}
+            <p className="text-sm mt-1 opacity-80">
               Make sure the backend is running and you have proper authentication.
             </p>
-          </div>
+          </Alert>
         )}
 
         {/* Status Cards */}

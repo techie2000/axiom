@@ -1,8 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
-import ThemeToggle from '../components/ThemeToggle'
+import Alert from '../components/Alert'
+import Badge from '../components/Badge'
+import LoadingSpinner from '../components/LoadingSpinner'
+import PageHeader from '../components/PageHeader'
+import StatCard from '../components/StatCard'
 
 interface Country {
   id: string
@@ -64,51 +67,32 @@ export default function CountriesPage() {
   )
 
   if (loading) {
-    return (
-      <div className="min-h-screen p-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center py-20">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            <p className="mt-4 opacity-70">Loading countries...</p>
-          </div>
-        </div>
-      </div>
-    )
+    return <LoadingSpinner message="Loading countries..." />
   }
 
   return (
     <div className="min-h-screen p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8 flex justify-between items-start">
-          <div>
-            <Link href="/" className="text-blue-400 hover:text-blue-300 mb-4 inline-block">
-              ← Back to Home
-            </Link>
-            <h1 className="text-4xl font-bold mb-2">Countries</h1>
-            <p className="opacity-70">Browse ISO 3166 country codes and reference data</p>
-          </div>
-          <ThemeToggle />
-        </div>
+        <PageHeader
+          title="Countries"
+          subtitle="Browse ISO 3166 country codes and reference data"
+        />
 
         {/* Info/Error Alert */}
         {error && (
-          <div className={`mb-6 p-4 rounded-lg border ${
-            error.includes('No countries data') 
-              ? 'bg-yellow-50 border-yellow-200' 
-              : 'bg-red-50 border-red-200'
-          }`}>
-            <p className={error.includes('No countries data') ? 'text-yellow-800' : 'text-red-800'}>
-              <span className="font-semibold">
-                {error.includes('No countries data') ? '📋 Notice:' : '⚠️ Error:'}
-              </span> {error}
-            </p>
+          <Alert
+            variant={error.includes('No countries data') ? 'warning' : 'error'}
+            title={error.includes('No countries data') ? '📋 Notice:' : '⚠️ Error:'}
+            className="mb-6"
+          >
+            {error}
             {error.includes('No countries data') && (
-              <p className="text-sm text-yellow-700 mt-2">
+              <p className="text-sm mt-2 opacity-80">
                 💡 Tip: Countries data is typically loaded during initial system setup. Contact your administrator if this data should be available.
               </p>
             )}
-          </div>
+          </Alert>
         )}
 
         {/* Search */}
@@ -124,18 +108,9 @@ export default function CountriesPage() {
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-white dark:bg-white/5 rounded-lg shadow p-6 border-2 border-gray-200 dark:border-white/10">
-            <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Countries</h3>
-            <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">{countries.length}</p>
-          </div>
-          <div className="bg-white dark:bg-white/5 rounded-lg shadow p-6 border-2 border-gray-200 dark:border-white/10">
-            <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Filtered Results</h3>
-            <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">{filteredCountries.length}</p>
-          </div>
-          <div className="bg-white dark:bg-white/5 rounded-lg shadow p-6 border-2 border-gray-200 dark:border-white/10">
-            <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Data Standard</h3>
-            <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">ISO 3166</p>
-          </div>
+          <StatCard title="Total Countries" value={countries.length} />
+          <StatCard title="Filtered Results" value={filteredCountries.length} />
+          <StatCard title="Data Standard" value="ISO 3166" />
         </div>
 
         {/* Countries Table */}
@@ -165,14 +140,10 @@ export default function CountriesPage() {
                       {country.name}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded font-mono">
-                        {country.alpha2}
-                      </span>
+                      <Badge variant="blue" mono>{country.alpha2}</Badge>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded font-mono">
-                        {country.alpha3}
-                      </span>
+                      <Badge variant="green" mono>{country.alpha3}</Badge>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 font-mono">
                       {country.numeric_code}
