@@ -44,6 +44,7 @@ Architecture decisions are documented as ADRs in [docs/adr](docs/adr).
 - **Master Data Management** - Pre-populated countries, currencies, continents, and languages
 - **LEI Data Acquisition** - Automated Legal Entity Identifier data acquisition from GLEIF
 - **Daily Synchronization** - Automated daily sync for LEI and master data updates
+- **Interrupted Sync Recovery** - Scheduler auto-resumes interrupted full LEI imports on service startup
 
 ## Project Structure
 

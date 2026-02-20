@@ -206,19 +206,27 @@ func (s *schedulerService) Start() error {
 	// CRITICAL: Initialize next_run_at for jobs that don't have it set
 	s.initializeNextRunTimes()
 
-	// Check for initial data load on startup (one-time check)
-	count, err := s.leiService.CountLEIRecords()
+	// Auto-resume interrupted full sync files from previous crashes/restarts
+	resumed, err := s.resumeInterruptedFullSyncOnStartup()
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to count LEI records during startup")
-	} else if count == 0 {
-		log.Info().Msg("Database is empty, triggering initial full sync")
-		go func() {
-			if err := s.RunDailyFullSync(); err != nil {
-				log.Error().Err(err).Msg("Failed to run initial full sync")
-			}
-		}()
-	} else {
-		log.Info().Int64("existing_records", count).Msg("Database has existing records, waiting for scheduled full sync")
+		log.Error().Err(err).Msg("Failed to check interrupted full sync files")
+	}
+
+	// Check for initial data load on startup (one-time check)
+	if !resumed {
+		count, err := s.leiService.CountLEIRecords()
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to count LEI records during startup")
+		} else if count == 0 {
+			log.Info().Msg("Database is empty, triggering initial full sync")
+			go func() {
+				if err := s.RunDailyFullSync(); err != nil {
+					log.Error().Err(err).Msg("Failed to run initial full sync")
+				}
+			}()
+		} else {
+			log.Info().Int64("existing_records", count).Msg("Database has existing records, waiting for scheduled full sync")
+		}
 	}
 
 	// DELTA SYNC DISABLED - Using FULL sync only strategy
@@ -342,6 +350,104 @@ func (s *schedulerService) initializeNextRunTimes() {
 	}
 
 	log.Info().Msg("Next_run_at initialization completed")
+}
+
+func (s *schedulerService) resumeInterruptedFullSyncOnStartup() (bool, error) {
+	pendingFiles, err := s.leiService.FindPendingSourceFiles()
+	if err != nil {
+		return false, fmt.Errorf("failed to find pending source files: %w", err)
+	}
+
+	var interruptedFile *domain.SourceFile
+	for i := range pendingFiles {
+		file := pendingFiles[i]
+		if file.FileType != "FULL" {
+			continue
+		}
+
+		isInterrupted := file.ProcessingStatus == "IN_PROGRESS" || file.ProcessedRecords > 0 || file.LastProcessedLEI != ""
+		if !isInterrupted {
+			continue
+		}
+
+		if interruptedFile == nil || file.UpdatedAt.After(interruptedFile.UpdatedAt) {
+			interruptedFile = file
+		}
+	}
+
+	if interruptedFile == nil {
+		return false, nil
+	}
+
+	status, err := s.leiService.GetProcessingStatus("DAILY_FULL")
+	if err != nil {
+		status = &domain.FileProcessingStatus{
+			JobType: "DAILY_FULL",
+			Status:  "IDLE",
+		}
+	}
+
+	now := time.Now()
+	fileID := interruptedFile.ID
+	status.Status = "RUNNING"
+	status.LastRunAt = &now
+	status.CurrentSourceFileID = &fileID
+	status.ErrorMessage = ""
+	if err := s.leiService.UpdateProcessingStatus(status); err != nil {
+		return false, fmt.Errorf("failed to mark DAILY_FULL as RUNNING for resume: %w", err)
+	}
+
+	resumeLEI := interruptedFile.LastProcessedLEI
+	fileName := interruptedFile.FileName
+	processed := interruptedFile.ProcessedRecords
+	total := interruptedFile.TotalRecords
+
+	log.Info().
+		Str("source_file_id", fileID.String()).
+		Str("file_name", fileName).
+		Str("resume_from", resumeLEI).
+		Int("processed", processed).
+		Int("total", total).
+		Msg("Auto-resuming interrupted full sync on startup")
+
+	go func() {
+		if err := s.leiService.ProcessSourceFileWithResume(fileID, resumeLEI); err != nil {
+			status, getErr := s.leiService.GetProcessingStatus("DAILY_FULL")
+			if getErr != nil {
+				log.Error().Err(getErr).Msg("Failed to get DAILY_FULL status after resume failure")
+				return
+			}
+			status.Status = "FAILED"
+			status.ErrorMessage = err.Error()
+			status.CurrentSourceFileID = nil
+			if updateErr := s.leiService.UpdateProcessingStatus(status); updateErr != nil {
+				log.Error().Err(updateErr).Msg("Failed to set DAILY_FULL status to FAILED after resume failure")
+			}
+			log.Error().Err(err).Str("source_file_id", fileID.String()).Msg("Auto-resume full sync failed")
+			return
+		}
+
+		status, getErr := s.leiService.GetProcessingStatus("DAILY_FULL")
+		if getErr != nil {
+			log.Error().Err(getErr).Msg("Failed to get DAILY_FULL status after resume success")
+			return
+		}
+
+		now := time.Now()
+		status.Status = "IDLE"
+		status.LastSuccessAt = &now
+		status.NextRunAt = s.calculateNextDailyFullRun()
+		status.ErrorMessage = ""
+		status.CurrentSourceFileID = nil
+		if updateErr := s.leiService.UpdateProcessingStatus(status); updateErr != nil {
+			log.Error().Err(updateErr).Msg("Failed to set DAILY_FULL status to IDLE after resume success")
+			return
+		}
+
+		log.Info().Str("source_file_id", fileID.String()).Msg("Auto-resume full sync completed successfully")
+	}()
+
+	return true, nil
 }
 
 // DISABLED: dailyDeltaSyncLoop runs delta sync at configured interval

@@ -22,11 +22,11 @@ type Country struct {
 	Name          string `gorm:"not null" json:"name" validate:"required"`
 	NativeName    string `json:"native_name"`
 	Alpha3Code    string `gorm:"size:3" json:"alpha3_code" validate:"len=3"`
-	PhoneCodes    string `gorm:"type:jsonb" json:"phone_codes"`                   // JSON array of phone codes
-	Continent     string `gorm:"size:2" json:"continent"`                         // AF, AN, AS, EU, NA, OC, SA
+	PhoneCodes    string `gorm:"type:jsonb" json:"phone_codes"` // JSON array of phone codes
+	Continent     string `gorm:"size:2" json:"continent"`       // AF, AN, AS, EU, NA, OC, SA
 	Capital       string `json:"capital"`
-	CurrencyCodes string `gorm:"type:jsonb" json:"currency_codes"`                // JSON array of currency codes
-	Languages     string `gorm:"type:jsonb" json:"languages"`                     // JSON array of language codes
+	CurrencyCodes string `gorm:"type:jsonb" json:"currency_codes"` // JSON array of currency codes
+	Languages     string `gorm:"type:jsonb" json:"languages"`      // JSON array of language codes
 	Region        string `json:"region"`
 	Active        bool   `gorm:"default:true" json:"active"`
 }
@@ -70,8 +70,8 @@ func (Continent) TableName() string {
 // Language represents a language reference entity
 type Language struct {
 	Code      string    `gorm:"primaryKey;size:2" json:"code"`
-	Name      string    `gorm:"not null" json:"name"`
-	Native    string    `gorm:"not null" json:"native"`
+	Name      string    `gorm:"column:language_name;not null" json:"name"`
+	Native    string    `gorm:"column:native_name;not null" json:"native"`
 	RTL       bool      `gorm:"default:false" json:"rtl"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -314,18 +314,18 @@ func (CodeMapping) TableName() string {
 
 // CodeMappingAudit represents the complete audit history of code mapping changes
 type CodeMappingAudit struct {
-	ID            uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
-	CodeMappingID uuid.UUID `gorm:"type:uuid;not null;index" json:"code_mapping_id"`
-	FromSystem    string    `gorm:"size:100;not null" json:"from_system"`
-	ToSystem      string    `gorm:"size:100;not null" json:"to_system"`
-	FromCodeType  string    `gorm:"size:100;not null" json:"from_code_type"`
-	ToCodeType    string    `gorm:"size:100;not null" json:"to_code_type"`
-	FromCode      string    `gorm:"size:255;not null" json:"from_code"`
-	ToCode        string    `gorm:"size:255;not null" json:"to_code"`
-	Action        string    `gorm:"size:20;not null" json:"action"` // CREATE, UPDATE, DELETE
-	RecordSnapshot string   `gorm:"type:jsonb;not null" json:"record_snapshot"`
-	ChangedFields  string   `gorm:"type:jsonb" json:"changed_fields"`
-	ChangedBy      string   `gorm:"size:100;not null;default:'system'" json:"changed_by"`
+	ID             uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	CodeMappingID  uuid.UUID `gorm:"type:uuid;not null;index" json:"code_mapping_id"`
+	FromSystem     string    `gorm:"size:100;not null" json:"from_system"`
+	ToSystem       string    `gorm:"size:100;not null" json:"to_system"`
+	FromCodeType   string    `gorm:"size:100;not null" json:"from_code_type"`
+	ToCodeType     string    `gorm:"size:100;not null" json:"to_code_type"`
+	FromCode       string    `gorm:"size:255;not null" json:"from_code"`
+	ToCode         string    `gorm:"size:255;not null" json:"to_code"`
+	Action         string    `gorm:"size:20;not null" json:"action"` // CREATE, UPDATE, DELETE
+	RecordSnapshot string    `gorm:"type:jsonb;not null" json:"record_snapshot"`
+	ChangedFields  string    `gorm:"type:jsonb" json:"changed_fields"`
+	ChangedBy      string    `gorm:"size:100;not null;default:'system'" json:"changed_by"`
 	CreatedAt      time.Time `json:"created_at"`
 }
 
