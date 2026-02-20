@@ -179,6 +179,28 @@ make docker-uat-logs    # UAT
 make docker-prod-logs   # Production
 ```
 
+#### API Smoke Testing
+
+Use the PowerShell smoke test script to quickly validate API health and auth behavior across environments.
+
+```bash
+# Run smoke tests for all environments (dev, uat, prod)
+./scripts/smoke-api.ps1
+
+# Run only UAT
+./scripts/smoke-api.ps1 -Environment uat
+
+# Include login endpoint check (informational)
+./scripts/smoke-api.ps1 -Environment prod -CheckLogin
+```
+
+The script validates:
+
+- `GET /health` returns `200` and `healthy`
+- `GET /version` returns `200`
+- Protected endpoint (`/api/v1/entities`) without token returns `401`
+- Protected endpoint (`/api/v1/entities`) with generated JWT is accepted by auth middleware (not `401`/`403`)
+
 #### Environment-Specific URLs
 
 Once started, each environment is accessible at:

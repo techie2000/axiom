@@ -54,6 +54,7 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
 ## Optional
 
 - [Makefile](Makefile): Build automation, testing, linting, and development commands
+- [API Smoke Script](scripts/smoke-api.ps1): Environment-aware API smoke tests for health and auth checks
 - [LEI Persistence Fix](docs/LEI_PERSISTENCE_AND_RACE_CONDITION_FIX.md): Technical fix for race condition issues
 - [Delta URL Fix](docs/DELTA_URL_FIX_SUMMARY.md): Bug fix summary for GLEIF delta URL parsing
 - [Backend Config](backend/config.yaml): Application configuration reference
