@@ -117,7 +117,7 @@ CREATE TABLE IF NOT EXISTS lei_raw.lei_records_audit (
     id UUID PRIMARY KEY DEFAULT GEN_RANDOM_UUID(),
     lei_record_id UUID NOT NULL,
     lei VARCHAR(20) NOT NULL,
-    action VARCHAR(20) NOT NULL,  -- CREATE, UPDATE, DELETE
+    "action" VARCHAR(20) NOT NULL,  -- CREATE, UPDATE, DELETE
 
     -- Complete record snapshot
     record_snapshot JSONB NOT NULL,
@@ -135,7 +135,7 @@ CREATE TABLE IF NOT EXISTS lei_raw.lei_records_audit (
 -- Create indexes for lei_records_audit
 CREATE INDEX idx_lei_records_audit_lei_record_id ON lei_raw.lei_records_audit (lei_record_id);
 CREATE INDEX idx_lei_records_audit_lei ON lei_raw.lei_records_audit (lei);
-CREATE INDEX idx_lei_records_audit_action ON lei_raw.lei_records_audit (action);
+CREATE INDEX idx_lei_records_audit_action ON lei_raw.lei_records_audit ("action");
 CREATE INDEX idx_lei_records_audit_created_at ON lei_raw.lei_records_audit (created_at);
 CREATE INDEX idx_lei_records_audit_source_file_id ON lei_raw.lei_records_audit (source_file_id);
 

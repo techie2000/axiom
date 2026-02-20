@@ -19,7 +19,7 @@ indent_unit = space
 tab_space_size = 4
 
 # Exclude directories and files
-exclude_rules = None
+exclude_rules = RF06
 ignore_templated_areas = True
 
 # File extensions to lint

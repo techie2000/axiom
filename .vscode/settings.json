@@ -65,6 +65,7 @@
     "fullsynctime",
     "functools",
     "Getenv",
+    "giga",
     "gleif",
     "GLEIFJSON",
     "goarch",
@@ -98,7 +99,9 @@
     "modelcontextprotocol",
     "MTTR",
     "myregistry",
+    "noqa",
     "Optim",
+    "ossp",
     "parallelizable",
     "PBOX",
     "pdoc",
@@ -131,10 +134,12 @@
     "vercel",
     "Vitest",
     "Warshall",
+    "XFRA",
     "xmldoc",
+    "XNAS",
     "xvzf",
     "zerolog"
-  ],
+],
   "go.toolsEnvVars": {
     "GOPROXY": "direct"
   },

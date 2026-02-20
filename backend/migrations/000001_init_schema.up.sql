@@ -5,7 +5,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE TABLE IF NOT EXISTS countries (
     id UUID PRIMARY KEY DEFAULT GEN_RANDOM_UUID(),
     code VARCHAR(2) NOT NULL UNIQUE,
-    name VARCHAR(255) NOT NULL,
+    "name" VARCHAR(255) NOT NULL,
     alpha3_code VARCHAR(3),
     region VARCHAR(255),
     active BOOLEAN DEFAULT TRUE,
@@ -21,7 +21,7 @@ CREATE INDEX idx_countries_deleted_at ON countries (deleted_at);
 CREATE TABLE IF NOT EXISTS currencies (
     id UUID PRIMARY KEY DEFAULT GEN_RANDOM_UUID(),
     code VARCHAR(3) NOT NULL UNIQUE,
-    name VARCHAR(255) NOT NULL,
+    "name" VARCHAR(255) NOT NULL,
     symbol VARCHAR(10),
     decimal_places INTEGER DEFAULT 2,
     active BOOLEAN DEFAULT TRUE,
@@ -73,9 +73,9 @@ CREATE INDEX idx_addresses_deleted_at ON addresses (deleted_at);
 -- Create entities table
 CREATE TABLE IF NOT EXISTS entities (
     id UUID PRIMARY KEY DEFAULT GEN_RANDOM_UUID(),
-    name VARCHAR(255) NOT NULL,
+    "name" VARCHAR(255) NOT NULL,
     registration_number VARCHAR(255) UNIQUE,
-    type VARCHAR(50),
+    "type" VARCHAR(50),
     active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS entities (
 );
 
 CREATE INDEX idx_entities_registration_number ON entities (registration_number);
-CREATE INDEX idx_entities_type ON entities (type);
+CREATE INDEX idx_entities_type ON entities ("type");
 CREATE INDEX idx_entities_deleted_at ON entities (deleted_at);
 
 -- Create entity_addresses junction table (many-to-many relationship)
@@ -106,8 +106,8 @@ CREATE INDEX idx_entity_addresses_deleted_at ON entity_addresses (deleted_at);
 -- Create instruments table
 CREATE TABLE IF NOT EXISTS instruments (
     id UUID PRIMARY KEY DEFAULT GEN_RANDOM_UUID(),
-    name VARCHAR(255) NOT NULL,
-    type VARCHAR(50),
+    "name" VARCHAR(255) NOT NULL,
+    "type" VARCHAR(50),
     issue_currency_id UUID REFERENCES currencies (id),  -- Currency in which the instrument is issued
     primary_exchange VARCHAR(100),  -- Primary exchange where instrument trades (can trade on multiple)
     active BOOLEAN DEFAULT TRUE,
@@ -116,7 +116,7 @@ CREATE TABLE IF NOT EXISTS instruments (
     deleted_at TIMESTAMP
 );
 
-CREATE INDEX idx_instruments_type ON instruments (type);
+CREATE INDEX idx_instruments_type ON instruments ("type");
 CREATE INDEX idx_instruments_issue_currency_id ON instruments (issue_currency_id);
 CREATE INDEX idx_instruments_deleted_at ON instruments (deleted_at);
 
@@ -153,12 +153,12 @@ CREATE INDEX idx_instrument_codes_market_identifier_code ON instrument_codes (ma
 CREATE INDEX idx_instrument_codes_deleted_at ON instrument_codes (deleted_at);
 
 -- Create accounts table
-CREATE TABLE IF NOT EXISTS accounts (
+CREATE TABLE IF NOT EXISTS "accounts" ( -- noqa: RF06
     id UUID PRIMARY KEY DEFAULT GEN_RANDOM_UUID(),
     account_number VARCHAR(255) NOT NULL UNIQUE,
     entity_id UUID REFERENCES entities (id),
     account_currency_id UUID REFERENCES currencies (id),  -- Currency of the account
-    type VARCHAR(50),
+    "type" VARCHAR(50),
     balance DECIMAL(19, 4) DEFAULT 0,
     opened_at TIMESTAMP NOT NULL DEFAULT NOW(),
     active BOOLEAN DEFAULT TRUE,
@@ -167,11 +167,11 @@ CREATE TABLE IF NOT EXISTS accounts (
     deleted_at TIMESTAMP
 );
 
-CREATE INDEX idx_accounts_account_number ON accounts (account_number);
-CREATE INDEX idx_accounts_entity_id ON accounts (entity_id);
-CREATE INDEX idx_accounts_account_currency_id ON accounts (account_currency_id);
-CREATE INDEX idx_accounts_type ON accounts (type);
-CREATE INDEX idx_accounts_deleted_at ON accounts (deleted_at);
+CREATE INDEX idx_accounts_account_number ON "accounts" (account_number); -- noqa: RF06
+CREATE INDEX idx_accounts_entity_id ON "accounts" (entity_id); -- noqa: RF06
+CREATE INDEX idx_accounts_account_currency_id ON "accounts" (account_currency_id); -- noqa: RF06
+CREATE INDEX idx_accounts_type ON "accounts" ("type"); -- noqa: RF06
+CREATE INDEX idx_accounts_deleted_at ON "accounts" (deleted_at); -- noqa: RF06
 
 -- Create SSIs table
 CREATE TABLE IF NOT EXISTS ssis (
@@ -204,7 +204,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     id UUID PRIMARY KEY DEFAULT GEN_RANDOM_UUID(),
     entity_type VARCHAR(100) NOT NULL,
     entity_id UUID NOT NULL,
-    action VARCHAR(50) NOT NULL,
+    "action" VARCHAR(50) NOT NULL,
     user_id UUID,
     changed_data JSONB,
     previous_data JSONB,
@@ -216,7 +216,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 CREATE INDEX idx_audit_logs_entity_type ON audit_logs (entity_type);
 CREATE INDEX idx_audit_logs_entity_id ON audit_logs (entity_id);
 CREATE INDEX idx_audit_logs_user_id ON audit_logs (user_id);
-CREATE INDEX idx_audit_logs_action ON audit_logs (action);
+CREATE INDEX idx_audit_logs_action ON audit_logs ("action");
 CREATE INDEX idx_audit_logs_created_at ON audit_logs (created_at);
 
 -- Create standardized audit tables for each entity (following LEI audit pattern)
@@ -226,7 +226,7 @@ CREATE TABLE IF NOT EXISTS countries_audit (
     id UUID PRIMARY KEY DEFAULT GEN_RANDOM_UUID(),
     country_id UUID NOT NULL,
     code VARCHAR(2) NOT NULL,
-    action VARCHAR(20) NOT NULL,  -- CREATE, UPDATE, DELETE
+    "action" VARCHAR(20) NOT NULL,  -- CREATE, UPDATE, DELETE
     record_snapshot JSONB NOT NULL,
     changed_fields JSONB,
     changed_by VARCHAR(100) NOT NULL DEFAULT 'system',
@@ -235,7 +235,7 @@ CREATE TABLE IF NOT EXISTS countries_audit (
 
 CREATE INDEX idx_countries_audit_country_id ON countries_audit (country_id);
 CREATE INDEX idx_countries_audit_code ON countries_audit (code);
-CREATE INDEX idx_countries_audit_action ON countries_audit (action);
+CREATE INDEX idx_countries_audit_action ON countries_audit ("action");
 CREATE INDEX idx_countries_audit_created_at ON countries_audit (created_at);
 
 -- Currencies audit table
@@ -243,7 +243,7 @@ CREATE TABLE IF NOT EXISTS currencies_audit (
     id UUID PRIMARY KEY DEFAULT GEN_RANDOM_UUID(),
     currency_id UUID NOT NULL,
     code VARCHAR(3) NOT NULL,
-    action VARCHAR(20) NOT NULL,  -- CREATE, UPDATE, DELETE
+    "action" VARCHAR(20) NOT NULL,  -- CREATE, UPDATE, DELETE
     record_snapshot JSONB NOT NULL,
     changed_fields JSONB,
     changed_by VARCHAR(100) NOT NULL DEFAULT 'system',
@@ -252,14 +252,14 @@ CREATE TABLE IF NOT EXISTS currencies_audit (
 
 CREATE INDEX idx_currencies_audit_currency_id ON currencies_audit (currency_id);
 CREATE INDEX idx_currencies_audit_code ON currencies_audit (code);
-CREATE INDEX idx_currencies_audit_action ON currencies_audit (action);
+CREATE INDEX idx_currencies_audit_action ON currencies_audit ("action");
 CREATE INDEX idx_currencies_audit_created_at ON currencies_audit (created_at);
 
 -- Addresses audit table
 CREATE TABLE IF NOT EXISTS addresses_audit (
     id UUID PRIMARY KEY DEFAULT GEN_RANDOM_UUID(),
     address_id UUID NOT NULL,
-    action VARCHAR(20) NOT NULL,  -- CREATE, UPDATE, DELETE
+    "action" VARCHAR(20) NOT NULL,  -- CREATE, UPDATE, DELETE
     record_snapshot JSONB NOT NULL,
     changed_fields JSONB,
     changed_by VARCHAR(100) NOT NULL DEFAULT 'system',
@@ -267,7 +267,7 @@ CREATE TABLE IF NOT EXISTS addresses_audit (
 );
 
 CREATE INDEX idx_addresses_audit_address_id ON addresses_audit (address_id);
-CREATE INDEX idx_addresses_audit_action ON addresses_audit (action);
+CREATE INDEX idx_addresses_audit_action ON addresses_audit ("action");
 CREATE INDEX idx_addresses_audit_created_at ON addresses_audit (created_at);
 
 -- Entities audit table
@@ -275,7 +275,7 @@ CREATE TABLE IF NOT EXISTS entities_audit (
     id UUID PRIMARY KEY DEFAULT GEN_RANDOM_UUID(),
     entity_id UUID NOT NULL,
     registration_number VARCHAR(255),
-    action VARCHAR(20) NOT NULL,  -- CREATE, UPDATE, DELETE
+    "action" VARCHAR(20) NOT NULL,  -- CREATE, UPDATE, DELETE
     record_snapshot JSONB NOT NULL,
     changed_fields JSONB,
     changed_by VARCHAR(100) NOT NULL DEFAULT 'system',
@@ -284,7 +284,7 @@ CREATE TABLE IF NOT EXISTS entities_audit (
 
 CREATE INDEX idx_entities_audit_entity_id ON entities_audit (entity_id);
 CREATE INDEX idx_entities_audit_registration_number ON entities_audit (registration_number);
-CREATE INDEX idx_entities_audit_action ON entities_audit (action);
+CREATE INDEX idx_entities_audit_action ON entities_audit ("action");
 CREATE INDEX idx_entities_audit_created_at ON entities_audit (created_at);
 
 -- Entity addresses audit table
@@ -293,7 +293,7 @@ CREATE TABLE IF NOT EXISTS entity_addresses_audit (
     entity_address_id UUID NOT NULL,
     entity_id UUID NOT NULL,
     address_id UUID NOT NULL,
-    action VARCHAR(20) NOT NULL,  -- CREATE, UPDATE, DELETE
+    "action" VARCHAR(20) NOT NULL,  -- CREATE, UPDATE, DELETE
     record_snapshot JSONB NOT NULL,
     changed_fields JSONB,
     changed_by VARCHAR(100) NOT NULL DEFAULT 'system',
@@ -303,15 +303,15 @@ CREATE TABLE IF NOT EXISTS entity_addresses_audit (
 CREATE INDEX idx_entity_addresses_audit_entity_address_id ON entity_addresses_audit (entity_address_id);
 CREATE INDEX idx_entity_addresses_audit_entity_id ON entity_addresses_audit (entity_id);
 CREATE INDEX idx_entity_addresses_audit_address_id ON entity_addresses_audit (address_id);
-CREATE INDEX idx_entity_addresses_audit_action ON entity_addresses_audit (action);
+CREATE INDEX idx_entity_addresses_audit_action ON entity_addresses_audit ("action");
 CREATE INDEX idx_entity_addresses_audit_created_at ON entity_addresses_audit (created_at);
 
 -- Instruments audit table
 CREATE TABLE IF NOT EXISTS instruments_audit (
     id UUID PRIMARY KEY DEFAULT GEN_RANDOM_UUID(),
     instrument_id UUID NOT NULL,
-    name VARCHAR(255),
-    action VARCHAR(20) NOT NULL,  -- CREATE, UPDATE, DELETE
+    "name" VARCHAR(255),
+    "action" VARCHAR(20) NOT NULL,  -- CREATE, UPDATE, DELETE
     record_snapshot JSONB NOT NULL,
     changed_fields JSONB,
     changed_by VARCHAR(100) NOT NULL DEFAULT 'system',
@@ -319,7 +319,7 @@ CREATE TABLE IF NOT EXISTS instruments_audit (
 );
 
 CREATE INDEX idx_instruments_audit_instrument_id ON instruments_audit (instrument_id);
-CREATE INDEX idx_instruments_audit_action ON instruments_audit (action);
+CREATE INDEX idx_instruments_audit_action ON instruments_audit ("action");
 CREATE INDEX idx_instruments_audit_created_at ON instruments_audit (created_at);
 
 -- Instrument codes audit table
@@ -329,7 +329,7 @@ CREATE TABLE IF NOT EXISTS instrument_codes_audit (
     instrument_id UUID NOT NULL,
     code_type VARCHAR(50),
     code_value VARCHAR(100),
-    action VARCHAR(20) NOT NULL,  -- CREATE, UPDATE, DELETE
+    "action" VARCHAR(20) NOT NULL,  -- CREATE, UPDATE, DELETE
     record_snapshot JSONB NOT NULL,
     changed_fields JSONB,
     changed_by VARCHAR(100) NOT NULL DEFAULT 'system',
@@ -338,7 +338,7 @@ CREATE TABLE IF NOT EXISTS instrument_codes_audit (
 
 CREATE INDEX idx_instrument_codes_audit_instrument_code_id ON instrument_codes_audit (instrument_code_id);
 CREATE INDEX idx_instrument_codes_audit_instrument_id ON instrument_codes_audit (instrument_id);
-CREATE INDEX idx_instrument_codes_audit_action ON instrument_codes_audit (action);
+CREATE INDEX idx_instrument_codes_audit_action ON instrument_codes_audit ("action");
 CREATE INDEX idx_instrument_codes_audit_created_at ON instrument_codes_audit (created_at);
 
 -- Accounts audit table
@@ -346,7 +346,7 @@ CREATE TABLE IF NOT EXISTS accounts_audit (
     id UUID PRIMARY KEY DEFAULT GEN_RANDOM_UUID(),
     account_id UUID NOT NULL,
     account_number VARCHAR(255),
-    action VARCHAR(20) NOT NULL,  -- CREATE, UPDATE, DELETE
+    "action" VARCHAR(20) NOT NULL,  -- CREATE, UPDATE, DELETE
     record_snapshot JSONB NOT NULL,
     changed_fields JSONB,
     changed_by VARCHAR(100) NOT NULL DEFAULT 'system',
@@ -355,7 +355,7 @@ CREATE TABLE IF NOT EXISTS accounts_audit (
 
 CREATE INDEX idx_accounts_audit_account_id ON accounts_audit (account_id);
 CREATE INDEX idx_accounts_audit_account_number ON accounts_audit (account_number);
-CREATE INDEX idx_accounts_audit_action ON accounts_audit (action);
+CREATE INDEX idx_accounts_audit_action ON accounts_audit ("action");
 CREATE INDEX idx_accounts_audit_created_at ON accounts_audit (created_at);
 
 -- SSIs audit table
@@ -363,7 +363,7 @@ CREATE TABLE IF NOT EXISTS ssis_audit (
     id UUID PRIMARY KEY DEFAULT GEN_RANDOM_UUID(),
     ssi_id UUID NOT NULL,
     beneficiary_account VARCHAR(255),
-    action VARCHAR(20) NOT NULL,  -- CREATE, UPDATE, DELETE
+    "action" VARCHAR(20) NOT NULL,  -- CREATE, UPDATE, DELETE
     record_snapshot JSONB NOT NULL,
     changed_fields JSONB,
     changed_by VARCHAR(100) NOT NULL DEFAULT 'system',
@@ -371,7 +371,7 @@ CREATE TABLE IF NOT EXISTS ssis_audit (
 );
 
 CREATE INDEX idx_ssis_audit_ssi_id ON ssis_audit (ssi_id);
-CREATE INDEX idx_ssis_audit_action ON ssis_audit (action);
+CREATE INDEX idx_ssis_audit_action ON ssis_audit ("action");
 CREATE INDEX idx_ssis_audit_created_at ON ssis_audit (created_at);
 
 -- Create trigger function for updated_at
@@ -405,7 +405,7 @@ FOR EACH ROW EXECUTE FUNCTION UPDATE_UPDATED_AT_COLUMN();
 CREATE TRIGGER update_instrument_codes_updated_at BEFORE UPDATE ON instrument_codes
 FOR EACH ROW EXECUTE FUNCTION UPDATE_UPDATED_AT_COLUMN();
 
-CREATE TRIGGER update_accounts_updated_at BEFORE UPDATE ON accounts
+CREATE TRIGGER update_accounts_updated_at BEFORE UPDATE ON "accounts" -- noqa: RF06
 FOR EACH ROW EXECUTE FUNCTION UPDATE_UPDATED_AT_COLUMN();
 
 CREATE TRIGGER update_ssis_updated_at BEFORE UPDATE ON ssis
