@@ -18,9 +18,9 @@ type BaseModel struct {
 // Country represents a country entity
 type Country struct {
 	BaseModel
-	Code          string `gorm:"uniqueIndex;size:2;not null" json:"code" validate:"required,len=2"`
-	Name          string `gorm:"not null" json:"name" validate:"required"`
-	NativeName    string `json:"native_name"`
+	Code          string `gorm:"column:code;uniqueIndex;size:2;not null" json:"code" validate:"required,len=2"`
+	Name          string `gorm:"column:name;not null" json:"name" validate:"required"`
+	NativeName    string `gorm:"column:native_name" json:"native_name"`
 	Alpha3Code    string `gorm:"size:3" json:"alpha3_code" validate:"len=3"`
 	PhoneCodes    string `gorm:"type:jsonb" json:"phone_codes"` // JSON array of phone codes
 	Continent     string `gorm:"size:2" json:"continent"`       // AF, AN, AS, EU, NA, OC, SA
@@ -39,13 +39,13 @@ func (Country) TableName() string {
 // Currency represents a currency entity
 type Currency struct {
 	BaseModel
-	Code          string `gorm:"uniqueIndex;size:3;not null" json:"code" validate:"required,len=3"`
-	Name          string `gorm:"not null" json:"name" validate:"required"`
+	Code          string `gorm:"column:code;uniqueIndex;size:3;not null" json:"code" validate:"required,len=3"`
+	Name          string `gorm:"column:name;not null" json:"name" validate:"required"`
 	Symbol        string `json:"symbol"`
 	SymbolNative  string `json:"symbol_native"`
 	DecimalDigits int    `gorm:"default:2" json:"decimal_digits"`
 	Rounding      int    `gorm:"default:0" json:"rounding"`
-	NamePlural    string `json:"name_plural"`
+	NamePlural    string `gorm:"column:name_plural" json:"name_plural"`
 	Active        bool   `gorm:"default:true" json:"active"`
 }
 
@@ -57,7 +57,7 @@ func (Currency) TableName() string {
 // Continent represents a continent reference entity
 type Continent struct {
 	Code      string    `gorm:"primaryKey;size:2" json:"code"`
-	Name      string    `gorm:"not null" json:"name"`
+	Name      string    `gorm:"column:name;not null" json:"name"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
