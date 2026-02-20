@@ -81,7 +81,7 @@ Write-Info "Target PG: $TargetPgVersion"
 Write-Host ""
 
 # ── Check volume exists ───────────────────────────────────────────────────────
-$volumeCheck = docker volume inspect $VolumeName 2>&1
+docker volume inspect $VolumeName 2>&1 | Out-Null
 if ($LASTEXITCODE -ne 0) {
     Write-Success "Volume '$VolumeName' does not exist - no existing data to migrate."
     Write-Success "The postgres:${TargetPgVersion}-alpine container will initialise a fresh database on first start."
