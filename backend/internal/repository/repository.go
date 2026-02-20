@@ -7,25 +7,27 @@ import (
 
 // Repositories holds all repository interfaces
 type Repositories struct {
-	Country    CountryRepository
-	Currency   CurrencyRepository
-	Entity     EntityRepository
-	Instrument InstrumentRepository
-	Account    AccountRepository
-	SSI        SSIRepository
-	LEI        LEIRepository
+	Country     CountryRepository
+	Currency    CurrencyRepository
+	Entity      EntityRepository
+	Instrument  InstrumentRepository
+	Account     AccountRepository
+	SSI         SSIRepository
+	LEI         LEIRepository
+	CodeMapping CodeMappingRepository
 }
 
 // NewRepositories creates a new repositories instance
 func NewRepositories(db *gorm.DB) *Repositories {
 	return &Repositories{
-		Country:    NewCountryRepository(db),
-		Currency:   NewCurrencyRepository(db),
-		Entity:     NewEntityRepository(db),
-		Instrument: NewInstrumentRepository(db),
-		Account:    NewAccountRepository(db),
-		SSI:        NewSSIRepository(db),
-		LEI:        NewLEIRepository(db),
+		Country:     NewCountryRepository(db),
+		Currency:    NewCurrencyRepository(db),
+		Entity:      NewEntityRepository(db),
+		Instrument:  NewInstrumentRepository(db),
+		Account:     NewAccountRepository(db),
+		SSI:         NewSSIRepository(db),
+		LEI:         NewLEIRepository(db),
+		CodeMapping: NewCodeMappingRepository(db),
 	}
 }
 
@@ -299,4 +301,63 @@ func (r *ssiRepository) Update(ssi *domain.SSI) error {
 
 func (r *ssiRepository) Delete(id string) error {
 	return r.db.Delete(&domain.SSI{}, "id = ?", id).Error
+}
+
+// CodeMappingRepository interface
+type CodeMappingRepository interface {
+	Create(mapping *domain.CodeMapping) error
+	FindByID(id string) (*domain.CodeMapping, error)
+	FindAll(limit, offset int) ([]*domain.CodeMapping, error)
+	FindByFromCode(fromSystem, fromCodeType, fromCode string) ([]*domain.CodeMapping, error)
+	Update(mapping *domain.CodeMapping) error
+	Delete(id string) error
+}
+
+type codeMappingRepository struct {
+	db *gorm.DB
+}
+
+// NewCodeMappingRepository creates a new code mapping repository
+func NewCodeMappingRepository(db *gorm.DB) CodeMappingRepository {
+	return &codeMappingRepository{db: db}
+}
+
+func (r *codeMappingRepository) Create(mapping *domain.CodeMapping) error {
+	return r.db.Create(mapping).Error
+}
+
+func (r *codeMappingRepository) FindByID(id string) (*domain.CodeMapping, error) {
+	var mapping domain.CodeMapping
+	if err := r.db.First(&mapping, "id = ?", id).Error; err != nil {
+		return nil, err
+	}
+	return &mapping, nil
+}
+
+func (r *codeMappingRepository) FindAll(limit, offset int) ([]*domain.CodeMapping, error) {
+	var mappings []*domain.CodeMapping
+	if err := r.db.Limit(limit).Offset(offset).Find(&mappings).Error; err != nil {
+		return nil, err
+	}
+	return mappings, nil
+}
+
+// FindByFromCode looks up a mapping given the source system, code type, and code value
+func (r *codeMappingRepository) FindByFromCode(fromSystem, fromCodeType, fromCode string) ([]*domain.CodeMapping, error) {
+	var mappings []*domain.CodeMapping
+	if err := r.db.Where(
+		"from_system = ? AND from_code_type = ? AND from_code = ? AND active = true",
+		fromSystem, fromCodeType, fromCode,
+	).Find(&mappings).Error; err != nil {
+		return nil, err
+	}
+	return mappings, nil
+}
+
+func (r *codeMappingRepository) Update(mapping *domain.CodeMapping) error {
+	return r.db.Save(mapping).Error
+}
+
+func (r *codeMappingRepository) Delete(id string) error {
+	return r.db.Delete(&domain.CodeMapping{}, "id = ?", id).Error
 }

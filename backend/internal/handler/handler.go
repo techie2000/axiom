@@ -21,6 +21,7 @@ type Handlers struct {
 	SSI             *SSIHandler
 	LEI             *LEIHandler
 	DataAcquisition *DataAcquisitionHandler
+	CodeMapping     *CodeMappingHandler
 }
 
 // NewHandlers creates a new handlers instance
@@ -35,6 +36,7 @@ func NewHandlers(services *service.Services, schedulerService service.SchedulerS
 		SSI:             NewSSIHandler(services.SSI),
 		LEI:             NewLEIHandler(services.LEI, schedulerService),
 		DataAcquisition: NewDataAcquisitionHandler(),
+		CodeMapping:     NewCodeMappingHandler(services.CodeMapping),
 	}
 }
 
@@ -638,4 +640,184 @@ func (h *DataAcquisitionHandler) ListJobs(c *gin.Context) {
 
 func (h *DataAcquisitionHandler) GetJob(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Get job endpoint - to be implemented"})
+}
+
+// CodeMappingHandler handles code mapping endpoints
+type CodeMappingHandler struct {
+	service service.CodeMappingService
+}
+
+// NewCodeMappingHandler creates a new code mapping handler
+func NewCodeMappingHandler(svc service.CodeMappingService) *CodeMappingHandler {
+	return &CodeMappingHandler{service: svc}
+}
+
+// List godoc
+// @Summary List code mappings
+// @Description Get list of all code mappings
+// @Tags code-mappings
+// @Accept json
+// @Produce json
+// @Param limit query int false "Limit"
+// @Param offset query int false "Offset"
+// @Success 200 {array} domain.CodeMapping
+// @Security BearerAuth
+// @Router /code-mappings [get]
+func (h *CodeMappingHandler) List(c *gin.Context) {
+	limit, err := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	if err != nil || limit < 1 || limit > 100 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid limit parameter (must be 1-100)"})
+		return
+	}
+
+	offset, err := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	if err != nil || offset < 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid offset parameter (must be >= 0)"})
+		return
+	}
+
+	mappings, err := h.service.GetAll(limit, offset)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch code mappings"})
+		return
+	}
+
+	c.JSON(http.StatusOK, mappings)
+}
+
+// Get godoc
+// @Summary Get code mapping by ID
+// @Description Get a single code mapping by ID
+// @Tags code-mappings
+// @Accept json
+// @Produce json
+// @Param id path string true "Code Mapping ID"
+// @Success 200 {object} domain.CodeMapping
+// @Security BearerAuth
+// @Router /code-mappings/{id} [get]
+func (h *CodeMappingHandler) Get(c *gin.Context) {
+	mapping, err := h.service.GetByID(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Code mapping not found"})
+		return
+	}
+	c.JSON(http.StatusOK, mapping)
+}
+
+// Create godoc
+// @Summary Create code mapping
+// @Description Create a new code mapping
+// @Tags code-mappings
+// @Accept json
+// @Produce json
+// @Param mapping body domain.CodeMapping true "Code Mapping object"
+// @Success 201 {object} domain.CodeMapping
+// @Security BearerAuth
+// @Router /code-mappings [post]
+func (h *CodeMappingHandler) Create(c *gin.Context) {
+	var mapping domain.CodeMapping
+	if err := c.ShouldBindJSON(&mapping); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	if err := h.service.Create(&mapping); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create code mapping"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, mapping)
+}
+
+// Update godoc
+// @Summary Update code mapping
+// @Description Update an existing code mapping
+// @Tags code-mappings
+// @Accept json
+// @Produce json
+// @Param id path string true "Code Mapping ID"
+// @Param mapping body domain.CodeMapping true "Code Mapping object"
+// @Success 200 {object} domain.CodeMapping
+// @Security BearerAuth
+// @Router /code-mappings/{id} [put]
+func (h *CodeMappingHandler) Update(c *gin.Context) {
+	id := c.Param("id")
+
+	mappingID, err := uuid.Parse(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		return
+	}
+
+	var mapping domain.CodeMapping
+	if err := c.ShouldBindJSON(&mapping); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	mapping.ID = mappingID
+
+	if _, err := h.service.GetByID(id); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Code mapping not found"})
+		return
+	}
+
+	if err := h.service.Update(&mapping); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update code mapping"})
+		return
+	}
+
+	c.JSON(http.StatusOK, mapping)
+}
+
+// Delete godoc
+// @Summary Delete code mapping
+// @Description Delete a code mapping
+// @Tags code-mappings
+// @Accept json
+// @Produce json
+// @Param id path string true "Code Mapping ID"
+// @Success 204
+// @Security BearerAuth
+// @Router /code-mappings/{id} [delete]
+func (h *CodeMappingHandler) Delete(c *gin.Context) {
+	if err := h.service.Delete(c.Param("id")); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete code mapping"})
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+// Translate godoc
+// @Summary Translate a code
+// @Description Translate a from_code to a to_code using active mappings
+// @Tags code-mappings
+// @Accept json
+// @Produce json
+// @Param from_system query string true "Source system (e.g. ALERT)"
+// @Param from_code_type query string true "Source code type (e.g. CCY_ALERT)"
+// @Param from_code query string true "Source code value (e.g. SWE)"
+// @Param to_code_type query string true "Target code type (e.g. CCY_CODE)"
+// @Success 200 {object} object{to_code=string}
+// @Router /code-mappings/translate [get]
+func (h *CodeMappingHandler) Translate(c *gin.Context) {
+	fromSystem := c.Query("from_system")
+	fromCodeType := c.Query("from_code_type")
+	fromCode := c.Query("from_code")
+	toCodeType := c.Query("to_code_type")
+
+	if fromSystem == "" || fromCodeType == "" || fromCode == "" || toCodeType == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "from_system, from_code_type, from_code, and to_code_type are all required",
+		})
+		return
+	}
+
+	toCode, err := h.service.Translate(fromSystem, fromCodeType, fromCode, toCodeType)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"to_code": toCode})
 }
