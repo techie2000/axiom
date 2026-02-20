@@ -245,5 +245,5 @@ install-hooks: ## Install git hooks for pre-commit validation
 validate-env: ## Validate multi-environment setup
 	@bash scripts/validate-multi-env.sh
 
-smoke-api: ## Run API smoke checks (usage: make smoke-api [env=dev|uat|prod|all] [check_login=1])
-	@pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/smoke-api.ps1 -Environment $${env:-all} $$( [ "$${check_login:-0}" = "1" ] && echo "-CheckLogin" )
+smoke-api: ## Run API smoke checks (usage: make smoke-api [env=dev|uat|prod|all] [check_login=1] [startup_wait=90])
+	@pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/smoke-api.ps1 -Environment $${env:-all} -StartupWaitSec $${startup_wait:-90} $$( [ "$${check_login:-0}" = "1" ] && echo "-CheckLogin" )

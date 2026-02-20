@@ -54,8 +54,13 @@ make docker-all-status
 # Run smoke checks for all environments
 make smoke-api
 
+# If make is unavailable, use the Windows CMD wrapper commands below
+
 # Run smoke checks for one environment
 make smoke-api env=uat
+
+# Wait longer for API readiness during startup/migrations
+make smoke-api env=dev startup_wait=120
 
 # Include login endpoint check (informational)
 make smoke-api env=prod check_login=1

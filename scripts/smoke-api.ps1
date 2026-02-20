@@ -22,6 +22,9 @@ Environment to test: dev, uat, prod, or all. Defaults to all.
 .PARAMETER TimeoutSec
 HTTP timeout in seconds for each request. Defaults to 20.
 
+.PARAMETER StartupWaitSec
+Maximum seconds to wait for /health before running checks. Defaults to 90.
+
 .PARAMETER CheckLogin
 Include POST /api/v1/auth/login in checks. This is informational and does not
 fail the run if it is not 200.
@@ -37,6 +40,10 @@ Runs smoke tests only for UAT.
 .EXAMPLE
 ./scripts/smoke-api.ps1 -Environment prod -CheckLogin
 Runs smoke tests for prod and includes login endpoint check.
+
+.EXAMPLE
+./scripts/smoke-api.ps1 -Environment dev -StartupWaitSec 120
+Waits up to 120 seconds for API readiness, then runs dev smoke tests.
 #>
 
 [CmdletBinding()]
@@ -46,6 +53,9 @@ param(
 
     [ValidateRange(5, 120)]
     [int]$TimeoutSec = 20,
+
+    [ValidateRange(0, 300)]
+    [int]$StartupWaitSec = 90,
 
     [switch]$CheckLogin
 )
@@ -155,6 +165,33 @@ function Invoke-Endpoint {
     }
 }
 
+function Wait-ApiReady {
+    param(
+        [Parameter(Mandatory = $true)][string]$BaseUrl,
+        [int]$MaxWaitSec = 90,
+        [int]$RequestTimeoutSec = 5
+    )
+
+    if ($MaxWaitSec -le 0) {
+        return $true
+    }
+
+    $deadline = (Get-Date).AddSeconds($MaxWaitSec)
+    $healthUrl = "$BaseUrl/health"
+
+    do {
+        $probe = Invoke-Endpoint -Method 'GET' -Url $healthUrl -Timeout $RequestTimeoutSec
+        if ($probe.StatusCode -eq 200 -and $probe.Content -match 'healthy') {
+            return $true
+        }
+
+        Start-Sleep -Seconds 2
+    }
+    while ((Get-Date) -lt $deadline)
+
+    return $false
+}
+
 # Resolve workspace root from script location.
 $workspaceRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $workspaceRoot
@@ -178,6 +215,7 @@ Write-Host "`n=== Axiom API Smoke Test ===" -ForegroundColor Cyan
 Write-Host "Workspace: $workspaceRoot"
 Write-Host "Targets: $($targetEnvironments -join ', ')"
 Write-Host "Timeout: ${TimeoutSec}s`n"
+Write-Host "Startup wait: ${StartupWaitSec}s max`n"
 
 foreach ($envName in $targetEnvironments) {
     $envFile = Join-Path $workspaceRoot $environmentFiles[$envName]
@@ -195,6 +233,10 @@ foreach ($envName in $targetEnvironments) {
 
     $baseUrl = "http://localhost:$backendPort"
     Write-Host "[$($envName.ToUpper())] Base URL: $baseUrl" -ForegroundColor Yellow
+
+    if (-not (Wait-ApiReady -BaseUrl $baseUrl -MaxWaitSec $StartupWaitSec -RequestTimeoutSec ([Math]::Min($TimeoutSec, 5)))) {
+        Write-Host ("  readiness=TIMEOUT after {0}s; continuing with checks" -f $StartupWaitSec) -ForegroundColor Yellow
+    }
 
     $health = Invoke-Endpoint -Method 'GET' -Url "$baseUrl/health" -Timeout $TimeoutSec
     $version = Invoke-Endpoint -Method 'GET' -Url "$baseUrl/version" -Timeout $TimeoutSec

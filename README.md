@@ -183,6 +183,8 @@ make docker-prod-logs   # Production
 
 Use the PowerShell smoke test script to quickly validate API health and auth behavior across environments.
 
+If `make` is not installed (common on Windows PowerShell), use `./scripts/smoke-api.ps1` or `scripts\smoke-api.cmd`.
+
 ```bash
 # Run smoke tests for all environments (dev, uat, prod)
 ./scripts/smoke-api.ps1
@@ -199,6 +201,12 @@ make smoke-api env=uat
 # Include login endpoint check (informational)
 ./scripts/smoke-api.ps1 -Environment prod -CheckLogin
 
+# Wait longer for API readiness during startup/migrations
+./scripts/smoke-api.ps1 -Environment dev -StartupWaitSec 120
+
+# Makefile variant with startup wait override
+make smoke-api env=dev startup_wait=120
+
 # Makefile variant
 make smoke-api env=prod check_login=1
 
@@ -214,6 +222,8 @@ The script validates:
 - `GET /version` returns `200`
 - Protected endpoint (`/api/v1/entities`) without token returns `401`
 - Protected endpoint (`/api/v1/entities`) with generated JWT is accepted by auth middleware (not `401`/`403`)
+
+The script waits for `/health` before running checks (default max wait: 90 seconds).
 
 #### Environment-Specific URLs
 
