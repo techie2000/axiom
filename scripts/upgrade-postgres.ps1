@@ -134,6 +134,9 @@ New-Item -ItemType Directory -Force -Path $BackupDir | Out-Null
 $Timestamp  = Get-Date -Format "yyyyMMdd_HHmmss"
 $BackupFile = Join-Path $BackupDir "postgres-${Environment}-v${CurrentPgVersion}-${Timestamp}.sql"
 
+# Clean up any previous leftover temp container with the same name
+docker rm -f $TempContainer 2>&1 | Out-Null
+
 Write-Info "Step 2/5: Starting temporary postgres:${CurrentPgVersion}-alpine container to take backup..."
 docker run -d `
     --name $TempContainer `
@@ -157,12 +160,15 @@ if (-not $ready) {
 }
 
 Write-Info "Dumping all databases to $BackupFile..."
-$env:PGPASSWORD = $PgPassword
-$dumpLines = docker exec $TempContainer pg_dumpall -U $PgUser
-Remove-Item Env:\PGPASSWORD -ErrorAction SilentlyContinue
+# Stream output directly to disk to avoid buffering large backups in memory.
+# Use --clean --if-exists so restore is idempotent and does not fail on pre-created roles/databases.
+docker exec -e "PGPASSWORD=$PgPassword" $TempContainer pg_dumpall --clean --if-exists -U $PgUser > $BackupFile
+$dumpExitCode = $LASTEXITCODE
 
-# Write without BOM so psql can read the file correctly
-[System.IO.File]::WriteAllLines((Resolve-Path $BackupDir | Join-Path -ChildPath (Split-Path $BackupFile -Leaf)), $dumpLines)
+if ($dumpExitCode -ne 0) {
+    docker rm -f $TempContainer 2>&1 | Out-Null
+    Write-Fail "Database backup failed while running pg_dumpall."
+}
 
 docker rm -f $TempContainer | Out-Null
 
