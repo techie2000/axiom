@@ -293,6 +293,46 @@ func (SSI) TableName() string {
 	return "ssis"
 }
 
+// CodeMapping represents a generic cross-system code mapping
+type CodeMapping struct {
+	BaseModel
+	FromSystem   string `gorm:"size:100;not null" json:"from_system" validate:"required"`
+	ToSystem     string `gorm:"size:100;not null" json:"to_system" validate:"required"`
+	FromCodeType string `gorm:"size:100;not null" json:"from_code_type" validate:"required"`
+	ToCodeType   string `gorm:"size:100;not null" json:"to_code_type" validate:"required"`
+	FromCode     string `gorm:"size:255;not null" json:"from_code" validate:"required"`
+	ToCode       string `gorm:"size:255;not null" json:"to_code" validate:"required"`
+	Description  string `gorm:"size:500" json:"description,omitempty"`
+	Active       bool   `gorm:"default:true" json:"active"`
+	CreatedBy    string `gorm:"size:100;not null;default:'system'" json:"created_by"`
+}
+
+// TableName overrides the table name
+func (CodeMapping) TableName() string {
+	return "code_mappings"
+}
+
+// CodeMappingAudit represents the complete audit history of code mapping changes
+type CodeMappingAudit struct {
+	ID            uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	CodeMappingID uuid.UUID `gorm:"type:uuid;not null;index" json:"code_mapping_id"`
+	FromSystem    string    `gorm:"size:100;not null" json:"from_system"`
+	ToSystem      string    `gorm:"size:100;not null" json:"to_system"`
+	FromCodeType  string    `gorm:"size:100;not null" json:"from_code_type"`
+	ToCodeType    string    `gorm:"size:100;not null" json:"to_code_type"`
+	FromCode      string    `gorm:"size:255;not null" json:"from_code"`
+	ToCode        string    `gorm:"size:255;not null" json:"to_code"`
+	Action        string    `gorm:"size:20;not null" json:"action"` // CREATE, UPDATE, DELETE
+	RecordSnapshot string   `gorm:"type:jsonb;not null" json:"record_snapshot"`
+	ChangedFields  string   `gorm:"type:jsonb" json:"changed_fields"`
+	ChangedBy      string   `gorm:"size:100;not null;default:'system'" json:"changed_by"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+func (CodeMappingAudit) TableName() string {
+	return "code_mappings_audit"
+}
+
 // AuditLog represents an audit trail entry
 type AuditLog struct {
 	BaseModel

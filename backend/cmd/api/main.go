@@ -301,6 +301,17 @@ func setupRouter(cfg *config.Config, h *handler.Handlers) *gin.Engine {
 			protected.PUT("/currencies/:id", h.Currency.Update)
 			protected.DELETE("/currencies/:id", h.Currency.Delete)
 
+			// Code mapping routes (full CRUD + translate)
+			codeMappings := protected.Group("/code-mappings")
+			{
+				codeMappings.GET("", h.CodeMapping.List)
+				codeMappings.GET("/translate", h.CodeMapping.Translate)
+				codeMappings.GET("/:id", h.CodeMapping.Get)
+				codeMappings.POST("", h.CodeMapping.Create)
+				codeMappings.PUT("/:id", h.CodeMapping.Update)
+				codeMappings.DELETE("/:id", h.CodeMapping.Delete)
+			}
+
 			// Domain data routes
 
 			entities := protected.Group("/entities")

@@ -1,6 +1,8 @@
 package service
 
 import (
+	"fmt"
+
 	"github.com/techie2000/axiom/internal/domain"
 	"github.com/techie2000/axiom/internal/repository"
 	"gorm.io/gorm"
@@ -8,27 +10,29 @@ import (
 
 // Services holds all service interfaces
 type Services struct {
-	Country    CountryService
-	Currency   CurrencyService
-	Entity     EntityService
-	Instrument InstrumentService
-	Account    AccountService
-	SSI        SSIService
-	LEI        LEIService
-	MasterData MasterDataService
+	Country     CountryService
+	Currency    CurrencyService
+	Entity      EntityService
+	Instrument  InstrumentService
+	Account     AccountService
+	SSI         SSIService
+	LEI         LEIService
+	MasterData  MasterDataService
+	CodeMapping CodeMappingService
 }
 
 // NewServices creates a new services instance
 func NewServices(repos *repository.Repositories, db *gorm.DB, leiDataDir string, masterDataDir string) *Services {
 	return &Services{
-		Country:    NewCountryService(repos.Country),
-		Currency:   NewCurrencyService(repos.Currency),
-		Entity:     NewEntityService(repos.Entity),
-		Instrument: NewInstrumentService(repos.Instrument),
-		Account:    NewAccountService(repos.Account),
-		SSI:        NewSSIService(repos.SSI),
-		LEI:        NewLEIService(repos.LEI, repos.Country, leiDataDir),
-		MasterData: NewMasterDataService(db, masterDataDir),
+		Country:     NewCountryService(repos.Country),
+		Currency:    NewCurrencyService(repos.Currency),
+		Entity:      NewEntityService(repos.Entity),
+		Instrument:  NewInstrumentService(repos.Instrument),
+		Account:     NewAccountService(repos.Account),
+		SSI:         NewSSIService(repos.SSI),
+		LEI:         NewLEIService(repos.LEI, repos.Country, leiDataDir),
+		MasterData:  NewMasterDataService(db, masterDataDir),
+		CodeMapping: NewCodeMappingService(repos.CodeMapping),
 	}
 }
 
@@ -248,5 +252,61 @@ func (s *ssiService) Update(ssi *domain.SSI) error {
 }
 
 func (s *ssiService) Delete(id string) error {
+	return s.repo.Delete(id)
+}
+
+// CodeMappingService interface
+type CodeMappingService interface {
+	Create(mapping *domain.CodeMapping) error
+	GetByID(id string) (*domain.CodeMapping, error)
+	GetAll(limit, offset int) ([]*domain.CodeMapping, error)
+	Translate(fromSystem, fromCodeType, fromCode, toCodeType string) (string, error)
+	Update(mapping *domain.CodeMapping) error
+	Delete(id string) error
+}
+
+type codeMappingService struct {
+	repo repository.CodeMappingRepository
+}
+
+// NewCodeMappingService creates a new code mapping service
+func NewCodeMappingService(repo repository.CodeMappingRepository) CodeMappingService {
+	return &codeMappingService{repo: repo}
+}
+
+func (s *codeMappingService) Create(mapping *domain.CodeMapping) error {
+	return s.repo.Create(mapping)
+}
+
+func (s *codeMappingService) GetByID(id string) (*domain.CodeMapping, error) {
+	return s.repo.FindByID(id)
+}
+
+func (s *codeMappingService) GetAll(limit, offset int) ([]*domain.CodeMapping, error) {
+	return s.repo.FindAll(limit, offset)
+}
+
+// Translate looks up the to_code for a given source code, returning an error when not found
+func (s *codeMappingService) Translate(fromSystem, fromCodeType, fromCode, toCodeType string) (string, error) {
+	mappings, err := s.repo.FindByFromCode(fromSystem, fromCodeType, fromCode)
+	if err != nil {
+		return "", err
+	}
+	for _, m := range mappings {
+		if m.ToCodeType == toCodeType {
+			return m.ToCode, nil
+		}
+	}
+	return "", fmt.Errorf(
+		"no active mapping found: %s/%s/%s -> to_code_type=%s",
+		fromSystem, fromCodeType, fromCode, toCodeType,
+	)
+}
+
+func (s *codeMappingService) Update(mapping *domain.CodeMapping) error {
+	return s.repo.Update(mapping)
+}
+
+func (s *codeMappingService) Delete(id string) error {
 	return s.repo.Delete(id)
 }
