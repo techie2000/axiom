@@ -17,8 +17,8 @@ BEGIN
           AND table_name = 'continents'
           AND column_name = 'name'
     ) THEN
-        ALTER TABLE continents RENAME COLUMN continent_name TO name;
+        ALTER TABLE continents RENAME COLUMN continent_name TO "name";
     END IF;
 END $$;
 
-COMMENT ON COLUMN continents.name IS 'Full continent name';
+    COMMENT ON COLUMN continents."name" IS 'Full continent name';
