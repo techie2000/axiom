@@ -38,6 +38,14 @@ docker-logs: ## Show logs from all services (default/legacy)
 
 # Development environment
 docker-dev-up: ## Start development environment (ports: 18080, 13000, 15432)
+	@if command -v bash >/dev/null 2>&1; then \
+		bash scripts/upgrade-postgres.sh dev --yes; \
+	elif command -v pwsh >/dev/null 2>&1; then \
+		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/upgrade-postgres.ps1 -Environment dev -Yes; \
+	else \
+		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run PostgreSQL upgrade precheck."; \
+		exit 1; \
+	fi
 	docker-compose --env-file .env.dev -f docker-compose.dev.yml up -d
 
 docker-dev-down: ## Stop development environment
@@ -47,10 +55,26 @@ docker-dev-logs: ## Show logs from development environment
 	docker-compose --env-file .env.dev -f docker-compose.dev.yml logs -f
 
 docker-dev-restart: ## Restart development environment
+	@if command -v bash >/dev/null 2>&1; then \
+		bash scripts/upgrade-postgres.sh dev --yes; \
+	elif command -v pwsh >/dev/null 2>&1; then \
+		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/upgrade-postgres.ps1 -Environment dev -Yes; \
+	else \
+		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run PostgreSQL upgrade precheck."; \
+		exit 1; \
+	fi
 	docker-compose --env-file .env.dev -f docker-compose.dev.yml restart
 
 # UAT environment
 docker-uat-up: ## Start UAT environment (ports: 28080, 23000, 25432)
+	@if command -v bash >/dev/null 2>&1; then \
+		bash scripts/upgrade-postgres.sh uat --yes; \
+	elif command -v pwsh >/dev/null 2>&1; then \
+		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/upgrade-postgres.ps1 -Environment uat -Yes; \
+	else \
+		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run PostgreSQL upgrade precheck."; \
+		exit 1; \
+	fi
 	docker-compose --env-file .env.uat -f docker-compose.uat.yml up -d
 
 docker-uat-down: ## Stop UAT environment
@@ -60,10 +84,26 @@ docker-uat-logs: ## Show logs from UAT environment
 	docker-compose --env-file .env.uat -f docker-compose.uat.yml logs -f
 
 docker-uat-restart: ## Restart UAT environment
+	@if command -v bash >/dev/null 2>&1; then \
+		bash scripts/upgrade-postgres.sh uat --yes; \
+	elif command -v pwsh >/dev/null 2>&1; then \
+		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/upgrade-postgres.ps1 -Environment uat -Yes; \
+	else \
+		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run PostgreSQL upgrade precheck."; \
+		exit 1; \
+	fi
 	docker-compose --env-file .env.uat -f docker-compose.uat.yml restart
 
 # Production environment
 docker-prod-up: ## Start production environment (ports: 38080, 33000, 35432)
+	@if command -v bash >/dev/null 2>&1; then \
+		bash scripts/upgrade-postgres.sh prod --yes; \
+	elif command -v pwsh >/dev/null 2>&1; then \
+		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/upgrade-postgres.ps1 -Environment prod -Yes; \
+	else \
+		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run PostgreSQL upgrade precheck."; \
+		exit 1; \
+	fi
 	docker-compose --env-file .env.prod -f docker-compose.prod.yml up -d
 
 docker-prod-down: ## Stop production environment
@@ -73,6 +113,14 @@ docker-prod-logs: ## Show logs from production environment
 	docker-compose --env-file .env.prod -f docker-compose.prod.yml logs -f
 
 docker-prod-restart: ## Restart production environment
+	@if command -v bash >/dev/null 2>&1; then \
+		bash scripts/upgrade-postgres.sh prod --yes; \
+	elif command -v pwsh >/dev/null 2>&1; then \
+		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/upgrade-postgres.ps1 -Environment prod -Yes; \
+	else \
+		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run PostgreSQL upgrade precheck."; \
+		exit 1; \
+	fi
 	docker-compose --env-file .env.prod -f docker-compose.prod.yml restart
 
 # All environments

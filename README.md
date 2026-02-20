@@ -131,6 +131,11 @@ prefix to avoid conflicts:
 
 #### Starting a Specific Environment
 
+`make docker-dev-up`, `make docker-uat-up`, and `make docker-prod-up` now run an automatic PostgreSQL
+major-version precheck/upgrade step before `docker-compose up -d`. If no upgrade is needed, startup proceeds
+immediately.
+`make docker-dev-restart`, `make docker-uat-restart`, and `make docker-prod-restart` run the same precheck.
+
 ```bash
 # Start development environment
 make docker-dev-up
