@@ -36,3 +36,4 @@ ALTER COLUMN code TYPE VARCHAR(2) USING code::VARCHAR(2);
 
 DROP DOMAIN IF EXISTS lei_raw.lei_code;
 DROP DOMAIN IF EXISTS country_code;
+DROP DOMAIN IF EXISTS region_code;

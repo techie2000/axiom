@@ -16,6 +16,22 @@ COMMENT ON DOMAIN country_code IS
 'See: http://www.iso.org/iso/home/standards/country_codes.htm';
 
 -- ============================================================================
+-- DOMAIN: region_code (created in public schema via default search_path)
+-- ISO 3166-2 region code: country code + hyphen + 1-3 uppercase alphanumeric
+-- subdivision code (4 to 6 characters total).
+-- See: https://www.iso.org/iso-3166-country-codes.html
+-- ============================================================================
+
+CREATE DOMAIN region_code AS VARCHAR(6)
+CHECK (VALUE ~ '^[A-Z]{2}-[A-Z0-9]{1,3}$'); -- noqa: RF04, CP02
+
+COMMENT ON DOMAIN region_code IS
+'ISO 3166-2 region (subdivision) code. 4 to 6 characters total: '
+'2-letter country code, a hyphen, and 1-3 uppercase alphanumeric subdivision characters. '
+'Pattern: [A-Z]{2}-[A-Z0-9]{1,3}. Examples: US-CA, GB-ENG, AU-NSW, DE-BY. '
+'See: https://www.iso.org/iso-3166-country-codes.html';
+
+-- ============================================================================
 -- DOMAIN: lei_raw.lei_code
 -- Legal Entity Identifier (ISO 17442): 18 uppercase alphanumeric characters
 -- followed by 2 check digits.
