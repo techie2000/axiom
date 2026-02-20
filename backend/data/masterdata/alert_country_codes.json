@@ -1,0 +1,560 @@
+[
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "ARG",
+        "to_code": "AR",
+        "description": "Argentina: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "AUS",
+        "to_code": "AU",
+        "description": "Australia: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "AUT",
+        "to_code": "AT",
+        "description": "Austria: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "BGD",
+        "to_code": "BD",
+        "description": "Bangladesh: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "BEL",
+        "to_code": "BE",
+        "description": "Belgium: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "BMU",
+        "to_code": "BM",
+        "description": "Bermuda: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "BRA",
+        "to_code": "BR",
+        "description": "Brazil: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "CAN",
+        "to_code": "CA",
+        "description": "Canada: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "CYM",
+        "to_code": "KY",
+        "description": "Cayman Islands: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "CHL",
+        "to_code": "CL",
+        "description": "Chile: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "CHN",
+        "to_code": "CN",
+        "description": "China: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "COL",
+        "to_code": "CO",
+        "description": "Colombia: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "CRI",
+        "to_code": "CR",
+        "description": "Costa Rica: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "DNK",
+        "to_code": "DK",
+        "description": "Denmark: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "ECU",
+        "to_code": "EC",
+        "description": "Ecuador: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "EUR",
+        "to_code": "EU",
+        "description": "Europe: ALERT Direct proprietary code to ISO region code"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "FIN",
+        "to_code": "FI",
+        "description": "Finland: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "FRA",
+        "to_code": "FR",
+        "description": "France: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "DEU",
+        "to_code": "DE",
+        "description": "Germany: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "GRC",
+        "to_code": "GR",
+        "description": "Greece: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "HKG",
+        "to_code": "HK",
+        "description": "Hong Kong: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "HUN",
+        "to_code": "HU",
+        "description": "Hungary: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "ISL",
+        "to_code": "IS",
+        "description": "Iceland: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "IND",
+        "to_code": "IN",
+        "description": "India: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "IDN",
+        "to_code": "ID",
+        "description": "Indonesia: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "IRL",
+        "to_code": "IE",
+        "description": "Ireland: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "ISR",
+        "to_code": "IL",
+        "description": "Israel: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "ITA",
+        "to_code": "IT",
+        "description": "Italy: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "JPN",
+        "to_code": "JP",
+        "description": "Japan: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "KOR",
+        "to_code": "KR",
+        "description": "Korea, Republic of (South): ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "LUX",
+        "to_code": "LU",
+        "description": "Luxembourg: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "MYS",
+        "to_code": "MY",
+        "description": "Malaysia: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "MEX",
+        "to_code": "MX",
+        "description": "Mexico: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "MAR",
+        "to_code": "MA",
+        "description": "Morocco: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "NLD",
+        "to_code": "NL",
+        "description": "Netherlands: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "NZL",
+        "to_code": "NZ",
+        "description": "New Zealand: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "NOR",
+        "to_code": "NO",
+        "description": "Norway: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "PAK",
+        "to_code": "PK",
+        "description": "Pakistan: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "PAN",
+        "to_code": "PA",
+        "description": "Panama: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "PNG",
+        "to_code": "PG",
+        "description": "Papua New Guinea: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "PER",
+        "to_code": "PE",
+        "description": "Peru: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "PHL",
+        "to_code": "PH",
+        "description": "Philippines: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "POL",
+        "to_code": "PL",
+        "description": "Poland: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "PRT",
+        "to_code": "PT",
+        "description": "Portugal: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "ROM",
+        "to_code": "RO",
+        "description": "Romania: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "RUS",
+        "to_code": "RU",
+        "description": "Russian Federation: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "WSM",
+        "to_code": "WS",
+        "description": "Samoa: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "SAU",
+        "to_code": "SA",
+        "description": "Saudi Arabia: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "SGP",
+        "to_code": "SG",
+        "description": "Singapore: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "ZAF",
+        "to_code": "ZA",
+        "description": "South Africa: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "ESP",
+        "to_code": "ES",
+        "description": "Spain: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "LKA",
+        "to_code": "LK",
+        "description": "Sri Lanka: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "SWE",
+        "to_code": "SE",
+        "description": "Sweden: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "CHE",
+        "to_code": "CH",
+        "description": "Switzerland: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "TWN",
+        "to_code": "TW",
+        "description": "Taiwan, Province of China: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "THA",
+        "to_code": "TH",
+        "description": "Thailand: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "TTO",
+        "to_code": "TT",
+        "description": "Trinidad and Tobago: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "TUR",
+        "to_code": "TR",
+        "description": "Turkey: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "GBR",
+        "to_code": "GB",
+        "description": "United Kingdom: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "USA",
+        "to_code": "US",
+        "description": "United States: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "VEN",
+        "to_code": "VE",
+        "description": "Venezuela: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    },
+    {
+        "from_system": "ALERT",
+        "to_system": "ISO",
+        "from_code_type": "ALERT_DIRECT_COUNTRY_CODE",
+        "to_code_type": "COUNTRY_CODE",
+        "from_code": "VNM",
+        "to_code": "VN",
+        "description": "Vietnam: ALERT Direct proprietary country code to ISO 3166-1 alpha-2"
+    }
+]
