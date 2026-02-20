@@ -27,7 +27,8 @@ CHECK (VALUE ~ '^[0-9A-Z]{18}[0-9]{2}$'); -- noqa: RF04, CP02
 COMMENT ON DOMAIN lei_raw.lei_code IS
 'Legal Entity Identifier domain (ISO 17442 standard). Exactly 20 characters: '
 '18 uppercase alphanumeric characters ([0-9A-Z]) followed by a 2-digit checksum. '
-'Pattern: [0-9A-Z]{18}[0-9]{2}. No spaces, control characters, or lowercase letters.';
+'Pattern: [0-9A-Z]{18}[0-9]{2}. No spaces, control characters, or lowercase letters.'
+'See: https://www.gleif.org/lei-data/access-and-use-lei-data/gleif-data-dictionary/2025-11-18_gleif-data-dictionary_v1.2_final.pdf';
 
 -- ============================================================================
 -- Apply lei_raw.lei_code to LEI columns
