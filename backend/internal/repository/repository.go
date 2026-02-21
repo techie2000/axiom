@@ -136,6 +136,19 @@ type entityRepository struct {
 	db *gorm.DB
 }
 
+var entityRelationPreloads = []string{
+	"Addresses",
+	"Addresses.Address",
+	"Addresses.Address.Country",
+}
+
+func applyEntityPreloads(db *gorm.DB) *gorm.DB {
+	for _, relation := range entityRelationPreloads {
+		db = db.Preload(relation)
+	}
+	return db
+}
+
 func NewEntityRepository(db *gorm.DB) EntityRepository {
 	return &entityRepository{db: db}
 }
@@ -146,7 +159,7 @@ func (r *entityRepository) Create(entity *domain.Entity) error {
 
 func (r *entityRepository) FindByID(id string) (*domain.Entity, error) {
 	var entity domain.Entity
-	if err := r.db.Preload("Addresses").Preload("Addresses.Address").Preload("Addresses.Address.Country").First(&entity, "id = ?", id).Error; err != nil {
+	if err := applyEntityPreloads(r.db).First(&entity, "id = ?", id).Error; err != nil {
 		return nil, err
 	}
 	return &entity, nil
@@ -154,7 +167,7 @@ func (r *entityRepository) FindByID(id string) (*domain.Entity, error) {
 
 func (r *entityRepository) FindAll(limit, offset int) ([]*domain.Entity, error) {
 	var entities []*domain.Entity
-	if err := r.db.Preload("Address").Preload("Address.Country").Limit(limit).Offset(offset).Find(&entities).Error; err != nil {
+	if err := applyEntityPreloads(r.db).Limit(limit).Offset(offset).Find(&entities).Error; err != nil {
 		return nil, err
 	}
 	return entities, nil
