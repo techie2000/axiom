@@ -51,6 +51,12 @@ type leiRepository struct {
 	db *gorm.DB
 }
 
+const notSetEntityStatusWhereClause = "entity_status IS NULL OR TRIM(entity_status) = '' OR UPPER(TRIM(entity_status)) = 'NULL'"
+
+func isNotSetStatusFilter(status string) bool {
+	return strings.EqualFold(strings.TrimSpace(status), "NULL")
+}
+
 // NewLEIRepository creates a new LEI repository instance
 func NewLEIRepository(db *gorm.DB) LEIRepository {
 	return &leiRepository{db: db}
@@ -213,9 +219,9 @@ func (r *leiRepository) FindAllLEIWithFilters(limit, offset int, search, status,
 
 	// Apply status filter
 	if status != "" {
-		if status == "NULL" {
-			// Filter for records where entity_status IS NULL or empty string
-			query = query.Where("entity_status IS NULL OR entity_status = ''")
+		if isNotSetStatusFilter(status) {
+			// Filter for records where entity_status is missing or represented as literal "NULL"
+			query = query.Where(notSetEntityStatusWhereClause)
 		} else {
 			query = query.Where("entity_status = ?", status)
 		}
