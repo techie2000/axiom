@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import ThemeToggle from '../components/ThemeToggle'
+import { formatLEICellValue, getStatusBadgePresentation, normalizeRecordNullLikeValues } from './null-utils'
 
 interface LEIRecord {
   id: string
@@ -307,11 +308,12 @@ export default function LEIRecordsPage() {
         // If we got more than requested, there are more pages - only show the requested amount
         const hasMorePages = data && data.length > itemsPerPage
         const displayData = hasMorePages ? data.slice(0, itemsPerPage) : (data || [])
+        const normalizedDisplayData = displayData.map((record: LEIRecord) => normalizeRecordNullLikeValues(record))
         
-        setRecords(displayData)
+        setRecords(normalizedDisplayData)
         setHasMorePages(hasMorePages)
         
-        if (!displayData || displayData.length === 0) {
+        if (!normalizedDisplayData || normalizedDisplayData.length === 0) {
           setError('No LEI data matches the selected filters.')
         } else {
           setError(null)
@@ -426,16 +428,16 @@ export default function LEIRecordsPage() {
       const response = await fetch(`${API_BASE_URL}/api/v1/lei/${partialRecord.lei}`)
       if (response.ok) {
         const fullRecord = await response.json()
-        setSelectedRecord(fullRecord)
+        setSelectedRecord(normalizeRecordNullLikeValues(fullRecord))
       } else {
         // Fallback to partial record if fetch fails
         console.warn('Failed to fetch complete record, using partial data')
-        setSelectedRecord(partialRecord)
+        setSelectedRecord(normalizeRecordNullLikeValues(partialRecord))
       }
     } catch (err) {
       console.error('Error fetching complete record:', err)
       // Fallback to partial record if fetch fails
-      setSelectedRecord(partialRecord)
+      setSelectedRecord(normalizeRecordNullLikeValues(partialRecord))
     }
   }
 
@@ -544,19 +546,7 @@ export default function LEIRecordsPage() {
   }
 
   const formatCellValue = (value: any, key: keyof LEIRecord): string => {
-    if (!value || value === 'null' || value === '0001-01-01T00:00:00Z') return '-'
-    
-    // Date fields
-    if (key.includes('date') && typeof value === 'string') {
-      try {
-        const date = new Date(value)
-        return date.toISOString().split('T')[0]
-      } catch {
-        return value
-      }
-    }
-    
-    return String(value)
+    return formatLEICellValue(value, key)
   }
 
   const isHqAddressSameAsLegal = (record: LEIRecord): boolean => {
@@ -1132,13 +1122,18 @@ export default function LEIRecordsPage() {
                             className={`px-4 py-3 text-sm ${column.key === 'lei' ? 'font-mono' : ''} text-gray-900 dark:text-gray-100 ${column.key.includes('date') || column.key === 'lei' ? 'whitespace-nowrap' : ''}`}
                           >
                             {isStatus ? (
+                              (() => {
+                                const statusPresentation = getStatusBadgePresentation(value)
+                                return (
                               <span className={`px-2 py-1 text-xs rounded ${
-                                value === 'ACTIVE' 
+                                statusPresentation.isActive
                                   ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
                                   : 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
                               }`}>
-                                {value || '-'}
+                                {statusPresentation.label}
                               </span>
+                                )
+                              })()
                             ) : isManagingLou ? (
                               <div>
                                 <div className="font-mono">{formatCellValue(value, column.key)}</div>
@@ -1299,13 +1294,18 @@ export default function LEIRecordsPage() {
                   <div>
                     <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</label>
                     <p className="mt-1">
+                      {(() => {
+                        const statusPresentation = getStatusBadgePresentation(selectedRecord.entity_status)
+                        return (
                       <span className={`px-2 py-1 text-xs rounded ${
-                        selectedRecord.entity_status === 'ACTIVE' 
+                        statusPresentation.isActive
                           ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
                           : 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
                       }`}>
-                        {selectedRecord.entity_status}
+                        {statusPresentation.label}
                       </span>
+                        )
+                      })()}
                     </p>
                   </div>
                   <div>

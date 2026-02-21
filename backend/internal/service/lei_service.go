@@ -961,6 +961,48 @@ type LEIValidationAuthority struct {
 	ValidationAuthorityEntityID LEIValueField `json:"ValidationAuthorityEntityID"`
 }
 
+func normalizeNullLikeValue(value string) string {
+	if strings.EqualFold(strings.TrimSpace(value), "null") {
+		return ""
+	}
+
+	return value
+}
+
+func normalizeLEIRecordNullLikeFields(record *domain.LEIRecord) {
+	if record == nil {
+		return
+	}
+
+	record.TransliteratedLegalName = normalizeNullLikeValue(record.TransliteratedLegalName)
+	record.LegalAddressLine1 = normalizeNullLikeValue(record.LegalAddressLine1)
+	record.LegalAddressLine2 = normalizeNullLikeValue(record.LegalAddressLine2)
+	record.LegalAddressLine3 = normalizeNullLikeValue(record.LegalAddressLine3)
+	record.LegalAddressLine4 = normalizeNullLikeValue(record.LegalAddressLine4)
+	record.LegalAddressCity = normalizeNullLikeValue(record.LegalAddressCity)
+	record.LegalAddressRegion = normalizeNullLikeValue(record.LegalAddressRegion)
+	record.LegalAddressCountry = normalizeNullLikeValue(record.LegalAddressCountry)
+	record.LegalAddressPostalCode = normalizeNullLikeValue(record.LegalAddressPostalCode)
+	record.HQAddressLine1 = normalizeNullLikeValue(record.HQAddressLine1)
+	record.HQAddressLine2 = normalizeNullLikeValue(record.HQAddressLine2)
+	record.HQAddressLine3 = normalizeNullLikeValue(record.HQAddressLine3)
+	record.HQAddressLine4 = normalizeNullLikeValue(record.HQAddressLine4)
+	record.HQAddressCity = normalizeNullLikeValue(record.HQAddressCity)
+	record.HQAddressRegion = normalizeNullLikeValue(record.HQAddressRegion)
+	record.HQAddressCountry = normalizeNullLikeValue(record.HQAddressCountry)
+	record.HQAddressPostalCode = normalizeNullLikeValue(record.HQAddressPostalCode)
+	record.RegistrationAuthority = normalizeNullLikeValue(record.RegistrationAuthority)
+	record.RegistrationAuthorityID = normalizeNullLikeValue(record.RegistrationAuthorityID)
+	record.RegistrationNumber = normalizeNullLikeValue(record.RegistrationNumber)
+	record.EntityCategory = normalizeNullLikeValue(record.EntityCategory)
+	record.EntitySubCategory = normalizeNullLikeValue(record.EntitySubCategory)
+	record.EntityLegalForm = normalizeNullLikeValue(record.EntityLegalForm)
+	record.EntityStatus = normalizeNullLikeValue(record.EntityStatus)
+	record.ManagingLOU = normalizeNullLikeValue(record.ManagingLOU)
+	record.SuccessorLEI = normalizeNullLikeValue(record.SuccessorLEI)
+	record.ValidationAuthority = normalizeNullLikeValue(record.ValidationAuthority)
+}
+
 // jsonToDomainRecord converts a JSON record to a domain.LEIRecord
 func (s *leiService) jsonToDomainRecord(jsonRecord *LEIJSONRecord, sourceFileID uuid.UUID) *domain.LEIRecord {
 	record := &domain.LEIRecord{
@@ -986,7 +1028,7 @@ func (s *leiService) jsonToDomainRecord(jsonRecord *LEIJSONRecord, sourceFileID 
 
 	// Extract SuccessorLEI from SuccessorEntity array (if present)
 	// Some entities have multiple successors (array), others have single or none
-	if len(jsonRecord.Entity.SuccessorEntity) > 0 && jsonRecord.Entity.SuccessorEntity[0].SuccessorLEI.Value != "" {
+	if len(jsonRecord.Entity.SuccessorEntity) > 0 && normalizeNullLikeValue(jsonRecord.Entity.SuccessorEntity[0].SuccessorLEI.Value) != "" {
 		record.SuccessorLEI = jsonRecord.Entity.SuccessorEntity[0].SuccessorLEI.Value
 	}
 
@@ -1070,6 +1112,8 @@ func (s *leiService) jsonToDomainRecord(jsonRecord *LEIJSONRecord, sourceFileID 
 		}
 	}
 
+	normalizeLEIRecordNullLikeFields(record)
+
 	return record
 }
 
@@ -1080,22 +1124,54 @@ func (s *leiService) CreateLEIRecord(record *domain.LEIRecord) error {
 
 // GetLEIByCode retrieves an LEI record by LEI code
 func (s *leiService) GetLEIByCode(lei string) (*domain.LEIRecord, error) {
-	return s.repo.FindLEIByLEI(lei)
+	record, err := s.repo.FindLEIByLEI(lei)
+	if err != nil {
+		return nil, err
+	}
+
+	normalizeLEIRecordNullLikeFields(record)
+
+	return record, nil
 }
 
 // GetLEIByID retrieves an LEI record by ID
 func (s *leiService) GetLEIByID(id string) (*domain.LEIRecord, error) {
-	return s.repo.FindLEIByID(id)
+	record, err := s.repo.FindLEIByID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	normalizeLEIRecordNullLikeFields(record)
+
+	return record, nil
 }
 
 // GetAllLEI retrieves all LEI records with pagination
 func (s *leiService) GetAllLEI(limit, offset int) ([]*domain.LEIRecord, error) {
-	return s.repo.FindAllLEI(limit, offset)
+	records, err := s.repo.FindAllLEI(limit, offset)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, record := range records {
+		normalizeLEIRecordNullLikeFields(record)
+	}
+
+	return records, nil
 }
 
 // GetAllLEIWithFilters retrieves LEI records with search and filters
 func (s *leiService) GetAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string) ([]*domain.LEIRecord, error) {
-	return s.repo.FindAllLEIWithFilters(limit, offset, search, status, category, country, sortBy, sortOrder, columns)
+	records, err := s.repo.FindAllLEIWithFilters(limit, offset, search, status, category, country, sortBy, sortOrder, columns)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, record := range records {
+		normalizeLEIRecordNullLikeFields(record)
+	}
+
+	return records, nil
 }
 
 // CountLEIRecords returns the total count of LEI records
