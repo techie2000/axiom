@@ -9,6 +9,7 @@ import (
 type Repositories struct {
 	Country     CountryRepository
 	Currency    CurrencyRepository
+	Language    LanguageRepository
 	Entity      EntityRepository
 	Instrument  InstrumentRepository
 	Account     AccountRepository
@@ -22,6 +23,7 @@ func NewRepositories(db *gorm.DB) *Repositories {
 	return &Repositories{
 		Country:     NewCountryRepository(db),
 		Currency:    NewCurrencyRepository(db),
+		Language:    NewLanguageRepository(db),
 		Entity:      NewEntityRepository(db),
 		Instrument:  NewInstrumentRepository(db),
 		Account:     NewAccountRepository(db),
@@ -119,6 +121,27 @@ func (r *currencyRepository) Update(currency *domain.Currency) error {
 
 func (r *currencyRepository) Delete(id string) error {
 	return r.db.Delete(&domain.Currency{}, "id = ?", id).Error
+}
+
+// LanguageRepository interface
+type LanguageRepository interface {
+	FindAll(limit, offset int) ([]*domain.Language, error)
+}
+
+type languageRepository struct {
+	db *gorm.DB
+}
+
+func NewLanguageRepository(db *gorm.DB) LanguageRepository {
+	return &languageRepository{db: db}
+}
+
+func (r *languageRepository) FindAll(limit, offset int) ([]*domain.Language, error) {
+	var languages []*domain.Language
+	if err := r.db.Order("code ASC").Limit(limit).Offset(offset).Find(&languages).Error; err != nil {
+		return nil, err
+	}
+	return languages, nil
 }
 
 // Additional repository implementations for Entity, Instrument, Account, SSI

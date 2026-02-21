@@ -10,6 +10,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/techie2000/axiom/internal/domain"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // MasterDataService handles loading and synchronizing master data
@@ -49,15 +50,15 @@ type LanguageData map[string]struct {
 
 // CurrencyData represents the JSON structure for currencies
 type CurrencyData map[string]struct {
-	Code               string `json:"code"`
-	Name               string `json:"name"`
-	Symbol             string `json:"symbol"`
-	SymbolNative       string `json:"symbol_native"`
-	DecimalDigits      int    `json:"decimal_digits"`
-	Rounding           int    `json:"rounding"`
-	NamePlural         string `json:"name_plural"`
-	IsAlertClsAllowed  bool   `json:"is_alert_cls_allowed"`
-	IsOfacSanctioned   bool   `json:"is_ofac_sanctioned"`
+	Code              string `json:"code"`
+	Name              string `json:"name"`
+	Symbol            string `json:"symbol"`
+	SymbolNative      string `json:"symbol_native"`
+	DecimalDigits     int    `json:"decimal_digits"`
+	Rounding          int    `json:"rounding"`
+	NamePlural        string `json:"name_plural"`
+	IsAlertClsAllowed bool   `json:"is_alert_cls_allowed"`
+	IsOfacSanctioned  bool   `json:"is_ofac_sanctioned"`
 }
 
 // CodeMappingData represents the JSON structure for a code mapping entry
@@ -213,8 +214,7 @@ func (s *masterDataService) LoadCurrencies() error {
 	}
 
 	if count > 0 {
-		log.Info().Int64("count", count).Msg("Currencies already loaded, skipping")
-		return nil
+		log.Info().Int64("count", count).Msg("Currencies already loaded, synchronizing from source file")
 	}
 
 	// Read JSON file
@@ -244,7 +244,21 @@ func (s *masterDataService) LoadCurrencies() error {
 			IsAlertClsAllowed: curr.IsAlertClsAllowed,
 			IsOfacSanctioned:  curr.IsOfacSanctioned,
 		}
-		if err := s.db.Create(currency).Error; err != nil {
+		if err := s.db.Clauses(clause.OnConflict{
+			Columns: []clause.Column{{Name: "code"}},
+			DoUpdates: clause.Assignments(map[string]interface{}{
+				"name":                 curr.Name,
+				"symbol":               curr.Symbol,
+				"symbol_native":        curr.SymbolNative,
+				"decimal_digits":       curr.DecimalDigits,
+				"rounding":             curr.Rounding,
+				"name_plural":          curr.NamePlural,
+				"active":               true,
+				"is_alert_cls_allowed": curr.IsAlertClsAllowed,
+				"is_ofac_sanctioned":   curr.IsOfacSanctioned,
+				"updated_at":           gorm.Expr("NOW()"),
+			}),
+		}).Create(currency).Error; err != nil {
 			log.Warn().Err(err).Str("code", curr.Code).Msg("Failed to insert currency, skipping")
 		}
 	}
@@ -262,8 +276,7 @@ func (s *masterDataService) LoadCountries() error {
 	}
 
 	if count > 0 {
-		log.Info().Int64("count", count).Msg("Countries already loaded, skipping")
-		return nil
+		log.Info().Int64("count", count).Msg("Countries already loaded, synchronizing from source file")
 	}
 
 	// Read JSON file
@@ -299,7 +312,22 @@ func (s *masterDataService) LoadCountries() error {
 			Region:        countryData.Region,
 			Active:        true,
 		}
-		if err := s.db.Create(country).Error; err != nil {
+		if err := s.db.Clauses(clause.OnConflict{
+			Columns: []clause.Column{{Name: "code"}},
+			DoUpdates: clause.Assignments(map[string]interface{}{
+				"alpha3_code":    countryData.Alpha3Code,
+				"name":           countryData.Name,
+				"native_name":    countryData.NativeName,
+				"phone_codes":    string(phoneCodesJSON),
+				"continent":      countryData.Continent,
+				"capital":        countryData.Capital,
+				"currency_codes": string(currencyCodesJSON),
+				"languages":      string(languagesJSON),
+				"region":         countryData.Region,
+				"active":         true,
+				"updated_at":     gorm.Expr("NOW()"),
+			}),
+		}).Create(country).Error; err != nil {
 			log.Warn().Err(err).Str("code", countryData.Code).Msg("Failed to insert country, skipping")
 		}
 	}

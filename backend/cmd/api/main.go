@@ -281,6 +281,7 @@ func setupRouter(cfg *config.Config, h *handler.Handlers) *gin.Engine {
 		v1.GET("/countries/:id", h.Country.Get)
 		v1.GET("/currencies", h.Currency.List)
 		v1.GET("/currencies/:id", h.Currency.Get)
+		v1.GET("/languages", h.Language.List)
 
 		// Public LEI data routes (read-only, no auth required)
 		v1.GET("/lei", h.LEI.ListLEI)

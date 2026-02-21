@@ -15,6 +15,7 @@ type Handlers struct {
 	Auth            *AuthHandler
 	Country         *CountryHandler
 	Currency        *CurrencyHandler
+	Language        *LanguageHandler
 	Entity          *EntityHandler
 	Instrument      *InstrumentHandler
 	Account         *AccountHandler
@@ -30,6 +31,7 @@ func NewHandlers(services *service.Services, schedulerService service.SchedulerS
 		Auth:            NewAuthHandler(),
 		Country:         NewCountryHandler(services.Country),
 		Currency:        NewCurrencyHandler(services.Currency),
+		Language:        NewLanguageHandler(services.Language),
 		Entity:          NewEntityHandler(services.Entity),
 		Instrument:      NewInstrumentHandler(services.Instrument),
 		Account:         NewAccountHandler(services.Account),
@@ -80,6 +82,11 @@ type CountryHandler struct {
 	service service.CountryService
 }
 
+const (
+	referenceDataDefaultLimit = 1000
+	referenceDataMaxLimit     = 5000
+)
+
 func NewCountryHandler(service service.CountryService) *CountryHandler {
 	return &CountryHandler{service: service}
 }
@@ -97,12 +104,12 @@ func NewCountryHandler(service service.CountryService) *CountryHandler {
 // @Router /countries [get]
 func (h *CountryHandler) List(c *gin.Context) {
 	// Parse and validate pagination parameters
-	limit, err := strconv.Atoi(c.DefaultQuery("limit", "10"))
-	if err != nil || limit < 1 || limit > 100 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid limit parameter (must be 1-100)"})
+	limit, err := strconv.Atoi(c.DefaultQuery("limit", strconv.Itoa(referenceDataDefaultLimit)))
+	if err != nil || limit < 1 || limit > referenceDataMaxLimit {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid limit parameter (must be 1-5000)"})
 		return
 	}
-	
+
 	offset, err := strconv.Atoi(c.DefaultQuery("offset", "0"))
 	if err != nil || offset < 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid offset parameter (must be >= 0)"})
@@ -178,7 +185,7 @@ func (h *CountryHandler) Create(c *gin.Context) {
 // @Router /countries/{id} [put]
 func (h *CountryHandler) Update(c *gin.Context) {
 	id := c.Param("id")
-	
+
 	// Parse UUID from path
 	countryID, err := uuid.Parse(id)
 	if err != nil {
@@ -191,7 +198,7 @@ func (h *CountryHandler) Update(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
-	
+
 	// Apply the path ID to prevent updating wrong record
 	country.ID = countryID
 
@@ -237,13 +244,31 @@ type CurrencyHandler struct {
 	service service.CurrencyService
 }
 
+type LanguageHandler struct {
+	service service.LanguageService
+}
+
 func NewCurrencyHandler(service service.CurrencyService) *CurrencyHandler {
 	return &CurrencyHandler{service: service}
 }
 
+func NewLanguageHandler(service service.LanguageService) *LanguageHandler {
+	return &LanguageHandler{service: service}
+}
+
 func (h *CurrencyHandler) List(c *gin.Context) {
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
-	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	limit, err := strconv.Atoi(c.DefaultQuery("limit", strconv.Itoa(referenceDataDefaultLimit)))
+	if err != nil || limit < 1 || limit > referenceDataMaxLimit {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid limit parameter (must be 1-5000)"})
+		return
+	}
+
+	offset, err := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	if err != nil || offset < 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid offset parameter (must be >= 0)"})
+		return
+	}
+
 	currencies, err := h.service.GetAll(limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch currencies"})
@@ -276,7 +301,7 @@ func (h *CurrencyHandler) Create(c *gin.Context) {
 
 func (h *CurrencyHandler) Update(c *gin.Context) {
 	id := c.Param("id")
-	
+
 	// Parse UUID from path
 	currencyID, err := uuid.Parse(id)
 	if err != nil {
@@ -289,16 +314,16 @@ func (h *CurrencyHandler) Update(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
-	
+
 	// Apply the path ID to prevent updating wrong record
 	currency.ID = currencyID
-	
+
 	// Verify currency exists
 	if _, err := h.service.GetByID(id); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Currency not found"})
 		return
 	}
-	
+
 	if err := h.service.Update(&currency); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update currency"})
 		return
@@ -312,6 +337,28 @@ func (h *CurrencyHandler) Delete(c *gin.Context) {
 		return
 	}
 	c.Status(http.StatusNoContent)
+}
+
+func (h *LanguageHandler) List(c *gin.Context) {
+	limit, err := strconv.Atoi(c.DefaultQuery("limit", strconv.Itoa(referenceDataDefaultLimit)))
+	if err != nil || limit < 1 || limit > referenceDataMaxLimit {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid limit parameter (must be 1-5000)"})
+		return
+	}
+
+	offset, err := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	if err != nil || offset < 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid offset parameter (must be >= 0)"})
+		return
+	}
+
+	languages, err := h.service.GetAll(limit, offset)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch languages"})
+		return
+	}
+
+	c.JSON(http.StatusOK, languages)
 }
 
 // Placeholder handlers for other entities
@@ -365,7 +412,7 @@ func (h *EntityHandler) Create(c *gin.Context) {
 
 func (h *EntityHandler) Update(c *gin.Context) {
 	id := c.Param("id")
-	
+
 	// Parse UUID from path
 	entityID, err := uuid.Parse(id)
 	if err != nil {
@@ -378,16 +425,16 @@ func (h *EntityHandler) Update(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
-	
+
 	// Apply the path ID to prevent updating wrong record
 	entity.ID = entityID
-	
+
 	// Verify entity exists
 	if _, err := h.service.GetByID(id); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Entity not found"})
 		return
 	}
-	
+
 	if err := h.service.Update(&entity); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update entity"})
 		return
@@ -439,7 +486,7 @@ func (h *InstrumentHandler) Create(c *gin.Context) {
 
 func (h *InstrumentHandler) Update(c *gin.Context) {
 	id := c.Param("id")
-	
+
 	// Parse UUID from path
 	instrumentID, err := uuid.Parse(id)
 	if err != nil {
@@ -452,16 +499,16 @@ func (h *InstrumentHandler) Update(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
-	
+
 	// Apply the path ID to prevent updating wrong record
 	instrument.ID = instrumentID
-	
+
 	// Verify instrument exists
 	if _, err := h.service.GetByID(id); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Instrument not found"})
 		return
 	}
-	
+
 	if err := h.service.Update(&instrument); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update instrument"})
 		return
@@ -513,7 +560,7 @@ func (h *AccountHandler) Create(c *gin.Context) {
 
 func (h *AccountHandler) Update(c *gin.Context) {
 	id := c.Param("id")
-	
+
 	// Parse UUID from path
 	accountID, err := uuid.Parse(id)
 	if err != nil {
@@ -526,16 +573,16 @@ func (h *AccountHandler) Update(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
-	
+
 	// Apply the path ID to prevent updating wrong record
 	account.ID = accountID
-	
+
 	// Verify account exists
 	if _, err := h.service.GetByID(id); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Account not found"})
 		return
 	}
-	
+
 	if err := h.service.Update(&account); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update account"})
 		return
@@ -587,7 +634,7 @@ func (h *SSIHandler) Create(c *gin.Context) {
 
 func (h *SSIHandler) Update(c *gin.Context) {
 	id := c.Param("id")
-	
+
 	// Parse UUID from path
 	ssiID, err := uuid.Parse(id)
 	if err != nil {
@@ -600,16 +647,16 @@ func (h *SSIHandler) Update(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
-	
+
 	// Apply the path ID to prevent updating wrong record
 	ssi.ID = ssiID
-	
+
 	// Verify SSI exists
 	if _, err := h.service.GetByID(id); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "SSI not found"})
 		return
 	}
-	
+
 	if err := h.service.Update(&ssi); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update SSI"})
 		return

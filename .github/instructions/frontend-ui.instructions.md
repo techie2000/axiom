@@ -198,6 +198,34 @@ EVERY visual change:
 - Mobile-first approach with breakpoints
 - Ensure tables are scrollable on mobile: `overflow-x-auto`
 
+### Filter Bar Consistency (Required)
+- Keep page structure consistent: **Header → Info/Error Alert (if any) → Stats Cards → Filter Bar → Data Table**.
+- Do **not** place filter controls above stats cards on list/report pages.
+- Filter controls must be wrapped in a visible bordered container (LEI pattern), e.g. `bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm rounded-lg p-6`.
+- Provide a `Clear Filters` action whenever a page has two or more filters (search counts as a filter).
+- Show `Clear Filters` only when at least one filter is active (LEI Records behavior).
+- `Clear Filters` should reset all filter inputs to default values in one click.
+- For dark mode readability, all `<select>` controls must style both the `<select>` and each `<option>` explicitly.
+
+### Column Selector Standard (Required)
+- Any page with a `Columns` control must list **all table columns** (core + optional), not only optional columns.
+- Core columns may be toggled off by users; preserve usability by defining a `defaultVisible` preset and a `Reset Default` action.
+- Include `Select All` and `Reset Default` actions in the selector.
+- The `Columns` count should reflect current visible column count.
+- Use the LEI Records pattern as the baseline implementation for grouped or ungrouped column selectors.
+
+### Landing Cards Standard (Required)
+- Cards within the same landing-page section must use a shared component and identical interaction/visual behavior.
+- In the **Master Data Management** section, cards (Instruments, Accounts, SSI, Code Mappings) must keep consistent structure:
+  title, description, single `Protected` badge, icon placement, min height, and hover behavior.
+- Do not add special-case badges or card-specific layout differences within the same section unless explicitly requested.
+
+```tsx
+<select className="bg-white dark:bg-white/5 text-gray-900 dark:text-white border-gray-300 dark:border-white/20">
+  <option className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white" value="">All</option>
+</select>
+```
+
 ## Accessibility
 
 ### ARIA Labels

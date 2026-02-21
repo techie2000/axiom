@@ -12,6 +12,7 @@ import (
 type Services struct {
 	Country     CountryService
 	Currency    CurrencyService
+	Language    LanguageService
 	Entity      EntityService
 	Instrument  InstrumentService
 	Account     AccountService
@@ -26,6 +27,7 @@ func NewServices(repos *repository.Repositories, db *gorm.DB, leiDataDir string,
 	return &Services{
 		Country:     NewCountryService(repos.Country),
 		Currency:    NewCurrencyService(repos.Currency),
+		Language:    NewLanguageService(repos.Language),
 		Entity:      NewEntityService(repos.Entity),
 		Instrument:  NewInstrumentService(repos.Instrument),
 		Account:     NewAccountService(repos.Account),
@@ -108,6 +110,22 @@ func (s *currencyService) Update(currency *domain.Currency) error {
 
 func (s *currencyService) Delete(id string) error {
 	return s.repo.Delete(id)
+}
+
+type LanguageService interface {
+	GetAll(limit, offset int) ([]*domain.Language, error)
+}
+
+type languageService struct {
+	repo repository.LanguageRepository
+}
+
+func NewLanguageService(repo repository.LanguageRepository) LanguageService {
+	return &languageService{repo: repo}
+}
+
+func (s *languageService) GetAll(limit, offset int) ([]*domain.Language, error) {
+	return s.repo.FindAll(limit, offset)
 }
 
 // EntityService, InstrumentService, AccountService, SSIService follow the same pattern

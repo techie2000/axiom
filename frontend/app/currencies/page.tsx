@@ -48,7 +48,10 @@ export default function CurrenciesPage() {
       if (response.ok) {
         const data = await response.json()
         console.log('Currencies API response:', data)
-        setCurrencies(data || [])
+        const sortedCurrencies = Array.isArray(data)
+          ? [...data].sort((a, b) => (a?.name || '').localeCompare(b?.name || ''))
+          : []
+        setCurrencies(sortedCurrencies)
         if (!data || data.length === 0) {
           setError('No currencies data available yet. The database may need to be populated with reference data.')
         } else {
@@ -67,12 +70,13 @@ export default function CurrenciesPage() {
 
   const alertClsCount = currencies.filter(c => c.is_alert_cls_allowed).length
   const ofacCount = currencies.filter(c => c.is_ofac_sanctioned).length
+  const normalize = (value: string | undefined | null) => (value || '').toLowerCase()
 
   const filteredCurrencies = currencies.filter(currency => {
     const matchesSearch =
-      currency.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      currency.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (currency.symbol && currency.symbol.toLowerCase().includes(searchTerm.toLowerCase()))
+      normalize(currency.name).includes(normalize(searchTerm)) ||
+      normalize(currency.code).includes(normalize(searchTerm)) ||
+      normalize(currency.symbol).includes(normalize(searchTerm))
 
     const matchesCompliance =
       complianceFilter === 'all' ||
@@ -151,23 +155,25 @@ export default function CurrenciesPage() {
         </div>
 
         {/* Search and compliance filter */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-6">
-          <input
-            type="text"
-            placeholder="Search by name, code, or symbol..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1 px-4 py-2 border border-gray-300 dark:border-white/20 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-white/5 text-gray-900 dark:text-white"
-          />
-          <select
-            value={complianceFilter}
-            onChange={(e) => setComplianceFilter(e.target.value as ComplianceFilter)}
-            className="px-4 py-2 border border-gray-300 dark:border-white/20 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-          >
-            <option className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white" value="all">All Currencies</option>
-            <option className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white" value="alert_cls">ALERT CLS Allowed</option>
-            <option className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white" value="ofac">OFAC Sanctioned</option>
-          </select>
+        <div className="mb-6 bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm rounded-lg p-6">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <input
+              type="text"
+              placeholder="Search by name, code, or symbol..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="flex-1 px-4 py-2 border border-gray-300 dark:border-white/20 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-white/5 text-gray-900 dark:text-white"
+            />
+            <select
+              value={complianceFilter}
+              onChange={(e) => setComplianceFilter(e.target.value as ComplianceFilter)}
+              className="px-4 py-2 border border-gray-300 dark:border-white/20 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+            >
+              <option className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white" value="all">All Currencies</option>
+              <option className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white" value="alert_cls">ALERT CLS Allowed</option>
+              <option className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white" value="ofac">OFAC Sanctioned</option>
+            </select>
+          </div>
         </div>
 
         {/* Currencies Table */}
@@ -177,7 +183,7 @@ export default function CurrenciesPage() {
               <thead className="bg-gray-50 dark:bg-white/5">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Name
+                    Name (Plural)
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Code
@@ -228,7 +234,9 @@ export default function CurrenciesPage() {
                             ✓ Allowed
                           </span>
                         ) : (
-                          <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>
+                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-300">
+                            ✕ Not Allowed
+                          </span>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -237,7 +245,9 @@ export default function CurrenciesPage() {
                             ⚠ Sanctioned
                           </span>
                         ) : (
-                          <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>
+                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300">
+                            ✓ Not Sanctioned
+                          </span>
                         )}
                       </td>
                     </tr>
