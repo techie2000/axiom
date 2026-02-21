@@ -118,7 +118,7 @@ axiom/
 - Go 1.21+
 - Node.js 18+
 - PostgreSQL 17+
-- RabbitMQ 4.0+
+- RabbitMQ 4.2+
 - Docker & Docker Compose
 
 ### Multi-Environment Support
