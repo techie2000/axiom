@@ -21,4 +21,4 @@ BEGIN
     END IF;
 END $$;
 
-    COMMENT ON COLUMN continents."name" IS 'Full continent name';
+COMMENT ON COLUMN continents."name" IS 'Full continent name';
