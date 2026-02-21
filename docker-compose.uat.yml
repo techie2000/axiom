@@ -19,7 +19,7 @@ services:
       - axiom-uat
 
   rabbitmq:
-    image: rabbitmq:3.12-management-alpine
+    image: rabbitmq:4.2-management-alpine
     container_name: ${COMPOSE_PROJECT_NAME}-rabbitmq
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
