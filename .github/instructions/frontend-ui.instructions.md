@@ -214,6 +214,13 @@ EVERY visual change:
 - The `Columns` count should reflect current visible column count.
 - Use the LEI Records pattern as the baseline implementation for grouped or ungrouped column selectors.
 
+### Virtual/Derived Columns Standard (Required)
+- Prefer **virtual/derived UI columns** for deterministic display data (for example, country flag emoji from ISO alpha-2 country code).
+- Do not persist deterministic presentation-only fields in database schemas or initial seed data unless there is a clear business requirement.
+- Implement derived value logic in a reusable utility and consume it across pages to ensure consistency.
+- For country flags, use the shared helper in `frontend/app/lib/country-flag.ts` instead of duplicating conversion logic.
+- If a page does not yet have a finalized table/list layout (for example, placeholder/coming-soon pages), defer derived column rendering until the page schema is defined.
+
 ### Landing Cards Standard (Required)
 - Cards within the same landing-page section must use a shared component and identical interaction/visual behavior.
 - In the **Master Data Management** section, cards (Instruments, Accounts, SSI, Code Mappings) must keep consistent structure:

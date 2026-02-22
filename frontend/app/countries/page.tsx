@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import ThemeToggle from '../components/ThemeToggle'
+import { getCountryFlagEmoji } from '../lib/country-flag'
 
 interface Country {
   id: string
@@ -26,6 +27,7 @@ interface LanguageOption {
 
 type CountryColumnKey =
   | 'name'
+  | 'flag'
   | 'code'
   | 'alpha3_code'
   | 'continent'
@@ -42,6 +44,7 @@ interface CountryColumnConfig {
 
 const COUNTRY_COLUMNS: CountryColumnConfig[] = [
   { key: 'name', label: 'Name (Native Name)', defaultVisible: true },
+  { key: 'flag', label: 'Flag', defaultVisible: false },
   { key: 'code', label: 'Alpha-2', defaultVisible: true },
   { key: 'alpha3_code', label: 'Alpha-3', defaultVisible: true },
   { key: 'continent', label: 'Continent', defaultVisible: true },
@@ -525,6 +528,11 @@ export default function CountriesPage() {
                     Alpha-2
                   </th>
                 )}
+                {visibleColumns.has('flag') && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Flag
+                  </th>
+                )}
                 {visibleColumns.has('alpha3_code') && (
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Alpha-3
@@ -576,6 +584,11 @@ export default function CountriesPage() {
                         <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded font-mono">
                           {country.code || '—'}
                         </span>
+                      </td>
+                    )}
+                    {visibleColumns.has('flag') && (
+                      <td className="px-6 py-4 whitespace-nowrap text-2xl text-gray-900 dark:text-white" title={country.code || '—'}>
+                        {getCountryFlagEmoji(country.code)}
                       </td>
                     )}
                     {visibleColumns.has('alpha3_code') && (

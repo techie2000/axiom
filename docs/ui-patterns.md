@@ -5,7 +5,34 @@ Reusable UI patterns and components for the Axiom frontend. These patterns have 
 ## Table of Contents
 
 - [Sticky Headers with Smooth Transitions](#sticky-headers-with-smooth-transitions)
+- [Virtual Columns (Derived Display Data)](#virtual-columns-derived-display-data)
 - [Best Practices](#best-practices)
+
+---
+
+## Virtual Columns (Derived Display Data)
+
+Use virtual columns for values that are deterministic and presentation-oriented, rather than storing them in the
+database.
+
+### Country Flag Emoji Pattern
+
+- Source of truth: ISO alpha-2 country code (for example, `GB`, `SE`, `JP`)
+- Derived value: flag emoji rendered in UI
+- Shared helper: `frontend/app/lib/country-flag.ts`
+
+### Why this pattern
+
+- Avoids schema bloat for non-business data
+- Keeps seed/reference loads simpler
+- Ensures one consistent conversion implementation across pages
+
+### Reuse guidance
+
+- Import and reuse the shared helper anywhere country flags are shown (countries, SSI, accounts, etc.)
+- Do not duplicate inline conversion code in page components
+- If a module is still in placeholder state (no finalized list/table schema), defer adding the virtual column until
+  that schema is defined
 
 ---
 
