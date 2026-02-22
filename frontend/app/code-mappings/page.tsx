@@ -20,10 +20,73 @@ interface CodeMapping {
   updated_at: string
 }
 
+const SAMPLE_CODE_MAPPINGS: CodeMapping[] = [
+  {
+    id: 'sample-1',
+    from_system: 'ALERT',
+    to_system: 'AXIOM',
+    from_code_type: 'COUNTRY',
+    to_code_type: 'ISO_COUNTRY',
+    from_code: 'SWE',
+    to_code: 'SE',
+    description: 'Map ALERT country code SWE to ISO alpha-2 SE',
+    active: true,
+    created_by: 'system',
+    created_at: '2026-02-20T09:00:00Z',
+    updated_at: '2026-02-20T09:00:00Z',
+  },
+  {
+    id: 'sample-2',
+    from_system: 'ALERT',
+    to_system: 'AXIOM',
+    from_code_type: 'CURRENCY',
+    to_code_type: 'ISO_CURRENCY',
+    from_code: 'US DOLLAR',
+    to_code: 'USD',
+    description: 'Normalize currency label to ISO code',
+    active: true,
+    created_by: 'system',
+    created_at: '2026-02-20T09:05:00Z',
+    updated_at: '2026-02-20T09:05:00Z',
+  },
+  {
+    id: 'sample-3',
+    from_system: 'LEGACY',
+    to_system: 'AXIOM',
+    from_code_type: 'SETTLEMENT_METHOD',
+    to_code_type: 'SETTLEMENT_METHOD',
+    from_code: 'DVP',
+    to_code: 'Direct',
+    description: 'Legacy DVP value mapped to AXIOM settlement method',
+    active: true,
+    created_by: 'system',
+    created_at: '2026-02-20T09:10:00Z',
+    updated_at: '2026-02-20T09:10:00Z',
+  },
+]
+
+const getAuthToken = (): string | null => {
+  if (typeof window === 'undefined') {
+    return null
+  }
+
+  const keys = ['token', 'jwt', 'authToken', 'access_token']
+  for (const key of keys) {
+    const value = localStorage.getItem(key)
+    if (value && value.trim()) {
+      return value.trim()
+    }
+  }
+
+  return null
+}
+
 export default function CodeMappingsPage() {
   const [mappings, setMappings] = useState<CodeMapping[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [dataMode, setDataMode] = useState<'api' | 'sample'>('api')
+  const [infoMessage, setInfoMessage] = useState('')
+  const [expandedWidth, setExpandedWidth] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
 
   const API_BASE_URL = typeof window !== 'undefined'
@@ -38,28 +101,43 @@ export default function CodeMappingsPage() {
 
   const fetchMappings = async () => {
     try {
+      const headers: Record<string, string> = {
+        Accept: 'application/json',
+      }
+
+      const token = getAuthToken()
+      if (token) {
+        headers.Authorization = `Bearer ${token}`
+      }
+
       const response = await fetch(`${API_BASE_URL}/api/v1/code-mappings?limit=100`, {
-        headers: {
-          'Accept': 'application/json'
-        }
+        headers,
       })
 
       if (response.ok) {
-        const data = await response.json()
-        setMappings(data || [])
-        if (!data || data.length === 0) {
-          setError('No code mappings have been configured yet.')
-        } else {
-          setError(null)
-        }
-      } else if (response.status === 401) {
-        setError('Authentication required. Please log in to view code mappings.')
+        const data: CodeMapping[] = await response.json()
+        const resolvedMappings = Array.isArray(data) ? data : []
+        setMappings(resolvedMappings)
+        setDataMode('api')
+        setInfoMessage(
+          resolvedMappings.length > 0
+            ? 'Loaded from Code Mappings API.'
+            : 'No code mappings have been configured yet. Connect data to begin.'
+        )
       } else {
-        setError(`API returned ${response.status}: ${response.statusText}`)
+        setMappings(SAMPLE_CODE_MAPPINGS)
+        setDataMode('sample')
+        if (response.status === 401 || response.status === 403) {
+          setInfoMessage('Code Mappings API requires authentication. Showing sample data.')
+        } else {
+          setInfoMessage(`Code Mappings API returned ${response.status}. Showing sample data.`)
+        }
       }
     } catch (err) {
       console.error('Code mappings fetch error:', err)
-      setError('Unable to connect to backend API. Please ensure the backend service is running at ' + API_BASE_URL)
+      setMappings(SAMPLE_CODE_MAPPINGS)
+      setDataMode('sample')
+      setInfoMessage('Code Mappings API unavailable. Showing sample data.')
     } finally {
       setLoading(false)
     }
@@ -81,7 +159,7 @@ export default function CodeMappingsPage() {
   if (loading) {
     return (
       <div className="min-h-screen p-8">
-        <div className="max-w-7xl mx-auto">
+        <div className={`${expandedWidth ? 'max-w-full' : 'max-w-7xl'} mx-auto transition-all duration-300`}>
           <div className="text-center py-20">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
             <p className="mt-4 opacity-70">Loading code mappings...</p>
@@ -93,7 +171,7 @@ export default function CodeMappingsPage() {
 
   return (
     <div className="min-h-screen p-8">
-      <div className="max-w-7xl mx-auto">
+      <div className={`${expandedWidth ? 'max-w-full' : 'max-w-7xl'} mx-auto transition-all duration-300`}>
         {/* Header */}
         <div className="mb-8 flex justify-between items-start">
           <div>
@@ -105,7 +183,16 @@ export default function CodeMappingsPage() {
               Cross-system code translation — map external codes (e.g., ALERT) to internal AXIOM identifiers
             </p>
           </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setExpandedWidth(!expandedWidth)}
+              className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 transition-colors text-white text-sm font-medium"
+              title={expandedWidth ? 'Normal Width' : 'Expanded Width'}
+            >
+              {expandedWidth ? '⬅️ Normal' : '↔️ Expand'}
+            </button>
+            <ThemeToggle />
+          </div>
         </div>
 
         {/* Info box explaining the feature */}
@@ -118,24 +205,17 @@ export default function CodeMappingsPage() {
           </p>
         </div>
 
-        {/* Error/Notice Alert */}
-        {error && (
-          <div className={`mb-6 p-4 rounded-lg border ${
-            error.includes('No code mappings')
-              ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800'
-              : 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800'
-          }`}>
-            <p className={
-              error.includes('No code mappings')
-                ? 'text-yellow-800 dark:text-yellow-200'
-                : 'text-red-800 dark:text-red-200'
-            }>
-              <span className="font-semibold">
-                {error.includes('No code mappings') ? '📋 Notice:' : '⚠️ Error:'}
-              </span> {error}
-            </p>
-          </div>
-        )}
+        {/* Data Source Alert */}
+        <div
+          className={`mb-6 p-4 rounded-lg border ${
+            dataMode === 'api' ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'
+          }`}
+        >
+          <p className={dataMode === 'api' ? 'text-green-800' : 'text-yellow-800'}>
+            <span className="font-semibold">{dataMode === 'api' ? '✅ Data Source:' : '📋 Notice:'}</span>{' '}
+            {infoMessage}
+          </p>
+        </div>
 
         {/* Search */}
         <div className="mb-6">
@@ -243,7 +323,7 @@ export default function CodeMappingsPage() {
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate">
+                      <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 max-w-xl whitespace-normal break-words leading-relaxed align-top">
                         {mapping.description || '—'}
                       </td>
                     </tr>

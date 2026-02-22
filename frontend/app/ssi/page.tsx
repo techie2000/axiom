@@ -581,17 +581,17 @@ export default function SSIPage() {
                   filteredRecords.map((record) => (
                     <tr key={record.id} className="hover:bg-blue-50 dark:hover:bg-white/10 transition-colors">
                       {visibleColumns.has('ssi_reference') && (
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                        <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white whitespace-normal break-words leading-relaxed align-top">
                           {record.ssi_reference}
                         </td>
                       )}
                       {visibleColumns.has('counterparty_name') && (
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
+                        <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300 whitespace-normal break-words leading-relaxed align-top">
                           {record.counterparty_name}
                         </td>
                       )}
                       {visibleColumns.has('account_name') && (
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
+                        <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300 whitespace-normal break-words leading-relaxed align-top">
                           {record.account_name}
                         </td>
                       )}
@@ -622,7 +622,7 @@ export default function SSIPage() {
                         </td>
                       )}
                       {visibleColumns.has('iban') && (
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 font-mono">
+                        <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 font-mono whitespace-normal break-all leading-relaxed align-top">
                           {record.iban || '—'}
                         </td>
                       )}

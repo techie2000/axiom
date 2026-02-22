@@ -28,11 +28,73 @@ interface ProcessingStatus {
   error_message: string
 }
 
+const SAMPLE_FULL_STATUS: ProcessingStatus = {
+  id: 'sample-full',
+  job_type: 'DAILY_FULL',
+  status: 'IDLE',
+  last_run_at: '2026-02-20T01:00:00Z',
+  next_run_at: '2026-02-23T01:00:00Z',
+  last_success_at: '2026-02-20T01:25:00Z',
+  current_source_file_id: 'sample-file-full',
+  current_source_file: {
+    id: 'sample-file-full',
+    file_name: 'gleif_full_20260220.xml.zip',
+    processing_status: 'COMPLETED',
+    total_records: 1200,
+    processed_records: 1200,
+    failed_records: 0,
+    last_processed_lei: '529900T8BM49AURSDO55',
+    failure_category: '',
+    processing_error: '',
+  },
+  error_message: '',
+}
+
+const SAMPLE_DELTA_STATUS: ProcessingStatus = {
+  id: 'sample-delta',
+  job_type: 'DAILY_DELTA',
+  status: 'IDLE',
+  last_run_at: '2026-02-22T09:00:00Z',
+  next_run_at: '2026-02-22T10:00:00Z',
+  last_success_at: '2026-02-22T09:02:30Z',
+  current_source_file_id: 'sample-file-delta',
+  current_source_file: {
+    id: 'sample-file-delta',
+    file_name: 'gleif_delta_20260222.xml.zip',
+    processing_status: 'COMPLETED',
+    total_records: 150,
+    processed_records: 150,
+    failed_records: 0,
+    last_processed_lei: '5493001KJTIIGC8Y1R12',
+    failure_category: '',
+    processing_error: '',
+  },
+  error_message: '',
+}
+
+const getAuthToken = (): string | null => {
+  if (typeof window === 'undefined') {
+    return null
+  }
+
+  const keys = ['token', 'jwt', 'authToken', 'access_token']
+  for (const key of keys) {
+    const value = localStorage.getItem(key)
+    if (value && value.trim()) {
+      return value.trim()
+    }
+  }
+
+  return null
+}
+
 export default function LEIStatusPage() {
   const [fullStatus, setFullStatus] = useState<ProcessingStatus | null>(null)
   const [deltaStatus, setDeltaStatus] = useState<ProcessingStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [dataMode, setDataMode] = useState<'api' | 'sample'>('api')
+  const [infoMessage, setInfoMessage] = useState('')
   const [autoRefresh, setAutoRefresh] = useState(true)
 
   const API_BASE_URL = typeof window !== 'undefined'
@@ -41,41 +103,64 @@ export default function LEIStatusPage() {
 
   const fetchStatus = async () => {
     try {
-      // For now, we'll call without auth - you'll need to add JWT token
+      const headers: Record<string, string> = {
+        Accept: 'application/json',
+      }
+
+      const token = getAuthToken()
+      if (token) {
+        headers.Authorization = `Bearer ${token}`
+      }
+
       const [fullResponse, deltaResponse] = await Promise.all([
         fetch(`${API_BASE_URL}/api/v1/lei/status/DAILY_FULL`, {
-          headers: {
-            'Accept': 'application/json',
-            // Add auth when ready: 'Authorization': `Bearer ${token}`
-          }
+          headers,
         }).catch(() => null),
         fetch(`${API_BASE_URL}/api/v1/lei/status/DAILY_DELTA`, {
-          headers: {
-            'Accept': 'application/json',
-            // Add auth when ready: 'Authorization': `Bearer ${token}`
-          }
+          headers,
         }).catch(() => null)
       ])
+
+      const unauthorized = fullResponse?.status === 401 || fullResponse?.status === 403 || deltaResponse?.status === 401 || deltaResponse?.status === 403
+      const hasApiData = Boolean((fullResponse && fullResponse.ok) || (deltaResponse && deltaResponse.ok))
 
       if (fullResponse && fullResponse.ok) {
         const fullData = await fullResponse.json()
         console.log('LEI Full Status:', fullData)
         setFullStatus(fullData)
-      } else {
+      } else if (!hasApiData) {
         console.error('Failed to fetch full status:', fullResponse?.status)
+        setFullStatus(SAMPLE_FULL_STATUS)
       }
 
       if (deltaResponse && deltaResponse.ok) {
         const deltaData = await deltaResponse.json()
         console.log('LEI Delta Status:', deltaData)
         setDeltaStatus(deltaData)
-      } else {
+      } else if (!hasApiData) {
         console.error('Failed to fetch delta status:', deltaResponse?.status)
+        setDeltaStatus(SAMPLE_DELTA_STATUS)
+      }
+
+      if (hasApiData) {
+        setDataMode('api')
+        setInfoMessage('Loaded from LEI status API.')
+      } else {
+        setDataMode('sample')
+        setInfoMessage(
+          unauthorized
+            ? 'LEI status API requires authentication. Showing sample data.'
+            : 'LEI status API unavailable. Showing sample data.'
+        )
       }
 
       setError(null)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch status')
+      setFullStatus(SAMPLE_FULL_STATUS)
+      setDeltaStatus(SAMPLE_DELTA_STATUS)
+      setDataMode('sample')
+      setInfoMessage('LEI status API unavailable. Showing sample data.')
+      setError(null)
     } finally {
       setLoading(false)
     }
@@ -354,17 +439,19 @@ export default function LEIStatusPage() {
           </div>
         </div>
 
-        {/* Error Alert */}
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-red-800">
-              <span className="font-semibold">Connection Error:</span> {error}
-            </p>
-            <p className="text-sm text-red-600 mt-1">
-              Make sure the backend is running and you have proper authentication.
-            </p>
-          </div>
-        )}
+        {/* Data Source Alert */}
+        <div
+          className={`mb-6 p-4 rounded-lg border ${
+            dataMode === 'api' ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'
+          }`}
+        >
+          <p className={dataMode === 'api' ? 'text-green-800' : 'text-yellow-800'}>
+            <span className="font-semibold">{dataMode === 'api' ? '✅ Data Source:' : '📋 Notice:'}</span> {infoMessage}
+          </p>
+          {error && (
+            <p className="text-sm mt-1 text-yellow-700">{error}</p>
+          )}
+        </div>
 
         {/* Status Cards */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

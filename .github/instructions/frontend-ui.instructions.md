@@ -229,6 +229,18 @@ EVERY visual change:
 - Preserve dark mode row hover behavior (for example, `dark:hover:bg-white/10` or `dark:hover:bg-white/5`).
 - Include `transition-colors` on interactive table rows for consistent visual feedback.
 
+### Table Cell Content Visibility Standard (Required)
+- Do not truncate critical table data values by default (avoid `truncate` for primary business fields).
+- Cells containing potentially long values (for example description, names, free-text references) must wrap and expand row height.
+- Use wrapping classes such as `whitespace-normal break-words leading-relaxed` to keep full values visible.
+- Use top alignment (`align-top`) on multi-line cells to preserve readability across rows.
+
+### Protected API Fallback Standard (Required)
+- Pages backed by protected APIs must attempt authenticated fetch using existing client token keys (`token`, `jwt`, `authToken`, `access_token`).
+- On `401`/`403` or API unavailability, render approved sample data instead of an empty/broken page.
+- Always show a clear data-source banner indicating whether data is from API (`✅ Data Source`) or sample fallback (`📋 Notice`).
+- Sample records must use realistic but non-sensitive values and must not include restricted tenant-specific naming.
+
 ### Virtual/Derived Columns Standard (Required)
 - Prefer **virtual/derived UI columns** for deterministic display data (for example, country flag emoji from ISO alpha-2 country code).
 - Do not persist deterministic presentation-only fields in database schemas or initial seed data unless there is a clear business requirement.

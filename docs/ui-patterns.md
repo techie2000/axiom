@@ -7,6 +7,8 @@ tested and optimized for performance, accessibility, and user experience.
 
 - [Sticky Headers with Smooth Transitions](#sticky-headers-with-smooth-transitions)
 - [Virtual Columns (Derived Display Data)](#virtual-columns-derived-display-data)
+- [Protected API Sample Fallback](#protected-api-sample-fallback)
+- [Table Cell Content Visibility](#table-cell-content-visibility)
 - [Best Practices](#best-practices)
 
 ---
@@ -34,6 +36,69 @@ database.
 - Do not duplicate inline conversion code in page components
 - If a module is still in placeholder state (no finalized list/table schema), defer adding the virtual column until
   that schema is defined
+
+---
+
+## Protected API Sample Fallback
+
+Use a consistent fallback strategy for pages that depend on authenticated APIs.
+
+### Why this pattern
+
+- Keeps pages usable when users are not authenticated yet
+- Avoids blank/error-only screens during local development and demos
+- Provides deterministic UI behavior while still surfacing API/auth status
+
+### Required behavior
+
+- Attempt authenticated fetch using existing token keys (`token`, `jwt`, `authToken`, `access_token`)
+- On `401`/`403` or API connectivity failures, load approved sample rows
+- Display a visible banner indicating source:
+  - `✅ Data Source:` for live API data
+  - `📋 Notice:` for sample fallback
+
+### Template
+
+```tsx
+const [dataMode, setDataMode] = useState<'api' | 'sample'>('api')
+const [infoMessage, setInfoMessage] = useState('')
+
+if (response.ok) {
+  setRows(apiRows)
+  setDataMode('api')
+  setInfoMessage('Loaded from API.')
+} else {
+  setRows(SAMPLE_ROWS)
+  setDataMode('sample')
+  setInfoMessage('API requires authentication. Showing sample data.')
+}
+```
+
+---
+
+## Table Cell Content Visibility
+
+Use wrapping cell styles for fields that can exceed a single line.
+
+### Why this pattern
+
+- Prevents hidden business values in narrow columns
+- Keeps sample and live data equally readable
+- Allows row height to expand naturally instead of clipping content
+
+### Required behavior
+
+- Avoid `truncate` for primary data fields.
+- Use wrapped multi-line cells for long text: `whitespace-normal break-words leading-relaxed align-top`.
+- Keep tag/code-style compact cells (`whitespace-nowrap`) only for short fixed-width values.
+
+### Template
+
+```tsx
+<td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300 whitespace-normal break-words leading-relaxed align-top">
+  {row.description || '—'}
+</td>
+```
 
 ---
 
