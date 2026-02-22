@@ -64,6 +64,7 @@ const CONTINENT_LABELS: Record<string, string> = {
 export default function CountriesPage() {
   const [countries, setCountries] = useState<Country[]>([])
   const [languageMap, setLanguageMap] = useState<Record<string, string>>({})
+  const [languageMapLoadAttempted, setLanguageMapLoadAttempted] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
@@ -82,7 +83,6 @@ export default function CountriesPage() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       fetchCountries()
-      fetchLanguages()
     }
   }, [])
 
@@ -277,6 +277,15 @@ export default function CountriesPage() {
       .join(', ')
   }
 
+  const ensureLanguagesLoaded = () => {
+    if (languageMapLoadAttempted) {
+      return
+    }
+
+    setLanguageMapLoadAttempted(true)
+    fetchLanguages()
+  }
+
   const toggleColumn = (column: CountryColumnKey) => {
     setVisibleColumns((current) => {
       const next = new Set(current)
@@ -284,6 +293,9 @@ export default function CountriesPage() {
         next.delete(column)
       } else {
         next.add(column)
+        if (column === 'languages') {
+          ensureLanguagesLoaded()
+        }
       }
       return next
     })
@@ -364,7 +376,10 @@ export default function CountriesPage() {
                     </div>
                     <div className="flex gap-2 text-xs">
                       <button
-                        onClick={() => setVisibleColumns(new Set(COUNTRY_COLUMNS.map((column) => column.key)))}
+                        onClick={() => {
+                          setVisibleColumns(new Set(COUNTRY_COLUMNS.map((column) => column.key)))
+                          ensureLanguagesLoaded()
+                        }}
                         className="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded hover:bg-blue-200 dark:hover:bg-blue-800"
                       >
                         Select All
