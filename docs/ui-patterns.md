@@ -1,6 +1,7 @@
 # UI Patterns Guide
 
-Reusable UI patterns and components for the Axiom frontend. These patterns have been tested and optimized for performance, accessibility, and user experience.
+Reusable UI patterns and components for the Axiom frontend. These patterns have been
+tested and optimized for performance, accessibility, and user experience.
 
 ## Table of Contents
 
@@ -38,7 +39,8 @@ database.
 
 ## Sticky Headers with Smooth Transitions
 
-**Use Case:** Data tables or lists where column headers must remain visible during vertical scrolling while preserving horizontal scroll capability.
+**Use Case:** Data tables or lists where column headers must remain visible during
+vertical scrolling while preserving horizontal scroll capability.
 
 **Decision Record:** See [ADR-0008](./adr/adr-0008-sticky-headers-with-smooth-transitions.md)
 
@@ -47,12 +49,14 @@ database.
 ### When to Use
 
 ✅ Use this pattern when:
+
 - Table has many rows requiring vertical scrolling
 - Table has many columns requiring horizontal scrolling
 - Users need to maintain column context while scrolling data
 - Professional smooth transitions are required
 
 ❌ Don't use this pattern when:
+
 - Table fits entirely in viewport (no scrolling needed)
 - Only vertical OR horizontal scrolling (pure CSS `position: sticky` works)
 - Mobile-first design (consider alternative patterns for small screens)
@@ -171,6 +175,7 @@ Place this **before** your main table container in the JSX:
 #### Transition Speed
 
 Adjust `duration-{time}` in sticky header className:
+
 - `duration-200` - Fast (200ms)
 - `duration-300` - Default (300ms) - Recommended
 - `duration-500` - Slow (500ms)
@@ -202,6 +207,7 @@ className={showStickyHeader
 #### Z-Index Management
 
 If sticky header is hidden behind other fixed elements:
+
 - Increase `z-30` to `z-40` or `z-50`
 - Ensure fixed navbars/modals have lower z-index
 - Common z-index hierarchy: navbar (z-40), sticky headers (z-30), modals (z-50)
@@ -334,22 +340,30 @@ Example with ARIA:
 ### Troubleshooting
 
 #### Header width doesn't match table
+
 **Problem:** Sticky header is wider/narrower than table  
-**Solution:** Ensure `tableContainerRef` is on the direct parent of the table, not a wrapper several levels up
+**Solution:** Ensure `tableContainerRef` is on the direct parent of the table, not a wrapper
+several levels up
 
 #### Header appears but is invisible
+
 **Problem:** Width or left is 0  
-**Solution:** Check that `tableContainerRef.current` exists before `showStickyHeader` becomes true. Call dimensions update immediately in useEffect.
+**Solution:** Check that `tableContainerRef.current` exists before `showStickyHeader` becomes
+true. Call dimensions update immediately in useEffect.
 
 #### Header doesn't appear at all
+
 **Problem:** `containerRect.top` never goes negative  
-**Solution:** Check that you're scrolling the window, not a nested scrollable div. If nested, attach scroll listener to that element instead.
+**Solution:** Check that you're scrolling the window, not a nested scrollable div. If nested,
+attach scroll listener to that element instead.
 
 #### Transition is choppy
+
 **Problem:** Browser reflow during scroll  
 **Solution:** Avoid changing layout properties during scroll. Use `transform` and `opacity` only (GPU-accelerated).
 
 #### Header appears too early/late
+
 **Problem:** `topOffset` calculation incorrect  
 **Solution:** Measure your fixed top elements accurately. Use `element.offsetHeight` or `getBoundingClientRect().height`.
 
