@@ -2,7 +2,7 @@
 .PHONY: docker-dev-up docker-dev-down docker-uat-up docker-uat-down docker-prod-up docker-prod-down
 .PHONY: docker-all-up docker-all-down docker-all-status validate-env
 .PHONY: lint lint-docs lint-docs-fix lint-all install-hooks
-.PHONY: smoke-api
+.PHONY: smoke-api smoke-ssi
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
@@ -247,3 +247,6 @@ validate-env: ## Validate multi-environment setup
 
 smoke-api: ## Run API smoke checks (usage: make smoke-api [env=dev|uat|prod|all] [check_login=1] [startup_wait=90])
 	@pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/smoke-api.ps1 -Environment $${env:-all} -StartupWaitSec $${startup_wait:-90} $$( [ "$${check_login:-0}" = "1" ] && echo "-CheckLogin" )
+
+smoke-ssi: ## Run SSI smoke checks (usage: make smoke-ssi [env=dev|uat|prod] [seed=1] [cleanup=1] [timeout=25])
+	@pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/smoke-ssi.ps1 -Environment $${env:-dev} -TimeoutSec $${timeout:-25} $$( [ "$${seed:-0}" = "1" ] && echo "-SeedSmokeData" ) $$( [ "$${cleanup:-0}" = "1" ] && echo "-CleanupSmokeData" )

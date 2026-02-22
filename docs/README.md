@@ -26,6 +26,12 @@ Located in [adr/](./adr/):
 
 - [**UI Patterns Guide**](./ui-patterns.md) - Reusable frontend patterns and component templates ⭐ **For UI development**
 
+### 💳 SSI (Standard Settlement Instructions)
+
+Located in [ssi/](./ssi/):
+
+- [**SSI UI Schema (MVP)**](./ssi/SSI_UI_SCHEMA.md) - Initial table columns, filters, and virtual flag guidance
+
 ### 🌍 Environment Configuration
 
 Located in [environments/](./environments/):

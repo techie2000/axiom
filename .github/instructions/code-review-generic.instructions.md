@@ -471,6 +471,8 @@ When performing a code review:
 - **Import Paths**: Verify internal imports use `github.com/techie2000/axiom/backend/...` module path
 - **Logging**: Check structured logging with proper levels (debug, info, warn, error) using zerolog
 - **API Documentation**: Verify Swagger annotations are updated for API changes
+- **SSI Validation**: For SSI API/UI changes, run SSI smoke checks (`make smoke-ssi` or
+  `./scripts/smoke-ssi.ps1`) and confirm contract fields plus no `BGC` text in payload
 
 ## Additional Resources
 

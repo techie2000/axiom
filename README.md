@@ -225,6 +225,37 @@ The script validates:
 
 The script waits for `/health` before running checks (default max wait: 90 seconds).
 
+#### SSI API Smoke Testing
+
+Use the SSI smoke script to verify the `/api/v1/ssis` response contract used by the SSI page.
+
+```bash
+# Contract check only (no data mutation)
+./scripts/smoke-ssi.ps1 -Environment dev
+make smoke-ssi env=dev
+
+# Full check with temporary smoke rows, then cleanup
+./scripts/smoke-ssi.ps1 -Environment dev -SeedSmokeData -CleanupSmokeData
+make smoke-ssi env=dev seed=1 cleanup=1
+
+# UAT/PROD endpoint checks
+./scripts/smoke-ssi.ps1 -Environment uat
+./scripts/smoke-ssi.ps1 -Environment prod
+
+# Windows CMD wrapper
+scripts\smoke-ssi.cmd
+scripts\smoke-ssi.cmd uat
+scripts\smoke-ssi.cmd dev --seed --cleanup
+```
+
+The script validates:
+
+- `/api/v1/ssis` returns `200` with JWT auth
+- expected UI fields exist:
+  `id`, `ssi_reference`, `counterparty_name`, `account_name`, `country_code`, `currency`,
+  `bic`, `iban`, `settlement_method`, `status`, `updated_at`
+- no `BGC` text appears in `counterparty_name`/`account_name`
+
 #### Environment-Specific URLs
 
 Once started, each environment is accessible at:

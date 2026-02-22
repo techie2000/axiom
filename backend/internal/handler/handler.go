@@ -3,6 +3,7 @@ package handler
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -607,7 +608,13 @@ func (h *SSIHandler) List(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch SSIs"})
 		return
 	}
-	c.JSON(http.StatusOK, ssis)
+
+	response := make([]ssiListItemResponse, 0, len(ssis))
+	for _, item := range ssis {
+		response = append(response, mapSSIToListItem(item))
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
 func (h *SSIHandler) Get(c *gin.Context) {
@@ -616,7 +623,7 @@ func (h *SSIHandler) Get(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "SSI not found"})
 		return
 	}
-	c.JSON(http.StatusOK, ssi)
+	c.JSON(http.StatusOK, mapSSIToListItem(ssi))
 }
 
 func (h *SSIHandler) Create(c *gin.Context) {
@@ -670,6 +677,102 @@ func (h *SSIHandler) Delete(c *gin.Context) {
 		return
 	}
 	c.Status(http.StatusNoContent)
+}
+
+type ssiListItemResponse struct {
+	ID               string `json:"id"`
+	SSIReference     string `json:"ssi_reference"`
+	CounterpartyName string `json:"counterparty_name"`
+	AccountName      string `json:"account_name"`
+	CountryCode      string `json:"country_code"`
+	Currency         string `json:"currency"`
+	BIC              string `json:"bic"`
+	IBAN             string `json:"iban,omitempty"`
+	SettlementMethod string `json:"settlement_method"`
+	Status           string `json:"status"`
+	UpdatedAt        string `json:"updated_at"`
+}
+
+func mapSSIToListItem(ssi *domain.SSI) ssiListItemResponse {
+	if ssi == nil {
+		return ssiListItemResponse{}
+	}
+
+	beneficiaryAccount := strings.TrimSpace(ssi.BeneficiaryAccount)
+	countryCode := extractCountryCode(beneficiaryAccount)
+	currencyCode := ""
+	if ssi.SettlementCurrency != nil {
+		currencyCode = strings.ToUpper(strings.TrimSpace(ssi.SettlementCurrency.Code))
+	}
+	bic := strings.TrimSpace(ssi.BeneficiaryBankBIC)
+	if bic == "" {
+		bic = strings.TrimSpace(ssi.IntermediaryBankBIC)
+	}
+	status := "Inactive"
+	if ssi.Active {
+		status = "Active"
+	}
+
+	return ssiListItemResponse{
+		ID:               ssi.ID.String(),
+		SSIReference:     "SSI-" + strings.ToUpper(strings.ReplaceAll(ssi.ID.String(), "-", ""))[:8],
+		CounterpartyName: firstNonEmpty(strings.TrimSpace(ssi.BeneficiaryName), entityName(ssi)),
+		AccountName:      firstNonEmpty(beneficiaryAccount, "—"),
+		CountryCode:      countryCode,
+		Currency:         firstNonEmpty(currencyCode, "—"),
+		BIC:              firstNonEmpty(bic, "—"),
+		IBAN:             ibanOrEmpty(beneficiaryAccount),
+		SettlementMethod: settlementMethodFromType(ssi.SettlementType),
+		Status:           status,
+		UpdatedAt:        ssi.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
+	}
+}
+
+func entityName(ssi *domain.SSI) string {
+	if ssi.Entity == nil {
+		return "—"
+	}
+	return strings.TrimSpace(ssi.Entity.Name)
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		trimmed := strings.TrimSpace(value)
+		if trimmed != "" {
+			return trimmed
+		}
+	}
+	return ""
+}
+
+func extractCountryCode(account string) string {
+	if len(account) < 2 {
+		return ""
+	}
+	prefix := strings.ToUpper(account[:2])
+	if prefix[0] >= 'A' && prefix[0] <= 'Z' && prefix[1] >= 'A' && prefix[1] <= 'Z' {
+		return prefix
+	}
+	return ""
+}
+
+func ibanOrEmpty(account string) string {
+	if len(account) < 12 {
+		return ""
+	}
+	prefix := strings.ToUpper(account[:2])
+	if !(prefix[0] >= 'A' && prefix[0] <= 'Z' && prefix[1] >= 'A' && prefix[1] <= 'Z') {
+		return ""
+	}
+	return account
+}
+
+func settlementMethodFromType(settlementType domain.SettlementType) string {
+	normalized := strings.ToUpper(strings.TrimSpace(string(settlementType)))
+	if normalized == "DVP" || normalized == "DAP" {
+		return "Direct"
+	}
+	return "Agent"
 }
 
 // Data acquisition endpoints

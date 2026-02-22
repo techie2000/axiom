@@ -21,6 +21,7 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
 - [Environment Port Reference](docs/environments/environment-port-reference.md): Port mappings for all environments
 - [Environment Guide](docs/environments/README.md): Environment management overview and best practices
 - [Master Data Management](docs/MASTER_DATA.md): Pre-populated countries, currencies, continents, and languages
+- [SSI UI Schema](docs/ssi/SSI_UI_SCHEMA.md): MVP table schema, filters, and virtual country flag guidance
 
 ## LEI Integration (Legal Entity Identifier)
 
@@ -55,7 +56,9 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
 
 - [Makefile](Makefile): Build automation, testing, linting, and development commands
 - [API Smoke Script](scripts/smoke-api.ps1): Environment-aware API smoke tests for health/auth checks with startup readiness wait
+- [SSI Smoke Script](scripts/smoke-ssi.ps1): Verifies `/api/v1/ssis` contract fields, optional temporary seed rows, and BGC-free payload checks
 - [Windows Smoke Wrapper](scripts/smoke-api.cmd): CMD entrypoint for smoke tests on machines without make
+- [Windows SSI Smoke Wrapper](scripts/smoke-ssi.cmd): CMD entrypoint for SSI contract checks with optional `--seed` and `--cleanup`
 - [LEI Persistence Fix](docs/LEI_PERSISTENCE_AND_RACE_CONDITION_FIX.md): Technical fix for race condition issues
 - [Delta URL Fix](docs/DELTA_URL_FIX_SUMMARY.md): Bug fix summary for GLEIF delta URL parsing
 - [Backend Config](backend/config.yaml): Application configuration reference
