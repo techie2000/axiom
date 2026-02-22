@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import ThemeToggle from '../components/ThemeToggle'
+import SearchInputWithOverflowTooltip from '../components/SearchInputWithOverflowTooltip'
 
 interface CodeMapping {
   id: string
@@ -138,7 +139,7 @@ export default function CodeMappingsPage() {
 
         {/* Search */}
         <div className="mb-6">
-          <input
+          <SearchInputWithOverflowTooltip
             type="text"
             placeholder="Search by system, code type, or code value..."
             value={searchTerm}

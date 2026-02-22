@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import ThemeToggle from '../components/ThemeToggle'
-import { getCountryFlagEmoji } from '../lib/country-flag'
+import CountryFlag from '../components/CountryFlag'
+import SearchInputWithOverflowTooltip from '../components/SearchInputWithOverflowTooltip'
 
 interface Country {
   id: string
@@ -465,7 +466,7 @@ export default function CountriesPage() {
         {/* Filters */}
         <div className="mb-6 bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm rounded-lg p-6">
           <div className={`grid grid-cols-1 ${hasActiveFilters ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-3`}>
-            <input
+            <SearchInputWithOverflowTooltip
               type="text"
               placeholder="Search by name, native name, or code..."
               value={searchTerm}
@@ -588,7 +589,11 @@ export default function CountriesPage() {
                     )}
                     {visibleColumns.has('flag') && (
                       <td className="px-6 py-4 whitespace-nowrap text-2xl text-gray-900 dark:text-white" title={country.code || '—'}>
-                        {getCountryFlagEmoji(country.code)}
+                        <CountryFlag
+                          countryCode={country.code}
+                          title={country.code || '—'}
+                          className="inline-block h-6 w-6 align-middle"
+                        />
                       </td>
                     )}
                     {visibleColumns.has('alpha3_code') && (

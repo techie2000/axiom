@@ -206,6 +206,9 @@ EVERY visual change:
 - Show `Clear Filters` only when at least one filter is active (LEI Records behavior).
 - `Clear Filters` should reset all filter inputs to default values in one click.
 - For dark mode readability, all `<select>` controls must style both the `<select>` and each `<option>` explicitly.
+- Search inputs with long placeholder guidance must show a tooltip when placeholder text is clipped.
+- Use shared component `frontend/app/components/SearchInputWithOverflowTooltip.tsx` for search/filter text inputs.
+- Do not implement page-specific placeholder tooltip logic; keep behavior centralized and reusable.
 
 ### Column Selector Standard (Required)
 - Any page with a `Columns` control must list **all table columns** (core + optional), not only optional columns.
@@ -219,6 +222,7 @@ EVERY visual change:
 - Do not persist deterministic presentation-only fields in database schemas or initial seed data unless there is a clear business requirement.
 - Implement derived value logic in a reusable utility and consume it across pages to ensure consistency.
 - For country flags, use the shared helper in `frontend/app/lib/country-flag.ts` instead of duplicating conversion logic.
+- Render country flags via shared component `frontend/app/components/CountryFlag.tsx` to ensure consistent display across OS/browser font differences.
 - If a page does not yet have a finalized table/list layout (for example, placeholder/coming-soon pages), defer derived column rendering until the page schema is defined.
 
 ### Landing Cards Standard (Required)

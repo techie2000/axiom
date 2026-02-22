@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import ThemeToggle from '../components/ThemeToggle'
+import SearchInputWithOverflowTooltip from '../components/SearchInputWithOverflowTooltip'
 import { formatLEICellValue, getStatusBadgePresentation, normalizeRecordNullLikeValues } from './null-utils'
 
 interface LEIRecord {
@@ -816,7 +817,7 @@ export default function LEIRecordsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             <div>
               <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Search</label>
-              <input
+              <SearchInputWithOverflowTooltip
                 type="text"
                 placeholder="LEI code or legal name..."
                 value={searchTerm}
@@ -858,7 +859,7 @@ export default function LEIRecordsPage() {
             <div>
               <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Country</label>
               <div className="relative" ref={countryDropdownRef}>
-                <input
+                <SearchInputWithOverflowTooltip
                   type="text"
                   placeholder="Search countries..."
                   value={countrySearch}
