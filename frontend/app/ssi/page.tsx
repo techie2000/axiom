@@ -197,6 +197,7 @@ export default function SSIPage() {
   const [loading, setLoading] = useState(true)
   const [dataMode, setDataMode] = useState<'api' | 'sample'>('api')
   const [infoMessage, setInfoMessage] = useState<string>('')
+  const [expandedWidth, setExpandedWidth] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [countryFilter, setCountryFilter] = useState('')
   const [currencyFilter, setCurrencyFilter] = useState('')
@@ -310,7 +311,7 @@ export default function SSIPage() {
   if (loading) {
     return (
       <div className="min-h-screen p-8">
-        <div className="max-w-7xl mx-auto">
+        <div className={`${expandedWidth ? 'max-w-full' : 'max-w-7xl'} mx-auto transition-all duration-300`}>
           <div className="text-center py-20">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
             <p className="mt-4 opacity-70">Loading SSI records...</p>
@@ -322,7 +323,7 @@ export default function SSIPage() {
 
   return (
     <div className="min-h-screen p-8">
-      <div className="max-w-7xl mx-auto">
+      <div className={`${expandedWidth ? 'max-w-full' : 'max-w-7xl'} mx-auto transition-all duration-300`}>
         <div className="mb-8 flex justify-between items-start">
           <div>
             <Link href="/" className="text-blue-400 hover:text-blue-300 mb-4 inline-block">
@@ -332,6 +333,14 @@ export default function SSIPage() {
             <p className="opacity-70">Browse and filter settlement instructions</p>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => setExpandedWidth(!expandedWidth)}
+              className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 transition-colors text-white text-sm font-medium"
+              title={expandedWidth ? 'Normal Width' : 'Expanded Width'}
+            >
+              {expandedWidth ? '⬅️ Normal' : '↔️ Expand'}
+            </button>
+
             <div className="relative">
               <button
                 onClick={() => setShowColumnSelector(!showColumnSelector)}

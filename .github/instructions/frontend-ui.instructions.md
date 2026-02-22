@@ -217,6 +217,12 @@ EVERY visual change:
 - The `Columns` count should reflect current visible column count.
 - Use the LEI Records pattern as the baseline implementation for grouped or ungrouped column selectors.
 
+### Table Width Toggle Standard (Required)
+- Pages with wide data tables and optional columns must provide an `Expand/Normal` width toggle in the page header.
+- Use `max-w-full` when expanded and `max-w-7xl` when normal, with `transition-all duration-300` for consistent behavior.
+- Default to expanded width (`expandedWidth = true`) on pages where selected optional columns would otherwise force immediate horizontal scrolling.
+- Keep horizontal scrolling as a fallback only; do not rely on horizontal scrolling as the primary way to access newly enabled columns.
+
 ### Virtual/Derived Columns Standard (Required)
 - Prefer **virtual/derived UI columns** for deterministic display data (for example, country flag emoji from ISO alpha-2 country code).
 - Do not persist deterministic presentation-only fields in database schemas or initial seed data unless there is a clear business requirement.
