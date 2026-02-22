@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { formatStatusLabel } from '../lib/status-label'
 
 interface LEIStatus {
   status: string
@@ -56,7 +57,7 @@ export default function LEIStatusCard() {
     
     switch (status.status) {
       case 'RUNNING':
-        return { color: 'bg-blue-500 animate-pulse', label: 'Running', icon: '🔄' }
+        return { color: 'bg-blue-500 animate-pulse', label: 'Running', icon: '⏳' }
       case 'COMPLETED':
         return { color: 'bg-green-500', label: 'Completed', icon: '✅' }
       case 'FAILED':
@@ -64,7 +65,7 @@ export default function LEIStatusCard() {
       case 'IDLE':
         return { color: 'bg-gray-400', label: 'Idle', icon: '⏸️' }
       default:
-        return { color: 'bg-gray-400', label: status.status, icon: '❓' }
+        return { color: 'bg-gray-400', label: formatStatusLabel(status.status), icon: '❓' }
     }
   }
 
@@ -84,6 +85,21 @@ export default function LEIStatusCard() {
     if (fullStatus?.status === 'RUNNING' || deltaStatus?.status === 'RUNNING') return 'Running'
     if (fullStatus?.status === 'IDLE' || deltaStatus?.status === 'IDLE') return 'Idle'
     return 'Completed'
+  }
+
+  const getOverallIcon = () => {
+    const overallStatus = getOverallStatus()
+
+    switch (overallStatus) {
+      case 'Running':
+        return '⏳'
+      case 'Failed':
+        return '❌'
+      case 'Idle':
+        return '⏸️'
+      default:
+        return '✅'
+    }
   }
 
   const fullHealth = getHealthIndicator(fullStatus)
@@ -157,7 +173,7 @@ export default function LEIStatusCard() {
             <span className="px-2 py-1 bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 text-xs rounded">Real-time</span>
           </div>
         </div>
-        <span className="text-3xl ml-4 shrink-0">🔄</span>
+        <span className="text-3xl ml-4 shrink-0">{getOverallIcon()}</span>
       </div>
     </Link>
   )

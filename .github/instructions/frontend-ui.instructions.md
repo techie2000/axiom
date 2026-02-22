@@ -255,6 +255,12 @@ EVERY visual change:
   title, description, single `Protected` badge, icon placement, min height, and hover behavior.
 - Do not add special-case badges or card-specific layout differences within the same section unless explicitly requested.
 
+### Status Label Formatting Standard (Required)
+- Do not render raw backend enum values directly in user-facing UI (for example `IN_PROGRESS`, `FAILED`, `DAILY_FULL`).
+- Use shared formatter `frontend/app/lib/status-label.ts` for status labels (`formatStatusLabel`) across pages/components.
+- Prefer shared utilities over per-page inline status-format helpers to keep capitalization and wording consistent.
+- Keep status **logic** based on original enum values and apply formatting only at render time.
+
 ```tsx
 <select className="bg-white dark:bg-white/5 text-gray-900 dark:text-white border-gray-300 dark:border-white/20">
   <option className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white" value="">All</option>

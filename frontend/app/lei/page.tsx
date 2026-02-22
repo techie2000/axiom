@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import ThemeToggle from '../components/ThemeToggle'
+import { formatStatusLabel } from '../lib/status-label'
 
 interface SourceFile {
   id: string
@@ -256,6 +257,16 @@ export default function LEIStatusPage() {
 
     const progress = calculateProgress(status)
     const file = status.current_source_file
+    const runningPhase =
+      status.status === 'RUNNING' && file
+        ? file.total_records > 0
+          ? 'processing'
+          : file.processing_status === 'PENDING'
+            ? 'downloading'
+            : file.processing_status === 'IN_PROGRESS'
+              ? 'extracting'
+              : 'preparing'
+        : null
 
     return (
       <div className={`rounded-lg shadow-md p-6 border-2 ${
@@ -266,7 +277,7 @@ export default function LEIStatusPage() {
         <div className="flex justify-between items-start mb-4">
           <h2 className="text-2xl font-bold">{title}</h2>
           <span className={`px-3 py-1 rounded-full text-sm font-semibold border-2 ${getStatusColor(status.status)}`}>
-            {status.status}
+            {formatStatusLabel(status.status)}
           </span>
         </div>
 
@@ -290,7 +301,11 @@ export default function LEIStatusPage() {
               </>
             ) : (
               <div className="text-sm text-gray-600 dark:text-gray-400">
-                <p className="mb-2">⏳ Downloading file... ({file.processed_records.toLocaleString()} records processed)</p>
+                <p className="mb-2">
+                  {runningPhase === 'downloading' && `⏳ Downloading file... (${file.processed_records.toLocaleString()} records processed)`}
+                  {runningPhase === 'extracting' && `⏳ Extracting file... (${file.processed_records.toLocaleString()} records processed)`}
+                  {runningPhase === 'preparing' && `⏳ Preparing file... (${file.processed_records.toLocaleString()} records processed)`}
+                </p>
                 <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden">
                   <div className="bg-blue-600 dark:bg-blue-500 h-4 rounded-full animate-pulse" style={{ width: '30%' }} />
                 </div>
@@ -344,7 +359,7 @@ export default function LEIStatusPage() {
             <h3 className="font-semibold mb-2 text-sm text-gray-700 dark:text-gray-200">Current File</h3>
             <div className="space-y-1 text-sm text-gray-900 dark:text-gray-100">
               <p className="truncate"><span className="font-medium text-gray-700 dark:text-gray-300">Name:</span> {file.file_name}</p>
-              <p><span className="font-medium text-gray-700 dark:text-gray-300">Status:</span> {file.processing_status}</p>
+              <p><span className="font-medium text-gray-700 dark:text-gray-300">Status:</span> {formatStatusLabel(file.processing_status)}</p>
               {file.total_records > 0 && (
                 <p><span className="font-medium text-gray-700 dark:text-gray-300">Total Records:</span> {file.total_records.toLocaleString()}</p>
               )}
@@ -469,15 +484,15 @@ export default function LEIStatusPage() {
           <h3 className="font-semibold mb-3 text-gray-700 dark:text-gray-200">Status Legend</h3>
           <div className="flex flex-wrap gap-4 text-sm">
             <div className="flex items-center gap-2">
-              <span className={`px-3 py-1 rounded-full font-semibold border-2 ${getStatusColor('IDLE')}`}>IDLE</span>
+              <span className={`px-3 py-1 rounded-full font-semibold border-2 ${getStatusColor('IDLE')}`}>Idle</span>
               <span className="text-gray-600 dark:text-gray-400">Waiting for next scheduled run</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className={`px-3 py-1 rounded-full font-semibold border-2 ${getStatusColor('RUNNING')}`}>RUNNING</span>
+              <span className={`px-3 py-1 rounded-full font-semibold border-2 ${getStatusColor('RUNNING')}`}>Running</span>
               <span className="text-gray-600 dark:text-gray-400">Currently processing data</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className={`px-3 py-1 rounded-full font-semibold border-2 ${getStatusColor('FAILED')}`}>FAILED</span>
+              <span className={`px-3 py-1 rounded-full font-semibold border-2 ${getStatusColor('FAILED')}`}>Failed</span>
               <span className="text-gray-600 dark:text-gray-400">Encountered an error (requires manual intervention)</span>
             </div>
           </div>
