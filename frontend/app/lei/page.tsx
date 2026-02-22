@@ -420,7 +420,6 @@ export default function LEIStatusPage() {
             <p className="text-lg opacity-70">Real-time monitoring of GLEIF data synchronization</p>
           </div>
           <div className="flex items-center gap-4">
-            <ThemeToggle />
             <button
               onClick={fetchStatus}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -436,6 +435,7 @@ export default function LEIStatusPage() {
               />
               <span className="text-sm opacity-70">Auto-refresh (5s)</span>
             </label>
+            <ThemeToggle />
           </div>
         </div>
 
