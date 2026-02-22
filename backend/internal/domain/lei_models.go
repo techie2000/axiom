@@ -163,11 +163,11 @@ type SourceFile struct {
 	PublicationDate time.Time `json:"publication_date"`
 
 	// Processing status
-	ProcessingStatus string `gorm:"size:20;not null;default:'PENDING'" json:"processing_status"` // PENDING, IN_PROGRESS, COMPLETED, FAILED
-	TotalRecords     int    `gorm:"default:0" json:"total_records"`
-	ProcessedRecords int    `gorm:"default:0" json:"processed_records"`
-	FailedRecords    int    `gorm:"default:0" json:"failed_records"`
-	LastProcessedLEI string `gorm:"size:20" json:"last_processed_lei"` // For resumption
+	ProcessingStatus string  `gorm:"size:20;not null;default:'PENDING'" json:"processing_status"` // PENDING, IN_PROGRESS, COMPLETED, FAILED
+	TotalRecords     int     `gorm:"default:0" json:"total_records"`
+	ProcessedRecords int     `gorm:"default:0" json:"processed_records"`
+	FailedRecords    int     `gorm:"default:0" json:"failed_records"`
+	LastProcessedLEI *string `gorm:"size:20" json:"last_processed_lei"` // For resumption
 
 	ProcessingStartedAt   *time.Time `json:"processing_started_at"`
 	ProcessingCompletedAt *time.Time `json:"processing_completed_at"`

@@ -365,7 +365,7 @@ func (s *schedulerService) resumeInterruptedFullSyncOnStartup() (bool, error) {
 			continue
 		}
 
-		isInterrupted := file.ProcessingStatus == "IN_PROGRESS" || file.ProcessedRecords > 0 || file.LastProcessedLEI != ""
+		isInterrupted := file.ProcessingStatus == "IN_PROGRESS" || file.ProcessedRecords > 0 || leiCodeValue(file.LastProcessedLEI) != ""
 		if !isInterrupted {
 			continue
 		}
@@ -397,7 +397,7 @@ func (s *schedulerService) resumeInterruptedFullSyncOnStartup() (bool, error) {
 		return false, fmt.Errorf("failed to mark DAILY_FULL as RUNNING for resume: %w", err)
 	}
 
-	resumeLEI := interruptedFile.LastProcessedLEI
+	resumeLEI := leiCodeValue(interruptedFile.LastProcessedLEI)
 	fileName := interruptedFile.FileName
 	processed := interruptedFile.ProcessedRecords
 	total := interruptedFile.TotalRecords
@@ -540,8 +540,8 @@ func (s *schedulerService) dailyDeltaSyncLoop() {
 
 				// FIX: Use checkpoint resume regardless of status (PENDING or IN_PROGRESS)
 				resumeLEI := ""
-				if file.LastProcessedLEI != "" {
-					resumeLEI = file.LastProcessedLEI
+				if leiCodeValue(file.LastProcessedLEI) != "" {
+					resumeLEI = leiCodeValue(file.LastProcessedLEI)
 					log.Info().
 						Str("file_id", fileID.String()).
 						Str("file_name", file.FileName).
@@ -801,8 +801,8 @@ func (s *schedulerService) RunDailyFullSync() error {
 
 	// Process file (can resume if interrupted)
 	var resumeLEI string
-	if sourceFile.LastProcessedLEI != "" {
-		resumeLEI = sourceFile.LastProcessedLEI
+	if leiCodeValue(sourceFile.LastProcessedLEI) != "" {
+		resumeLEI = leiCodeValue(sourceFile.LastProcessedLEI)
 		log.Info().Str("resume_from", resumeLEI).Msg("Resuming file processing")
 	}
 

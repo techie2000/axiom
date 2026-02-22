@@ -78,3 +78,48 @@ func TestJSONToDomainRecord_NormalizesNullLikeFields(t *testing.T) {
 		t.Fatalf("expected LegalAddressCity to remain unchanged, got %q", record.LegalAddressCity)
 	}
 }
+
+func TestNormalizeLEICodePointer(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     string
+		wantNil   bool
+		wantValue string
+	}{
+		{name: "empty string", input: "", wantNil: true},
+		{name: "whitespace only", input: "   ", wantNil: true},
+		{name: "valid mixed case", input: "5493001kjtiigc8y1r12", wantNil: false, wantValue: "5493001KJTIIGC8Y1R12"},
+		{name: "valid with surrounding spaces", input: "  5493001KJTIIGC8Y1R12  ", wantNil: false, wantValue: "5493001KJTIIGC8Y1R12"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := normalizeLEICodePointer(tt.input)
+			if tt.wantNil {
+				if got != nil {
+					t.Fatalf("expected nil, got %q", *got)
+				}
+				return
+			}
+
+			if got == nil {
+				t.Fatalf("expected non-nil pointer, got nil")
+			}
+
+			if *got != tt.wantValue {
+				t.Fatalf("expected %q, got %q", tt.wantValue, *got)
+			}
+		})
+	}
+}
+
+func TestLEICodeValue(t *testing.T) {
+	if got := leiCodeValue(nil); got != "" {
+		t.Fatalf("expected empty string for nil pointer, got %q", got)
+	}
+
+	value := "5493001KJTIIGC8Y1R12"
+	if got := leiCodeValue(&value); got != value {
+		t.Fatalf("expected %q, got %q", value, got)
+	}
+}

@@ -770,7 +770,7 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 			sourceFile.TotalRecords = totalRecords
 			sourceFile.ProcessedRecords = cumulativeProcessed
 			sourceFile.FailedRecords = failedRecords
-			sourceFile.LastProcessedLEI = lastProcessedLEI
+			sourceFile.LastProcessedLEI = normalizeLEICodePointer(lastProcessedLEI)
 			if err := s.repo.UpdateSourceFile(sourceFile); err != nil {
 				log.Error().Err(err).Msg("Failed to update source file progress")
 			}
@@ -871,6 +871,21 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 		Msg("File processing completed")
 
 	return nil
+}
+
+func normalizeLEICodePointer(value string) *string {
+	normalized := strings.ToUpper(strings.TrimSpace(value))
+	if normalized == "" {
+		return nil
+	}
+	return &normalized
+}
+
+func leiCodeValue(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
 }
 
 // extractLEI extracts the LEI string from a JSON record (handles nested $ structure)
