@@ -206,7 +206,7 @@ export default function CurrenciesPage() {
               <tbody className="bg-white dark:bg-white/5 divide-y divide-gray-200 dark:divide-white/10">
                 {filteredCurrencies.length > 0 ? (
                   filteredCurrencies.map((currency) => (
-                    <tr key={currency.id} className="hover:bg-gray-50 dark:hover:bg-white/10">
+                    <tr key={currency.id} className="hover:bg-blue-50 dark:hover:bg-white/10 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                         {currency.name}
                         {currency.name_plural && currency.name_plural !== currency.name && (

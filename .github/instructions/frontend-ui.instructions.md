@@ -223,6 +223,12 @@ EVERY visual change:
 - Default to expanded width (`expandedWidth = true`) on pages where selected optional columns would otherwise force immediate horizontal scrolling.
 - Keep horizontal scrolling as a fallback only; do not rely on horizontal scrolling as the primary way to access newly enabled columns.
 
+### Table Row Hover Contrast Standard (Required)
+- Data table rows must provide clearly visible hover contrast in light mode.
+- Use `hover:bg-blue-50` for light mode row hover states (or stronger approved equivalent), not subtle gray shades.
+- Preserve dark mode row hover behavior (for example, `dark:hover:bg-white/10` or `dark:hover:bg-white/5`).
+- Include `transition-colors` on interactive table rows for consistent visual feedback.
+
 ### Virtual/Derived Columns Standard (Required)
 - Prefer **virtual/derived UI columns** for deterministic display data (for example, country flag emoji from ISO alpha-2 country code).
 - Do not persist deterministic presentation-only fields in database schemas or initial seed data unless there is a clear business requirement.

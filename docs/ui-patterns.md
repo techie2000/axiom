@@ -379,6 +379,20 @@ attach scroll listener to that element instead.
 4. **Test on real devices** - Performance varies significantly on mobile
 5. **Consider reduced motion preference** - Respect `prefers-reduced-motion` media query
 
+### Table Row Hover Contrast
+
+- Light mode table row hover should be clearly visible: use `hover:bg-blue-50` with `transition-colors`.
+- Avoid subtle light hover shades like `hover:bg-gray-50` on primary data rows.
+- Keep dark mode hover behavior aligned with current table styles (for example, `dark:hover:bg-white/10`).
+
+Example:
+
+```tsx
+<tr className="hover:bg-blue-50 dark:hover:bg-white/10 transition-colors">
+  {/* row cells */}
+</tr>
+```
+
 ### Dark Mode Support
 
 All patterns should support dark mode via Tailwind's `dark:` variant:

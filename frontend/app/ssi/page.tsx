@@ -388,7 +388,7 @@ export default function SSIPage() {
                     {SSI_COLUMNS.map((column) => (
                       <label
                         key={column.key}
-                        className="flex items-center gap-2 px-2 py-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+                        className="flex items-center gap-2 px-2 py-2 rounded hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
                       >
                         <input
                           type="checkbox"
@@ -579,7 +579,7 @@ export default function SSIPage() {
               <tbody className="bg-white dark:bg-white/5 divide-y divide-gray-200 dark:divide-white/10">
                 {filteredRecords.length > 0 ? (
                   filteredRecords.map((record) => (
-                    <tr key={record.id} className="hover:bg-gray-50 dark:hover:bg-white/10">
+                    <tr key={record.id} className="hover:bg-blue-50 dark:hover:bg-white/10 transition-colors">
                       {visibleColumns.has('ssi_reference') && (
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                           {record.ssi_reference}

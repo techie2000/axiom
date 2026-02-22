@@ -407,7 +407,7 @@ export default function CountriesPage() {
                     {COUNTRY_COLUMNS.map((column) => (
                       <label
                         key={column.key}
-                        className="flex items-center gap-2 px-2 py-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+                        className="flex items-center gap-2 px-2 py-2 rounded hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
                       >
                         <input
                           type="checkbox"
@@ -569,7 +569,7 @@ export default function CountriesPage() {
             <tbody className="bg-white dark:bg-white/5 divide-y divide-gray-200 dark:divide-white/10">
               {filteredCountries.length > 0 ? (
                 filteredCountries.map((country) => (
-                  <tr key={country.id} className="hover:bg-gray-50 dark:hover:bg-white/10">
+                  <tr key={country.id} className="hover:bg-blue-50 dark:hover:bg-white/10 transition-colors">
                     {visibleColumns.has('name') && (
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                         {country.name}

@@ -739,7 +739,7 @@ export default function LEIRecordsPage() {
                         {columns.map((column) => (
                           <label
                             key={String(column.key)}
-                            className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700 rounded cursor-pointer text-sm"
+                            className="flex items-center gap-2 px-2 py-1.5 hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors rounded cursor-pointer text-sm"
                           >
                             <input
                               type="checkbox"
