@@ -78,3 +78,12 @@ trivy-*.sarif
 pr_description.md
 backend_full_logs.txt
 .cache/
+
+# Explicit root-level generated artifacts from automated update/security workflows
+/.cache/trivy/
+/go_updates.txt
+/pr_description.md
+/trivy-backend-results.json
+/trivy-backend-results.sarif
+/trivy-frontend-results.json
+/trivy-frontend-results.sarif
