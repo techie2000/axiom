@@ -50,7 +50,10 @@ Follow these guidelines for formatting and structuring your markdown content:
     ❌ BAD:
     A high-performance service that monitors directories for CSV files and converts them to JSON format with routing capabilities.
     ```
-- **Links**: Use `[link text](path/to/file)` for links. Ensure that the link text is descriptive and the path is valid.
+- **Links**: Use markdown link syntax like `[Architecture](../../docs/architecture.md)`.
+  Ensure that link text is descriptive and targets a valid path.
+- **No Placeholder Targets**: Do not use placeholder link/image targets in markdown examples
+  (for example `path/to/file`, `IMAGE_URL`, `your-file.md`). Use real repository paths or plain text.
 - **File References**: **CRITICAL** - Always hyperlink file and document references. Use relative paths appropriate
   to file location.
   - ✅ **GOOD** (from `.github/instructions/`):
@@ -61,10 +64,25 @@ Follow these guidelines for formatting and structuring your markdown content:
   - ❌ **BAD**: `Configuration in config.yaml` (not hyperlinked)
   - This applies to: ADRs, configuration files, documentation files, source code files, test files, and any other
     project artifacts
-- **Images**: Use `![alt text](IMAGE_URL)` for images (replace IMAGE_URL with actual path). Include a brief
-  description of the image in the alt text.
+- **Images**: Use markdown image syntax with descriptive alt text and a valid repository-relative path.
+  Avoid placeholder image targets in examples.
 - **Tables**: Use `|` to create tables. Ensure that columns are properly aligned and headers are included.
+  - Separator/header rows must use spaced pipe style (MD060-compliant), for example:
+    - ✅ `| Column | Type | Description |`
+    - ✅ `| ------ | ---- | ----------- |`
+    - ❌ `|------|----|-----------|`
 - **Whitespace**: Use blank lines to separate sections and improve readability. Avoid excessive whitespace.
+  - Lists must be surrounded by blank lines (MD032-compliant).
+  - Headings must be surrounded by blank lines, including one blank line below each heading (MD022-compliant).
+
+### Mandatory Pre-Submission Checks (for any edited `.md` file)
+
+- Run markdown diagnostics before finishing markdown edits.
+- Fix **all MD013 line-length violations** introduced in edited sections (max 120 chars per line).
+- Fix **all MD060 table-column-style violations** in edited tables.
+- Fix **all MD032 list-spacing violations** in edited sections.
+- Fix **all MD022 heading-spacing violations** in edited sections.
+- Do not leave newly introduced markdownlint warnings in the edited regions.
 
 ## Validation Requirements
 

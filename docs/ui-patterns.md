@@ -1,6 +1,7 @@
 # UI Patterns Guide
 
-Reusable UI patterns and components for the Axiom frontend. These patterns have been tested and optimized for performance, accessibility, and user experience.
+Reusable UI patterns and components for the Axiom frontend. These patterns have been tested and
+optimized for performance, accessibility, and user experience.
 
 ## Table of Contents
 
@@ -37,7 +38,7 @@ import Badge from '../components/Badge'
 #### Props
 
 | Prop | Type | Default | Description |
-|------|------|---------|-------------|
+| ------ | ---- | ------- | ----------- |
 | `variant` | `blue \| green \| red \| yellow \| orange \| purple \| gray \| default` | `default` | Colour theme |
 | `shape` | `rounded \| pill` | `rounded` | Border radius |
 | `mono` | `boolean` | `false` | Use monospace font |
@@ -46,7 +47,7 @@ import Badge from '../components/Badge'
 #### Variant guide
 
 | Variant | Use for |
-|---------|---------|
+| ------- | ------- |
 | `blue` | Identifiers, ISO codes, system names |
 | `green` | Active / allowed / success states |
 | `red` | Error states, source codes, sanctioned |
@@ -89,7 +90,7 @@ import Alert from '../components/Alert'
 #### Props
 
 | Prop | Type | Default | Description |
-|------|------|---------|-------------|
+| ------ | ---- | ------- | ----------- |
 | `variant` | `info \| warning \| error \| success` | `info` | Colour and meaning |
 | `title` | `string` | — | Bold prefix text |
 | `children` | `ReactNode` | — | Message body (supports JSX) |
@@ -113,7 +114,7 @@ if (loading && records.length === 0) {
 #### Props
 
 | Prop | Type | Default | Description |
-|------|------|---------|-------------|
+| ------ | ---- | ------- | ----------- |
 | `message` | `string` | `'Loading...'` | Text shown below spinner |
 
 ---
@@ -136,7 +137,7 @@ import StatCard from '../components/StatCard'
 #### Props
 
 | Prop | Type | Default | Description |
-|------|------|---------|-------------|
+| ------ | ---- | ------- | ----------- |
 | `title` | `string` | — | Label above the value |
 | `value` | `string \| number` | — | Large display value |
 | `accent` | `green \| red \| blue \| yellow \| default` | `default` | Border and text colour |
@@ -174,7 +175,7 @@ import PageHeader from '../components/PageHeader'
 #### Props
 
 | Prop | Type | Default | Description |
-|------|------|---------|-------------|
+| ------ | ---- | ------- | ----------- |
 | `title` | `string` | — | Page heading (rendered as `h1`) |
 | `subtitle` | `string` | — | Descriptive subtext below the heading |
 | `backHref` | `string` | `'/'` | Destination of the back link |
@@ -200,7 +201,8 @@ When creating a new Axiom page always use the shared components:
 
 ## Sticky Headers with Smooth Transitions
 
-**Use Case:** Data tables or lists where column headers must remain visible during vertical scrolling while preserving horizontal scroll capability.
+**Use Case:** Data tables or lists where column headers must remain visible during vertical
+scrolling while preserving horizontal scroll capability.
 
 **Decision Record:** See [ADR-0008](./adr/adr-0008-sticky-headers-with-smooth-transitions.md)
 
@@ -209,12 +211,14 @@ When creating a new Axiom page always use the shared components:
 ### When to Use
 
 ✅ Use this pattern when:
+
 - Table has many rows requiring vertical scrolling
 - Table has many columns requiring horizontal scrolling
 - Users need to maintain column context while scrolling data
 - Professional smooth transitions are required
 
 ❌ Don't use this pattern when:
+
 - Table fits entirely in viewport (no scrolling needed)
 - Only vertical OR horizontal scrolling (pure CSS `position: sticky` works)
 - Mobile-first design (consider alternative patterns for small screens)
@@ -333,6 +337,7 @@ Place this **before** your main table container in the JSX:
 #### Transition Speed
 
 Adjust `duration-{time}` in sticky header className:
+
 - `duration-200` - Fast (200ms)
 - `duration-300` - Default (300ms) - Recommended
 - `duration-500` - Slow (500ms)
@@ -364,6 +369,7 @@ className={showStickyHeader
 #### Z-Index Management
 
 If sticky header is hidden behind other fixed elements:
+
 - Increase `z-30` to `z-40` or `z-50`
 - Ensure fixed navbars/modals have lower z-index
 - Common z-index hierarchy: navbar (z-40), sticky headers (z-30), modals (z-50)
@@ -496,22 +502,29 @@ Example with ARIA:
 ### Troubleshooting
 
 #### Header width doesn't match table
+
 **Problem:** Sticky header is wider/narrower than table  
 **Solution:** Ensure `tableContainerRef` is on the direct parent of the table, not a wrapper several levels up
 
 #### Header appears but is invisible
+
 **Problem:** Width or left is 0  
-**Solution:** Check that `tableContainerRef.current` exists before `showStickyHeader` becomes true. Call dimensions update immediately in useEffect.
+**Solution:** Check that `tableContainerRef.current` exists before `showStickyHeader` becomes true.
+Call dimensions update immediately in useEffect.
 
 #### Header doesn't appear at all
+
 **Problem:** `containerRect.top` never goes negative  
-**Solution:** Check that you're scrolling the window, not a nested scrollable div. If nested, attach scroll listener to that element instead.
+**Solution:** Check that you're scrolling the window, not a nested scrollable div.
+If nested, attach scroll listener to that element instead.
 
 #### Transition is choppy
+
 **Problem:** Browser reflow during scroll  
 **Solution:** Avoid changing layout properties during scroll. Use `transform` and `opacity` only (GPU-accelerated).
 
 #### Header appears too early/late
+
 **Problem:** `topOffset` calculation incorrect  
 **Solution:** Measure your fixed top elements accurately. Use `element.offsetHeight` or `getBoundingClientRect().height`.
 
@@ -519,15 +532,19 @@ Example with ARIA:
 
 ## Frozen Columns Checklist
 
-Use this checklist for any table with frozen/sticky identity columns (for example `LEI` + `Legal Name`) to prevent divider drift and bleed-through.
+Use this checklist for any table with frozen/sticky identity columns (for example `LEI` +
+`Legal Name`) to prevent divider drift and bleed-through.
 
 - [ ] Apply sticky/frozen behavior identically to both header (`th`) and body (`td`) cells.
 - [ ] Derive frozen column width and left offset from measured rendered header widths (not hard-coded values only).
 - [ ] Use explicit background colors on frozen cells in both light and dark mode.
-- [ ] Use a consistent z-index stack so frozen body cells stay above scrolling cells, and frozen header cells stay above frozen body cells.
+- [ ] Use a consistent z-index stack so frozen body cells stay above scrolling cells,
+  and frozen header cells stay above frozen body cells.
 - [ ] Render the separator seam using the same primitive for header and body (prefer inset right-edge seam inside the cell).
-- [ ] Avoid negative-offset seam techniques (such as `right: -1px`) that can create sub-pixel mismatch during horizontal scroll.
-- [ ] Verify seam behavior in all combinations: light/dark, narrow/expanded width, and after small + large horizontal scroll movements.
+- [ ] Avoid negative-offset seam techniques (such as `right: -1px`) that can create
+  sub-pixel mismatch during horizontal scroll.
+- [ ] Verify seam behavior in all combinations: light/dark, narrow/expanded width,
+  and after small + large horizontal scroll movements.
 - [ ] Verify no horizontal content bleeds through the frozen divider boundary at any scroll position.
 
 ---
