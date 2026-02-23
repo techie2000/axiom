@@ -196,103 +196,125 @@ func validateColumns(columns string) string {
 // Uses dynamic SELECT based on requested columns for performance optimization
 func (r *leiRepository) FindAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string) ([]*domain.LEIRecord, error) {
 	var records []*domain.LEIRecord
-	query := r.db.Limit(limit).Offset(offset)
+	buildQuery := func(useSearchVector bool) *gorm.DB {
+		query := r.db.Limit(limit).Offset(offset)
 
-	// Dynamic SELECT optimization: only fetch requested columns
-	// Validates columns against whitelist to prevent SQL injection
-	validatedColumns := validateColumns(columns)
-	query = query.Select(validatedColumns)
+		// Dynamic SELECT optimization: only fetch requested columns
+		// Validates columns against whitelist to prevent SQL injection
+		validatedColumns := validateColumns(columns)
+		query = query.Select(validatedColumns)
 
-	// Remove Preload for list view - only needed for detail view
-	// Saves ~50-100ms per query by not fetching source_file records
+		// Remove Preload for list view - only needed for detail view
+		// Saves ~50-100ms per query by not fetching source_file records
 
-	// Apply search filter (LEI code or legal name)
-	if search != "" {
-		// Optimize search based on pattern:
-		// 1. If exactly 20 chars (LEI format), use exact match on LEI only
-		// 2. Otherwise, search name fields including other_names JSONB
-		if len(search) == 20 && isAlphanumeric(search) {
-			// Exact LEI match - uses idx_lei_records_lei B-tree index (< 1ms)
-			query = query.Where("lei = ?", search)
-		} else {
-			// Full-text search using the composite search_vector column
-			// Uses idx_lei_records_search_vector GIN index for single efficient lookup
-			// Replaces OR ILIKE queries across 3 columns that caused sequential scans
-			// plainto_tsquery handles partial text and is user-friendly (no syntax required)
-			query = query.Where(
-				"search_vector @@ plainto_tsquery('simple', ?)",
-				search,
-			)
-		}
-	}
-
-	// Apply status filter
-	if status != "" {
-		if isNotSetStatusFilter(status) {
-			// Filter for records where entity_status is missing or represented as literal "NULL"
-			query = query.Where(notSetEntityStatusWhereClause)
-		} else {
-			query = query.Where("entity_status = ?", status)
-		}
-	}
-
-	// Apply category filter
-	if category != "" {
-		query = query.Where("entity_category = ?", category)
-	}
-
-	// Apply country filter
-	if country != "" {
-		query = query.Where("legal_address_country = ?", country)
-	}
-
-	// Hybrid Approach for Sorting:
-	// - No search/filter: ORDER BY updated_at DESC (fast: ~50ms, shows recent updates)
-	// - With search/filter: ORDER BY legal_name ASC (fast: filtered result set is small)
-	// This eliminates the 1276ms slow query on initial page load (ORDER BY legal_name on 3.2M records)
-	hasSearchOrFilter := search != "" || status != "" || category != "" || country != ""
-
-	// Apply sorting
-	if sortBy == "" {
-		if hasSearchOrFilter {
-			// Default to legal_name when user has narrowed results
-			sortBy = "legal_name"
-			if sortOrder == "" {
-				sortOrder = "asc"
-			}
-		} else {
-			// Default to updated_at for browsing all records (Hybrid Approach)
-			sortBy = "updated_at"
-			if sortOrder == "" {
-				sortOrder = "desc"
+		// Apply search filter (LEI code or legal name)
+		if search != "" {
+			// Optimize search based on pattern:
+			// 1. If exactly 20 chars (LEI format), use exact match on LEI only
+			// 2. Otherwise, search name fields including other_names JSONB
+			if len(search) == 20 && isAlphanumeric(search) {
+				// Exact LEI match - uses idx_lei_records_lei B-tree index (< 1ms)
+				query = query.Where("lei = ?", search)
+			} else if useSearchVector {
+				// Full-text search using the composite search_vector column
+				// Uses idx_lei_records_search_vector GIN index for single efficient lookup
+				query = query.Where(
+					"search_vector @@ plainto_tsquery('simple', ?)",
+					search,
+				)
+			} else {
+				searchPattern := "%" + strings.TrimSpace(search) + "%"
+				query = query.Where(
+					"(legal_name ILIKE ? OR lei ILIKE ? OR COALESCE(other_names::text, '') ILIKE ?)",
+					searchPattern,
+					searchPattern,
+					searchPattern,
+				)
 			}
 		}
-	} else {
-		// sortBy was explicitly provided, validate sortOrder
-		if sortOrder == "" || (sortOrder != "asc" && sortOrder != "desc") {
-			sortOrder = "asc"
+
+		// Apply status filter
+		if status != "" {
+			if isNotSetStatusFilter(status) {
+				// Filter for records where entity_status is missing or represented as literal "NULL"
+				query = query.Where(notSetEntityStatusWhereClause)
+			} else {
+				query = query.Where("entity_status = ?", status)
+			}
 		}
+
+		// Apply category filter
+		if category != "" {
+			query = query.Where("entity_category = ?", category)
+		}
+
+		// Apply country filter
+		if country != "" {
+			query = query.Where("legal_address_country = ?", country)
+		}
+
+		// Hybrid Approach for Sorting:
+		// - No search/filter: ORDER BY updated_at DESC (fast: ~50ms, shows recent updates)
+		// - With search/filter: ORDER BY legal_name ASC (fast: filtered result set is small)
+		hasSearchOrFilter := search != "" || status != "" || category != "" || country != ""
+
+		resolvedSortBy := sortBy
+		resolvedSortOrder := sortOrder
+
+		// Apply sorting
+		if resolvedSortBy == "" {
+			if hasSearchOrFilter {
+				// Default to legal_name when user has narrowed results
+				resolvedSortBy = "legal_name"
+				if resolvedSortOrder == "" {
+					resolvedSortOrder = "asc"
+				}
+			} else {
+				// Default to updated_at for browsing all records (Hybrid Approach)
+				resolvedSortBy = "updated_at"
+				if resolvedSortOrder == "" {
+					resolvedSortOrder = "desc"
+				}
+			}
+		} else {
+			// sortBy was explicitly provided, validate sortOrder
+			if resolvedSortOrder == "" || (resolvedSortOrder != "asc" && resolvedSortOrder != "desc") {
+				resolvedSortOrder = "asc"
+			}
+		}
+
+		// Validate sortBy field to prevent SQL injection
+		validSortFields := map[string]bool{
+			"lei":                   true,
+			"legal_name":            true,
+			"entity_status":         true,
+			"entity_category":       true,
+			"legal_address_country": true,
+			"last_update_date":      true,
+			"updated_at":            true,
+		}
+
+		if validSortFields[resolvedSortBy] {
+			query = query.Order(resolvedSortBy + " " + resolvedSortOrder)
+		} else {
+			query = query.Order("updated_at desc")
+		}
+
+		return query
 	}
 
-	// Validate sortBy field to prevent SQL injection
-	validSortFields := map[string]bool{
-		"lei":                   true,
-		"legal_name":            true,
-		"entity_status":         true,
-		"entity_category":       true,
-		"legal_address_country": true,
-		"last_update_date":      true,
-		"updated_at":            true, // Added for Hybrid Approach
-	}
-
-	if validSortFields[sortBy] {
-		query = query.Order(sortBy + " " + sortOrder)
-	} else {
-		// Default to updated_at if invalid sort field (Hybrid Approach)
-		query = query.Order("updated_at desc")
-	}
-
+	query := buildQuery(true)
 	if err := query.Find(&records).Error; err != nil {
+		errMsg := strings.ToLower(err.Error())
+		isNonLEISearch := search != "" && !(len(search) == 20 && isAlphanumeric(search))
+		if isNonLEISearch && strings.Contains(errMsg, "search_vector") && strings.Contains(errMsg, "does not exist") {
+			records = nil
+			fallbackQuery := buildQuery(false)
+			if fallbackErr := fallbackQuery.Find(&records).Error; fallbackErr != nil {
+				return nil, fallbackErr
+			}
+			return records, nil
+		}
 		return nil, err
 	}
 	return records, nil

@@ -819,11 +819,14 @@ export default function LEIRecordsPage() {
               <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Search</label>
               <SearchInputWithOverflowTooltip
                 type="text"
-                placeholder="LEI code or legal name..."
+                placeholder="LEI code, legal name, or other names..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full px-4 py-2 rounded-lg border-2 border-gray-300 bg-gray-50 text-gray-900 placeholder-gray-500 dark:border-white/20 dark:bg-white/5 dark:text-white dark:placeholder-gray-400 focus:border-blue-500 focus:outline-none"
               />
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Searches LEI code, legal name, and other names.
+              </p>
             </div>
 
             <div>
