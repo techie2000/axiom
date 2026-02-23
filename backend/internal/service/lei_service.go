@@ -718,7 +718,7 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 			recordsSinceLastHeartbeat := processedRecords - lastHeartbeatProcessed
 			rate := float64(recordsSinceLastHeartbeat) / elapsed
 
-			cumulativeProcessed := checkpointProcessed + processedRecords
+			cumulativeProcessed := capProcessedRecords(progressTotalRecords, checkpointProcessed+processedRecords)
 			remainingRecords := progressTotalRecords - cumulativeProcessed
 			if remainingRecords < 0 {
 				remainingRecords = 0
@@ -761,7 +761,7 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 		}
 
 		// Calculate progress for flush message
-		cumulativeProcessed := checkpointProcessed + processedRecords
+		cumulativeProcessed := capProcessedRecords(progressTotalRecords, checkpointProcessed+processedRecords)
 		flushPercent := 0.0
 		if progressTotalRecords > 0 {
 			flushPercent = (float64(cumulativeProcessed) / float64(progressTotalRecords)) * 100
@@ -794,7 +794,7 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 			processedRecords += len(batch)
 
 			// Update source file with cumulative progress
-			cumulativeProcessed = checkpointProcessed + processedRecords
+			cumulativeProcessed = capProcessedRecords(progressTotalRecords, checkpointProcessed+processedRecords)
 			sourceFile.TotalRecords = progressTotalRecords
 			sourceFile.ProcessedRecords = cumulativeProcessed
 			sourceFile.FailedRecords = failedRecords
@@ -900,7 +900,7 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 	}
 
 	// Final update
-	cumulativeProcessed := checkpointProcessed + processedRecords
+	cumulativeProcessed := capProcessedRecords(progressTotalRecords, checkpointProcessed+processedRecords)
 	sourceFile.TotalRecords = progressTotalRecords
 	sourceFile.ProcessedRecords = cumulativeProcessed
 	sourceFile.FailedRecords = failedRecords
@@ -934,6 +934,34 @@ func resolveProgressTotalRecords(sourceFile *domain.SourceFile, scannedRecords i
 	}
 
 	return scannedRecords
+}
+
+func capProcessedRecords(totalRecords int, processedRecords int) int {
+	if processedRecords < 0 {
+		return 0
+	}
+
+	if totalRecords > 0 && processedRecords > totalRecords {
+		return totalRecords
+	}
+
+	return processedRecords
+}
+
+func sanitizeSourceFileProgress(sourceFile *domain.SourceFile) {
+	if sourceFile == nil {
+		return
+	}
+
+	sourceFile.ProcessedRecords = capProcessedRecords(sourceFile.TotalRecords, sourceFile.ProcessedRecords)
+
+	if sourceFile.FailedRecords < 0 {
+		sourceFile.FailedRecords = 0
+	}
+
+	if sourceFile.FailedRecords > sourceFile.ProcessedRecords {
+		sourceFile.FailedRecords = sourceFile.ProcessedRecords
+	}
 }
 
 func normalizeLEICodeValue(value string) string {
@@ -1296,7 +1324,16 @@ func (s *leiService) GetAuditHistory(lei string, limit int) ([]*domain.LEIRecord
 
 // GetProcessingStatus retrieves processing status for a job type
 func (s *leiService) GetProcessingStatus(jobType string) (*domain.FileProcessingStatus, error) {
-	return s.repo.FindProcessingStatus(jobType)
+	status, err := s.repo.FindProcessingStatus(jobType)
+	if err != nil {
+		return nil, err
+	}
+
+	if status != nil && status.CurrentSourceFile != nil {
+		sanitizeSourceFileProgress(status.CurrentSourceFile)
+	}
+
+	return status, nil
 }
 
 // UpdateProcessingStatus updates processing status

@@ -245,3 +245,56 @@ func TestResolveProgressTotalRecords(t *testing.T) {
 		})
 	}
 }
+
+func TestCapProcessedRecords(t *testing.T) {
+	tests := []struct {
+		name      string
+		total     int
+		processed int
+		expected  int
+	}{
+		{name: "keeps processed when within total", total: 100, processed: 80, expected: 80},
+		{name: "caps processed at total", total: 100, processed: 190, expected: 100},
+		{name: "allows processed when total unknown", total: 0, processed: 190, expected: 190},
+		{name: "normalizes negative processed", total: 100, processed: -1, expected: 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := capProcessedRecords(tt.total, tt.processed)
+			if got != tt.expected {
+				t.Fatalf("expected %d, got %d", tt.expected, got)
+			}
+		})
+	}
+}
+
+func TestSanitizeSourceFileProgress(t *testing.T) {
+	sourceFile := &domain.SourceFile{
+		TotalRecords:     3223073,
+		ProcessedRecords: 6135146,
+		FailedRecords:    10,
+	}
+
+	sanitizeSourceFileProgress(sourceFile)
+
+	if sourceFile.ProcessedRecords != 3223073 {
+		t.Fatalf("expected processed records to be capped at total, got %d", sourceFile.ProcessedRecords)
+	}
+
+	if sourceFile.FailedRecords != 10 {
+		t.Fatalf("expected failed records to remain unchanged when valid, got %d", sourceFile.FailedRecords)
+	}
+
+	sourceFile = &domain.SourceFile{
+		TotalRecords:     100,
+		ProcessedRecords: 60,
+		FailedRecords:    190,
+	}
+
+	sanitizeSourceFileProgress(sourceFile)
+
+	if sourceFile.FailedRecords != 60 {
+		t.Fatalf("expected failed records to be capped at processed, got %d", sourceFile.FailedRecords)
+	}
+}
