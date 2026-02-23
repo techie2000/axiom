@@ -39,6 +39,7 @@ export default function SyncedWideTable({
 }: SyncedWideTableProps) {
   const tableContainerRef = useRef<HTMLDivElement>(null)
   const tableRef = useRef<HTMLTableElement>(null)
+  const stickyTableRef = useRef<HTMLTableElement>(null)
   const stickyHeaderScrollRef = useRef<HTMLDivElement>(null)
   const topScrollbarRef = useRef<HTMLDivElement>(null)
   const isSyncingHorizontalScrollRef = useRef(false)
@@ -105,9 +106,23 @@ export default function SyncedWideTable({
       setTableClientWidth(tableContainerRef.current.clientWidth)
       setTableScrollWidth(Math.max(tableContainerRef.current.scrollWidth, tableRef.current.scrollWidth))
 
+      const headerCells = Array.from(tableRef.current.querySelectorAll<HTMLTableCellElement>('thead th'))
+      const widths = headerCells.map((cell) => cell.getBoundingClientRect().width)
+
+      const stickyHeaderCells = stickyTableRef.current
+        ? Array.from(stickyTableRef.current.querySelectorAll<HTMLTableCellElement>('thead th'))
+        : []
+
+      if (stickyHeaderCells.length === widths.length) {
+        stickyHeaderCells.forEach((cell, index) => {
+          const width = widths[index]
+          cell.style.width = `${width}px`
+          cell.style.minWidth = `${width}px`
+          cell.style.maxWidth = `${width}px`
+        })
+      }
+
       if (onMainHeaderWidthsChange) {
-        const headerCells = Array.from(tableRef.current.querySelectorAll('thead th'))
-        const widths = headerCells.map((cell) => cell.getBoundingClientRect().width)
         onMainHeaderWidthsChange(widths)
       }
 
@@ -149,7 +164,7 @@ export default function SyncedWideTable({
         }}
       >
         <div style={{ width: `${tableScrollWidth}px` }}>
-          <table className={tableClassName} style={tableStyle}>
+          <table ref={stickyTableRef} className={tableClassName} style={tableStyle}>
             <thead className={stickyHeaderClassName}>{headerRow}</thead>
           </table>
         </div>
