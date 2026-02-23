@@ -286,6 +286,8 @@ func setupRouter(cfg *config.Config, h *handler.Handlers) *gin.Engine {
 		// Public LEI data routes (read-only, no auth required)
 		v1.GET("/lei", h.LEI.ListLEI)
 		v1.GET("/lei-countries", h.LEI.GetDistinctCountries)
+		v1.GET("/lei-regions", h.LEI.GetDistinctRegions)
+		v1.GET("/lei-legal-forms", h.LEI.GetDistinctLegalForms)
 		v1.GET("/lei/record/:id", h.LEI.GetLEIByID)
 		v1.GET("/lei/:lei/audit", h.LEI.GetAuditHistory)
 		v1.GET("/lei/:lei", h.LEI.GetLEIByCode)

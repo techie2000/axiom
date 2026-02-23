@@ -107,6 +107,8 @@ type LEIService interface {
 	GetAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string) ([]*domain.LEIRecord, error)
 	CountLEIRecords() (int64, error)
 	GetDistinctCountries() ([]domain.Country, error)
+	GetDistinctRegions() ([]string, error)
+	GetDistinctLegalForms() ([]string, error)
 	UpdateLEIRecord(record *domain.LEIRecord) error
 
 	// Audit and history
@@ -1310,6 +1312,16 @@ func (s *leiService) GetDistinctCountries() ([]domain.Country, error) {
 	}
 
 	return activeCountries, nil
+}
+
+// GetDistinctRegions returns a sorted list of unique region values from LEI records
+func (s *leiService) GetDistinctRegions() ([]string, error) {
+	return s.repo.GetDistinctRegions()
+}
+
+// GetDistinctLegalForms returns a sorted list of unique legal form values from LEI records
+func (s *leiService) GetDistinctLegalForms() ([]string, error) {
+	return s.repo.GetDistinctLegalForms()
 }
 
 // UpdateLEIRecord updates an LEI record

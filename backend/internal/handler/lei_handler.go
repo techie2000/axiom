@@ -41,6 +41,40 @@ func (h *LEIHandler) GetDistinctCountries(c *gin.Context) {
 	c.JSON(http.StatusOK, countries)
 }
 
+// GetDistinctRegions returns a list of all unique region values in the LEI database
+// @Summary Get distinct regions
+// @Description Get sorted list of unique regions from LEI records
+// @Tags LEI
+// @Produce json
+// @Success 200 {array} string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/lei-regions [get]
+func (h *LEIHandler) GetDistinctRegions(c *gin.Context) {
+	regions, err := h.leiService.GetDistinctRegions()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve regions"})
+		return
+	}
+	c.JSON(http.StatusOK, regions)
+}
+
+// GetDistinctLegalForms returns a list of all unique legal forms in the LEI database
+// @Summary Get distinct legal forms
+// @Description Get sorted list of unique legal form values from LEI records
+// @Tags LEI
+// @Produce json
+// @Success 200 {array} string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/lei-legal-forms [get]
+func (h *LEIHandler) GetDistinctLegalForms(c *gin.Context) {
+	legalForms, err := h.leiService.GetDistinctLegalForms()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve legal forms"})
+		return
+	}
+	c.JSON(http.StatusOK, legalForms)
+}
+
 // GetLEIByCode retrieves an LEI record by LEI code
 // @Summary Get LEI record by code
 // @Description Get a specific LEI record by its LEI code

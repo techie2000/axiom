@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 	"time"
 
@@ -23,6 +24,8 @@ type LEIRepository interface {
 	FindAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string) ([]*domain.LEIRecord, error)
 	CountLEIRecords() (int64, error)
 	GetDistinctCountries() ([]string, error)
+	GetDistinctRegions() ([]string, error)
+	GetDistinctLegalForms() ([]string, error)
 	UpdateLEIRecord(record *domain.LEIRecord) error
 	UpsertLEIRecord(record *domain.LEIRecord) (bool, error)              // Returns true if updated, false if created
 	BatchUpsertLEIRecords(records []*domain.LEIRecord) (int, int, error) // Returns (created, updated, error)
@@ -341,6 +344,66 @@ func (r *leiRepository) GetDistinctCountries() ([]string, error) {
 		return nil, err
 	}
 	return countries, nil
+}
+
+// GetDistinctRegions returns sorted unique region values from legal and HQ addresses
+func (r *leiRepository) GetDistinctRegions() ([]string, error) {
+	regionsMap := make(map[string]struct{})
+
+	var legalRegions []string
+	if err := r.db.Model(&domain.LEIRecord{}).
+		Distinct("legal_address_region").
+		Where("legal_address_region IS NOT NULL AND TRIM(legal_address_region) != ''").
+		Pluck("legal_address_region", &legalRegions).Error; err != nil {
+		return nil, err
+	}
+
+	for _, region := range legalRegions {
+		trimmed := strings.TrimSpace(region)
+		if trimmed != "" {
+			regionsMap[trimmed] = struct{}{}
+		}
+	}
+
+	var hqRegions []string
+	if err := r.db.Model(&domain.LEIRecord{}).
+		Distinct("hq_address_region").
+		Where("hq_address_region IS NOT NULL AND TRIM(hq_address_region) != ''").
+		Pluck("hq_address_region", &hqRegions).Error; err != nil {
+		return nil, err
+	}
+
+	for _, region := range hqRegions {
+		trimmed := strings.TrimSpace(region)
+		if trimmed != "" {
+			regionsMap[trimmed] = struct{}{}
+		}
+	}
+
+	regions := make([]string, 0, len(regionsMap))
+	for region := range regionsMap {
+		regions = append(regions, region)
+	}
+
+	if len(regions) > 0 {
+		sort.Strings(regions)
+	}
+
+	return regions, nil
+}
+
+// GetDistinctLegalForms returns a sorted list of unique legal form values
+func (r *leiRepository) GetDistinctLegalForms() ([]string, error) {
+	var legalForms []string
+	err := r.db.Model(&domain.LEIRecord{}).
+		Distinct("entity_legal_form").
+		Where("entity_legal_form IS NOT NULL AND TRIM(entity_legal_form) != ''").
+		Order("entity_legal_form ASC").
+		Pluck("entity_legal_form", &legalForms).Error
+	if err != nil {
+		return nil, err
+	}
+	return legalForms, nil
 }
 
 // UpdateLEIRecord updates an existing LEI record

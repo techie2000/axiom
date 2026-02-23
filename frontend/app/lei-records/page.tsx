@@ -9,6 +9,7 @@ import { formatLEICellValue, getStatusBadgePresentation, normalizeRecordNullLike
 interface LEIRecord {
   id: string
   lei: string
+  country_flag?: string
   legal_name: string
   transliterated_legal_name: string
   other_names: string
@@ -60,6 +61,7 @@ interface LEIRecord {
 interface Country {
   code: string
   name: string
+  region?: string
   active: boolean
 }
 
@@ -77,6 +79,7 @@ const AVAILABLE_COLUMNS: ColumnConfig[] = [
   { key: 'legal_name', label: 'Legal Name', group: 'Core', defaultVisible: true, width: 'min-w-64' },
   { key: 'entity_status', label: 'Status', group: 'Core', defaultVisible: true, width: 'w-32' },
   { key: 'entity_category', label: 'Category', group: 'Core', defaultVisible: true, width: 'w-40' },
+  { key: 'country_flag', label: 'Country Flag', group: 'Core', defaultVisible: false, width: 'w-20' },
   { key: 'legal_address_country', label: 'Country', group: 'Core', defaultVisible: true, width: 'w-24' },
   { key: 'last_update_date', label: 'Last Updated', group: 'Core', defaultVisible: true, width: 'w-32' },
   
@@ -132,6 +135,8 @@ export default function LEIRecordsPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [totalRecords, setTotalRecords] = useState(0)
   const [countryOptions, setCountryOptions] = useState<Country[]>([])
+  const [regionNameByCode, setRegionNameByCode] = useState<Map<string, string>>(new Map())
+  const [legalFormNameByCode, setLegalFormNameByCode] = useState<Map<string, string>>(new Map())
   const [itemsPerPage, setItemsPerPage] = useState(50)
   const [hasMorePages, setHasMorePages] = useState(false)
   const [sortField, setSortField] = useState<keyof LEIRecord | ''>('')  // Empty: let backend decide (Hybrid Approach)
@@ -154,6 +159,7 @@ export default function LEIRecordsPage() {
   const [managingLouName, setManagingLouName] = useState<string | null>(null)
   const [managingLouNames, setManagingLouNames] = useState<Map<string, string>>(new Map())
   const [dateDisplayMode, setDateDisplayMode] = useState<'relative' | 'absolute'>('relative')
+  const [showLocationCodes, setShowLocationCodes] = useState(false)
 
   const API_BASE_URL = typeof window !== 'undefined' 
     ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080')
@@ -201,6 +207,56 @@ export default function LEIRecordsPage() {
     // Refresh every 30 seconds to get live updates during sync
     const interval = setInterval(fetchTotalRecords, 30000)
     return () => clearInterval(interval)
+  }, [API_BASE_URL])
+
+  // Fetch region and legal form resolver maps from backend metadata endpoints
+  useEffect(() => {
+    const fetchDisplayResolvers = async () => {
+      try {
+        const [regionsResponse, legalFormsResponse] = await Promise.all([
+          fetch(`${API_BASE_URL}/api/v1/lei-regions`),
+          fetch(`${API_BASE_URL}/api/v1/lei-legal-forms`),
+        ])
+
+        if (regionsResponse.ok) {
+          const regionsData: string[] = await regionsResponse.json()
+          const nextRegionMap = new Map<string, string>()
+
+          ;(regionsData || []).forEach((region) => {
+            const rawValue = typeof region === 'string' ? region.trim() : ''
+            if (!rawValue) return
+
+            const normalizedCode = rawValue.toUpperCase()
+            if (!nextRegionMap.has(normalizedCode)) {
+              nextRegionMap.set(normalizedCode, rawValue)
+            }
+          })
+
+          setRegionNameByCode(nextRegionMap)
+        }
+
+        if (legalFormsResponse.ok) {
+          const legalFormsData: string[] = await legalFormsResponse.json()
+          const nextLegalFormMap = new Map<string, string>()
+
+          ;(legalFormsData || []).forEach((legalForm) => {
+            const rawValue = typeof legalForm === 'string' ? legalForm.trim() : ''
+            if (!rawValue) return
+
+            const normalizedCode = rawValue.toUpperCase()
+            if (!nextLegalFormMap.has(normalizedCode)) {
+              nextLegalFormMap.set(normalizedCode, rawValue)
+            }
+          })
+
+          setLegalFormNameByCode(nextLegalFormMap)
+        }
+      } catch (err) {
+        console.error('Failed to fetch display resolver metadata:', err)
+      }
+    }
+
+    fetchDisplayResolvers()
   }, [API_BASE_URL])
 
   // Debug logging for records array
@@ -282,13 +338,19 @@ export default function LEIRecordsPage() {
       if (statusFilter) params.append('status', statusFilter)
       if (categoryFilter) params.append('category', categoryFilter)
       if (countryFilter) params.append('country', countryFilter)
-      if (sortField) params.append('sortBy', sortField)
+      if (sortField && !isVirtualColumnKey(sortField)) params.append('sortBy', sortField)
       if (sortDirection) params.append('sortOrder', sortDirection)
       
       // Send visible columns for dynamic SELECT optimization
       // Backend will fetch only the columns requested
       // Always include other_names for search result display (shown inline with legal_name)
-      const columnsToFetch = Array.from(visibleColumns)
+      const columnsToFetch = Array.from(visibleColumns).filter(key => !isVirtualColumnKey(key))
+      const dependentColumns = getDependentColumnsForVisibleColumns(visibleColumns)
+      dependentColumns.forEach((column) => {
+        if (!columnsToFetch.includes(column)) {
+          columnsToFetch.push(column)
+        }
+      })
       if (!columnsToFetch.includes('other_names')) {
         columnsToFetch.push('other_names')
       }
@@ -340,6 +402,10 @@ export default function LEIRecordsPage() {
   }
 
   const handleSort = (field: keyof LEIRecord) => {
+    if (isVirtualColumnKey(field)) {
+      return
+    }
+
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
     } else {
@@ -550,6 +616,148 @@ export default function LEIRecordsPage() {
     return formatLEICellValue(value, key)
   }
 
+  const isVirtualColumnKey = (key: keyof LEIRecord): boolean => {
+    return key === 'country_flag'
+  }
+
+  const getDependentColumnsForVisibleColumns = (columns: Set<keyof LEIRecord>): Array<keyof LEIRecord> => {
+    const dependenciesByVirtualColumn: Partial<Record<keyof LEIRecord, Array<keyof LEIRecord>>> = {
+      country_flag: ['legal_address_country'],
+    }
+
+    const requiredColumns = new Set<keyof LEIRecord>()
+
+    columns.forEach((column) => {
+      const dependencies = dependenciesByVirtualColumn[column]
+      if (!dependencies) {
+        return
+      }
+
+      dependencies.forEach((dependency) => requiredColumns.add(dependency))
+    })
+
+    return Array.from(requiredColumns)
+  }
+
+  const getCountryNameByCode = (countryCode: string): string | null => {
+    const normalizedCode = (countryCode || '').trim().toUpperCase()
+    if (!normalizedCode) return null
+
+    return countryOptions.find(c => c.code.toUpperCase() === normalizedCode)?.name || null
+  }
+
+  const getRegionNameByCode = (regionCode: string): string | null => {
+    const normalizedCode = (regionCode || '').trim().toUpperCase()
+    if (!normalizedCode) return null
+
+    return regionNameByCode.get(normalizedCode) || null
+  }
+
+  const getLegalFormNameByCode = (legalFormCode: string): string | null => {
+    const normalizedCode = (legalFormCode || '').trim().toUpperCase()
+    if (!normalizedCode) return null
+
+    return legalFormNameByCode.get(normalizedCode) || null
+  }
+
+  const getFlagEmojiFromCountryCode = (countryCode: string): string => {
+    const normalizedCode = (countryCode || '').trim().toUpperCase()
+    if (!/^[A-Z]{2}$/.test(normalizedCode)) {
+      return '🌐'
+    }
+
+    const codePoints = normalizedCode.split('').map(char => 127397 + char.charCodeAt(0))
+    return String.fromCodePoint(...codePoints)
+  }
+
+  const getFlagImageUrlFromCountryCode = (countryCode: string): string | null => {
+    const normalizedCode = (countryCode || '').trim().toUpperCase()
+    if (!/^[A-Z]{2}$/.test(normalizedCode)) {
+      return null
+    }
+
+    return `https://flagcdn.com/w20/${normalizedCode.toLowerCase()}.png`
+  }
+
+  const renderCountryFlagIcon = (countryCode: string, sizeClass: string = 'h-3.5 w-5') => {
+    const flagImageUrl = getFlagImageUrlFromCountryCode(countryCode)
+
+    if (flagImageUrl) {
+      return (
+        <img
+          src={flagImageUrl}
+          alt=""
+          aria-hidden="true"
+          className={`${sizeClass} rounded-sm border border-gray-200 dark:border-gray-700`}
+          loading="lazy"
+        />
+      )
+    }
+
+    return <span className="inline-flex h-3.5 w-5 items-center justify-center text-xs" aria-hidden="true">🌐</span>
+  }
+
+  const formatCountryDisplay = (countryCode: string): string => {
+    const normalizedCode = (countryCode || '').trim().toUpperCase()
+    if (!normalizedCode) {
+      return '-'
+    }
+
+    const countryName = getCountryNameByCode(normalizedCode)
+    if (showLocationCodes) {
+      return normalizedCode
+    }
+
+    return countryName || normalizedCode
+  }
+
+  const formatRegionDisplay = (regionCode: string): string => {
+    const normalizedCode = (regionCode || '').trim().toUpperCase()
+    if (!normalizedCode) {
+      return '-'
+    }
+
+    const regionName = getRegionNameByCode(normalizedCode)
+    if (showLocationCodes) {
+      return normalizedCode
+    }
+
+    return regionName || normalizedCode
+  }
+
+  const formatLegalFormDisplay = (legalFormCode: string): string => {
+    const normalizedCode = (legalFormCode || '').trim().toUpperCase()
+    if (!normalizedCode) {
+      return '-'
+    }
+
+    const legalFormName = getLegalFormNameByCode(normalizedCode)
+    if (showLocationCodes) {
+      return normalizedCode
+    }
+
+    return legalFormName || normalizedCode
+  }
+
+  const getColumnLabel = (column: ColumnConfig): string => {
+    if (column.key === 'entity_legal_form') {
+      return showLocationCodes ? 'Legal Form Code' : 'Legal Form Name'
+    }
+    if (column.key === 'legal_address_region') {
+      return showLocationCodes ? 'Region Code' : 'Region Name'
+    }
+    if (column.key === 'hq_address_region') {
+      return showLocationCodes ? 'HQ Region Code' : 'HQ Region Name'
+    }
+    if (column.key === 'legal_address_country') {
+      return showLocationCodes ? 'Country Code' : 'Country Name'
+    }
+    if (column.key === 'hq_address_country') {
+      return showLocationCodes ? 'HQ Country Code' : 'HQ Country Name'
+    }
+    return column.label
+  }
+
   const isHqAddressSameAsLegal = (record: LEIRecord): boolean => {
     // Helper to normalize empty values (null, undefined, "") to null for comparison
     const normalize = (val: string | null | undefined): string | null => {
@@ -747,7 +955,7 @@ export default function LEIRecordsPage() {
                               onChange={() => toggleColumn(column.key)}
                               className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                             />
-                            <span className="text-gray-900 dark:text-white">{column.label}</span>
+                            <span className="text-gray-900 dark:text-white">{getColumnLabel(column)}</span>
                           </label>
                         ))}
                       </div>
@@ -756,6 +964,14 @@ export default function LEIRecordsPage() {
                 </div>
               )}
             </div>
+
+            <button
+              onClick={() => setShowLocationCodes(!showLocationCodes)}
+              className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 transition-colors text-white text-sm font-medium"
+              title={showLocationCodes ? 'Display mode: codes' : 'Display mode: names'}
+            >
+              {showLocationCodes ? '🏷️ Display: Codes' : '🏷️ Display: Names'}
+            </button>
             
             <ThemeToggle />
           </div>
@@ -1047,7 +1263,7 @@ export default function LEIRecordsPage() {
                             className={`${column.width || 'min-w-40'} px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors`}
                           >
                             <div className="flex items-center gap-1">
-                              {column.label}
+                              {getColumnLabel(column)}
                               {sortField === column.key && (
                                 <span className="text-blue-600 dark:text-blue-400">{sortDirection === 'asc' ? '↑' : '↓'}</span>
                               )}
@@ -1084,7 +1300,7 @@ export default function LEIRecordsPage() {
                           className={`${column.width || 'min-w-40'} px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors`}
                         >
                           <div className="flex items-center gap-1">
-                            {column.label}
+                            {getColumnLabel(column)}
                             {sortField === column.key && (
                               <span className="text-blue-600 dark:text-blue-400">{sortDirection === 'asc' ? '↑' : '↓'}</span>
                             )}
@@ -1118,7 +1334,11 @@ export default function LEIRecordsPage() {
                         const value = record[column.key]
                         const isStatus = column.key === 'entity_status'
                         const isLegalName = column.key === 'legal_name'
+                        const isLegalFormColumn = column.key === 'entity_legal_form'
                         const isManagingLou = column.key === 'managing_lou'
+                        const isCountryFlagColumn = column.key === 'country_flag'
+                        const isRegionColumn = column.key === 'legal_address_region' || column.key === 'hq_address_region'
+                        const isCountryColumn = column.key === 'legal_address_country' || column.key === 'hq_address_country'
                         
                         return (
                           <td 
@@ -1170,6 +1390,30 @@ export default function LEIRecordsPage() {
                                   )
                                 })()}
                               </div>
+                            ) : isCountryColumn ? (
+                              formatCountryDisplay(String(value || ''))
+                            ) : isCountryFlagColumn ? (
+                              (() => {
+                                const countryCode = String(record.legal_address_country || '')
+                                const flagImageUrl = getFlagImageUrlFromCountryCode(countryCode)
+                                return flagImageUrl ? (
+                                  <img
+                                    src={flagImageUrl}
+                                    alt={formatCountryDisplay(countryCode)}
+                                    title={formatCountryDisplay(countryCode)}
+                                    className="h-4 w-6 rounded-sm border border-gray-200 dark:border-gray-700"
+                                    loading="lazy"
+                                  />
+                                ) : (
+                                  <span className="text-lg" title={formatCountryDisplay(countryCode)}>
+                                    {getFlagEmojiFromCountryCode(countryCode)}
+                                  </span>
+                                )
+                              })()
+                            ) : isRegionColumn ? (
+                              formatRegionDisplay(String(value || ''))
+                            ) : isLegalFormColumn ? (
+                              formatLegalFormDisplay(String(value || ''))
                             ) : (
                               formatCellValue(value, column.key)
                             )}
@@ -1274,6 +1518,13 @@ export default function LEIRecordsPage() {
                 >
                   {dateDisplayMode === 'relative' ? '📅 Relative' : '🔢 Days only'}
                 </button>
+                <span className="text-gray-600 dark:text-gray-400 ml-2">Display:</span>
+                <button
+                  onClick={() => setShowLocationCodes(!showLocationCodes)}
+                  className="px-3 py-1 rounded-lg bg-indigo-100 hover:bg-indigo-200 dark:bg-indigo-900 dark:hover:bg-indigo-800 text-indigo-900 dark:text-indigo-100 transition-colors font-medium"
+                >
+                  {showLocationCodes ? '🏷️ Codes' : '🏷️ Names'}
+                </button>
               </div>
             </div>
 
@@ -1324,8 +1575,8 @@ export default function LEIRecordsPage() {
                   )}
                   {selectedRecord.entity_legal_form && (
                     <div>
-                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Legal Form</label>
-                      <p className="text-sm text-gray-900 dark:text-white mt-1">{selectedRecord.entity_legal_form}</p>
+                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{showLocationCodes ? 'Legal Form Code' : 'Legal Form Name'}</label>
+                      <p className="text-sm text-gray-900 dark:text-white mt-1">{formatLegalFormDisplay(selectedRecord.entity_legal_form)}</p>
                     </div>
                   )}
                 </div>
@@ -1444,11 +1695,11 @@ export default function LEIRecordsPage() {
                     {/* Region Row */}
                     <div className="grid grid-cols-2 gap-6">
                       <div>
-                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Region</label>
-                        <p className="text-sm text-gray-900 dark:text-white mt-1">{selectedRecord.legal_address_region || '-'}</p>
+                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{showLocationCodes ? 'Region Code' : 'Region Name'}</label>
+                        <p className="text-sm text-gray-900 dark:text-white mt-1">{formatRegionDisplay(selectedRecord.legal_address_region)}</p>
                       </div>
                       <div>
-                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Region</label>
+                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{showLocationCodes ? 'Region Code' : 'Region Name'}</label>
                         <p className="text-sm text-gray-500 dark:text-gray-400 italic mt-1">〃</p>
                       </div>
                     </div>
@@ -1456,11 +1707,14 @@ export default function LEIRecordsPage() {
                     {/* Country Row */}
                     <div className="grid grid-cols-2 gap-6">
                       <div>
-                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Country</label>
-                        <p className="text-sm text-gray-900 dark:text-white mt-1">{selectedRecord.legal_address_country || '-'}</p>
+                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{showLocationCodes ? 'Country Code' : 'Country Name'}</label>
+                        <p className="text-sm text-gray-900 dark:text-white mt-1 flex items-center gap-2">
+                          <span>{formatCountryDisplay(selectedRecord.legal_address_country)}</span>
+                          {renderCountryFlagIcon(String(selectedRecord.legal_address_country || ''))}
+                        </p>
                       </div>
                       <div>
-                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Country</label>
+                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{showLocationCodes ? 'Country Code' : 'Country Name'}</label>
                         <p className="text-sm text-gray-500 dark:text-gray-400 italic mt-1">〃</p>
                       </div>
                     </div>
@@ -1516,24 +1770,30 @@ export default function LEIRecordsPage() {
                     {/* Region Row */}
                     <div className="grid grid-cols-2 gap-6">
                       <div>
-                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Region</label>
-                        <p className="text-sm text-gray-900 dark:text-white mt-1">{selectedRecord.legal_address_region || '-'}</p>
+                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{showLocationCodes ? 'Region Code' : 'Region Name'}</label>
+                        <p className="text-sm text-gray-900 dark:text-white mt-1">{formatRegionDisplay(selectedRecord.legal_address_region)}</p>
                       </div>
                       <div>
-                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Region</label>
-                        <p className="text-sm text-gray-900 dark:text-white mt-1">{selectedRecord.hq_address_region || '-'}</p>
+                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{showLocationCodes ? 'Region Code' : 'Region Name'}</label>
+                        <p className="text-sm text-gray-900 dark:text-white mt-1">{formatRegionDisplay(selectedRecord.hq_address_region)}</p>
                       </div>
                     </div>
 
                     {/* Country Row */}
                     <div className="grid grid-cols-2 gap-6">
                       <div>
-                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Country</label>
-                        <p className="text-sm text-gray-900 dark:text-white mt-1">{selectedRecord.legal_address_country || '-'}</p>
+                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{showLocationCodes ? 'Country Code' : 'Country Name'}</label>
+                        <p className="text-sm text-gray-900 dark:text-white mt-1 flex items-center gap-2">
+                          <span>{formatCountryDisplay(selectedRecord.legal_address_country)}</span>
+                          {renderCountryFlagIcon(String(selectedRecord.legal_address_country || ''))}
+                        </p>
                       </div>
                       <div>
-                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Country</label>
-                        <p className="text-sm text-gray-900 dark:text-white mt-1">{selectedRecord.hq_address_country || '-'}</p>
+                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{showLocationCodes ? 'Country Code' : 'Country Name'}</label>
+                        <p className="text-sm text-gray-900 dark:text-white mt-1 flex items-center gap-2">
+                          <span>{formatCountryDisplay(selectedRecord.hq_address_country)}</span>
+                          {renderCountryFlagIcon(String(selectedRecord.hq_address_country || ''))}
+                        </p>
                       </div>
                     </div>
 
