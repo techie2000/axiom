@@ -672,6 +672,7 @@ func (s *schedulerService) RunDailyDeltaSync() error {
 
 	// Update status
 	status.Status = "RUNNING"
+	status.ErrorMessage = ""
 	now := time.Now()
 	status.LastRunAt = &now
 	if err := s.leiService.UpdateProcessingStatus(status); err != nil {
@@ -762,6 +763,7 @@ func (s *schedulerService) RunDailyFullSync() error {
 
 	// Update status
 	status.Status = "RUNNING"
+	status.ErrorMessage = ""
 	now := time.Now()
 	status.LastRunAt = &now
 	if err := s.leiService.UpdateProcessingStatus(status); err != nil {

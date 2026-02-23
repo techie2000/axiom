@@ -5,11 +5,13 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -19,6 +21,19 @@ import (
 	"github.com/techie2000/axiom/internal/domain"
 	"github.com/techie2000/axiom/internal/repository"
 )
+
+func isTerminalJSONDecodeError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
+		return true
+	}
+
+	errMsg := strings.ToLower(err.Error())
+	return strings.Contains(errMsg, "unexpected eof")
+}
 
 // GLEIF API endpoints and data directory configuration
 const (
@@ -32,6 +47,8 @@ const (
 	// Data directory for downloaded files (relative to working directory)
 	DefaultDataDirectory = "./data/lei"
 )
+
+var leiCodePattern = regexp.MustCompile(`^[0-9A-Z]{18}[0-9]{2}$`)
 
 // GLEIFPublishesResponse represents the response from the GLEIF latest publishes endpoint
 type GLEIFPublishesResponse struct {
@@ -214,7 +231,8 @@ func (s *leiService) DownloadFullFile() (*domain.SourceFile, error) {
 
 	url := publishes.Data.LEI2.FullFile.JSON.URL
 	publishedAt := publishes.Data.LEI2.PublishDate
-	return s.downloadFile(url, "FULL", publishedAt)
+	recordCount := publishes.Data.LEI2.FullFile.JSON.RecordCount
+	return s.downloadFile(url, "FULL", publishedAt, recordCount)
 }
 
 // DownloadDeltaFile downloads the delta LEI data file from GLEIF
@@ -226,11 +244,12 @@ func (s *leiService) DownloadDeltaFile() (*domain.SourceFile, error) {
 
 	url := publishes.Data.LEI2.DeltaFiles.LastWeek.JSON.URL
 	publishedAt := publishes.Data.LEI2.PublishDate
-	return s.downloadFile(url, "DELTA", publishedAt)
+	recordCount := publishes.Data.LEI2.DeltaFiles.LastWeek.JSON.RecordCount
+	return s.downloadFile(url, "DELTA", publishedAt, recordCount)
 }
 
 // downloadFile downloads a file from GLEIF and creates a SourceFile record
-func (s *leiService) downloadFile(url, fileType, publishedAt string) (*domain.SourceFile, error) {
+func (s *leiService) downloadFile(url, fileType, publishedAt string, expectedRecordCount int) (*domain.SourceFile, error) {
 	log.Info().Str("url", url).Str("type", fileType).Msg("Starting file download from GLEIF")
 
 	// Create data directory if it doesn't exist
@@ -328,6 +347,7 @@ func (s *leiService) downloadFile(url, fileType, publishedAt string) (*domain.So
 		DownloadedAt:     time.Now(),
 		PublicationDate:  publicationDate,
 		ProcessingStatus: "PENDING",
+		TotalRecords:     expectedRecordCount,
 	}
 
 	if err := s.repo.CreateSourceFile(sourceFile); err != nil {
@@ -648,7 +668,7 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 	}
 
 	// Start counters based on whether we're resuming or starting fresh
-	var totalRecords int
+	var scannedRecords int
 	var processedRecords int
 	var failedRecords int
 	shouldProcess := resumeFromLEI == ""
@@ -663,18 +683,21 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 		// Resuming: initialize totalRecords at checkpoint to account for skipped records
 		// processedRecords tracks only NEW records processed in this session
 		checkpointProcessed = sourceFile.ProcessedRecords
-		totalRecords = sourceFile.ProcessedRecords // Start counting from checkpoint
-		processedRecords = 0                       // Track only new records in this session
+		scannedRecords = sourceFile.ProcessedRecords // Start counting from checkpoint
+		processedRecords = 0                         // Track only new records in this session
 		failedRecords = sourceFile.FailedRecords
 	} else {
 		// Starting fresh: reset all counters
-		totalRecords = 0
+		scannedRecords = 0
 		processedRecords = 0
 		failedRecords = 0
 	}
 
+	progressTotalRecords := resolveProgressTotalRecords(sourceFile, scannedRecords)
+
 	log.Info().
-		Int("starting_total", totalRecords).
+		Int("starting_total", scannedRecords).
+		Int("expected_total", progressTotalRecords).
 		Int("checkpoint_processed", checkpointProcessed).
 		Int("session_processed", processedRecords).
 		Int("starting_failed", failedRecords).
@@ -696,19 +719,23 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 			rate := float64(recordsSinceLastHeartbeat) / elapsed
 
 			cumulativeProcessed := checkpointProcessed + processedRecords
-			remainingRecords := totalRecords - cumulativeProcessed
+			remainingRecords := progressTotalRecords - cumulativeProcessed
+			if remainingRecords < 0 {
+				remainingRecords = 0
+			}
 			etaSeconds := 0.0
 			if rate > 0 {
 				etaSeconds = float64(remainingRecords) / rate
 			}
 
 			percentComplete := 0.0
-			if totalRecords > 0 {
-				percentComplete = (float64(cumulativeProcessed) / float64(totalRecords)) * 100
+			if progressTotalRecords > 0 {
+				percentComplete = (float64(cumulativeProcessed) / float64(progressTotalRecords)) * 100
 			}
 
 			log.Info().
-				Int("total_records", totalRecords).
+				Int("total_records", progressTotalRecords).
+				Int("scanned_records", scannedRecords).
 				Int("checkpoint_processed", checkpointProcessed).
 				Int("session_processed", processedRecords).
 				Int("cumulative_processed", cumulativeProcessed).
@@ -736,8 +763,8 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 		// Calculate progress for flush message
 		cumulativeProcessed := checkpointProcessed + processedRecords
 		flushPercent := 0.0
-		if totalRecords > 0 {
-			flushPercent = (float64(cumulativeProcessed) / float64(totalRecords)) * 100
+		if progressTotalRecords > 0 {
+			flushPercent = (float64(cumulativeProcessed) / float64(progressTotalRecords)) * 100
 		}
 
 		log.Info().
@@ -745,7 +772,8 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 			Int("checkpoint_processed", checkpointProcessed).
 			Int("session_processed", processedRecords).
 			Int("cumulative_processed", cumulativeProcessed).
-			Int("total_records", totalRecords).
+			Int("total_records", progressTotalRecords).
+			Int("scanned_records", scannedRecords).
 			Float64("percent_complete", flushPercent).
 			Str("last_lei", lastProcessedLEI).
 			Msg("Flushing batch to database")
@@ -767,7 +795,7 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 
 			// Update source file with cumulative progress
 			cumulativeProcessed = checkpointProcessed + processedRecords
-			sourceFile.TotalRecords = totalRecords
+			sourceFile.TotalRecords = progressTotalRecords
 			sourceFile.ProcessedRecords = cumulativeProcessed
 			sourceFile.FailedRecords = failedRecords
 			sourceFile.LastProcessedLEI = normalizeLEICodePointer(lastProcessedLEI)
@@ -777,12 +805,13 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 
 			// Calculate progress percentage
 			percentComplete := 0.0
-			if totalRecords > 0 {
-				percentComplete = (float64(cumulativeProcessed) / float64(totalRecords)) * 100
+			if progressTotalRecords > 0 {
+				percentComplete = (float64(cumulativeProcessed) / float64(progressTotalRecords)) * 100
 			}
 
 			log.Info().
-				Int("total_scanned", totalRecords).
+				Int("total_scanned", scannedRecords).
+				Int("expected_total", progressTotalRecords).
 				Int("cumulative_processed", cumulativeProcessed).
 				Int("session_processed", processedRecords).
 				Int("created", created).
@@ -804,6 +833,14 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 		recordCount++
 		var jsonRecord LEIJSONRecord
 		if err := decoder.Decode(&jsonRecord); err != nil {
+			if isTerminalJSONDecodeError(err) {
+				log.Error().
+					Err(err).
+					Int("record_number", recordCount).
+					Msg("Terminating LEI JSON processing due to malformed or truncated JSON payload")
+				return fmt.Errorf("terminal JSON decode error at record %d: %w", recordCount, err)
+			}
+
 			log.Error().
 				Err(err).
 				Int("record_number", recordCount).
@@ -831,10 +868,19 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 		}
 
 		// Count records only after we start processing (or if not resuming)
-		totalRecords++
+		scannedRecords++
 
 		// Convert JSON record to domain model
 		record := s.jsonToDomainRecord(&jsonRecord, sourceFile.ID)
+		if !isValidLEICode(record.LEI) {
+			log.Error().
+				Str("invalid_lei", record.LEI).
+				Int("record_number", recordCount).
+				Msg("Skipping record with invalid LEI code")
+			failedRecords++
+			continue
+		}
+
 		lastProcessedLEI = record.LEI
 
 		// Add to batch
@@ -855,7 +901,7 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 
 	// Final update
 	cumulativeProcessed := checkpointProcessed + processedRecords
-	sourceFile.TotalRecords = totalRecords
+	sourceFile.TotalRecords = progressTotalRecords
 	sourceFile.ProcessedRecords = cumulativeProcessed
 	sourceFile.FailedRecords = failedRecords
 	if err := s.repo.UpdateSourceFile(sourceFile); err != nil {
@@ -863,7 +909,8 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 	}
 
 	log.Info().
-		Int("total_records", totalRecords).
+		Int("total_records", progressTotalRecords).
+		Int("scanned_records", scannedRecords).
 		Int("checkpoint_processed", checkpointProcessed).
 		Int("session_processed", processedRecords).
 		Int("cumulative_processed", cumulativeProcessed).
@@ -874,11 +921,32 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 }
 
 func normalizeLEICodePointer(value string) *string {
-	normalized := strings.ToUpper(strings.TrimSpace(value))
+	normalized := normalizeLEICodeValue(value)
 	if normalized == "" {
 		return nil
 	}
 	return &normalized
+}
+
+func resolveProgressTotalRecords(sourceFile *domain.SourceFile, scannedRecords int) int {
+	if sourceFile != nil && sourceFile.TotalRecords > 0 {
+		return sourceFile.TotalRecords
+	}
+
+	return scannedRecords
+}
+
+func normalizeLEICodeValue(value string) string {
+	normalized := strings.ToUpper(strings.TrimSpace(value))
+	if normalized == "" || strings.EqualFold(normalized, "NULL") {
+		return ""
+	}
+
+	return normalized
+}
+
+func isValidLEICode(value string) bool {
+	return leiCodePattern.MatchString(value)
 }
 
 func leiCodeValue(value *string) string {
@@ -890,7 +958,7 @@ func leiCodeValue(value *string) string {
 
 // extractLEI extracts the LEI string from a JSON record (handles nested $ structure)
 func (s *leiService) extractLEI(jsonRecord *LEIJSONRecord) string {
-	return jsonRecord.LEI.Value
+	return normalizeLEICodeValue(jsonRecord.LEI.Value)
 }
 
 // LEIJSONRecord represents the JSON structure from GLEIF bulk files
@@ -1014,14 +1082,17 @@ func normalizeLEIRecordNullLikeFields(record *domain.LEIRecord) {
 	record.EntityLegalForm = normalizeNullLikeValue(record.EntityLegalForm)
 	record.EntityStatus = normalizeNullLikeValue(record.EntityStatus)
 	record.ManagingLOU = normalizeNullLikeValue(record.ManagingLOU)
-	record.SuccessorLEI = normalizeNullLikeValue(record.SuccessorLEI)
+	record.SuccessorLEI = normalizeLEICodeValue(record.SuccessorLEI)
+	if record.SuccessorLEI != "" && !isValidLEICode(record.SuccessorLEI) {
+		record.SuccessorLEI = ""
+	}
 	record.ValidationAuthority = normalizeNullLikeValue(record.ValidationAuthority)
 }
 
 // jsonToDomainRecord converts a JSON record to a domain.LEIRecord
 func (s *leiService) jsonToDomainRecord(jsonRecord *LEIJSONRecord, sourceFileID uuid.UUID) *domain.LEIRecord {
 	record := &domain.LEIRecord{
-		LEI:                    jsonRecord.LEI.Value,
+		LEI:                    normalizeLEICodeValue(jsonRecord.LEI.Value),
 		LegalName:              jsonRecord.Entity.LegalName.Value,
 		LegalAddressLine1:      jsonRecord.Entity.LegalAddress.FirstAddressLine.Value,
 		LegalAddressCity:       jsonRecord.Entity.LegalAddress.City.Value,
@@ -1044,7 +1115,7 @@ func (s *leiService) jsonToDomainRecord(jsonRecord *LEIJSONRecord, sourceFileID 
 	// Extract SuccessorLEI from SuccessorEntity array (if present)
 	// Some entities have multiple successors (array), others have single or none
 	if len(jsonRecord.Entity.SuccessorEntity) > 0 && normalizeNullLikeValue(jsonRecord.Entity.SuccessorEntity[0].SuccessorLEI.Value) != "" {
-		record.SuccessorLEI = jsonRecord.Entity.SuccessorEntity[0].SuccessorLEI.Value
+		record.SuccessorLEI = normalizeLEICodeValue(jsonRecord.Entity.SuccessorEntity[0].SuccessorLEI.Value)
 	}
 
 	// Extract transliterated legal name from TransliteratedOtherEntityNames

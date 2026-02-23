@@ -1,11 +1,36 @@
 package service
 
 import (
+	"errors"
+	"io"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/techie2000/axiom/internal/domain"
 )
+
+func TestIsTerminalJSONDecodeError(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{name: "nil error", err: nil, want: false},
+		{name: "io eof", err: io.EOF, want: true},
+		{name: "io unexpected eof", err: io.ErrUnexpectedEOF, want: true},
+		{name: "wrapped unexpected eof", err: errors.New("decode failure: unexpected EOF"), want: true},
+		{name: "other decode error", err: errors.New("invalid character 'x' looking for beginning of value"), want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := isTerminalJSONDecodeError(tt.err)
+			if got != tt.want {
+				t.Fatalf("expected %v, got %v", tt.want, got)
+			}
+		})
+	}
+}
 
 func TestNormalizeLEIRecordNullLikeFields(t *testing.T) {
 	record := &domain.LEIRecord{
@@ -44,13 +69,13 @@ func TestJSONToDomainRecord_NormalizesNullLikeFields(t *testing.T) {
 	sourceFileID := uuid.New()
 
 	jsonRecord := &LEIJSONRecord{
-		LEI: LEIValueField{Value: "5493001KJTIIGC8Y1R12"},
+		LEI: LEIValueField{Value: " 5493001kjtiigc8y1r12 "},
 		Entity: LEIEntity{
 			LegalName:       LEILegalName{Value: "Example Entity"},
 			EntityStatus:    LEIValueField{Value: "NULL"},
 			EntityCategory:  LEIValueField{Value: "null"},
 			LegalAddress:    LEIAddress{FirstAddressLine: LEIValueField{Value: "NULL"}, City: LEIValueField{Value: "Lagos"}, Country: LEIValueField{Value: "NG"}},
-			SuccessorEntity: []LEISuccessorEntity{{SuccessorLEI: LEIValueField{Value: "NULL"}}},
+			SuccessorEntity: []LEISuccessorEntity{{SuccessorLEI: LEIValueField{Value: " 5493001kjtiigc8y1r12 "}}},
 		},
 		Registration: LEIRegistration{
 			ManagingLOU: LEIValueField{Value: "NULL"},
@@ -58,6 +83,10 @@ func TestJSONToDomainRecord_NormalizesNullLikeFields(t *testing.T) {
 	}
 
 	record := svc.jsonToDomainRecord(jsonRecord, sourceFileID)
+
+	if record.LEI != "5493001KJTIIGC8Y1R12" {
+		t.Fatalf("expected LEI to be normalized to uppercase trimmed value, got %q", record.LEI)
+	}
 
 	if record.EntityStatus != "" {
 		t.Fatalf("expected EntityStatus to be normalized to empty string, got %q", record.EntityStatus)
@@ -68,14 +97,70 @@ func TestJSONToDomainRecord_NormalizesNullLikeFields(t *testing.T) {
 	if record.ManagingLOU != "" {
 		t.Fatalf("expected ManagingLOU to be normalized to empty string, got %q", record.ManagingLOU)
 	}
-	if record.SuccessorLEI != "" {
-		t.Fatalf("expected SuccessorLEI to be normalized to empty string, got %q", record.SuccessorLEI)
+	if record.SuccessorLEI != "5493001KJTIIGC8Y1R12" {
+		t.Fatalf("expected SuccessorLEI to be normalized to uppercase trimmed value, got %q", record.SuccessorLEI)
 	}
 	if record.LegalAddressLine1 != "" {
 		t.Fatalf("expected LegalAddressLine1 to be normalized to empty string, got %q", record.LegalAddressLine1)
 	}
 	if record.LegalAddressCity != "Lagos" {
 		t.Fatalf("expected LegalAddressCity to remain unchanged, got %q", record.LegalAddressCity)
+	}
+}
+
+func TestNormalizeLEIRecordNullLikeFields_InvalidSuccessorLEIBecomesEmpty(t *testing.T) {
+	record := &domain.LEIRecord{
+		SuccessorLEI: "INVALID_SUCCESSOR",
+	}
+
+	normalizeLEIRecordNullLikeFields(record)
+
+	if record.SuccessorLEI != "" {
+		t.Fatalf("expected invalid SuccessorLEI to be cleared, got %q", record.SuccessorLEI)
+	}
+}
+
+func TestNormalizeLEICodeValue(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{name: "empty", input: "", want: ""},
+		{name: "null-like", input: " null ", want: ""},
+		{name: "valid mixed-case with spaces", input: " 5493001kjtiigc8y1r12 ", want: "5493001KJTIIGC8Y1R12"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := normalizeLEICodeValue(tt.input)
+			if got != tt.want {
+				t.Fatalf("expected %q, got %q", tt.want, got)
+			}
+		})
+	}
+}
+
+func TestIsValidLEICode(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  bool
+	}{
+		{name: "valid code", input: "5493001KJTIIGC8Y1R12", want: true},
+		{name: "empty", input: "", want: false},
+		{name: "short", input: "5493001KJTIIGC8Y1R1", want: false},
+		{name: "invalid suffix", input: "5493001KJTIIGC8Y1RXX", want: false},
+		{name: "lowercase invalid", input: "5493001kjtiigc8y1r12", want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := isValidLEICode(tt.input)
+			if got != tt.want {
+				t.Fatalf("expected %v, got %v", tt.want, got)
+			}
+		})
 	}
 }
 
@@ -121,5 +206,42 @@ func TestLEICodeValue(t *testing.T) {
 	value := "5493001KJTIIGC8Y1R12"
 	if got := leiCodeValue(&value); got != value {
 		t.Fatalf("expected %q, got %q", value, got)
+	}
+}
+
+func TestResolveProgressTotalRecords(t *testing.T) {
+	tests := []struct {
+		name          string
+		sourceFile    *domain.SourceFile
+		scanned       int
+		expectedTotal int
+	}{
+		{
+			name:          "uses source file total when available",
+			sourceFile:    &domain.SourceFile{TotalRecords: 3211232},
+			scanned:       10000,
+			expectedTotal: 3211232,
+		},
+		{
+			name:          "falls back to scanned when source total missing",
+			sourceFile:    &domain.SourceFile{TotalRecords: 0},
+			scanned:       10000,
+			expectedTotal: 10000,
+		},
+		{
+			name:          "falls back to scanned when source file nil",
+			sourceFile:    nil,
+			scanned:       500,
+			expectedTotal: 500,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := resolveProgressTotalRecords(tt.sourceFile, tt.scanned)
+			if got != tt.expectedTotal {
+				t.Fatalf("expected %d, got %d", tt.expectedTotal, got)
+			}
+		})
 	}
 }

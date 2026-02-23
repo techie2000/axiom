@@ -1,5 +1,4 @@
 {
-  "[pgsql]": {},
   "chat.tools.terminal.autoApprove": {
     "ConvertFrom-Json": true,
     "ConvertTo-Json": true,
@@ -35,7 +34,18 @@
     "Set-Content": true,
     "sqlfluff": true,
     "Tee-Object": true,
-    "Test-Path": true
+    "Test-Path": true,
+    "Get-PSDrive": true,
+    "docker builder": true,
+    "docker container": true,
+    ".Name": true,
+    "println": true,
+    "Get-Command": true,
+    "wsl": true,
+    "diskpart": true,
+    "Start-Process": true,
+    "Write-Error": true,
+    "Out-Null": true
   },
   "cSpell.words": [
     "adduser",
@@ -46,6 +56,7 @@
     "Applitools",
     "aquasecurity",
     "asyncio",
+    "AURSDO",
     "Backpressure",
     "BARCGB",
     "Beego",
@@ -97,6 +108,7 @@
     "jsonschema",
     "keepdeltafiles",
     "keepfullfiles",
+    "KJTIIGC",
     "LASTEXITCODE",
     "LEIJSON",
     "llms",
@@ -119,6 +131,7 @@
     "pgcrypto",
     "PGDATA",
     "PGPASSWORD",
+    "plainto",
     "plpgsql",
     "precheck",
     "psql",
@@ -143,6 +156,7 @@
     "testdata",
     "toggleable",
     "trgm",
+    "tsquery",
     "unmarshal",
     "Upserting",
     "VARCHAR",
@@ -154,7 +168,7 @@
     "XNAS",
     "xvzf",
     "zerolog"
-],
+  ],
   "go.toolsEnvVars": {
     "GOPROXY": "direct"
   },

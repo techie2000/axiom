@@ -57,6 +57,15 @@ func isNotSetStatusFilter(status string) bool {
 	return strings.EqualFold(strings.TrimSpace(status), "NULL")
 }
 
+func nullableLEICode(value string) interface{} {
+	normalized := strings.TrimSpace(value)
+	if normalized == "" {
+		return nil
+	}
+
+	return normalized
+}
+
 // NewLEIRepository creates a new LEI repository instance
 func NewLEIRepository(db *gorm.DB) LEIRepository {
 	return &leiRepository{db: db}
@@ -403,8 +412,7 @@ func (r *leiRepository) BatchUpsertLEIRecords(records []*domain.LEIRecord) (int,
 
 	// Set created_by and updated_by for all records
 	now := time.Now()
-	leiCodes := make([]string, len(records))
-	for i, record := range records {
+	for _, record := range records {
 		if record.CreatedAt.IsZero() {
 			record.CreatedAt = now
 		}
@@ -417,21 +425,6 @@ func (r *leiRepository) BatchUpsertLEIRecords(records []*domain.LEIRecord) (int,
 		if record.UpdatedBy == "" {
 			record.UpdatedBy = "system"
 		}
-		leiCodes[i] = record.LEI
-	}
-
-	// Fetch full existing records to detect changes (not just LEI codes)
-	var existingRecords []domain.LEIRecord
-	if err := r.db.Model(&domain.LEIRecord{}).
-		Where("lei IN ?", leiCodes).
-		Find(&existingRecords).Error; err != nil {
-		return 0, 0, fmt.Errorf("failed to query existing records: %w", err)
-	}
-
-	// Build map of existing records for fast lookup and change detection
-	existingMap := make(map[string]*domain.LEIRecord)
-	for i := range existingRecords {
-		existingMap[existingRecords[i].LEI] = &existingRecords[i]
 	}
 
 	// Use transaction for atomicity: record + audit must succeed together
@@ -457,9 +450,28 @@ func (r *leiRepository) BatchUpsertLEIRecords(records []*domain.LEIRecord) (int,
 		}
 		batch := records[i:end]
 
+		// Fetch existing records only for this batch to avoid huge IN clauses and reduce memory pressure
+		batchLEICodes := make([]string, len(batch))
+		for idx, record := range batch {
+			batchLEICodes[idx] = record.LEI
+		}
+
+		var existingRecords []domain.LEIRecord
+		if err := tx.Model(&domain.LEIRecord{}).
+			Where("lei IN ?", batchLEICodes).
+			Find(&existingRecords).Error; err != nil {
+			tx.Rollback()
+			return 0, 0, fmt.Errorf("failed to query existing records for batch %d-%d: %w", i, end, err)
+		}
+
+		existingMap := make(map[string]*domain.LEIRecord, len(existingRecords))
+		for idx := range existingRecords {
+			existingMap[existingRecords[idx].LEI] = &existingRecords[idx]
+		}
+
 		// Build SQL with RETURNING to get affected record IDs
 		valueStrings := make([]string, 0, len(batch))
-		valueArgs := make([]interface{}, 0, len(batch)*20)
+		valueArgs := make([]interface{}, 0, len(batch)*41)
 
 		// Generate all values in Go, use placeholders for everything
 		now := time.Now()
@@ -473,47 +485,47 @@ func (r *leiRepository) BatchUpsertLEIRecords(records []*domain.LEIRecord) (int,
 			newID := uuid.New()
 
 			valueArgs = append(valueArgs,
-				newID,                          // id
-				record.LEI,                     // lei
-				record.LegalName,               // legal_name
-				record.TransliteratedLegalName, // transliterated_legal_name
-				record.OtherNames,              // other_names
-				record.LegalAddressLine1,       // legal_address_line_1
-				record.LegalAddressLine2,       // legal_address_line_2
-				record.LegalAddressLine3,       // legal_address_line_3
-				record.LegalAddressLine4,       // legal_address_line_4
-				record.LegalAddressCity,        // legal_address_city
-				record.LegalAddressRegion,      // legal_address_region
-				record.LegalAddressCountry,     // legal_address_country
-				record.LegalAddressPostalCode,  // legal_address_postal_code
-				record.HQAddressLine1,          // hq_address_line_1
-				record.HQAddressLine2,          // hq_address_line_2
-				record.HQAddressLine3,          // hq_address_line_3
-				record.HQAddressLine4,          // hq_address_line_4
-				record.HQAddressCity,           // hq_address_city
-				record.HQAddressRegion,         // hq_address_region
-				record.HQAddressCountry,        // hq_address_country
-				record.HQAddressPostalCode,     // hq_address_postal_code
-				record.RegistrationAuthority,   // registration_authority
-				record.RegistrationAuthorityID, // registration_authority_id
-				record.RegistrationNumber,      // registration_number
-				record.EntityCategory,          // entity_category
-				record.EntitySubCategory,       // entity_sub_category
-				record.EntityLegalForm,         // entity_legal_form
-				record.EntityStatus,            // entity_status
-				record.SuccessorLEI,            // successor_lei
-				record.ValidationAuthority,     // validation_authority
-				record.InitialRegistrationDate, // initial_registration_date
-				record.LastUpdateDate,          // last_update_date
-				record.NextRenewalDate,         // next_renewal_date
-				record.ManagingLOU,             // managing_lou
-				record.ValidationSources,       // validation_sources
-				record.SourceFileID,            // source_file_id
-				now,                            // created_at
-				now,                            // updated_at
-				"system",                       // created_by
-				"system",                       // updated_by
-				emptyChangedFields,             // changed_fields
+				newID,                                // id
+				record.LEI,                           // lei
+				record.LegalName,                     // legal_name
+				record.TransliteratedLegalName,       // transliterated_legal_name
+				record.OtherNames,                    // other_names
+				record.LegalAddressLine1,             // legal_address_line_1
+				record.LegalAddressLine2,             // legal_address_line_2
+				record.LegalAddressLine3,             // legal_address_line_3
+				record.LegalAddressLine4,             // legal_address_line_4
+				record.LegalAddressCity,              // legal_address_city
+				record.LegalAddressRegion,            // legal_address_region
+				record.LegalAddressCountry,           // legal_address_country
+				record.LegalAddressPostalCode,        // legal_address_postal_code
+				record.HQAddressLine1,                // hq_address_line_1
+				record.HQAddressLine2,                // hq_address_line_2
+				record.HQAddressLine3,                // hq_address_line_3
+				record.HQAddressLine4,                // hq_address_line_4
+				record.HQAddressCity,                 // hq_address_city
+				record.HQAddressRegion,               // hq_address_region
+				record.HQAddressCountry,              // hq_address_country
+				record.HQAddressPostalCode,           // hq_address_postal_code
+				record.RegistrationAuthority,         // registration_authority
+				record.RegistrationAuthorityID,       // registration_authority_id
+				record.RegistrationNumber,            // registration_number
+				record.EntityCategory,                // entity_category
+				record.EntitySubCategory,             // entity_sub_category
+				record.EntityLegalForm,               // entity_legal_form
+				record.EntityStatus,                  // entity_status
+				nullableLEICode(record.SuccessorLEI), // successor_lei
+				record.ValidationAuthority,           // validation_authority
+				record.InitialRegistrationDate,       // initial_registration_date
+				record.LastUpdateDate,                // last_update_date
+				record.NextRenewalDate,               // next_renewal_date
+				record.ManagingLOU,                   // managing_lou
+				record.ValidationSources,             // validation_sources
+				record.SourceFileID,                  // source_file_id
+				now,                                  // created_at
+				now,                                  // updated_at
+				"system",                             // created_by
+				"system",                             // updated_by
+				emptyChangedFields,                   // changed_fields
 			)
 		}
 
@@ -570,6 +582,41 @@ func (r *leiRepository) BatchUpsertLEIRecords(records []*domain.LEIRecord) (int,
 				source_file_id = EXCLUDED.source_file_id,
 				updated_at = NOW(),
 				updated_by = 'system'
+			WHERE
+				lei_raw.lei_records.legal_name IS DISTINCT FROM EXCLUDED.legal_name OR
+				lei_raw.lei_records.transliterated_legal_name IS DISTINCT FROM EXCLUDED.transliterated_legal_name OR
+				lei_raw.lei_records.other_names IS DISTINCT FROM EXCLUDED.other_names OR
+				lei_raw.lei_records.entity_status IS DISTINCT FROM EXCLUDED.entity_status OR
+				lei_raw.lei_records.legal_address_line_1 IS DISTINCT FROM EXCLUDED.legal_address_line_1 OR
+				lei_raw.lei_records.legal_address_line_2 IS DISTINCT FROM EXCLUDED.legal_address_line_2 OR
+				lei_raw.lei_records.legal_address_line_3 IS DISTINCT FROM EXCLUDED.legal_address_line_3 OR
+				lei_raw.lei_records.legal_address_line_4 IS DISTINCT FROM EXCLUDED.legal_address_line_4 OR
+				lei_raw.lei_records.legal_address_city IS DISTINCT FROM EXCLUDED.legal_address_city OR
+				lei_raw.lei_records.legal_address_region IS DISTINCT FROM EXCLUDED.legal_address_region OR
+				lei_raw.lei_records.legal_address_country IS DISTINCT FROM EXCLUDED.legal_address_country OR
+				lei_raw.lei_records.legal_address_postal_code IS DISTINCT FROM EXCLUDED.legal_address_postal_code OR
+				lei_raw.lei_records.hq_address_line_1 IS DISTINCT FROM EXCLUDED.hq_address_line_1 OR
+				lei_raw.lei_records.hq_address_line_2 IS DISTINCT FROM EXCLUDED.hq_address_line_2 OR
+				lei_raw.lei_records.hq_address_line_3 IS DISTINCT FROM EXCLUDED.hq_address_line_3 OR
+				lei_raw.lei_records.hq_address_line_4 IS DISTINCT FROM EXCLUDED.hq_address_line_4 OR
+				lei_raw.lei_records.hq_address_city IS DISTINCT FROM EXCLUDED.hq_address_city OR
+				lei_raw.lei_records.hq_address_region IS DISTINCT FROM EXCLUDED.hq_address_region OR
+				lei_raw.lei_records.hq_address_country IS DISTINCT FROM EXCLUDED.hq_address_country OR
+				lei_raw.lei_records.hq_address_postal_code IS DISTINCT FROM EXCLUDED.hq_address_postal_code OR
+				lei_raw.lei_records.registration_authority IS DISTINCT FROM EXCLUDED.registration_authority OR
+				lei_raw.lei_records.registration_authority_id IS DISTINCT FROM EXCLUDED.registration_authority_id OR
+				lei_raw.lei_records.registration_number IS DISTINCT FROM EXCLUDED.registration_number OR
+				lei_raw.lei_records.entity_category IS DISTINCT FROM EXCLUDED.entity_category OR
+				lei_raw.lei_records.entity_sub_category IS DISTINCT FROM EXCLUDED.entity_sub_category OR
+				lei_raw.lei_records.entity_legal_form IS DISTINCT FROM EXCLUDED.entity_legal_form OR
+				lei_raw.lei_records.successor_lei IS DISTINCT FROM EXCLUDED.successor_lei OR
+				lei_raw.lei_records.validation_authority IS DISTINCT FROM EXCLUDED.validation_authority OR
+				lei_raw.lei_records.initial_registration_date IS DISTINCT FROM EXCLUDED.initial_registration_date OR
+				lei_raw.lei_records.last_update_date IS DISTINCT FROM EXCLUDED.last_update_date OR
+				lei_raw.lei_records.next_renewal_date IS DISTINCT FROM EXCLUDED.next_renewal_date OR
+				lei_raw.lei_records.managing_lou IS DISTINCT FROM EXCLUDED.managing_lou OR
+				lei_raw.lei_records.validation_sources IS DISTINCT FROM EXCLUDED.validation_sources OR
+				lei_raw.lei_records.source_file_id IS DISTINCT FROM EXCLUDED.source_file_id
 	`, strings.Join(valueStrings, ","))
 
 		// Execute batch upsert using Exec (better placeholder handling than Raw)

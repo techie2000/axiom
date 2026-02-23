@@ -97,6 +97,9 @@ export default function LEIStatusPage() {
   const [dataMode, setDataMode] = useState<'api' | 'sample'>('api')
   const [infoMessage, setInfoMessage] = useState('')
   const [autoRefresh, setAutoRefresh] = useState(true)
+  const [activeTriggerJob, setActiveTriggerJob] = useState<'DAILY_FULL' | 'DAILY_DELTA' | null>(null)
+  const [fullSyncActionMessage, setFullSyncActionMessage] = useState<string | null>(null)
+  const [deltaSyncActionMessage, setDeltaSyncActionMessage] = useState<string | null>(null)
 
   const API_BASE_URL = typeof window !== 'undefined'
     ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080')
@@ -164,6 +167,65 @@ export default function LEIStatusPage() {
       setError(null)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const triggerSyncNow = async (jobType: 'DAILY_FULL' | 'DAILY_DELTA') => {
+    const token = getAuthToken()
+    if (!token) {
+      if (jobType === 'DAILY_FULL') {
+        setFullSyncActionMessage('Authentication token required to trigger sync. Please log in first.')
+      } else {
+        setDeltaSyncActionMessage('Authentication token required to trigger sync. Please log in first.')
+      }
+      return
+    }
+
+    setActiveTriggerJob(jobType)
+    if (jobType === 'DAILY_FULL') {
+      setFullSyncActionMessage(null)
+    } else {
+      setDeltaSyncActionMessage(null)
+    }
+
+    const endpoint = jobType === 'DAILY_FULL' ? 'full' : 'delta'
+    const syncLabel = jobType === 'DAILY_FULL' ? 'daily download' : 'delta download'
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/lei/sync/${endpoint}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
+        },
+      })
+
+      if (!response.ok) {
+        const errorBody = await response.text()
+        const message = `Failed to trigger ${syncLabel} (${response.status}). ${errorBody || 'Please try again.'}`
+        if (jobType === 'DAILY_FULL') {
+          setFullSyncActionMessage(message)
+        } else {
+          setDeltaSyncActionMessage(message)
+        }
+        return
+      }
+
+      if (jobType === 'DAILY_FULL') {
+        setFullSyncActionMessage('Daily download triggered successfully.')
+      } else {
+        setDeltaSyncActionMessage('Delta download triggered successfully.')
+      }
+      await fetchStatus()
+    } catch {
+      const message = `Failed to trigger ${syncLabel} due to network/API error.`
+      if (jobType === 'DAILY_FULL') {
+        setFullSyncActionMessage(message)
+      } else {
+        setDeltaSyncActionMessage(message)
+      }
+    } finally {
+      setActiveTriggerJob(null)
     }
   }
 
@@ -241,7 +303,12 @@ export default function LEIStatusPage() {
     return 'Unknown'
   }
 
-  const renderStatusCard = (title: string, status: ProcessingStatus | null, isDisabled: boolean = false) => {
+  const renderStatusCard = (
+    title: string,
+    status: ProcessingStatus | null,
+    isDisabled: boolean = false,
+    onDemandJobType: 'DAILY_FULL' | 'DAILY_DELTA' | null = null
+  ) => {
     if (!status) {
       return (
         <div className={`rounded-lg shadow-md p-6 border-2 ${
@@ -280,6 +347,35 @@ export default function LEIStatusPage() {
             {formatStatusLabel(status.status)}
           </span>
         </div>
+
+        {isDisabled && (
+          <div className="mb-4">
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border bg-gray-200 text-gray-700 border-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600">
+              Hourly sync currently disabled
+            </span>
+          </div>
+        )}
+
+        {onDemandJobType && (
+          <div className="mb-4">
+            <button
+              onClick={() => triggerSyncNow(onDemandJobType)}
+              disabled={activeTriggerJob !== null || status.status === 'RUNNING'}
+              className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed text-sm"
+            >
+              {activeTriggerJob === onDemandJobType
+                ? 'Starting…'
+                : onDemandJobType === 'DAILY_FULL'
+                  ? 'Run Daily Download Now'
+                  : 'Run Delta Download Now'}
+            </button>
+            {(onDemandJobType === 'DAILY_FULL' ? fullSyncActionMessage : deltaSyncActionMessage) && (
+              <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">
+                {onDemandJobType === 'DAILY_FULL' ? fullSyncActionMessage : deltaSyncActionMessage}
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Progress Bar */}
         {file && status.status === 'RUNNING' && (
@@ -470,13 +566,8 @@ export default function LEIStatusPage() {
 
         {/* Status Cards */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {renderStatusCard(`Full Sync (${getFrequencyLabel(fullStatus)})`, fullStatus, false)}
-          <div className="relative">
-            {renderStatusCard(`Delta Sync (${getFrequencyLabel(deltaStatus)})`, deltaStatus, true)}
-            <div className="absolute top-4 right-4 bg-gray-500 text-white text-xs px-2 py-1 rounded">
-              DISABLED
-            </div>
-          </div>
+          {renderStatusCard(`Full Sync (${getFrequencyLabel(fullStatus)})`, fullStatus, false, 'DAILY_FULL')}
+          {renderStatusCard(`Delta Sync (${getFrequencyLabel(deltaStatus)})`, deltaStatus, true, null)}
         </div>
 
         {/* Legend */}

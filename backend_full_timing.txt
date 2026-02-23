@@ -1,0 +1,9 @@
+status=IDLE
+file=lei-FULL-20260222-232302.json.zip
+processed=2938073
+total=3223073
+start_utc=2026-02-22T23:38:27.5552080Z
+end_utc=2026-02-23T01:29:31.1171515Z
+elapsed_sec=6663.6
+records_per_sec=440.92
+error_message=

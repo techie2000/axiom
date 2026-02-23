@@ -60,30 +60,21 @@ func CORS(cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		origin := c.Request.Header.Get("Origin")
 
-		// DEBUG: Log CORS configuration and request
-		fmt.Printf("[CORS DEBUG] Origin: %s, Allowed Origins: %v\n", origin, cfg.CORS.AllowedOrigins)
-
 		// Check if the origin is in the allowed list
 		allowed := false
 		for _, allowedOrigin := range cfg.CORS.AllowedOrigins {
-			fmt.Printf("[CORS DEBUG] Checking: %s == %s\n", allowedOrigin, origin)
 			if allowedOrigin == "*" || allowedOrigin == origin {
 				allowed = true
-				fmt.Printf("[CORS DEBUG] MATCH FOUND!\n")
 				break
 			}
 		}
-
-		fmt.Printf("[ CORS DEBUG] Allowed: %v\n", allowed)
 
 		// Set CORS headers if origin is allowed
 		if allowed {
 			if origin != "" {
 				c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
-				fmt.Printf("[CORS DEBUG] Set Access-Control-Allow-Origin: %s\n", origin)
 			} else if len(cfg.CORS.AllowedOrigins) > 0 && cfg.CORS.AllowedOrigins[0] == "*" {
 				c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-				fmt.Printf("[CORS DEBUG] Set Access-Control-Allow-Origin: *\n")
 			}
 			c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
 			c.Writer.Header().Set("Vary", "Origin")
@@ -107,7 +98,11 @@ func CORS(cfg *config.Config) gin.HandlerFunc {
 // Logger middleware
 func Logger() gin.HandlerFunc {
 	return gin.LoggerWithConfig(gin.LoggerConfig{
-		SkipPaths: []string{"/health"},
+		SkipPaths: []string{
+			"/health",
+			"/api/v1/lei/status/DAILY_FULL",
+			"/api/v1/lei/status/DAILY_DELTA",
+		},
 	})
 }
 
