@@ -349,8 +349,8 @@ jobs:
                 issueBody += `FROM alpine:${data.fixed}\n`;
                 issueBody += `\`\n\n`;
               } else {
-                issueBody += `Update \\`docker/Dockerfile.frontend\\` to use a newer base image `;
-                issueBody += `or install the fixed version of \\`${pkgName}\\`.\\n`;
+                issueBody += `Update \`docker/Dockerfile.frontend\` to use a newer base image `;
+                issueBody += `or install the fixed version of \`${pkgName}\`.\n`;
               }
 
               issueBody += `After updating, rebuild and test:\n`;
