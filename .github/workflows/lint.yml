@@ -39,6 +39,19 @@ jobs:
           working-directory: ./backend
           args: --timeout=10m --verbose
 
+  govulncheck:
+    name: Go Vulnerability Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run govulncheck
+        uses: golang/govulncheck-action@v1
+        with:
+          go-version-file: backend/go.mod
+          work-dir: backend
+
   docker-lint:
     name: Dockerfile Linting
     runs-on: ubuntu-latest
