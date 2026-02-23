@@ -996,21 +996,9 @@ export default function LEIRecordsPage() {
 
         {/* Info message about sorting behavior (Hybrid Approach) */}
         {!hasActiveFilters && (
-          <div className="mb-6 bg-blue-50 border-2 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800/30 backdrop-blur-sm rounded-lg p-4">
-            <div className="flex items-start gap-3">
-              <svg className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <div>
-                <p className="text-sm font-medium text-blue-900 dark:text-blue-200">
-                  Showing recently updated records
-                </p>
-                <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
-                  Results are sorted by most recent updates for fast browsing. Use search or filters to sort by name.
-                </p>
-              </div>
-            </div>
-          </div>
+          <Alert variant="info" title="ℹ️ Showing recently updated records" className="mb-6">
+            Results are sorted by most recent updates for fast browsing. Use search or filters to sort by name.
+          </Alert>
         )}
 
         <div className="mb-6 bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm rounded-lg p-6">
