@@ -1,25 +1,20 @@
 import Link from 'next/link'
-import ThemeToggle from './components/ThemeToggle'
 import LEIStatusCard from './components/LEIStatusCard'
 import LEIRecordsCard from './components/LEIRecordsCard'
 import CountriesRecordsCard from './components/CountriesRecordsCard'
 import CurrenciesRecordsCard from './components/CurrenciesRecordsCard'
+import PageHeader from './components/PageHeader'
 import ProtectedLandingCard from './components/ProtectedLandingCard'
 
 export default function Home() {
   return (
     <main className="min-h-screen p-8">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-12 flex justify-between items-center">
-          <div>
-            <h1 className="text-5xl font-bold mb-4 text-gray-900 dark:text-white">Axiom</h1>
-            <p className="text-xl text-gray-600 dark:text-gray-300">
-              Financial Services Static Data Management System
-            </p>
-          </div>
-          <ThemeToggle />
-        </div>
+        <PageHeader
+          title="Axiom"
+          subtitle="Financial Services Static Data Management System"
+          showBackLink={false}
+        />
 
         {/* Public Reference Data Section */}
         <section className="mb-12">
