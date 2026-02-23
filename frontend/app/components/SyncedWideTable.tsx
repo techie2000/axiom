@@ -107,7 +107,7 @@ export default function SyncedWideTable({
       setTableScrollWidth(Math.max(tableContainerRef.current.scrollWidth, tableRef.current.scrollWidth))
 
       const headerCells = Array.from(tableRef.current.querySelectorAll<HTMLTableCellElement>('thead th'))
-      const widths = headerCells.map((cell) => cell.getBoundingClientRect().width)
+      const widths = headerCells.map((cell) => Math.round(cell.getBoundingClientRect().width))
 
       const stickyHeaderCells = stickyTableRef.current
         ? Array.from(stickyTableRef.current.querySelectorAll<HTMLTableCellElement>('thead th'))

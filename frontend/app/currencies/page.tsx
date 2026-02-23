@@ -247,7 +247,7 @@ export default function CurrenciesPage() {
                 <th className="w-64 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   {showReferenceCodes ? 'Code' : 'Name'}
                 </th>
-                <th className="w-56 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="w-24 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   {showReferenceCodes ? 'Name' : 'Code'}
                 </th>
                 <th className="w-44 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">

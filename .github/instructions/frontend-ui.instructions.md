@@ -234,6 +234,11 @@ EVERY visual change:
 - For LEI-style entity tables, freeze `LEI` and `Legal Name` by default when visible.
 - Apply the same sticky/frozen behavior consistently to both header (`th`) and body (`td`) cells.
 - Ensure frozen cells define explicit background and z-index layers so content does not bleed through during scroll.
+- Frozen column widths and left offsets must be derived from measured rendered header widths (not hard-coded constants alone) to prevent seam drift during horizontal scroll.
+- Add an explicit light+dark separator seam on frozen columns (for example border or inset shadow) so horizontally scrolled cells cannot bleed through divider boundaries.
+- Use the **same seam rendering technique** for both frozen header (`th`) and body (`td`) cells; do not mix different seam primitives between header and body.
+- Prefer an **inset right-edge seam** (for example an inset box-shadow) rendered inside frozen cells over offset pseudo-elements.
+- Avoid negative-offset pseudo-element seams (`right: -1px` style patterns) on frozen cells because clipping and sub-pixel scroll can create header/body seam-width mismatch and reintroduce bleed.
 
 ### Wide Table UX Baseline (Required)
 - For any page with table overflow risk (many columns or long values), implement the full baseline by default: `Expand/Normal` width toggle, top synced horizontal scrollbar, sticky/fixed header on vertical scroll, and sticky Active Filters bar when filters are active.

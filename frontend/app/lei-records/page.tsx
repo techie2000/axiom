@@ -763,11 +763,27 @@ export default function LEIRecordsPage() {
   const LEI_COLUMN_WIDTH_PX = 184
   const LEGAL_NAME_COLUMN_WIDTH_PX = 320
   const leiColumnIndex = visibleColumnsInOrder.findIndex((column) => column.key === 'lei')
-  const leiColumnWidth = leiColumnIndex >= 0 ? LEI_COLUMN_WIDTH_PX : 0
+  const legalNameColumnIndex = visibleColumnsInOrder.findIndex((column) => column.key === 'legal_name')
+
+  const getMeasuredColumnWidth = (columnIndex: number, fallbackWidth: number): number => {
+    if (columnIndex < 0) {
+      return fallbackWidth
+    }
+
+    const measuredWidth = stickyColumnWidths[columnIndex]
+    if (typeof measuredWidth === 'number' && measuredWidth > 0) {
+      return measuredWidth
+    }
+
+    return fallbackWidth
+  }
+
+  const leiColumnWidth = getMeasuredColumnWidth(leiColumnIndex, LEI_COLUMN_WIDTH_PX)
+  const legalNameColumnWidth = getMeasuredColumnWidth(legalNameColumnIndex, LEGAL_NAME_COLUMN_WIDTH_PX)
 
   const getPinnedColumnWidth = (columnKey: keyof LEIRecord): number | null => {
-    if (columnKey === 'lei') return LEI_COLUMN_WIDTH_PX
-    if (columnKey === 'legal_name') return LEGAL_NAME_COLUMN_WIDTH_PX
+    if (columnKey === 'lei') return leiColumnWidth
+    if (columnKey === 'legal_name') return legalNameColumnWidth
     return null
   }
 
@@ -776,7 +792,7 @@ export default function LEIRecordsPage() {
       return {
         position: 'sticky' as const,
         left: 0,
-        zIndex: isHeader ? 30 : 20,
+        zIndex: isHeader ? 30 : 24,
       }
     }
 
@@ -784,7 +800,7 @@ export default function LEIRecordsPage() {
       return {
         position: 'sticky' as const,
         left: `${leiColumnWidth}px`,
-        zIndex: isHeader ? 29 : 19,
+        zIndex: isHeader ? 29 : 23,
       }
     }
 
@@ -1195,7 +1211,7 @@ export default function LEIRecordsPage() {
                       key={String(column.key)}
                       onClick={() => handleSort(column.key)}
                       className={`${column.width || 'min-w-40'} ${column.key === 'lei' ? 'px-2' : 'px-4'} py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${
-                        column.key === 'lei' || column.key === 'legal_name' ? 'bg-gray-100 dark:bg-gray-800' : ''
+                        column.key === 'lei' || column.key === 'legal_name' ? "relative bg-blue-100 hover:bg-blue-200 dark:bg-gray-800 dark:hover:bg-gray-700 shadow-[inset_-1px_0_0_0_rgba(203,213,225,1)] dark:shadow-[inset_-1px_0_0_0_rgba(55,65,81,1)]" : ''
                       }`}
                       style={(() => {
                         const pinnedWidth = getPinnedColumnWidth(column.key)
@@ -1257,7 +1273,7 @@ export default function LEIRecordsPage() {
                               key={String(column.key)}
                               className={`${column.key === 'lei' ? 'px-2' : 'px-4'} py-3 text-sm ${column.key === 'lei' ? 'font-mono' : ''} text-gray-900 dark:text-gray-100 ${column.key.includes('date') || column.key === 'lei' ? 'whitespace-nowrap' : ''} ${
                                 column.key === 'lei' || column.key === 'legal_name'
-                                  ? 'relative bg-white dark:bg-gray-900 group-hover:bg-blue-50 dark:group-hover:bg-gray-800 border-r border-gray-200 dark:border-gray-700 overflow-hidden text-ellipsis'
+                                  ? "relative bg-blue-50 dark:bg-gray-900 group-hover:bg-blue-100 dark:group-hover:bg-gray-800 shadow-[inset_-1px_0_0_0_rgba(203,213,225,1)] dark:shadow-[inset_-1px_0_0_0_rgba(55,65,81,1)] overflow-hidden text-ellipsis"
                                   : ''
                               }`}
                               style={(() => {

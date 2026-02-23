@@ -6,6 +6,7 @@ Reusable UI patterns and components for the Axiom frontend. These patterns have 
 
 - [Reusable Components](#reusable-components)
 - [Sticky Headers with Smooth Transitions](#sticky-headers-with-smooth-transitions)
+- [Frozen Columns Checklist](#frozen-columns-checklist)
 - [Best Practices](#best-practices)
 
 ---
@@ -513,6 +514,21 @@ Example with ARIA:
 #### Header appears too early/late
 **Problem:** `topOffset` calculation incorrect  
 **Solution:** Measure your fixed top elements accurately. Use `element.offsetHeight` or `getBoundingClientRect().height`.
+
+---
+
+## Frozen Columns Checklist
+
+Use this checklist for any table with frozen/sticky identity columns (for example `LEI` + `Legal Name`) to prevent divider drift and bleed-through.
+
+- [ ] Apply sticky/frozen behavior identically to both header (`th`) and body (`td`) cells.
+- [ ] Derive frozen column width and left offset from measured rendered header widths (not hard-coded values only).
+- [ ] Use explicit background colors on frozen cells in both light and dark mode.
+- [ ] Use a consistent z-index stack so frozen body cells stay above scrolling cells, and frozen header cells stay above frozen body cells.
+- [ ] Render the separator seam using the same primitive for header and body (prefer inset right-edge seam inside the cell).
+- [ ] Avoid negative-offset seam techniques (such as `right: -1px`) that can create sub-pixel mismatch during horizontal scroll.
+- [ ] Verify seam behavior in all combinations: light/dark, narrow/expanded width, and after small + large horizontal scroll movements.
+- [ ] Verify no horizontal content bleeds through the frozen divider boundary at any scroll position.
 
 ---
 
