@@ -1,12 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Alert from '../components/Alert'
 import Badge from '../components/Badge'
 import CountryFlag from '../components/CountryFlag'
 import LoadingSpinner from '../components/LoadingSpinner'
 import PageHeader from '../components/PageHeader'
 import StatCard from '../components/StatCard'
+import SyncedWideTable from '../components/SyncedWideTable'
 import { Country, normalizeCountriesPayload, summarizeCountriesDataQuality } from './normalization'
 
 type CountryColumnKey =
@@ -63,6 +64,8 @@ interface LanguageOption {
 }
 
 export default function CountriesPage() {
+  const filterBarRef = useRef<HTMLDivElement>(null)
+
   const [countries, setCountries] = useState<Country[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -75,6 +78,7 @@ export default function CountriesPage() {
   const [showReferenceCodes, setShowReferenceCodes] = useState(false)
   const [expandedWidth, setExpandedWidth] = useState(true)
   const [showColumnSelector, setShowColumnSelector] = useState(false)
+  const [filterBarHeight, setFilterBarHeight] = useState(0)
   const [visibleColumns, setVisibleColumns] = useState<Set<CountryColumnKey>>(
     new Set(AVAILABLE_COLUMNS.filter((column) => column.defaultVisible).map((column) => column.key))
   )
@@ -106,6 +110,23 @@ export default function CountriesPage() {
       setRegionFilter('')
     }
   }, [continentFilter, countries, regionFilter])
+
+  useEffect(() => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') {
+        return
+      }
+
+      if (showColumnSelector) {
+        setShowColumnSelector(false)
+      }
+    }
+
+    window.addEventListener('keydown', handleEscapeKey)
+    return () => {
+      window.removeEventListener('keydown', handleEscapeKey)
+    }
+  }, [showColumnSelector])
 
   const fetchLanguages = async () => {
     try {
@@ -271,6 +292,15 @@ export default function CountriesPage() {
     setRegionFilter('')
     setActiveFilter('all')
   }
+
+  useEffect(() => {
+    if (hasActiveFilters && filterBarRef.current) {
+      setFilterBarHeight(filterBarRef.current.offsetHeight)
+      return
+    }
+
+    setFilterBarHeight(0)
+  }, [hasActiveFilters, searchTerm, continentFilter, regionFilter, activeFilter])
 
   if (loading) {
     return <LoadingSpinner message="Loading countries..." />
@@ -439,25 +469,78 @@ export default function CountriesPage() {
           <StatCard title="Data Standard" value="ISO 3166" />
         </div>
 
-        <div className="bg-white dark:bg-white/5 rounded-lg shadow overflow-hidden border-2 border-gray-200 dark:border-white/10">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-white/10">
-              <thead className="bg-gray-50 dark:bg-white/5">
-                <tr>
-                  {visibleColumnsInOrder.map((column) => (
-                    <th
-                      key={column.key}
-                      className={`${column.width || 'min-w-32'} px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider`}
-                    >
-                      {getColumnLabel(column)}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-white/5 divide-y divide-gray-200 dark:divide-white/10">
+        {hasActiveFilters && (
+          <div
+            ref={filterBarRef}
+            className="sticky top-0 z-40 mb-1 bg-blue-50 dark:bg-blue-900 border-2 border-blue-200 dark:border-blue-700 px-4 py-2 shadow-md rounded-lg"
+          >
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-semibold text-blue-900 dark:text-blue-100">Active Filters:</span>
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors"
+                  >
+                    Search: {searchTerm} ✕
+                  </button>
+                )}
+                {continentFilter && (
+                  <button
+                    onClick={() => setContinentFilter('')}
+                    className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors"
+                  >
+                    Continent: {getContinentDisplay(continentFilter)} ✕
+                  </button>
+                )}
+                {regionFilter && (
+                  <button
+                    onClick={() => setRegionFilter('')}
+                    className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors"
+                  >
+                    Region: {regionFilter} ✕
+                  </button>
+                )}
+                {activeFilter !== 'all' && (
+                  <button
+                    onClick={() => setActiveFilter('all')}
+                    className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors"
+                  >
+                    Status: {activeFilter} ✕
+                  </button>
+                )}
+              </div>
+              <button
+                onClick={clearFilters}
+                className="px-3 py-1 text-xs rounded-lg bg-white hover:bg-gray-100 dark:bg-blue-600 dark:hover:bg-blue-700 text-blue-900 dark:text-white border border-blue-300 dark:border-transparent transition-colors font-medium shadow-sm"
+              >
+                ✕ Clear All
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="bg-white dark:bg-white/5 rounded-lg shadow border-2 border-gray-200 dark:border-white/10">
+          <SyncedWideTable
+            stickyTopOffset={hasActiveFilters ? filterBarHeight : 0}
+            dependencyKey={`${expandedWidth}-${showReferenceCodes}-${visibleColumnsInOrder.map((column) => column.key).join('|')}-${filteredCountries.length}`}
+            headerRow={(
+              <tr>
+                {visibleColumnsInOrder.map((column) => (
+                  <th
+                    key={column.key}
+                    className={`${column.width || 'min-w-32'} px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-800`}
+                  >
+                    {getColumnLabel(column)}
+                  </th>
+                ))}
+              </tr>
+            )}
+            bodyRows={(
+              <>
                 {filteredCountries.length > 0 ? (
                   filteredCountries.map((country) => (
-                    <tr key={country.id} className="hover:bg-gray-50 dark:hover:bg-white/10">
+                    <tr key={country.id} className="hover:bg-blue-50 dark:hover:bg-white/10 transition-colors">
                       {visibleColumnsInOrder.map((column) => {
                         switch (column.key) {
                           case 'flag':
@@ -558,9 +641,9 @@ export default function CountriesPage() {
                     </td>
                   </tr>
                 )}
-              </tbody>
-            </table>
-          </div>
+              </>
+            )}
+          />
         </div>
 
         <div className="mt-6 text-center text-sm text-gray-500">

@@ -168,7 +168,7 @@ export default function CodeMappingsPage() {
               <tbody className="bg-white dark:bg-white/5 divide-y divide-gray-200 dark:divide-white/10">
                 {filteredMappings.length > 0 ? (
                   filteredMappings.map((mapping) => (
-                    <tr key={mapping.id} className="hover:bg-gray-50 dark:hover:bg-white/10">
+                    <tr key={mapping.id} className="hover:bg-blue-50 dark:hover:bg-white/10 transition-colors">
                       <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                         <Badge variant="orange" mono>{mapping.from_system}</Badge>
                       </td>

@@ -7,6 +7,7 @@ import CountryFlag from '../components/CountryFlag'
 import PageHeader from '../components/PageHeader'
 import SearchInputWithOverflowTooltip from '../components/SearchInputWithOverflowTooltip'
 import StatCard from '../components/StatCard'
+import SyncedWideTable from '../components/SyncedWideTable'
 import { formatLEICellValue, getStatusBadgePresentation, normalizeRecordNullLikeValues } from './null-utils'
 
 interface LEIRecord {
@@ -151,16 +152,7 @@ export default function LEIRecordsPage() {
   const [filterBarHeight, setFilterBarHeight] = useState(0)
   const countryDropdownRef = useRef<HTMLDivElement>(null)
   const filterBarRef = useRef<HTMLDivElement>(null)
-  const tableHeaderRef = useRef<HTMLTableSectionElement>(null)
-  const tableContainerRef = useRef<HTMLDivElement>(null)
-  const stickyHeaderScrollRef = useRef<HTMLDivElement>(null)
-  const topScrollbarRef = useRef<HTMLDivElement>(null)
-  const isSyncingHorizontalScrollRef = useRef(false)
-  const [showStickyHeader, setShowStickyHeader] = useState(false)
-  const [stickyHeaderStyle, setStickyHeaderStyle] = useState<{left: number, width: number}>({left: 0, width: 0})
   const [stickyColumnWidths, setStickyColumnWidths] = useState<number[]>([])
-  const [tableScrollWidth, setTableScrollWidth] = useState(0)
-  const [tableClientWidth, setTableClientWidth] = useState(0)
   
   // New features
   const [visibleColumns, setVisibleColumns] = useState<Set<keyof LEIRecord>>(
@@ -799,89 +791,6 @@ export default function LEIRecordsPage() {
     return undefined
   }
 
-  const syncHorizontalScroll = (source: 'table' | 'sticky' | 'top', scrollLeft: number) => {
-    if (isSyncingHorizontalScrollRef.current) return
-
-    isSyncingHorizontalScrollRef.current = true
-
-    if (source !== 'table' && tableContainerRef.current) {
-      tableContainerRef.current.scrollLeft = scrollLeft
-    }
-    if (source !== 'sticky' && stickyHeaderScrollRef.current) {
-      stickyHeaderScrollRef.current.scrollLeft = scrollLeft
-    }
-    if (source !== 'top' && topScrollbarRef.current) {
-      topScrollbarRef.current.scrollLeft = scrollLeft
-    }
-
-    requestAnimationFrame(() => {
-      isSyncingHorizontalScrollRef.current = false
-    })
-  }
-
-  const handleTableHorizontalScroll = () => {
-    if (!tableContainerRef.current) return
-    syncHorizontalScroll('table', tableContainerRef.current.scrollLeft)
-  }
-
-  const handleStickyHeaderHorizontalScroll = () => {
-    if (!stickyHeaderScrollRef.current) return
-    syncHorizontalScroll('sticky', stickyHeaderScrollRef.current.scrollLeft)
-  }
-
-  const handleTopScrollbarScroll = () => {
-    if (!topScrollbarRef.current) return
-    syncHorizontalScroll('top', topScrollbarRef.current.scrollLeft)
-  }
-
-  // Handle sticky header on scroll and update dimensions
-  useEffect(() => {
-    const updateDimensionsAndCheckScroll = () => {
-      if (!tableContainerRef.current) return
-      
-      const containerRect = tableContainerRef.current.getBoundingClientRect()
-      
-      // Update dimensions every time we check scroll position
-      setStickyHeaderStyle({
-        left: containerRect.left,
-        width: containerRect.width
-      })
-      setTableClientWidth(tableContainerRef.current.clientWidth)
-      setTableScrollWidth(tableContainerRef.current.scrollWidth)
-
-      if (tableHeaderRef.current) {
-        const headerCells = Array.from(tableHeaderRef.current.querySelectorAll('th'))
-        const measuredWidths = headerCells.map((cell) => cell.getBoundingClientRect().width)
-        setStickyColumnWidths((previousWidths) => {
-          if (
-            previousWidths.length === measuredWidths.length &&
-            previousWidths.every((width, index) => Math.abs(width - measuredWidths[index]) < 0.5)
-          ) {
-            return previousWidths
-          }
-
-          return measuredWidths
-        })
-      }
-      
-      // Check if we should show sticky header
-      const topOffset = hasActiveFilters ? filterBarHeight : 0
-      setShowStickyHeader(containerRect.top < topOffset)
-
-      syncHorizontalScroll('table', tableContainerRef.current.scrollLeft)
-    }
-
-    // Call immediately and on every scroll
-    updateDimensionsAndCheckScroll()
-    
-    window.addEventListener('scroll', updateDimensionsAndCheckScroll)
-    window.addEventListener('resize', updateDimensionsAndCheckScroll)
-    return () => {
-      window.removeEventListener('scroll', updateDimensionsAndCheckScroll)
-      window.removeEventListener('resize', updateDimensionsAndCheckScroll)
-    }
-  }, [hasActiveFilters, filterBarHeight, expandedWidth, visibleColumns, showLocationCodes, records, currentPage])
-
   // Measure filter bar height dynamically
   useEffect(() => {
     if (filterBarRef.current && hasActiveFilters) {
@@ -1249,247 +1158,191 @@ export default function LEIRecordsPage() {
               </div>
             )}
 
-            {tableScrollWidth > tableClientWidth + 1 && (
-              <div
-                ref={topScrollbarRef}
-                onScroll={handleTopScrollbarScroll}
-                className="mb-1 overflow-x-auto bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 rounded-t-lg"
-              >
-                <div style={{ width: `${tableScrollWidth}px`, height: '1px' }}></div>
-              </div>
-            )}
-
-            {/* Fixed sticky header that appears on scroll */}
-            <div 
-              ref={stickyHeaderScrollRef}
-              onScroll={handleStickyHeaderHorizontalScroll}
-              className={`fixed z-30 overflow-x-auto bg-white border-b-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm shadow-lg transition-all duration-300 ease-in-out ${
-                showStickyHeader ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4 pointer-events-none'
-              }`}
-              style={{ 
-                top: hasActiveFilters ? `${filterBarHeight}px` : '0px',
-                left: `${stickyHeaderStyle.left}px`,
-                width: `${stickyHeaderStyle.width}px`
-              }}
-            >
-                <div className="max-w-full">
-                  <table className="w-full" style={{ tableLayout: 'auto', borderCollapse: 'collapse' }}>
-                    <thead className="bg-gray-100 dark:bg-gray-800">
-                      <tr>
-                        {visibleColumnsInOrder.map((column, columnIndex) => (
-                          <th 
-                            key={String(column.key)}
-                            onClick={() => handleSort(column.key)}
-                            className={`${column.width || 'min-w-40'} ${column.key === 'lei' ? 'px-2' : 'px-4'} py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${
-                              column.key === 'lei' || column.key === 'legal_name' ? 'bg-gray-100 dark:bg-gray-800' : ''
-                            }`}
-                            style={(() => {
-                              const pinnedWidth = getPinnedColumnWidth(column.key)
-                              if (pinnedWidth) {
-                                return {
-                                  ...getPinnedColumnStyle(column.key, true),
-                                  width: `${pinnedWidth}px`,
-                                  minWidth: `${pinnedWidth}px`,
-                                  maxWidth: `${pinnedWidth}px`,
-                                }
-                              }
-
-                              if (stickyColumnWidths[columnIndex]) {
-                                return {
-                                  ...getPinnedColumnStyle(column.key, true),
-                                  width: `${stickyColumnWidths[columnIndex]}px`,
-                                  minWidth: `${stickyColumnWidths[columnIndex]}px`,
-                                  maxWidth: `${stickyColumnWidths[columnIndex]}px`,
-                                }
-                              }
-
-                              return getPinnedColumnStyle(column.key, true)
-                            })()}
-                          >
-                            <div className={`flex items-center gap-1 ${column.key === 'lei' || column.key === 'legal_name' ? 'overflow-hidden whitespace-nowrap text-ellipsis' : ''}`}>
-                              {getColumnLabel(column)}
-                              {sortField === column.key && (
-                                <span className="text-blue-600 dark:text-blue-400">{sortDirection === 'asc' ? '↑' : '↓'}</span>
-                              )}
-                            </div>
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                  </table>
-                </div>
-              </div>
-            
-            <div 
-              ref={tableContainerRef}
-              onScroll={handleTableHorizontalScroll}
-              className={`overflow-x-auto bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm shadow-lg transition-opacity duration-200 ${loading ? 'opacity-40 pointer-events-none' : 'opacity-100'}`} 
-              style={{ 
+            <SyncedWideTable
+              stickyTopOffset={hasActiveFilters ? filterBarHeight : 0}
+              dependencyKey={`${expandedWidth}-${showLocationCodes}-${visibleColumnsInOrder.map((column) => column.key).join('|')}-${records.length}-${currentPage}-${loading}`}
+              tableClassName="w-full"
+              tableStyle={{ tableLayout: 'auto', borderCollapse: 'collapse' }}
+              stickyHeaderClassName="bg-gray-100 dark:bg-gray-800"
+              mainHeaderClassName="bg-gray-100 dark:bg-gray-800"
+              bodyClassName="divide-y divide-gray-200 dark:divide-white/10"
+              topScrollbarClassName="mb-1 overflow-x-auto bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 rounded-t-lg"
+              stickyContainerClassName="fixed z-30 overflow-x-auto bg-white border-b-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm shadow-lg transition-all duration-300 ease-in-out"
+              containerClassName={`overflow-x-auto bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm shadow-lg transition-opacity duration-200 ${loading ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}
+              containerStyle={{
                 borderTopLeftRadius: hasActiveFilters ? 0 : '0.5rem',
                 borderTopRightRadius: hasActiveFilters ? 0 : '0.5rem',
                 borderBottomLeftRadius: '0.5rem',
                 borderBottomRightRadius: '0.5rem',
-                borderTop: hasActiveFilters ? 'none' : undefined
+                borderTop: hasActiveFilters ? 'none' : undefined,
               }}
-            >
-                <table className="w-full" style={{ tableLayout: 'auto', borderCollapse: 'collapse' }}>
-                  <thead 
-                    ref={tableHeaderRef}
-                    className="bg-gray-100 dark:bg-gray-800"
-                  >
-                    <tr>
-                      {visibleColumnsInOrder.map((column, columnIndex) => (
-                        <th 
-                          key={String(column.key)}
-                          onClick={() => handleSort(column.key)}
-                          className={`${column.width || 'min-w-40'} ${column.key === 'lei' ? 'px-2' : 'px-4'} py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${
-                            column.key === 'lei' || column.key === 'legal_name' ? 'bg-gray-100 dark:bg-gray-800' : ''
-                          }`}
-                          style={(() => {
-                            const pinnedWidth = getPinnedColumnWidth(column.key)
-                            if (pinnedWidth) {
-                              return {
-                                ...getPinnedColumnStyle(column.key, true),
-                                width: `${pinnedWidth}px`,
-                                minWidth: `${pinnedWidth}px`,
-                                maxWidth: `${pinnedWidth}px`,
-                              }
-                            }
+              onMainHeaderWidthsChange={(measuredWidths) => {
+                setStickyColumnWidths((previousWidths) => {
+                  if (
+                    previousWidths.length === measuredWidths.length &&
+                    previousWidths.every((width, index) => Math.abs(width - measuredWidths[index]) < 0.5)
+                  ) {
+                    return previousWidths
+                  }
 
-                            if (stickyColumnWidths[columnIndex]) {
-                              return {
-                                ...getPinnedColumnStyle(column.key, true),
-                                width: `${stickyColumnWidths[columnIndex]}px`,
-                                minWidth: `${stickyColumnWidths[columnIndex]}px`,
-                                maxWidth: `${stickyColumnWidths[columnIndex]}px`,
-                              }
-                            }
+                  return measuredWidths
+                })
+              }}
+              headerRow={(
+                <tr>
+                  {visibleColumnsInOrder.map((column, columnIndex) => (
+                    <th
+                      key={String(column.key)}
+                      onClick={() => handleSort(column.key)}
+                      className={`${column.width || 'min-w-40'} ${column.key === 'lei' ? 'px-2' : 'px-4'} py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${
+                        column.key === 'lei' || column.key === 'legal_name' ? 'bg-gray-100 dark:bg-gray-800' : ''
+                      }`}
+                      style={(() => {
+                        const pinnedWidth = getPinnedColumnWidth(column.key)
+                        if (pinnedWidth) {
+                          return {
+                            ...getPinnedColumnStyle(column.key, true),
+                            width: `${pinnedWidth}px`,
+                            minWidth: `${pinnedWidth}px`,
+                            maxWidth: `${pinnedWidth}px`,
+                          }
+                        }
 
-                            return getPinnedColumnStyle(column.key, true)
-                          })()}
-                        >
-                          <div className={`flex items-center gap-1 ${column.key === 'lei' || column.key === 'legal_name' ? 'overflow-hidden whitespace-nowrap text-ellipsis' : ''}`}>
-                            {getColumnLabel(column)}
-                            {sortField === column.key && (
-                              <span className="text-blue-600 dark:text-blue-400">{sortDirection === 'asc' ? '↑' : '↓'}</span>
-                            )}
-                          </div>
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                <tbody className="divide-y divide-gray-200 dark:divide-white/10">
+                        if (stickyColumnWidths[columnIndex]) {
+                          return {
+                            ...getPinnedColumnStyle(column.key, true),
+                            width: `${stickyColumnWidths[columnIndex]}px`,
+                            minWidth: `${stickyColumnWidths[columnIndex]}px`,
+                            maxWidth: `${stickyColumnWidths[columnIndex]}px`,
+                          }
+                        }
+
+                        return getPinnedColumnStyle(column.key, true)
+                      })()}
+                    >
+                      <div className={`flex items-center gap-1 ${column.key === 'lei' || column.key === 'legal_name' ? 'overflow-hidden whitespace-nowrap text-ellipsis' : ''}`}>
+                        {getColumnLabel(column)}
+                        {sortField === column.key && (
+                          <span className="text-blue-600 dark:text-blue-400">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                        )}
+                      </div>
+                    </th>
+                  ))}
+                </tr>
+              )}
+              bodyRows={
+                <>
                   {records.filter(r => r && r.id).map((record, index) => {
                     return (
-                    <tr 
-                      key={record.id}
-                      data-lei={record.lei}
-                      data-row-index={index}
-                      onClick={() => handleRecordClick(record)}
-                      className="group hover:bg-blue-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
-                      style={{ height: 'auto', minHeight: '48px' }}
-                    >
-                      {visibleColumnsInOrder.map((column) => {
-                        const value = record[column.key]
-                        const isStatus = column.key === 'entity_status'
-                        const isLegalName = column.key === 'legal_name'
-                        const isLegalFormColumn = column.key === 'entity_legal_form'
-                        const isManagingLou = column.key === 'managing_lou'
-                        const isCountryFlagColumn = column.key === 'country_flag'
-                        const isRegionColumn = column.key === 'legal_address_region' || column.key === 'hq_address_region'
-                        const isCountryColumn = column.key === 'legal_address_country' || column.key === 'hq_address_country'
-                        
-                        return (
-                          <td 
-                            key={String(column.key)} 
-                            className={`${column.key === 'lei' ? 'px-2' : 'px-4'} py-3 text-sm ${column.key === 'lei' ? 'font-mono' : ''} text-gray-900 dark:text-gray-100 ${column.key.includes('date') || column.key === 'lei' ? 'whitespace-nowrap' : ''} ${
-                              column.key === 'lei' || column.key === 'legal_name'
-                                ? 'relative bg-white dark:bg-gray-900 group-hover:bg-blue-50 dark:group-hover:bg-gray-800 border-r border-gray-200 dark:border-gray-700 overflow-hidden text-ellipsis'
-                                : ''
-                            }`}
-                            style={(() => {
-                              const pinnedWidth = getPinnedColumnWidth(column.key)
-                              if (pinnedWidth) {
-                                return {
-                                  ...getPinnedColumnStyle(column.key, false),
-                                  width: `${pinnedWidth}px`,
-                                  minWidth: `${pinnedWidth}px`,
-                                  maxWidth: `${pinnedWidth}px`,
-                                }
-                              }
+                      <tr
+                        key={record.id}
+                        data-lei={record.lei}
+                        data-row-index={index}
+                        onClick={() => handleRecordClick(record)}
+                        className="group hover:bg-blue-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+                        style={{ height: 'auto', minHeight: '48px' }}
+                      >
+                        {visibleColumnsInOrder.map((column) => {
+                          const value = record[column.key]
+                          const isStatus = column.key === 'entity_status'
+                          const isLegalName = column.key === 'legal_name'
+                          const isLegalFormColumn = column.key === 'entity_legal_form'
+                          const isManagingLou = column.key === 'managing_lou'
+                          const isCountryFlagColumn = column.key === 'country_flag'
+                          const isRegionColumn = column.key === 'legal_address_region' || column.key === 'hq_address_region'
+                          const isCountryColumn = column.key === 'legal_address_country' || column.key === 'hq_address_country'
 
-                              return getPinnedColumnStyle(column.key, false)
-                            })()}
-                          >
-                            {isStatus ? (
-                              (() => {
-                                const statusPresentation = getStatusBadgePresentation(value)
-                                return (
-                              <span className={`px-2 py-1 text-xs rounded ${
-                                statusPresentation.isActive
-                                  ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
-                                  : 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
-                              }`}>
-                                {statusPresentation.label}
-                              </span>
-                                )
-                              })()
-                            ) : isManagingLou ? (
-                              <div>
-                                <div className="font-mono">{formatCellValue(value, column.key)}</div>
-                                {value && managingLouNames.has(String(value)) && (
-                                  <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                    {managingLouNames.get(String(value))}
-                                  </div>
-                                )}
-                              </div>
-                            ) : isLegalName ? (
-                              <div>
-                                <div>{formatCellValue(value, column.key)}</div>
-                                {(() => {
-                                  const otherNames = parseOtherNames(record.other_names)
-                                  if (otherNames.length === 0) return null
+                          return (
+                            <td
+                              key={String(column.key)}
+                              className={`${column.key === 'lei' ? 'px-2' : 'px-4'} py-3 text-sm ${column.key === 'lei' ? 'font-mono' : ''} text-gray-900 dark:text-gray-100 ${column.key.includes('date') || column.key === 'lei' ? 'whitespace-nowrap' : ''} ${
+                                column.key === 'lei' || column.key === 'legal_name'
+                                  ? 'relative bg-white dark:bg-gray-900 group-hover:bg-blue-50 dark:group-hover:bg-gray-800 border-r border-gray-200 dark:border-gray-700 overflow-hidden text-ellipsis'
+                                  : ''
+                              }`}
+                              style={(() => {
+                                const pinnedWidth = getPinnedColumnWidth(column.key)
+                                if (pinnedWidth) {
+                                  return {
+                                    ...getPinnedColumnStyle(column.key, false),
+                                    width: `${pinnedWidth}px`,
+                                    minWidth: `${pinnedWidth}px`,
+                                    maxWidth: `${pinnedWidth}px`,
+                                  }
+                                }
+
+                                return getPinnedColumnStyle(column.key, false)
+                              })()}
+                            >
+                              {isStatus ? (
+                                (() => {
+                                  const statusPresentation = getStatusBadgePresentation(value)
                                   return (
-                                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                      <div>Other names:</div>
-                                      {otherNames.map((n, i) => (
-                                        <div key={i} className="ml-2">
-                                          {n.name}
-                                          {n.type && (
-                                            <span className="ml-1 text-gray-400 dark:text-gray-500">
-                                              ({n.type.replace(/_/g, ' ')})
-                                            </span>
-                                          )}
-                                        </div>
-                                      ))}
-                                    </div>
+                                    <span className={`px-2 py-1 text-xs rounded ${
+                                      statusPresentation.isActive
+                                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                        : 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                                    }`}>
+                                      {statusPresentation.label}
+                                    </span>
                                   )
-                                })()}
-                              </div>
-                            ) : isCountryColumn ? (
-                              formatCountryDisplay(String(value || ''))
-                            ) : isCountryFlagColumn ? (
-                              <CountryFlag
-                                countryCode={String(record.legal_address_country || '')}
-                                title={formatCountryDisplay(String(record.legal_address_country || ''))}
-                                className="h-4 w-6 rounded-sm border border-gray-200 dark:border-gray-700"
-                              />
-                            ) : isRegionColumn ? (
-                              formatRegionDisplay(String(value || ''))
-                            ) : isLegalFormColumn ? (
-                              formatLegalFormDisplay(String(value || ''))
-                            ) : (
-                              formatCellValue(value, column.key)
-                            )}
-                          </td>
-                        )
-                      })}
-                    </tr>
+                                })()
+                              ) : isManagingLou ? (
+                                <div>
+                                  <div className="font-mono">{formatCellValue(value, column.key)}</div>
+                                  {value && managingLouNames.has(String(value)) && (
+                                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                      {managingLouNames.get(String(value))}
+                                    </div>
+                                  )}
+                                </div>
+                              ) : isLegalName ? (
+                                <div>
+                                  <div>{formatCellValue(value, column.key)}</div>
+                                  {(() => {
+                                    const otherNames = parseOtherNames(record.other_names)
+                                    if (otherNames.length === 0) return null
+                                    return (
+                                      <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                        <div>Other names:</div>
+                                        {otherNames.map((n, i) => (
+                                          <div key={i} className="ml-2">
+                                            {n.name}
+                                            {n.type && (
+                                              <span className="ml-1 text-gray-400 dark:text-gray-500">
+                                                ({n.type.replace(/_/g, ' ')})
+                                              </span>
+                                            )}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )
+                                  })()}
+                                </div>
+                              ) : isCountryColumn ? (
+                                formatCountryDisplay(String(value || ''))
+                              ) : isCountryFlagColumn ? (
+                                <CountryFlag
+                                  countryCode={String(record.legal_address_country || '')}
+                                  title={formatCountryDisplay(String(record.legal_address_country || ''))}
+                                  className="h-4 w-6 rounded-sm border border-gray-200 dark:border-gray-700"
+                                />
+                              ) : isRegionColumn ? (
+                                formatRegionDisplay(String(value || ''))
+                              ) : isLegalFormColumn ? (
+                                formatLegalFormDisplay(String(value || ''))
+                              ) : (
+                                formatCellValue(value, column.key)
+                              )}
+                            </td>
+                          )
+                        })}
+                      </tr>
                     )
                   })}
-                </tbody>
-              </table>
-            </div>
+                </>
+              }
+            />
           </div>
         ) : (
             <div className="text-center py-12 bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm rounded-lg">

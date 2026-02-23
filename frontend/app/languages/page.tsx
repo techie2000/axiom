@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Alert from '../components/Alert'
 import Badge from '../components/Badge'
 import LoadingSpinner from '../components/LoadingSpinner'
 import PageHeader from '../components/PageHeader'
 import StatCard from '../components/StatCard'
+import SyncedWideTable from '../components/SyncedWideTable'
 
 interface Language {
   code: string
@@ -17,12 +18,16 @@ interface Language {
 type DirectionFilter = 'all' | 'rtl' | 'ltr'
 
 export default function LanguagesPage() {
+  const filterBarRef = useRef<HTMLDivElement>(null)
+
   const [languages, setLanguages] = useState<Language[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [directionFilter, setDirectionFilter] = useState<DirectionFilter>('all')
   const [showReferenceCodes, setShowReferenceCodes] = useState(false)
+  const [expandedWidth, setExpandedWidth] = useState(true)
+  const [filterBarHeight, setFilterBarHeight] = useState(0)
 
   const API_BASE_URL = typeof window !== 'undefined'
     ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080')
@@ -94,24 +99,42 @@ export default function LanguagesPage() {
     setDirectionFilter('all')
   }
 
+  useEffect(() => {
+    if (hasActiveFilters && filterBarRef.current) {
+      setFilterBarHeight(filterBarRef.current.offsetHeight)
+      return
+    }
+
+    setFilterBarHeight(0)
+  }, [hasActiveFilters, searchTerm, directionFilter])
+
   if (loading) {
     return <LoadingSpinner message="Loading languages..." />
   }
 
   return (
     <div className="min-h-screen p-8">
-      <div className="max-w-7xl mx-auto">
+      <div className={`${expandedWidth ? 'max-w-full' : 'max-w-7xl'} mx-auto transition-all duration-300`}>
         <PageHeader
           title="Languages"
           subtitle="Browse language reference data and writing direction"
           actions={
-            <button
-              onClick={() => setShowReferenceCodes(!showReferenceCodes)}
-              className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 transition-colors text-white text-sm font-medium"
-              title={showReferenceCodes ? 'Display mode: codes' : 'Display mode: names'}
-            >
-              {showReferenceCodes ? '🏷️ Display: Codes' : '🏷️ Display: Names'}
-            </button>
+            <>
+              <button
+                onClick={() => setExpandedWidth(!expandedWidth)}
+                className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 transition-colors text-white text-sm font-medium"
+                title={expandedWidth ? 'Normal Width' : 'Expanded Width'}
+              >
+                {expandedWidth ? '⬅️ Normal' : '↔️ Expand'}
+              </button>
+              <button
+                onClick={() => setShowReferenceCodes(!showReferenceCodes)}
+                className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 transition-colors text-white text-sm font-medium"
+                title={showReferenceCodes ? 'Display mode: codes' : 'Display mode: names'}
+              >
+                {showReferenceCodes ? '🏷️ Display: Codes' : '🏷️ Display: Names'}
+              </button>
+            </>
           }
         />
 
@@ -169,29 +192,66 @@ export default function LanguagesPage() {
           )}
         </div>
 
-        <div className="bg-white dark:bg-white/5 rounded-lg shadow overflow-hidden border-2 border-gray-200 dark:border-white/10">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-white/10">
-              <thead className="bg-gray-50 dark:bg-white/5">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    {showReferenceCodes ? 'Code' : 'Language Name'}
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    {showReferenceCodes ? 'Language Name' : 'Code'}
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Native Name
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Direction
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-white/5 divide-y divide-gray-200 dark:divide-white/10">
+        {hasActiveFilters && (
+          <div
+            ref={filterBarRef}
+            className="sticky top-0 z-40 mb-1 bg-blue-50 dark:bg-blue-900 border-2 border-blue-200 dark:border-blue-700 px-4 py-2 shadow-md rounded-lg"
+          >
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-semibold text-blue-900 dark:text-blue-100">Active Filters:</span>
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors"
+                  >
+                    Search: {searchTerm} ✕
+                  </button>
+                )}
+                {directionFilter !== 'all' && (
+                  <button
+                    onClick={() => setDirectionFilter('all')}
+                    className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors"
+                  >
+                    Direction: {directionFilter.toUpperCase()} ✕
+                  </button>
+                )}
+              </div>
+              <button
+                onClick={clearFilters}
+                className="px-3 py-1 text-xs rounded-lg bg-white hover:bg-gray-100 dark:bg-blue-600 dark:hover:bg-blue-700 text-blue-900 dark:text-white border border-blue-300 dark:border-transparent transition-colors font-medium shadow-sm"
+              >
+                ✕ Clear All
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="bg-white dark:bg-white/5 rounded-lg shadow border-2 border-gray-200 dark:border-white/10">
+          <SyncedWideTable
+            stickyTopOffset={hasActiveFilters ? filterBarHeight : 0}
+            dependencyKey={`${expandedWidth}-${showReferenceCodes}-${filteredLanguages.length}-${directionFilter}-${searchTerm}`}
+            headerRow={(
+              <tr>
+                <th className="w-56 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  {showReferenceCodes ? 'Code' : 'Language Name'}
+                </th>
+                <th className="w-56 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  {showReferenceCodes ? 'Language Name' : 'Code'}
+                </th>
+                <th className="w-64 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Native Name
+                </th>
+                <th className="w-36 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Direction
+                </th>
+              </tr>
+            )}
+            bodyRows={(
+              <>
                 {filteredLanguages.length > 0 ? (
                   filteredLanguages.map((language) => (
-                    <tr key={language.code} className="hover:bg-gray-50 dark:hover:bg-white/10">
+                    <tr key={language.code} className="hover:bg-blue-50 dark:hover:bg-white/10 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                         {showReferenceCodes ? (
                           <Badge variant="blue" mono>{language.code}</Badge>
@@ -225,9 +285,9 @@ export default function LanguagesPage() {
                     </td>
                   </tr>
                 )}
-              </tbody>
-            </table>
-          </div>
+              </>
+            )}
+          />
         </div>
 
         <div className="mt-6 text-center text-sm text-gray-500">

@@ -226,10 +226,29 @@ EVERY visual change:
 ### Wide Table Scroll & Freeze Standard (Required)
 - Wide data tables must provide a **top horizontal scrollbar** synchronized with the main table body scrollbar.
 - Sticky/fixed headers must stay horizontally synchronized with the data body at all times (single shared scroll position).
+- Table header rows/cells must remain visible at the top of the viewport while vertically scrolling the page (`sticky top-0` with explicit background and z-index).
+- When any filter is active on a wide-table page, render a sticky **Active Filters** summary bar above the table header that remains visible during vertical scroll.
+- The Active Filters bar must show removable filter chips and include a single **Clear All** action (LEI pattern).
+- The sticky header offset must account for the Active Filters bar height so header and bar do not overlap.
 - Freeze primary identity columns using sticky positioning so key context remains visible during horizontal scrolling.
 - For LEI-style entity tables, freeze `LEI` and `Legal Name` by default when visible.
 - Apply the same sticky/frozen behavior consistently to both header (`th`) and body (`td`) cells.
 - Ensure frozen cells define explicit background and z-index layers so content does not bleed through during scroll.
+
+### Wide Table UX Baseline (Required)
+- For any page with table overflow risk (many columns or long values), implement the full baseline by default: `Expand/Normal` width toggle, top synced horizontal scrollbar, sticky/fixed header on vertical scroll, and sticky Active Filters bar when filters are active.
+- Keep behavior consistent with LEI/Countries/Currencies/Languages implementations; do not create alternate page-specific variants unless explicitly required.
+- Use shared component `frontend/app/components/SyncedWideTable.tsx` for top-scrollbar synchronization and sticky/fixed header behavior; do not duplicate this scaffolding per page.
+- Horizontal overflow detection must be based on actual rendered table width vs. container width; do not rely on static assumptions.
+- Table wrapper styles must not clip sticky/fixed elements (`overflow-hidden` should not block sticky headers or top scrollbars).
+- Preserve z-index layering order: Active Filters bar above sticky header, sticky header above table body, dropdowns/modals above all table layers.
+- If a page has filters, include `Clear Filters`; if active filters are displayed in sticky summary chips, include `Clear All` there as well.
+
+### Keyboard Shortcut Baseline (Required)
+- Use consistent keyboard shortcuts for interactive overlays across pages (column selectors, dropdown panels, popovers, dialogs).
+- Pressing `Escape` must close the top-most open overlay element first.
+- Implement keyboard handlers with proper cleanup (`addEventListener`/`removeEventListener`) to avoid leaks and duplicate bindings.
+- Do not create page-specific shortcut behavior that conflicts with existing LEI patterns unless explicitly required.
 
 ### Table Row Hover Contrast Standard (Required)
 - Data table rows must provide clearly visible hover contrast in light mode.
