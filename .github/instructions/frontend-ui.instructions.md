@@ -223,6 +223,14 @@ EVERY visual change:
 - Default to expanded width (`expandedWidth = true`) on pages where selected optional columns would otherwise force immediate horizontal scrolling.
 - Keep horizontal scrolling as a fallback only; do not rely on horizontal scrolling as the primary way to access newly enabled columns.
 
+### Wide Table Scroll & Freeze Standard (Required)
+- Wide data tables must provide a **top horizontal scrollbar** synchronized with the main table body scrollbar.
+- Sticky/fixed headers must stay horizontally synchronized with the data body at all times (single shared scroll position).
+- Freeze primary identity columns using sticky positioning so key context remains visible during horizontal scrolling.
+- For LEI-style entity tables, freeze `LEI` and `Legal Name` by default when visible.
+- Apply the same sticky/frozen behavior consistently to both header (`th`) and body (`td`) cells.
+- Ensure frozen cells define explicit background and z-index layers so content does not bleed through during scroll.
+
 ### Table Row Hover Contrast Standard (Required)
 - Data table rows must provide clearly visible hover contrast in light mode.
 - Use `hover:bg-blue-50` for light mode row hover states (or stronger approved equivalent), not subtle gray shades.

@@ -152,8 +152,14 @@ export default function LEIRecordsPage() {
   const filterBarRef = useRef<HTMLDivElement>(null)
   const tableHeaderRef = useRef<HTMLTableSectionElement>(null)
   const tableContainerRef = useRef<HTMLDivElement>(null)
+  const stickyHeaderScrollRef = useRef<HTMLDivElement>(null)
+  const topScrollbarRef = useRef<HTMLDivElement>(null)
+  const isSyncingHorizontalScrollRef = useRef(false)
   const [showStickyHeader, setShowStickyHeader] = useState(false)
   const [stickyHeaderStyle, setStickyHeaderStyle] = useState<{left: number, width: number}>({left: 0, width: 0})
+  const [stickyColumnWidths, setStickyColumnWidths] = useState<number[]>([])
+  const [tableScrollWidth, setTableScrollWidth] = useState(0)
+  const [tableClientWidth, setTableClientWidth] = useState(0)
   
   // New features
   const [visibleColumns, setVisibleColumns] = useState<Set<keyof LEIRecord>>(
@@ -264,25 +270,6 @@ export default function LEIRecordsPage() {
 
     fetchDisplayResolvers()
   }, [API_BASE_URL])
-
-  // Debug logging for records array
-  useEffect(() => {
-    if (debouncedSearch?.toLowerCase().includes('bgc')) {
-      console.log('=== DEBUG: Records State ===')
-      console.log('Total records:', records.length)
-      console.log('Records array:', records.map(r => ({ 
-        id: r?.id, 
-        lei: r?.lei, 
-        name: r?.legal_name 
-      })))
-      console.log('After filter (r && r.id):', records.filter(r => r && r.id).map(r => ({ 
-        id: r.id, 
-        lei: r.lei, 
-        name: r.legal_name 
-      })))
-      console.log('===========================')
-    }
-  }, [records, debouncedSearch])
 
   // Close country dropdown when clicking outside
   useEffect(() => {
@@ -816,6 +803,72 @@ export default function LEIRecordsPage() {
 
   const totalPages = Math.ceil(totalRecords / itemsPerPage)
   const hasActiveFilters = debouncedSearch || statusFilter || categoryFilter || countryFilter
+  const visibleColumnsInOrder = AVAILABLE_COLUMNS.filter((col) => visibleColumns.has(col.key))
+  const LEI_COLUMN_WIDTH_PX = 184
+  const LEGAL_NAME_COLUMN_WIDTH_PX = 320
+  const leiColumnIndex = visibleColumnsInOrder.findIndex((column) => column.key === 'lei')
+  const leiColumnWidth = leiColumnIndex >= 0 ? LEI_COLUMN_WIDTH_PX : 0
+
+  const getPinnedColumnWidth = (columnKey: keyof LEIRecord): number | null => {
+    if (columnKey === 'lei') return LEI_COLUMN_WIDTH_PX
+    if (columnKey === 'legal_name') return LEGAL_NAME_COLUMN_WIDTH_PX
+    return null
+  }
+
+  const getPinnedColumnStyle = (columnKey: keyof LEIRecord, isHeader: boolean) => {
+    if (columnKey === 'lei') {
+      return {
+        position: 'sticky' as const,
+        left: 0,
+        zIndex: isHeader ? 30 : 20,
+      }
+    }
+
+    if (columnKey === 'legal_name') {
+      return {
+        position: 'sticky' as const,
+        left: `${leiColumnWidth}px`,
+        zIndex: isHeader ? 29 : 19,
+      }
+    }
+
+    return undefined
+  }
+
+  const syncHorizontalScroll = (source: 'table' | 'sticky' | 'top', scrollLeft: number) => {
+    if (isSyncingHorizontalScrollRef.current) return
+
+    isSyncingHorizontalScrollRef.current = true
+
+    if (source !== 'table' && tableContainerRef.current) {
+      tableContainerRef.current.scrollLeft = scrollLeft
+    }
+    if (source !== 'sticky' && stickyHeaderScrollRef.current) {
+      stickyHeaderScrollRef.current.scrollLeft = scrollLeft
+    }
+    if (source !== 'top' && topScrollbarRef.current) {
+      topScrollbarRef.current.scrollLeft = scrollLeft
+    }
+
+    requestAnimationFrame(() => {
+      isSyncingHorizontalScrollRef.current = false
+    })
+  }
+
+  const handleTableHorizontalScroll = () => {
+    if (!tableContainerRef.current) return
+    syncHorizontalScroll('table', tableContainerRef.current.scrollLeft)
+  }
+
+  const handleStickyHeaderHorizontalScroll = () => {
+    if (!stickyHeaderScrollRef.current) return
+    syncHorizontalScroll('sticky', stickyHeaderScrollRef.current.scrollLeft)
+  }
+
+  const handleTopScrollbarScroll = () => {
+    if (!topScrollbarRef.current) return
+    syncHorizontalScroll('top', topScrollbarRef.current.scrollLeft)
+  }
 
   // Handle sticky header on scroll and update dimensions
   useEffect(() => {
@@ -829,10 +882,29 @@ export default function LEIRecordsPage() {
         left: containerRect.left,
         width: containerRect.width
       })
+      setTableClientWidth(tableContainerRef.current.clientWidth)
+      setTableScrollWidth(tableContainerRef.current.scrollWidth)
+
+      if (tableHeaderRef.current) {
+        const headerCells = Array.from(tableHeaderRef.current.querySelectorAll('th'))
+        const measuredWidths = headerCells.map((cell) => cell.getBoundingClientRect().width)
+        setStickyColumnWidths((previousWidths) => {
+          if (
+            previousWidths.length === measuredWidths.length &&
+            previousWidths.every((width, index) => Math.abs(width - measuredWidths[index]) < 0.5)
+          ) {
+            return previousWidths
+          }
+
+          return measuredWidths
+        })
+      }
       
       // Check if we should show sticky header
       const topOffset = hasActiveFilters ? filterBarHeight : 0
       setShowStickyHeader(containerRect.top < topOffset)
+
+      syncHorizontalScroll('table', tableContainerRef.current.scrollLeft)
     }
 
     // Call immediately and on every scroll
@@ -844,7 +916,7 @@ export default function LEIRecordsPage() {
       window.removeEventListener('scroll', updateDimensionsAndCheckScroll)
       window.removeEventListener('resize', updateDimensionsAndCheckScroll)
     }
-  }, [hasActiveFilters, filterBarHeight, expandedWidth])
+  }, [hasActiveFilters, filterBarHeight, expandedWidth, visibleColumns, showLocationCodes, records, currentPage])
 
   // Measure filter bar height dynamically
   useEffect(() => {
@@ -1001,7 +1073,7 @@ export default function LEIRecordsPage() {
           </Alert>
         )}
 
-        <div className="mb-6 bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm rounded-lg p-6">
+        <div className="relative z-40 mb-6 bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm rounded-lg p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             <div>
               <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Search</label>
@@ -1049,7 +1121,7 @@ export default function LEIRecordsPage() {
 
             <div>
               <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Country</label>
-              <div className="relative" ref={countryDropdownRef}>
+              <div className="relative z-50" ref={countryDropdownRef}>
                 <SearchInputWithOverflowTooltip
                   type="text"
                   placeholder="Search countries..."
@@ -1063,7 +1135,7 @@ export default function LEIRecordsPage() {
                 />
                 
                 {showCountryDropdown && (
-                  <div className="absolute z-10 w-full mt-1 max-h-60 overflow-y-auto bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-white/20 rounded-lg shadow-lg">
+                  <div className="absolute z-50 w-full mt-1 max-h-60 overflow-y-auto bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-white/20 rounded-lg shadow-lg">
                     <button
                       onClick={() => {
                         setCountryFilter('')
@@ -1213,8 +1285,20 @@ export default function LEIRecordsPage() {
               </div>
             )}
 
+            {tableScrollWidth > tableClientWidth + 1 && (
+              <div
+                ref={topScrollbarRef}
+                onScroll={handleTopScrollbarScroll}
+                className="mb-1 overflow-x-auto bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 rounded-t-lg"
+              >
+                <div style={{ width: `${tableScrollWidth}px`, height: '1px' }}></div>
+              </div>
+            )}
+
             {/* Fixed sticky header that appears on scroll */}
             <div 
+              ref={stickyHeaderScrollRef}
+              onScroll={handleStickyHeaderHorizontalScroll}
               className={`fixed z-30 overflow-x-auto bg-white border-b-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm shadow-lg transition-all duration-300 ease-in-out ${
                 showStickyHeader ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4 pointer-events-none'
               }`}
@@ -1228,13 +1312,37 @@ export default function LEIRecordsPage() {
                   <table className="w-full" style={{ tableLayout: 'auto', borderCollapse: 'collapse' }}>
                     <thead className="bg-gray-100 dark:bg-gray-800">
                       <tr>
-                        {AVAILABLE_COLUMNS.filter(col => visibleColumns.has(col.key)).map((column) => (
+                        {visibleColumnsInOrder.map((column, columnIndex) => (
                           <th 
                             key={String(column.key)}
                             onClick={() => handleSort(column.key)}
-                            className={`${column.width || 'min-w-40'} px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors`}
+                            className={`${column.width || 'min-w-40'} ${column.key === 'lei' ? 'px-2' : 'px-4'} py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${
+                              column.key === 'lei' || column.key === 'legal_name' ? 'bg-gray-100 dark:bg-gray-800' : ''
+                            }`}
+                            style={(() => {
+                              const pinnedWidth = getPinnedColumnWidth(column.key)
+                              if (pinnedWidth) {
+                                return {
+                                  ...getPinnedColumnStyle(column.key, true),
+                                  width: `${pinnedWidth}px`,
+                                  minWidth: `${pinnedWidth}px`,
+                                  maxWidth: `${pinnedWidth}px`,
+                                }
+                              }
+
+                              if (stickyColumnWidths[columnIndex]) {
+                                return {
+                                  ...getPinnedColumnStyle(column.key, true),
+                                  width: `${stickyColumnWidths[columnIndex]}px`,
+                                  minWidth: `${stickyColumnWidths[columnIndex]}px`,
+                                  maxWidth: `${stickyColumnWidths[columnIndex]}px`,
+                                }
+                              }
+
+                              return getPinnedColumnStyle(column.key, true)
+                            })()}
                           >
-                            <div className="flex items-center gap-1">
+                            <div className={`flex items-center gap-1 ${column.key === 'lei' || column.key === 'legal_name' ? 'overflow-hidden whitespace-nowrap text-ellipsis' : ''}`}>
                               {getColumnLabel(column)}
                               {sortField === column.key && (
                                 <span className="text-blue-600 dark:text-blue-400">{sortDirection === 'asc' ? '↑' : '↓'}</span>
@@ -1250,6 +1358,7 @@ export default function LEIRecordsPage() {
             
             <div 
               ref={tableContainerRef}
+              onScroll={handleTableHorizontalScroll}
               className={`overflow-x-auto bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm shadow-lg transition-opacity duration-200 ${loading ? 'opacity-40 pointer-events-none' : 'opacity-100'}`} 
               style={{ 
                 borderTopLeftRadius: hasActiveFilters ? 0 : '0.5rem',
@@ -1265,13 +1374,37 @@ export default function LEIRecordsPage() {
                     className="bg-gray-100 dark:bg-gray-800"
                   >
                     <tr>
-                      {AVAILABLE_COLUMNS.filter(col => visibleColumns.has(col.key)).map((column) => (
+                      {visibleColumnsInOrder.map((column, columnIndex) => (
                         <th 
                           key={String(column.key)}
                           onClick={() => handleSort(column.key)}
-                          className={`${column.width || 'min-w-40'} px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors`}
+                          className={`${column.width || 'min-w-40'} ${column.key === 'lei' ? 'px-2' : 'px-4'} py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${
+                            column.key === 'lei' || column.key === 'legal_name' ? 'bg-gray-100 dark:bg-gray-800' : ''
+                          }`}
+                          style={(() => {
+                            const pinnedWidth = getPinnedColumnWidth(column.key)
+                            if (pinnedWidth) {
+                              return {
+                                ...getPinnedColumnStyle(column.key, true),
+                                width: `${pinnedWidth}px`,
+                                minWidth: `${pinnedWidth}px`,
+                                maxWidth: `${pinnedWidth}px`,
+                              }
+                            }
+
+                            if (stickyColumnWidths[columnIndex]) {
+                              return {
+                                ...getPinnedColumnStyle(column.key, true),
+                                width: `${stickyColumnWidths[columnIndex]}px`,
+                                minWidth: `${stickyColumnWidths[columnIndex]}px`,
+                                maxWidth: `${stickyColumnWidths[columnIndex]}px`,
+                              }
+                            }
+
+                            return getPinnedColumnStyle(column.key, true)
+                          })()}
                         >
-                          <div className="flex items-center gap-1">
+                          <div className={`flex items-center gap-1 ${column.key === 'lei' || column.key === 'legal_name' ? 'overflow-hidden whitespace-nowrap text-ellipsis' : ''}`}>
                             {getColumnLabel(column)}
                             {sortField === column.key && (
                               <span className="text-blue-600 dark:text-blue-400">{sortDirection === 'asc' ? '↑' : '↓'}</span>
@@ -1283,26 +1416,16 @@ export default function LEIRecordsPage() {
                   </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-white/10">
                   {records.filter(r => r && r.id).map((record, index) => {
-                    // Debug logging
-                    if (debouncedSearch?.toLowerCase().includes('bgc')) {
-                      console.log(`Rendering row ${index}:`, {
-                        id: record.id,
-                        lei: record.lei,
-                        name: record.legal_name,
-                        key: record.id
-                      })
-                    }
-                    
                     return (
                     <tr 
                       key={record.id}
                       data-lei={record.lei}
                       data-row-index={index}
                       onClick={() => handleRecordClick(record)}
-                      className="hover:bg-blue-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
+                      className="group hover:bg-blue-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
                       style={{ height: 'auto', minHeight: '48px' }}
                     >
-                      {AVAILABLE_COLUMNS.filter(col => visibleColumns.has(col.key)).map((column) => {
+                      {visibleColumnsInOrder.map((column) => {
                         const value = record[column.key]
                         const isStatus = column.key === 'entity_status'
                         const isLegalName = column.key === 'legal_name'
@@ -1315,7 +1438,24 @@ export default function LEIRecordsPage() {
                         return (
                           <td 
                             key={String(column.key)} 
-                            className={`px-4 py-3 text-sm ${column.key === 'lei' ? 'font-mono' : ''} text-gray-900 dark:text-gray-100 ${column.key.includes('date') || column.key === 'lei' ? 'whitespace-nowrap' : ''}`}
+                            className={`${column.key === 'lei' ? 'px-2' : 'px-4'} py-3 text-sm ${column.key === 'lei' ? 'font-mono' : ''} text-gray-900 dark:text-gray-100 ${column.key.includes('date') || column.key === 'lei' ? 'whitespace-nowrap' : ''} ${
+                              column.key === 'lei' || column.key === 'legal_name'
+                                ? 'relative bg-white dark:bg-gray-900 group-hover:bg-blue-50 dark:group-hover:bg-gray-800 border-r border-gray-200 dark:border-gray-700 overflow-hidden text-ellipsis'
+                                : ''
+                            }`}
+                            style={(() => {
+                              const pinnedWidth = getPinnedColumnWidth(column.key)
+                              if (pinnedWidth) {
+                                return {
+                                  ...getPinnedColumnStyle(column.key, false),
+                                  width: `${pinnedWidth}px`,
+                                  minWidth: `${pinnedWidth}px`,
+                                  maxWidth: `${pinnedWidth}px`,
+                                }
+                              }
+
+                              return getPinnedColumnStyle(column.key, false)
+                            })()}
                           >
                             {isStatus ? (
                               (() => {
