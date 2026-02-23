@@ -12,6 +12,7 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
 
 - [README](README.md): Primary project documentation with setup instructions and architecture overview
 - [Architecture](docs/architecture.md): System architecture, design patterns, and component interactions
+- [Changelog](CHANGELOG.md): Version history and notable changes
 
 ## Getting Started
 
@@ -54,6 +55,7 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
 
 ## Optional
 
+- [UI Patterns Guide](docs/ui-patterns.md): Reusable frontend components and patterns (Badge, Alert, LoadingSpinner, StatCard, PageHeader, Sticky Headers)
 - [Makefile](Makefile): Build automation, testing, linting, and development commands
 - [API Smoke Script](scripts/smoke-api.ps1): Environment-aware API smoke tests for health/auth checks with startup readiness wait
 - [SSI Smoke Script](scripts/smoke-ssi.ps1): Verifies `/api/v1/ssis` contract fields, optional temporary seed rows, and BGC-free payload checks

@@ -1,9 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
-import ThemeToggle from '../components/ThemeToggle'
-import { formatStatusLabel } from '../lib/status-label'
+import Alert from '../components/Alert'
+import LoadingSpinner from '../components/LoadingSpinner'
+import PageHeader from '../components/PageHeader'
 
 interface SourceFile {
   id: string
@@ -29,77 +29,12 @@ interface ProcessingStatus {
   error_message: string
 }
 
-const SAMPLE_FULL_STATUS: ProcessingStatus = {
-  id: 'sample-full',
-  job_type: 'DAILY_FULL',
-  status: 'IDLE',
-  last_run_at: '2026-02-20T01:00:00Z',
-  next_run_at: '2026-02-23T01:00:00Z',
-  last_success_at: '2026-02-20T01:25:00Z',
-  current_source_file_id: 'sample-file-full',
-  current_source_file: {
-    id: 'sample-file-full',
-    file_name: 'gleif_full_20260220.xml.zip',
-    processing_status: 'COMPLETED',
-    total_records: 1200,
-    processed_records: 1200,
-    failed_records: 0,
-    last_processed_lei: '529900T8BM49AURSDO55',
-    failure_category: '',
-    processing_error: '',
-  },
-  error_message: '',
-}
-
-const SAMPLE_DELTA_STATUS: ProcessingStatus = {
-  id: 'sample-delta',
-  job_type: 'DAILY_DELTA',
-  status: 'IDLE',
-  last_run_at: '2026-02-22T09:00:00Z',
-  next_run_at: '2026-02-22T10:00:00Z',
-  last_success_at: '2026-02-22T09:02:30Z',
-  current_source_file_id: 'sample-file-delta',
-  current_source_file: {
-    id: 'sample-file-delta',
-    file_name: 'gleif_delta_20260222.xml.zip',
-    processing_status: 'COMPLETED',
-    total_records: 150,
-    processed_records: 150,
-    failed_records: 0,
-    last_processed_lei: '5493001KJTIIGC8Y1R12',
-    failure_category: '',
-    processing_error: '',
-  },
-  error_message: '',
-}
-
-const getAuthToken = (): string | null => {
-  if (typeof window === 'undefined') {
-    return null
-  }
-
-  const keys = ['token', 'jwt', 'authToken', 'access_token']
-  for (const key of keys) {
-    const value = localStorage.getItem(key)
-    if (value && value.trim()) {
-      return value.trim()
-    }
-  }
-
-  return null
-}
-
 export default function LEIStatusPage() {
   const [fullStatus, setFullStatus] = useState<ProcessingStatus | null>(null)
   const [deltaStatus, setDeltaStatus] = useState<ProcessingStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [dataMode, setDataMode] = useState<'api' | 'sample'>('api')
-  const [infoMessage, setInfoMessage] = useState('')
   const [autoRefresh, setAutoRefresh] = useState(true)
-  const [activeTriggerJob, setActiveTriggerJob] = useState<'DAILY_FULL' | 'DAILY_DELTA' | null>(null)
-  const [fullSyncActionMessage, setFullSyncActionMessage] = useState<string | null>(null)
-  const [deltaSyncActionMessage, setDeltaSyncActionMessage] = useState<string | null>(null)
 
   const API_BASE_URL = typeof window !== 'undefined'
     ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080')
@@ -107,125 +42,43 @@ export default function LEIStatusPage() {
 
   const fetchStatus = async () => {
     try {
-      const headers: Record<string, string> = {
-        Accept: 'application/json',
-      }
-
-      const token = getAuthToken()
-      if (token) {
-        headers.Authorization = `Bearer ${token}`
-      }
-
+      // For now, we'll call without auth - you'll need to add JWT token
       const [fullResponse, deltaResponse] = await Promise.all([
         fetch(`${API_BASE_URL}/api/v1/lei/status/DAILY_FULL`, {
-          headers,
+          headers: {
+            'Accept': 'application/json',
+            // Add auth when ready: 'Authorization': `Bearer ${token}`
+          }
         }).catch(() => null),
         fetch(`${API_BASE_URL}/api/v1/lei/status/DAILY_DELTA`, {
-          headers,
+          headers: {
+            'Accept': 'application/json',
+            // Add auth when ready: 'Authorization': `Bearer ${token}`
+          }
         }).catch(() => null)
       ])
-
-      const unauthorized = fullResponse?.status === 401 || fullResponse?.status === 403 || deltaResponse?.status === 401 || deltaResponse?.status === 403
-      const hasApiData = Boolean((fullResponse && fullResponse.ok) || (deltaResponse && deltaResponse.ok))
 
       if (fullResponse && fullResponse.ok) {
         const fullData = await fullResponse.json()
         console.log('LEI Full Status:', fullData)
         setFullStatus(fullData)
-      } else if (!hasApiData) {
+      } else {
         console.error('Failed to fetch full status:', fullResponse?.status)
-        setFullStatus(SAMPLE_FULL_STATUS)
       }
 
       if (deltaResponse && deltaResponse.ok) {
         const deltaData = await deltaResponse.json()
         console.log('LEI Delta Status:', deltaData)
         setDeltaStatus(deltaData)
-      } else if (!hasApiData) {
-        console.error('Failed to fetch delta status:', deltaResponse?.status)
-        setDeltaStatus(SAMPLE_DELTA_STATUS)
-      }
-
-      if (hasApiData) {
-        setDataMode('api')
-        setInfoMessage('Loaded from LEI status API.')
       } else {
-        setDataMode('sample')
-        setInfoMessage(
-          unauthorized
-            ? 'LEI status API requires authentication. Showing sample data.'
-            : 'LEI status API unavailable. Showing sample data.'
-        )
+        console.error('Failed to fetch delta status:', deltaResponse?.status)
       }
 
       setError(null)
     } catch (err) {
-      setFullStatus(SAMPLE_FULL_STATUS)
-      setDeltaStatus(SAMPLE_DELTA_STATUS)
-      setDataMode('sample')
-      setInfoMessage('LEI status API unavailable. Showing sample data.')
-      setError(null)
+      setError(err instanceof Error ? err.message : 'Failed to fetch status')
     } finally {
       setLoading(false)
-    }
-  }
-
-  const triggerSyncNow = async (jobType: 'DAILY_FULL' | 'DAILY_DELTA') => {
-    const token = getAuthToken()
-    if (!token) {
-      if (jobType === 'DAILY_FULL') {
-        setFullSyncActionMessage('Authentication token required to trigger sync. Please log in first.')
-      } else {
-        setDeltaSyncActionMessage('Authentication token required to trigger sync. Please log in first.')
-      }
-      return
-    }
-
-    setActiveTriggerJob(jobType)
-    if (jobType === 'DAILY_FULL') {
-      setFullSyncActionMessage(null)
-    } else {
-      setDeltaSyncActionMessage(null)
-    }
-
-    const endpoint = jobType === 'DAILY_FULL' ? 'full' : 'delta'
-    const syncLabel = jobType === 'DAILY_FULL' ? 'daily download' : 'delta download'
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/lei/sync/${endpoint}`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: 'application/json',
-        },
-      })
-
-      if (!response.ok) {
-        const errorBody = await response.text()
-        const message = `Failed to trigger ${syncLabel} (${response.status}). ${errorBody || 'Please try again.'}`
-        if (jobType === 'DAILY_FULL') {
-          setFullSyncActionMessage(message)
-        } else {
-          setDeltaSyncActionMessage(message)
-        }
-        return
-      }
-
-      if (jobType === 'DAILY_FULL') {
-        setFullSyncActionMessage('Daily download triggered successfully.')
-      } else {
-        setDeltaSyncActionMessage('Delta download triggered successfully.')
-      }
-      await fetchStatus()
-    } catch {
-      const message = `Failed to trigger ${syncLabel} due to network/API error.`
-      if (jobType === 'DAILY_FULL') {
-        setFullSyncActionMessage(message)
-      } else {
-        setDeltaSyncActionMessage(message)
-      }
-    } finally {
-      setActiveTriggerJob(null)
     }
   }
 
@@ -303,12 +156,7 @@ export default function LEIStatusPage() {
     return 'Unknown'
   }
 
-  const renderStatusCard = (
-    title: string,
-    status: ProcessingStatus | null,
-    isDisabled: boolean = false,
-    onDemandJobType: 'DAILY_FULL' | 'DAILY_DELTA' | null = null
-  ) => {
+  const renderStatusCard = (title: string, status: ProcessingStatus | null, isDisabled: boolean = false) => {
     if (!status) {
       return (
         <div className={`rounded-lg shadow-md p-6 border-2 ${
@@ -324,16 +172,6 @@ export default function LEIStatusPage() {
 
     const progress = calculateProgress(status)
     const file = status.current_source_file
-    const runningPhase =
-      status.status === 'RUNNING' && file
-        ? file.total_records > 0
-          ? 'processing'
-          : file.processing_status === 'PENDING'
-            ? 'downloading'
-            : file.processing_status === 'IN_PROGRESS'
-              ? 'extracting'
-              : 'preparing'
-        : null
 
     return (
       <div className={`rounded-lg shadow-md p-6 border-2 ${
@@ -344,38 +182,9 @@ export default function LEIStatusPage() {
         <div className="flex justify-between items-start mb-4">
           <h2 className="text-2xl font-bold">{title}</h2>
           <span className={`px-3 py-1 rounded-full text-sm font-semibold border-2 ${getStatusColor(status.status)}`}>
-            {formatStatusLabel(status.status)}
+            {status.status}
           </span>
         </div>
-
-        {isDisabled && (
-          <div className="mb-4">
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border bg-gray-200 text-gray-700 border-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600">
-              Hourly sync currently disabled
-            </span>
-          </div>
-        )}
-
-        {onDemandJobType && (
-          <div className="mb-4">
-            <button
-              onClick={() => triggerSyncNow(onDemandJobType)}
-              disabled={activeTriggerJob !== null || status.status === 'RUNNING'}
-              className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed text-sm"
-            >
-              {activeTriggerJob === onDemandJobType
-                ? 'Starting…'
-                : onDemandJobType === 'DAILY_FULL'
-                  ? 'Run Daily Download Now'
-                  : 'Run Delta Download Now'}
-            </button>
-            {(onDemandJobType === 'DAILY_FULL' ? fullSyncActionMessage : deltaSyncActionMessage) && (
-              <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">
-                {onDemandJobType === 'DAILY_FULL' ? fullSyncActionMessage : deltaSyncActionMessage}
-              </p>
-            )}
-          </div>
-        )}
 
         {/* Progress Bar */}
         {file && status.status === 'RUNNING' && (
@@ -397,11 +206,7 @@ export default function LEIStatusPage() {
               </>
             ) : (
               <div className="text-sm text-gray-600 dark:text-gray-400">
-                <p className="mb-2">
-                  {runningPhase === 'downloading' && `⏳ Downloading file... (${file.processed_records.toLocaleString()} records processed)`}
-                  {runningPhase === 'extracting' && `⏳ Extracting file... (${file.processed_records.toLocaleString()} records processed)`}
-                  {runningPhase === 'preparing' && `⏳ Preparing file... (${file.processed_records.toLocaleString()} records processed)`}
-                </p>
+                <p className="mb-2">⏳ Downloading file... ({file.processed_records.toLocaleString()} records processed)</p>
                 <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden">
                   <div className="bg-blue-600 dark:bg-blue-500 h-4 rounded-full animate-pulse" style={{ width: '30%' }} />
                 </div>
@@ -455,7 +260,7 @@ export default function LEIStatusPage() {
             <h3 className="font-semibold mb-2 text-sm text-gray-700 dark:text-gray-200">Current File</h3>
             <div className="space-y-1 text-sm text-gray-900 dark:text-gray-100">
               <p className="truncate"><span className="font-medium text-gray-700 dark:text-gray-300">Name:</span> {file.file_name}</p>
-              <p><span className="font-medium text-gray-700 dark:text-gray-300">Status:</span> {formatStatusLabel(file.processing_status)}</p>
+              <p><span className="font-medium text-gray-700 dark:text-gray-300">Status:</span> {file.processing_status}</p>
               {file.total_records > 0 && (
                 <p><span className="font-medium text-gray-700 dark:text-gray-300">Total Records:</span> {file.total_records.toLocaleString()}</p>
               )}
@@ -506,68 +311,56 @@ export default function LEIStatusPage() {
   }
 
   if (loading && !fullStatus && !deltaStatus) {
-    return (
-      <div className="min-h-screen p-8">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center py-20">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            <p className="mt-4 opacity-70">Loading LEI processing status...</p>
-          </div>
-        </div>
-      </div>
-    )
+    return <LoadingSpinner message="Loading LEI processing status..." />
   }
 
   return (
     <div className="min-h-screen p-8">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="flex justify-between items-start mb-8">
-          <div>
-            <Link href="/" className="text-blue-400 hover:text-blue-300 mb-4 inline-block">
-              ← Back to Home
-            </Link>
-            <h1 className="text-4xl font-bold mb-2">LEI Data Processing</h1>
-            <p className="text-lg opacity-70">Real-time monitoring of GLEIF data synchronization</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <button
-              onClick={fetchStatus}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              🔄 Refresh Now
-            </button>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={autoRefresh}
-                onChange={(e) => setAutoRefresh(e.target.checked)}
-                className="w-4 h-4"
-              />
-              <span className="text-sm opacity-70">Auto-refresh (5s)</span>
-            </label>
-            <ThemeToggle />
-          </div>
-        </div>
+        <PageHeader
+          title="LEI Data Processing"
+          subtitle="Real-time monitoring of GLEIF data synchronization"
+          actions={
+            <>
+              <button
+                onClick={fetchStatus}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                🔄 Refresh Now
+              </button>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={autoRefresh}
+                  onChange={(e) => setAutoRefresh(e.target.checked)}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm opacity-70">Auto-refresh (5s)</span>
+              </label>
+            </>
+          }
+        />
 
-        {/* Data Source Alert */}
-        <div
-          className={`mb-6 p-4 rounded-lg border ${
-            dataMode === 'api' ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'
-          }`}
-        >
-          <p className={dataMode === 'api' ? 'text-green-800' : 'text-yellow-800'}>
-            <span className="font-semibold">{dataMode === 'api' ? '✅ Data Source:' : '📋 Notice:'}</span> {infoMessage}
-          </p>
-          {error && (
-            <p className="text-sm mt-1 text-yellow-700">{error}</p>
-          )}
-        </div>
+        {/* Error Alert */}
+        {error && (
+          <Alert variant="error" title="Connection Error:" className="mb-6">
+            {error}
+            <p className="text-sm mt-1 opacity-80">
+              Make sure the backend is running and you have proper authentication.
+            </p>
+          </Alert>
+        )}
 
         {/* Status Cards */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {renderStatusCard(`Full Sync (${getFrequencyLabel(fullStatus)})`, fullStatus, false, 'DAILY_FULL')}
-          {renderStatusCard(`Delta Sync (${getFrequencyLabel(deltaStatus)})`, deltaStatus, true, null)}
+          {renderStatusCard(`Full Sync (${getFrequencyLabel(fullStatus)})`, fullStatus, false)}
+          <div className="relative">
+            {renderStatusCard(`Delta Sync (${getFrequencyLabel(deltaStatus)})`, deltaStatus, true)}
+            <div className="absolute top-4 right-4 bg-gray-500 text-white text-xs px-2 py-1 rounded">
+              DISABLED
+            </div>
+          </div>
         </div>
 
         {/* Legend */}
@@ -575,15 +368,15 @@ export default function LEIStatusPage() {
           <h3 className="font-semibold mb-3 text-gray-700 dark:text-gray-200">Status Legend</h3>
           <div className="flex flex-wrap gap-4 text-sm">
             <div className="flex items-center gap-2">
-              <span className={`px-3 py-1 rounded-full font-semibold border-2 ${getStatusColor('IDLE')}`}>Idle</span>
+              <span className={`px-3 py-1 rounded-full font-semibold border-2 ${getStatusColor('IDLE')}`}>IDLE</span>
               <span className="text-gray-600 dark:text-gray-400">Waiting for next scheduled run</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className={`px-3 py-1 rounded-full font-semibold border-2 ${getStatusColor('RUNNING')}`}>Running</span>
+              <span className={`px-3 py-1 rounded-full font-semibold border-2 ${getStatusColor('RUNNING')}`}>RUNNING</span>
               <span className="text-gray-600 dark:text-gray-400">Currently processing data</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className={`px-3 py-1 rounded-full font-semibold border-2 ${getStatusColor('FAILED')}`}>Failed</span>
+              <span className={`px-3 py-1 rounded-full font-semibold border-2 ${getStatusColor('FAILED')}`}>FAILED</span>
               <span className="text-gray-600 dark:text-gray-400">Encountered an error (requires manual intervention)</span>
             </div>
           </div>

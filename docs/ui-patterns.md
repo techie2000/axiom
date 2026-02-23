@@ -1,111 +1,205 @@
 # UI Patterns Guide
 
-Reusable UI patterns and components for the Axiom frontend. These patterns have been
-tested and optimized for performance, accessibility, and user experience.
+Reusable UI patterns and components for the Axiom frontend. These patterns have been tested and optimized for performance, accessibility, and user experience.
 
 ## Table of Contents
 
+- [Reusable Components](#reusable-components)
 - [Sticky Headers with Smooth Transitions](#sticky-headers-with-smooth-transitions)
-- [Virtual Columns (Derived Display Data)](#virtual-columns-derived-display-data)
-- [Protected API Sample Fallback](#protected-api-sample-fallback)
-- [Table Cell Content Visibility](#table-cell-content-visibility)
 - [Best Practices](#best-practices)
 
 ---
 
-## Virtual Columns (Derived Display Data)
+## Reusable Components
 
-Use virtual columns for values that are deterministic and presentation-oriented, rather than storing them in the
-database.
+All Axiom pages **must** use the shared components found in `frontend/app/components/` rather than
+writing inline one-off markup. This keeps presentation consistent and makes colour-scheme changes a
+single-file operation.
 
-### Country Flag Emoji Pattern
+### Badge
 
-- Source of truth: ISO alpha-2 country code (for example, `GB`, `SE`, `JP`)
-- Derived value: flag emoji rendered in UI
-- Shared helper: `frontend/app/lib/country-flag.ts`
+Coloured label chip for codes, status values, and classification tags.
 
-### Why this pattern
+```tsx
+import Badge from '../components/Badge'
 
-- Avoids schema bloat for non-business data
-- Keeps seed/reference loads simpler
-- Ensures one consistent conversion implementation across pages
+// Code chip (mono font, blue)
+<Badge variant="blue" mono>{country.alpha2}</Badge>
 
-### Reuse guidance
+// Status pill (pill shape, green)
+<Badge variant="green" shape="pill">✓ Active</Badge>
 
-- Import and reuse the shared helper anywhere country flags are shown (countries, SSI, accounts, etc.)
-- Do not duplicate inline conversion code in page components
-- If a module is still in placeholder state (no finalized list/table schema), defer adding the virtual column until
-  that schema is defined
+// Inactive state
+<Badge variant="gray">Inactive</Badge>
+```
+
+#### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `variant` | `blue \| green \| red \| yellow \| orange \| purple \| gray \| default` | `default` | Colour theme |
+| `shape` | `rounded \| pill` | `rounded` | Border radius |
+| `mono` | `boolean` | `false` | Use monospace font |
+| `className` | `string` | `''` | Extra Tailwind classes |
+
+#### Variant guide
+
+| Variant | Use for |
+|---------|---------|
+| `blue` | Identifiers, ISO codes, system names |
+| `green` | Active / allowed / success states |
+| `red` | Error states, source codes, sanctioned |
+| `yellow` | Warning, caution |
+| `orange` | External system identifiers |
+| `purple` | Coming-soon / future features |
+| `gray` | Inactive / neutral |
 
 ---
 
-## Protected API Sample Fallback
+### Alert
 
-Use a consistent fallback strategy for pages that depend on authenticated APIs.
-
-### Why this pattern
-
-- Keeps pages usable when users are not authenticated yet
-- Avoids blank/error-only screens during local development and demos
-- Provides deterministic UI behavior while still surfacing API/auth status
-
-### Required behavior
-
-- Attempt authenticated fetch using existing token keys (`token`, `jwt`, `authToken`, `access_token`)
-- On `401`/`403` or API connectivity failures, load approved sample rows
-- Display a visible banner indicating source:
-  - `✅ Data Source:` for live API data
-  - `📋 Notice:` for sample fallback
-
-### Template
+Notification banner for informational, warning, or error messages.
 
 ```tsx
-const [dataMode, setDataMode] = useState<'api' | 'sample'>('api')
-const [infoMessage, setInfoMessage] = useState('')
+import Alert from '../components/Alert'
 
-if (response.ok) {
-  setRows(apiRows)
-  setDataMode('api')
-  setInfoMessage('Loaded from API.')
-} else {
-  setRows(SAMPLE_ROWS)
-  setDataMode('sample')
-  setInfoMessage('API requires authentication. Showing sample data.')
+// Info (default)
+<Alert variant="info" title="💡 About Code Mappings:" className="mb-6">
+  This table maps codes from external systems to internal identifiers.
+</Alert>
+
+// Error
+<Alert variant="error" title="⚠️ Error:" className="mb-6">
+  {error}
+</Alert>
+
+// Warning with conditional rendering
+{error && (
+  <Alert
+    variant={error.includes('No data') ? 'warning' : 'error'}
+    title={error.includes('No data') ? '📋 Notice:' : '⚠️ Error:'}
+    className="mb-6"
+  >
+    {error}
+  </Alert>
+)}
+```
+
+#### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `variant` | `info \| warning \| error \| success` | `info` | Colour and meaning |
+| `title` | `string` | — | Bold prefix text |
+| `children` | `ReactNode` | — | Message body (supports JSX) |
+| `className` | `string` | `''` | Extra Tailwind classes |
+
+---
+
+### LoadingSpinner
+
+Full-page centred loading indicator. Use at the top of a page component whenever data is still
+being fetched and there is nothing to show yet.
+
+```tsx
+import LoadingSpinner from '../components/LoadingSpinner'
+
+if (loading && records.length === 0) {
+  return <LoadingSpinner message="Loading LEI records..." />
 }
 ```
 
+#### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `message` | `string` | `'Loading...'` | Text shown below spinner |
+
 ---
 
-## Table Cell Content Visibility
+### StatCard
 
-Use wrapping cell styles for fields that can exceed a single line.
-
-### Why this pattern
-
-- Prevents hidden business values in narrow columns
-- Keeps sample and live data equally readable
-- Allows row height to expand naturally instead of clipping content
-
-### Required behavior
-
-- Avoid `truncate` for primary data fields.
-- Use wrapped multi-line cells for long text: `whitespace-normal break-words leading-relaxed align-top`.
-- Keep tag/code-style compact cells (`whitespace-nowrap`) only for short fixed-width values.
-
-### Template
+Metric display card. Use in a responsive grid to show summary statistics at a glance.
 
 ```tsx
-<td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300 whitespace-normal break-words leading-relaxed align-top">
-  {row.description || '—'}
-</td>
+import StatCard from '../components/StatCard'
+
+<div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+  <StatCard title="Total Mappings" value={mappings.length} />
+  <StatCard title="Active Mappings" value={activeMappings.length} accent="green" />
+  <StatCard title="Source Systems" value={uniqueSystems.length} />
+  <StatCard title="Filtered Results" value={filteredMappings.length} />
+</div>
 ```
+
+#### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `title` | `string` | — | Label above the value |
+| `value` | `string \| number` | — | Large display value |
+| `accent` | `green \| red \| blue \| yellow \| default` | `default` | Border and text colour |
+
+---
+
+### PageHeader
+
+Standard page header — includes back link, page title, subtitle, `ThemeToggle`, and an optional
+`actions` slot for per-page controls (e.g. refresh buttons, toggles).
+
+```tsx
+import PageHeader from '../components/PageHeader'
+
+// Minimal
+<PageHeader
+  title="Countries"
+  subtitle="Browse ISO 3166 country codes and reference data"
+/>
+
+// With custom actions
+<PageHeader
+  title="LEI Records"
+  subtitle="GLEIF Legal Entity Identifiers (ISO 17442)"
+  actions={
+    <>
+      <button onClick={refresh} className="px-4 py-2 bg-blue-600 text-white rounded-lg ...">
+        🔄 Refresh
+      </button>
+    </>
+  }
+/>
+```
+
+#### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `title` | `string` | — | Page heading (rendered as `h1`) |
+| `subtitle` | `string` | — | Descriptive subtext below the heading |
+| `backHref` | `string` | `'/'` | Destination of the back link |
+| `backLabel` | `string` | `'← Back to Home'` | Back link label |
+| `actions` | `ReactNode` | — | Extra controls rendered left of `ThemeToggle` |
+
+> **Note:** `ThemeToggle` is always included in `PageHeader`. Do **not** import it separately on
+> pages that use `PageHeader`.
+
+---
+
+### Adding New Pages — Checklist
+
+When creating a new Axiom page always use the shared components:
+
+- [ ] Import and use `<PageHeader>` — do **not** repeat the header div/back-link/ThemeToggle pattern
+- [ ] Use `<LoadingSpinner>` for the initial load state — do **not** copy the spinner div
+- [ ] Use `<Alert>` for error and notice banners — do **not** inline the coloured `div/p` pattern
+- [ ] Use `<StatCard>` for metric grids — do **not** repeat the card `div` markup
+- [ ] Use `<Badge>` for coloured labels — do **not** use raw `<span className="px-2 py-1 bg-... text-...">` chips
 
 ---
 
 ## Sticky Headers with Smooth Transitions
 
-**Use Case:** Data tables or lists where column headers must remain visible during
-vertical scrolling while preserving horizontal scroll capability.
+**Use Case:** Data tables or lists where column headers must remain visible during vertical scrolling while preserving horizontal scroll capability.
 
 **Decision Record:** See [ADR-0008](./adr/adr-0008-sticky-headers-with-smooth-transitions.md)
 
@@ -114,14 +208,12 @@ vertical scrolling while preserving horizontal scroll capability.
 ### When to Use
 
 ✅ Use this pattern when:
-
 - Table has many rows requiring vertical scrolling
 - Table has many columns requiring horizontal scrolling
 - Users need to maintain column context while scrolling data
 - Professional smooth transitions are required
 
 ❌ Don't use this pattern when:
-
 - Table fits entirely in viewport (no scrolling needed)
 - Only vertical OR horizontal scrolling (pure CSS `position: sticky` works)
 - Mobile-first design (consider alternative patterns for small screens)
@@ -240,7 +332,6 @@ Place this **before** your main table container in the JSX:
 #### Transition Speed
 
 Adjust `duration-{time}` in sticky header className:
-
 - `duration-200` - Fast (200ms)
 - `duration-300` - Default (300ms) - Recommended
 - `duration-500` - Slow (500ms)
@@ -272,7 +363,6 @@ className={showStickyHeader
 #### Z-Index Management
 
 If sticky header is hidden behind other fixed elements:
-
 - Increase `z-30` to `z-40` or `z-50`
 - Ensure fixed navbars/modals have lower z-index
 - Common z-index hierarchy: navbar (z-40), sticky headers (z-30), modals (z-50)
@@ -405,30 +495,22 @@ Example with ARIA:
 ### Troubleshooting
 
 #### Header width doesn't match table
-
 **Problem:** Sticky header is wider/narrower than table  
-**Solution:** Ensure `tableContainerRef` is on the direct parent of the table, not a wrapper
-several levels up
+**Solution:** Ensure `tableContainerRef` is on the direct parent of the table, not a wrapper several levels up
 
 #### Header appears but is invisible
-
 **Problem:** Width or left is 0  
-**Solution:** Check that `tableContainerRef.current` exists before `showStickyHeader` becomes
-true. Call dimensions update immediately in useEffect.
+**Solution:** Check that `tableContainerRef.current` exists before `showStickyHeader` becomes true. Call dimensions update immediately in useEffect.
 
 #### Header doesn't appear at all
-
 **Problem:** `containerRect.top` never goes negative  
-**Solution:** Check that you're scrolling the window, not a nested scrollable div. If nested,
-attach scroll listener to that element instead.
+**Solution:** Check that you're scrolling the window, not a nested scrollable div. If nested, attach scroll listener to that element instead.
 
 #### Transition is choppy
-
 **Problem:** Browser reflow during scroll  
 **Solution:** Avoid changing layout properties during scroll. Use `transform` and `opacity` only (GPU-accelerated).
 
 #### Header appears too early/late
-
 **Problem:** `topOffset` calculation incorrect  
 **Solution:** Measure your fixed top elements accurately. Use `element.offsetHeight` or `getBoundingClientRect().height`.
 
@@ -443,20 +525,6 @@ attach scroll listener to that element instead.
 3. **Use Tailwind's transition utilities** - Consistent timing functions across app
 4. **Test on real devices** - Performance varies significantly on mobile
 5. **Consider reduced motion preference** - Respect `prefers-reduced-motion` media query
-
-### Table Row Hover Contrast
-
-- Light mode table row hover should be clearly visible: use `hover:bg-blue-50` with `transition-colors`.
-- Avoid subtle light hover shades like `hover:bg-gray-50` on primary data rows.
-- Keep dark mode hover behavior aligned with current table styles (for example, `dark:hover:bg-white/10`).
-
-Example:
-
-```tsx
-<tr className="hover:bg-blue-50 dark:hover:bg-white/10 transition-colors">
-  {/* row cells */}
-</tr>
-```
 
 ### Dark Mode Support
 

@@ -3,7 +3,7 @@ package version
 // Version is the current release version of Axiom.
 // This should match the VERSION file in the project root.
 // GitCommit and BuildDate are set by the build system via -ldflags.
-const Version = "0.1.0"
+const Version = "0.2.0"
 
 var (
 	GitCommit string = "unknown"
