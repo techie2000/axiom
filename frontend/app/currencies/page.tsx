@@ -29,6 +29,7 @@ export default function CurrenciesPage() {
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [complianceFilter, setComplianceFilter] = useState<ComplianceFilter>('all')
+  const [showReferenceCodes, setShowReferenceCodes] = useState(false)
 
   const API_BASE_URL = typeof window !== 'undefined'
     ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080')
@@ -50,7 +51,6 @@ export default function CurrenciesPage() {
 
       if (response.ok) {
         const data = await response.json()
-        console.log('Currencies API response:', data)
         setCurrencies(data || [])
         if (!data || data.length === 0) {
           setError('No currencies data available yet. The database may need to be populated with reference data.')
@@ -71,19 +71,28 @@ export default function CurrenciesPage() {
   const alertClsCount = currencies.filter(c => c.is_alert_cls_allowed).length
   const ofacCount = currencies.filter(c => c.is_ofac_sanctioned).length
 
-  const filteredCurrencies = currencies.filter(currency => {
-    const matchesSearch =
-      currency.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      currency.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (currency.symbol && currency.symbol.toLowerCase().includes(searchTerm.toLowerCase()))
+  const filteredCurrencies = currencies
+    .filter(currency => {
+      const matchesSearch =
+        currency.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        currency.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (currency.symbol && currency.symbol.toLowerCase().includes(searchTerm.toLowerCase()))
 
-    const matchesCompliance =
-      complianceFilter === 'all' ||
-      (complianceFilter === 'alert_cls' && currency.is_alert_cls_allowed) ||
-      (complianceFilter === 'ofac' && currency.is_ofac_sanctioned)
+      const matchesCompliance =
+        complianceFilter === 'all' ||
+        (complianceFilter === 'alert_cls' && currency.is_alert_cls_allowed) ||
+        (complianceFilter === 'ofac' && currency.is_ofac_sanctioned)
 
-    return matchesSearch && matchesCompliance
-  })
+      return matchesSearch && matchesCompliance
+    })
+    .sort((left, right) => {
+      const nameCompare = left.name.localeCompare(right.name, undefined, { sensitivity: 'base' })
+      if (nameCompare !== 0) {
+        return nameCompare
+      }
+
+      return left.code.localeCompare(right.code, undefined, { sensitivity: 'base' })
+    })
 
   if (loading) {
     return <LoadingSpinner message="Loading currencies..." />
@@ -96,6 +105,15 @@ export default function CurrenciesPage() {
         <PageHeader
           title="Currencies"
           subtitle="Browse ISO 4217 currency codes and compliance reference data"
+          actions={
+            <button
+              onClick={() => setShowReferenceCodes(!showReferenceCodes)}
+              className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 transition-colors text-white text-sm font-medium"
+              title={showReferenceCodes ? 'Display mode: codes' : 'Display mode: names'}
+            >
+              {showReferenceCodes ? '🏷️ Display: Codes' : '🏷️ Display: Names'}
+            </button>
+          }
         />
 
         {/* Info/Error Alert */}
@@ -149,10 +167,10 @@ export default function CurrenciesPage() {
               <thead className="bg-gray-50 dark:bg-white/5">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Name
+                    {showReferenceCodes ? 'Code' : 'Name'}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Code
+                    {showReferenceCodes ? 'Name' : 'Code'}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Symbol
@@ -173,15 +191,32 @@ export default function CurrenciesPage() {
                   filteredCurrencies.map((currency) => (
                     <tr key={currency.id} className="hover:bg-gray-50 dark:hover:bg-white/10">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                        {currency.name}
-                        {currency.name_plural && currency.name_plural !== currency.name && (
-                          <span className="ml-1 text-xs text-gray-400 dark:text-gray-500">
-                            ({currency.name_plural})
-                          </span>
+                        {showReferenceCodes ? (
+                          <Badge variant="blue" mono>{currency.code}</Badge>
+                        ) : (
+                          <>
+                            {currency.name}
+                            {currency.name_plural && currency.name_plural !== currency.name && (
+                              <span className="ml-1 text-xs text-gray-400 dark:text-gray-500">
+                                ({currency.name_plural})
+                              </span>
+                            )}
+                          </>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        <Badge variant="blue" mono>{currency.code}</Badge>
+                        {showReferenceCodes ? (
+                          <>
+                            <span className="text-gray-900 dark:text-white">{currency.name}</span>
+                            {currency.name_plural && currency.name_plural !== currency.name && (
+                              <span className="ml-1 text-xs text-gray-400 dark:text-gray-500">
+                                ({currency.name_plural})
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <Badge variant="blue" mono>{currency.code}</Badge>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                         <span className="text-lg">{currency.symbol}</span>

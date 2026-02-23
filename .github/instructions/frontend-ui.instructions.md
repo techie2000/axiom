@@ -255,7 +255,14 @@ EVERY visual change:
 - Implement derived value logic in a reusable utility and consume it across pages to ensure consistency.
 - For country flags, use the shared helper in `frontend/app/lib/country-flag.ts` instead of duplicating conversion logic.
 - Render country flags via shared component `frontend/app/components/CountryFlag.tsx` to ensure consistent display across OS/browser font differences.
+- Do not define page-local helpers such as `getFlagEmoji*`, `getFlagImageUrl*`, or `renderCountryFlag*`; import and use the shared utility/component.
 - If a page does not yet have a finalized table/list layout (for example, placeholder/coming-soon pages), defer derived column rendering until the page schema is defined.
+
+### Code vs Name Display Standard (Required)
+- When reference data has both machine codes and human-readable names (for example: continent, language, legal form, region), provide a single page-level toggle to switch display mode between names and codes.
+- Reuse the LEI pattern text and behavior (`🏷️ Display: Names` / `🏷️ Display: Codes`) for consistency unless a page has explicit UX requirements.
+- Apply the selected mode consistently to table headers, table cells, and filter option labels that render those reference values.
+- Keep filter query values stable (code-backed where possible); only the visible labels should change with display mode.
 
 ### Landing Cards Standard (Required)
 - Cards within the same landing-page section must use a shared component and identical interaction/visual behavior.

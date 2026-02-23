@@ -3,6 +3,7 @@ import LEIStatusCard from './components/LEIStatusCard'
 import LEIRecordsCard from './components/LEIRecordsCard'
 import CountriesRecordsCard from './components/CountriesRecordsCard'
 import CurrenciesRecordsCard from './components/CurrenciesRecordsCard'
+import LanguagesRecordsCard from './components/LanguagesRecordsCard'
 import PageHeader from './components/PageHeader'
 import ProtectedLandingCard from './components/ProtectedLandingCard'
 
@@ -25,10 +26,12 @@ export default function Home() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Publicly accessible ISO standards and reference data</p>
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-fr">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 auto-rows-fr">
             <CountriesRecordsCard />
 
             <CurrenciesRecordsCard />
+
+            <LanguagesRecordsCard />
 
             <LEIRecordsCard />
           </div>

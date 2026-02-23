@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import Alert from '../components/Alert'
+import CountryFlag from '../components/CountryFlag'
 import PageHeader from '../components/PageHeader'
 import SearchInputWithOverflowTooltip from '../components/SearchInputWithOverflowTooltip'
 import StatCard from '../components/StatCard'
@@ -647,43 +648,6 @@ export default function LEIRecordsPage() {
     if (!normalizedCode) return null
 
     return legalFormNameByCode.get(normalizedCode) || null
-  }
-
-  const getFlagEmojiFromCountryCode = (countryCode: string): string => {
-    const normalizedCode = (countryCode || '').trim().toUpperCase()
-    if (!/^[A-Z]{2}$/.test(normalizedCode)) {
-      return '🌐'
-    }
-
-    const codePoints = normalizedCode.split('').map(char => 127397 + char.charCodeAt(0))
-    return String.fromCodePoint(...codePoints)
-  }
-
-  const getFlagImageUrlFromCountryCode = (countryCode: string): string | null => {
-    const normalizedCode = (countryCode || '').trim().toUpperCase()
-    if (!/^[A-Z]{2}$/.test(normalizedCode)) {
-      return null
-    }
-
-    return `https://flagcdn.com/w20/${normalizedCode.toLowerCase()}.png`
-  }
-
-  const renderCountryFlagIcon = (countryCode: string, sizeClass: string = 'h-3.5 w-5') => {
-    const flagImageUrl = getFlagImageUrlFromCountryCode(countryCode)
-
-    if (flagImageUrl) {
-      return (
-        <img
-          src={flagImageUrl}
-          alt=""
-          aria-hidden="true"
-          className={`${sizeClass} rounded-sm border border-gray-200 dark:border-gray-700`}
-          loading="lazy"
-        />
-      )
-    }
-
-    return <span className="inline-flex h-3.5 w-5 items-center justify-center text-xs" aria-hidden="true">🌐</span>
   }
 
   const formatCountryDisplay = (countryCode: string): string => {
@@ -1505,23 +1469,11 @@ export default function LEIRecordsPage() {
                             ) : isCountryColumn ? (
                               formatCountryDisplay(String(value || ''))
                             ) : isCountryFlagColumn ? (
-                              (() => {
-                                const countryCode = String(record.legal_address_country || '')
-                                const flagImageUrl = getFlagImageUrlFromCountryCode(countryCode)
-                                return flagImageUrl ? (
-                                  <img
-                                    src={flagImageUrl}
-                                    alt={formatCountryDisplay(countryCode)}
-                                    title={formatCountryDisplay(countryCode)}
-                                    className="h-4 w-6 rounded-sm border border-gray-200 dark:border-gray-700"
-                                    loading="lazy"
-                                  />
-                                ) : (
-                                  <span className="text-lg" title={formatCountryDisplay(countryCode)}>
-                                    {getFlagEmojiFromCountryCode(countryCode)}
-                                  </span>
-                                )
-                              })()
+                              <CountryFlag
+                                countryCode={String(record.legal_address_country || '')}
+                                title={formatCountryDisplay(String(record.legal_address_country || ''))}
+                                className="h-4 w-6 rounded-sm border border-gray-200 dark:border-gray-700"
+                              />
                             ) : isRegionColumn ? (
                               formatRegionDisplay(String(value || ''))
                             ) : isLegalFormColumn ? (
@@ -1822,7 +1774,11 @@ export default function LEIRecordsPage() {
                         <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{showLocationCodes ? 'Country Code' : 'Country Name'}</label>
                         <p className="text-sm text-gray-900 dark:text-white mt-1 flex items-center gap-2">
                           <span>{formatCountryDisplay(selectedRecord.legal_address_country)}</span>
-                          {renderCountryFlagIcon(String(selectedRecord.legal_address_country || ''))}
+                          <CountryFlag
+                            countryCode={String(selectedRecord.legal_address_country || '')}
+                            title={formatCountryDisplay(selectedRecord.legal_address_country)}
+                            className="h-3.5 w-5 rounded-sm border border-gray-200 dark:border-gray-700"
+                          />
                         </p>
                       </div>
                       <div>
@@ -1897,14 +1853,22 @@ export default function LEIRecordsPage() {
                         <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{showLocationCodes ? 'Country Code' : 'Country Name'}</label>
                         <p className="text-sm text-gray-900 dark:text-white mt-1 flex items-center gap-2">
                           <span>{formatCountryDisplay(selectedRecord.legal_address_country)}</span>
-                          {renderCountryFlagIcon(String(selectedRecord.legal_address_country || ''))}
+                          <CountryFlag
+                            countryCode={String(selectedRecord.legal_address_country || '')}
+                            title={formatCountryDisplay(selectedRecord.legal_address_country)}
+                            className="h-3.5 w-5 rounded-sm border border-gray-200 dark:border-gray-700"
+                          />
                         </p>
                       </div>
                       <div>
                         <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{showLocationCodes ? 'Country Code' : 'Country Name'}</label>
                         <p className="text-sm text-gray-900 dark:text-white mt-1 flex items-center gap-2">
                           <span>{formatCountryDisplay(selectedRecord.hq_address_country)}</span>
-                          {renderCountryFlagIcon(String(selectedRecord.hq_address_country || ''))}
+                          <CountryFlag
+                            countryCode={String(selectedRecord.hq_address_country || '')}
+                            title={formatCountryDisplay(selectedRecord.hq_address_country)}
+                            className="h-3.5 w-5 rounded-sm border border-gray-200 dark:border-gray-700"
+                          />
                         </p>
                       </div>
                     </div>
