@@ -73,6 +73,10 @@ interface ColumnConfig {
   width?: string
 }
 
+const VIRTUAL_COLUMN_DEPENDENCIES: Partial<Record<keyof LEIRecord, Array<keyof LEIRecord>>> = {
+  country_flag: ['legal_address_country'],
+}
+
 const AVAILABLE_COLUMNS: ColumnConfig[] = [
   // Core fields
   { key: 'lei', label: 'LEI', group: 'Core', defaultVisible: true, width: 'w-44' },
@@ -617,18 +621,14 @@ export default function LEIRecordsPage() {
   }
 
   const isVirtualColumnKey = (key: keyof LEIRecord): boolean => {
-    return key === 'country_flag'
+    return Object.prototype.hasOwnProperty.call(VIRTUAL_COLUMN_DEPENDENCIES, key)
   }
 
   const getDependentColumnsForVisibleColumns = (columns: Set<keyof LEIRecord>): Array<keyof LEIRecord> => {
-    const dependenciesByVirtualColumn: Partial<Record<keyof LEIRecord, Array<keyof LEIRecord>>> = {
-      country_flag: ['legal_address_country'],
-    }
-
     const requiredColumns = new Set<keyof LEIRecord>()
 
     columns.forEach((column) => {
-      const dependencies = dependenciesByVirtualColumn[column]
+      const dependencies = VIRTUAL_COLUMN_DEPENDENCIES[column]
       if (!dependencies) {
         return
       }
