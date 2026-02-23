@@ -48,7 +48,7 @@ function Get-EnvironmentConfig {
     }
 }
 
-function To-B64Url {
+function ConvertTo-B64Url {
     param([byte[]]$Bytes)
 
     return [Convert]::ToBase64String($Bytes).TrimEnd('=') -replace '\+', '-' -replace '/', '_'
@@ -60,13 +60,13 @@ function New-JwtToken {
     $headerJson = '{"alg":"HS256","typ":"JWT"}'
     $payloadJson = '{"user_id":"00000000-0000-0000-0000-000000000001","email":"smoke@test.local"}'
 
-    $header = To-B64Url ([Text.Encoding]::UTF8.GetBytes($headerJson))
-    $payload = To-B64Url ([Text.Encoding]::UTF8.GetBytes($payloadJson))
+    $header = ConvertTo-B64Url ([Text.Encoding]::UTF8.GetBytes($headerJson))
+    $payload = ConvertTo-B64Url ([Text.Encoding]::UTF8.GetBytes($payloadJson))
     $unsigned = "$header.$payload"
 
     $hmac = [System.Security.Cryptography.HMACSHA256]::new([Text.Encoding]::UTF8.GetBytes($Secret))
     try {
-        $signature = To-B64Url ($hmac.ComputeHash([Text.Encoding]::UTF8.GetBytes($unsigned)))
+        $signature = ConvertTo-B64Url ($hmac.ComputeHash([Text.Encoding]::UTF8.GetBytes($unsigned)))
     }
     finally {
         $hmac.Dispose()
@@ -75,7 +75,7 @@ function New-JwtToken {
     return "$unsigned.$signature"
 }
 
-function Normalize-Records {
+function ConvertTo-RecordArray {
     param([object]$Raw)
 
     if ($null -eq $Raw) {
@@ -130,7 +130,7 @@ $requiredFields = @(
 
 Write-Host "[SSI Smoke] Calling $resolvedApiBaseUrl/api/v1/ssis ..." -ForegroundColor Cyan
 $response = Invoke-WebRequest -Uri "$resolvedApiBaseUrl/api/v1/ssis?limit=500&offset=0" -Headers @{ Authorization = "Bearer $token"; Accept = 'application/json' } -TimeoutSec $TimeoutSec
-$records = @(Normalize-Records -Raw ($response.Content | ConvertFrom-Json))
+$records = @(ConvertTo-RecordArray -Raw ($response.Content | ConvertFrom-Json))
 
 $missingFields = @()
 if ($records.Count -gt 0) {
