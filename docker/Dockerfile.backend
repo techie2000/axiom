@@ -55,6 +55,7 @@ COPY --from=builder /app/data/masterdata ./backend/data/masterdata
 
 # Create startup script that runs migrations first
 RUN echo '#!/bin/sh' > /root/start.sh && \
+    echo 'set -e' >> /root/start.sh && \
     echo "echo \"Running database migrations...\"" >> /root/start.sh && \
     echo "migrate -path /root/migrations -database \"postgres://\${DATABASE_USER}:\${DATABASE_PASSWORD}@\${DATABASE_HOST}:\${DATABASE_PORT}/\${DATABASE_NAME}?sslmode=disable\" -verbose up" >> /root/start.sh && \
     echo "echo \"Starting application...\"" >> /root/start.sh && \

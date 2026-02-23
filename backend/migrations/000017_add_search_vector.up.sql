@@ -8,11 +8,12 @@ ALTER TABLE lei_raw.lei_records ADD COLUMN search_vector TSVECTOR;
 -- Weight: A (highest) for legal_name, B for transliterated_legal_name, C for other_names
 UPDATE lei_raw.lei_records
 SET
-    search_vector = CONCAT(
-        SETWEIGHT(TO_TSVECTOR('simple', COALESCE(legal_name, '')), 'A'),
-        SETWEIGHT(TO_TSVECTOR('simple', COALESCE(transliterated_legal_name, '')), 'B'),
+    search_vector =
+        SETWEIGHT(TO_TSVECTOR('simple', COALESCE(legal_name, '')), 'A')
+        || SETWEIGHT(TO_TSVECTOR('simple', COALESCE(transliterated_legal_name, '')), 'B')
+        ||
         SETWEIGHT(TO_TSVECTOR('simple', COALESCE(other_names::TEXT, '')), 'C')
-    );
+    ;
 
 -- Create GIN index on the search vector for fast full-text search
 CREATE INDEX idx_lei_records_search_vector ON lei_raw.lei_records USING gin (search_vector);
@@ -21,11 +22,12 @@ CREATE INDEX idx_lei_records_search_vector ON lei_raw.lei_records USING gin (sea
 CREATE OR REPLACE FUNCTION lei_raw.lei_records_search_vector_update()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW.search_vector := CONCAT(
-        SETWEIGHT(TO_TSVECTOR('simple', COALESCE(NEW.legal_name, '')), 'A'),
-        SETWEIGHT(TO_TSVECTOR('simple', COALESCE(NEW.transliterated_legal_name, '')), 'B'),
+    NEW.search_vector :=
+        SETWEIGHT(TO_TSVECTOR('simple', COALESCE(NEW.legal_name, '')), 'A')
+        || SETWEIGHT(TO_TSVECTOR('simple', COALESCE(NEW.transliterated_legal_name, '')), 'B')
+        ||
         SETWEIGHT(TO_TSVECTOR('simple', COALESCE(NEW.other_names::TEXT, '')), 'C')
-    );
+    ;
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;

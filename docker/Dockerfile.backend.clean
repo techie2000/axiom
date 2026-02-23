@@ -1,6 +1,6 @@
 # Backend image for UAT/PRODUCTION-style deployments.
 # This variant is used by docker-compose.uat.yml and docker-compose.prod.yml.
-# Runtime behavior: starts app directly (`./main`) and does not install/use migrate startup script.
+# Runtime behavior: runs DB migrations first (fail-fast), then starts app.
 # Note: builder stage still includes corporate network TLS workarounds for module download.
 # Build stage
 FROM golang:1.24-alpine3.21 AS builder
@@ -38,7 +38,12 @@ FROM alpine:3.21
 # security-scan-managed
 RUN apk add --no-cache --upgrade libssl3=3.3.6-r0
 
-RUN apk --no-cache add ca-certificates=20250911-r0
+RUN apk --no-cache add ca-certificates=20250911-r0 wget=1.25.0-r0 && \
+	wget --no-check-certificate --progress=dot:giga -O migrate.tar.gz https://github.com/golang-migrate/migrate/releases/download/v4.18.1/migrate.linux-amd64.tar.gz && \
+	tar xvzf migrate.tar.gz && \
+	mv migrate /usr/local/bin/migrate && \
+	chmod +x /usr/local/bin/migrate && \
+	rm migrate.tar.gz
 
 WORKDIR /root/
 
@@ -48,6 +53,15 @@ COPY --from=builder /app/config.yaml ./config/config.yaml
 COPY --from=builder /app/migrations ./migrations
 COPY --from=builder /app/data/masterdata ./backend/data/masterdata
 
+# Create startup script that runs migrations first (fail-fast)
+RUN echo '#!/bin/sh' > /root/start.sh && \
+	echo 'set -e' >> /root/start.sh && \
+	echo "echo \"Running database migrations...\"" >> /root/start.sh && \
+	echo "migrate -path /root/migrations -database \"postgres://\${DATABASE_USER}:\${DATABASE_PASSWORD}@\${DATABASE_HOST}:\${DATABASE_PORT}/\${DATABASE_NAME}?sslmode=disable\" -verbose up" >> /root/start.sh && \
+	echo "echo \"Starting application...\"" >> /root/start.sh && \
+	echo "exec ./main" >> /root/start.sh && \
+	chmod +x /root/start.sh
+
 EXPOSE 8080
 
-CMD ["./main"]
+CMD ["/root/start.sh"]

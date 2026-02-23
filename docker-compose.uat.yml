@@ -41,7 +41,7 @@ services:
   backend:
     build:
       context: ./backend
-      # UAT uses clean image variant (no migrate startup script)
+      # UAT uses clean image variant (runs migrations fail-fast at startup)
       dockerfile: ../docker/Dockerfile.backend.clean
     container_name: ${COMPOSE_PROJECT_NAME}-backend
     environment:
