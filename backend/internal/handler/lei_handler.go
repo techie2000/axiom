@@ -214,10 +214,19 @@ func replyTrigger(c *gin.Context, err error, acceptedMsg string) {
 // @Accept json
 // @Produce json
 // @Success 202 {object} map[string]string
+// @Failure 409 {object} map[string]string
 // @Failure 500 {object} map[string]string
 // @Router /api/v1/lei/sync/full [post]
 func (h *LEIHandler) TriggerFullSync(c *gin.Context) {
-	replyTrigger(c, h.schedulerService.TriggerFullSync(), "Full sync triggered")
+	if err := h.schedulerService.TriggerFullSync(); err != nil {
+		if errors.Is(err, service.ErrJobRunning) {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to trigger full sync"})
+		}
+		return
+	}
+	c.JSON(http.StatusAccepted, gin.H{"message": "Full sync triggered"})
 }
 
 // TriggerMasterDataSync manually triggers a reference/master data sync
@@ -231,7 +240,19 @@ func (h *LEIHandler) TriggerFullSync(c *gin.Context) {
 // @Failure 500 {object} map[string]string
 // @Router /api/v1/lei/sync/masterdata [post]
 func (h *LEIHandler) TriggerMasterDataSync(c *gin.Context) {
-	replyTrigger(c, h.schedulerService.TriggerMasterDataSync(), "Master data sync triggered")
+	if st, err := h.leiService.GetProcessingStatus("MASTER_DATA_SYNC"); err == nil && st.Status == "RUNNING" {
+		c.JSON(http.StatusConflict, gin.H{"error": "MASTER_DATA_SYNC is already running"})
+		return
+	}
+	if err := h.schedulerService.TriggerMasterDataSync(); err != nil {
+		if errors.Is(err, service.ErrJobRunning) {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to trigger master data sync"})
+		}
+		return
+	}
+	c.JSON(http.StatusAccepted, gin.H{"message": "Master data sync triggered"})
 }
 
 // TriggerDeltaSync manually triggers a delta sync
@@ -241,10 +262,19 @@ func (h *LEIHandler) TriggerMasterDataSync(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Success 202 {object} map[string]string
+// @Failure 409 {object} map[string]string
 // @Failure 500 {object} map[string]string
 // @Router /api/v1/lei/sync/delta [post]
 func (h *LEIHandler) TriggerDeltaSync(c *gin.Context) {
-	replyTrigger(c, h.schedulerService.TriggerDeltaSync(), "Delta sync triggered")
+	if err := h.schedulerService.TriggerDeltaSync(); err != nil {
+		if errors.Is(err, service.ErrJobRunning) {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to trigger delta sync"})
+		}
+		return
+	}
+	c.JSON(http.StatusAccepted, gin.H{"message": "Delta sync triggered"})
 }
 
 // TriggerLevel2Sync manually triggers a Level 2 (Relationship Records + Reporting Exceptions) sync
@@ -255,10 +285,19 @@ func (h *LEIHandler) TriggerDeltaSync(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Success 202 {object} map[string]string
+// @Failure 409 {object} map[string]string
 // @Failure 500 {object} map[string]string
 // @Router /api/v1/lei/sync/level2 [post]
 func (h *LEIHandler) TriggerLevel2Sync(c *gin.Context) {
-	replyTrigger(c, h.schedulerService.TriggerLevel2Sync(), "Level 2 sync triggered (LEVEL2_RR → LEVEL2_REPEX)")
+	if err := h.schedulerService.TriggerLevel2Sync(); err != nil {
+		if errors.Is(err, service.ErrJobRunning) {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to trigger Level 2 sync"})
+		}
+		return
+	}
+	c.JSON(http.StatusAccepted, gin.H{"message": "Level 2 sync triggered (LEVEL2_RR → LEVEL2_REPEX)"})
 }
 
 // TriggerLevel2RRSync manually triggers Level 2 RR step
@@ -272,7 +311,15 @@ func (h *LEIHandler) TriggerLevel2Sync(c *gin.Context) {
 // @Failure 500 {object} map[string]string
 // @Router /api/v1/lei/sync/level2/rr [post]
 func (h *LEIHandler) TriggerLevel2RRSync(c *gin.Context) {
-	replyTrigger(c, h.schedulerService.TriggerLevel2RRSync(), "LEVEL2_RR sync triggered")
+	if err := h.schedulerService.TriggerLevel2RRSync(); err != nil {
+		if errors.Is(err, service.ErrJobRunning) {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to trigger LEVEL2_RR sync"})
+		}
+		return
+	}
+	c.JSON(http.StatusAccepted, gin.H{"message": "LEVEL2_RR sync triggered"})
 }
 
 // TriggerLevel2REPEXSync manually triggers Level 2 REPEX step
@@ -286,7 +333,15 @@ func (h *LEIHandler) TriggerLevel2RRSync(c *gin.Context) {
 // @Failure 500 {object} map[string]string
 // @Router /api/v1/lei/sync/level2/repex [post]
 func (h *LEIHandler) TriggerLevel2REPEXSync(c *gin.Context) {
-	replyTrigger(c, h.schedulerService.TriggerLevel2REPEXSync(), "LEVEL2_REPEX sync triggered")
+	if err := h.schedulerService.TriggerLevel2REPEXSync(); err != nil {
+		if errors.Is(err, service.ErrJobRunning) {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to trigger LEVEL2_REPEX sync"})
+		}
+		return
+	}
+	c.JSON(http.StatusAccepted, gin.H{"message": "LEVEL2_REPEX sync triggered"})
 }
 
 // GetProcessingStatus retrieves processing status for a job type
