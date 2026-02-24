@@ -356,9 +356,12 @@ func setupRouter(cfg *config.Config, h *handler.Handlers) *gin.Engine {
 			// LEI management routes (write operations only)
 			lei := protected.Group("/lei")
 			{
+				lei.POST("/sync/masterdata", h.LEI.TriggerMasterDataSync)
 				lei.POST("/sync/full", h.LEI.TriggerFullSync)
 				lei.POST("/sync/delta", h.LEI.TriggerDeltaSync)
 				lei.POST("/sync/level2", h.LEI.TriggerLevel2Sync)
+				lei.POST("/sync/level2/rr", h.LEI.TriggerLevel2RRSync)
+				lei.POST("/sync/level2/repex", h.LEI.TriggerLevel2REPEXSync)
 				lei.POST("/source-file/:id/resume", h.LEI.ResumeProcessing)
 			}
 
