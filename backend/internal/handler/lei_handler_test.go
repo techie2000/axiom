@@ -121,6 +121,24 @@ func TestTriggerFullSync_ConflictPaths(t *testing.T) {
 	})
 }
 
+func TestTriggerMasterDataSync_ConflictPaths(t *testing.T) {
+	t.Run("conflict when master data is already running", func(t *testing.T) {
+		h := NewLEIHandler(&leiServiceStub{
+			statuses: map[string]*domain.FileProcessingStatus{
+				"MASTER_DATA_SYNC": {JobType: "MASTER_DATA_SYNC", Status: "RUNNING"},
+			},
+		}, &schedulerServiceStub{})
+
+		resp := executePOST("/sync/masterdata", h.TriggerMasterDataSync)
+		if resp.Code != http.StatusConflict {
+			t.Fatalf("expected status %d, got %d", http.StatusConflict, resp.Code)
+		}
+		if !strings.Contains(resp.Body.String(), "MASTER_DATA_SYNC") {
+			t.Fatalf("expected MASTER_DATA_SYNC conflict message, got %s", resp.Body.String())
+		}
+	})
+}
+
 func TestTriggerDeltaSync_ConflictPaths(t *testing.T) {
 	t.Run("conflict when delta is already running", func(t *testing.T) {
 		h := NewLEIHandler(&leiServiceStub{
