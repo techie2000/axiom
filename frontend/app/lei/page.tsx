@@ -85,11 +85,61 @@ export default function LEIStatusPage() {
         setTimeout(() => setTriggerMessage(null), 5000)
         fetchStatus()
       } else {
-        setTriggerMessage('Failed to trigger Level 2 sync — check authentication')
+        let backendMessage = 'Failed to trigger Level 2 sync'
+        try {
+          const errorData = await response.json()
+          if (errorData?.error && typeof errorData.error === 'string') {
+            backendMessage = errorData.error
+          }
+        } catch {
+          backendMessage = response.status === 401 || response.status === 403
+            ? 'Failed to trigger Level 2 sync — check authentication'
+            : 'Failed to trigger Level 2 sync'
+        }
+
+        setTriggerMessage(backendMessage)
         setTimeout(() => setTriggerMessage(null), 5000)
       }
     } catch (err) {
       setTriggerMessage(err instanceof Error ? err.message : 'Failed to trigger Level 2 sync')
+      setTimeout(() => setTriggerMessage(null), 5000)
+    }
+  }
+
+  const triggerJob = async (endpoint: string, successMessage: string) => {
+    try {
+      const token = localStorage.getItem('token') || localStorage.getItem('jwt') || localStorage.getItem('authToken')
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setTriggerMessage(data.message || successMessage)
+        setTimeout(() => setTriggerMessage(null), 5000)
+        fetchStatus()
+        return
+      }
+
+      let backendMessage = 'Failed to trigger job'
+      try {
+        const errorData = await response.json()
+        if (errorData?.error && typeof errorData.error === 'string') {
+          backendMessage = errorData.error
+        }
+      } catch {
+        backendMessage = response.status === 401 || response.status === 403
+          ? 'Failed to trigger job — check authentication'
+          : 'Failed to trigger job'
+      }
+      setTriggerMessage(backendMessage)
+      setTimeout(() => setTriggerMessage(null), 5000)
+    } catch (err) {
+      setTriggerMessage(err instanceof Error ? err.message : 'Failed to trigger job')
       setTimeout(() => setTriggerMessage(null), 5000)
     }
   }
@@ -146,10 +196,69 @@ export default function LEIStatusPage() {
 
   const getFrequencyLabel = (status: ProcessingStatus | null): string => {
     if (!status) return ''
+    if (status.job_type === 'MASTER_DATA_SYNC') return 'Daily (01:00)'
     if (status.job_type === 'DAILY_FULL') return 'Daily'
     if (status.job_type === 'DAILY_DELTA') return 'Hourly'
+    if (status.job_type === 'LEVEL2_RR' || status.job_type === 'LEVEL2_REPEX') return 'On-demand / chained'
     return ''
   }
+
+  // For chained jobs (LEVEL2_RR, LEVEL2_REPEX) that have no fixed next_run_at, walk up the
+  // dependency chain to find the earliest possible run time from the ultimate parent's schedule.
+  const getChainedNextRun = (status: ProcessingStatus | null): { nextRun: string | null; ultimateParent: string | null } => {
+    if (!status) return { nextRun: null, ultimateParent: null }
+
+    if (status.next_run_at && !status.next_run_at.startsWith('0001-')) {
+      return { nextRun: status.next_run_at, ultimateParent: null }
+    }
+
+    const dep = status.depends_on_job_type
+    if (!dep || dep === 'NONE') return { nextRun: null, ultimateParent: null }
+
+    const statusByType: Record<string, ProcessingStatus | null> = {
+      MASTER_DATA_SYNC: masterDataStatus,
+      DAILY_FULL: fullStatus,
+      DAILY_DELTA: deltaStatus,
+      LEVEL2_RR: rrStatus,
+      LEVEL2_REPEX: repexStatus,
+    }
+
+    const visited = new Set<string>()
+    let currentDep: string | null = dep
+    let ultimateParent = dep
+
+    while (currentDep) {
+      if (visited.has(currentDep)) break
+      visited.add(currentDep)
+
+      const parentSt: ProcessingStatus | null = statusByType[currentDep] ?? null
+      if (!parentSt) break
+
+      if (parentSt.next_run_at && !parentSt.next_run_at.startsWith('0001-')) {
+        return { nextRun: parentSt.next_run_at, ultimateParent }
+      }
+
+      const nextDep: string | undefined = parentSt.depends_on_job_type || undefined
+      if (!nextDep || nextDep === 'NONE') break
+      ultimateParent = nextDep
+      currentDep = nextDep
+    }
+
+    return { nextRun: null, ultimateParent: dep }
+  }
+
+  const isMasterDataRunning = masterDataStatus?.status === 'RUNNING'
+  const isFullSyncRunning = fullStatus?.status === 'RUNNING'
+  const isDeltaRunning = deltaStatus?.status === 'RUNNING'
+  const isRrRunning = rrStatus?.status === 'RUNNING'
+  const isRepexRunning = repexStatus?.status === 'RUNNING'
+
+  const canTriggerMasterData = !isMasterDataRunning
+  const canTriggerFull = !isFullSyncRunning && !isMasterDataRunning
+  const canTriggerDelta = !isDeltaRunning && !isFullSyncRunning
+  const canTriggerLevel2 = !isRrRunning && !isRepexRunning && !isFullSyncRunning
+  const canTriggerRr = !isRrRunning && !isFullSyncRunning
+  const canTriggerRepex = !isRepexRunning && !isRrRunning && !isFullSyncRunning
 
   const renderStatusCard = (title: string, status: ProcessingStatus | null, isDisabled: boolean = false) => {
     if (!status) {
@@ -167,6 +276,10 @@ export default function LEIStatusPage() {
 
     const progress = calculateProgress(status)
     const file = status.current_source_file
+    const frequency = getFrequencyLabel(status)
+    const dependency = status.depends_on_job_type && status.depends_on_job_type !== 'NONE'
+      ? status.depends_on_job_type
+      : 'None'
 
     return (
       <div className={`rounded-lg shadow-md p-6 border-2 ${
@@ -179,6 +292,19 @@ export default function LEIStatusPage() {
           <span className={`px-3 py-1 rounded-full text-sm font-semibold border-2 ${getStatusColor(status.status)}`}>
             {status.status}
           </span>
+        </div>
+
+        <div className="mb-4 bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-600 dark:text-gray-400">Schedule:</span>
+              <span className="font-medium text-gray-900 dark:text-white">{frequency || 'N/A'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600 dark:text-gray-400">Depends On:</span>
+              <span className="font-medium text-gray-900 dark:text-white">{dependency}</span>
+            </div>
+          </div>
         </div>
 
         {file && status.status === 'RUNNING' && (
@@ -273,7 +399,14 @@ export default function LEIStatusPage() {
           </div>
           <div className="flex justify-between">
             <span className="text-gray-600 dark:text-gray-400">Next Run:</span>
-            <span className="font-medium text-gray-900 dark:text-white">{formatDate(status.next_run_at)}</span>
+            <span className="font-medium text-gray-900 dark:text-white">
+              {(() => {
+                const { nextRun, ultimateParent } = getChainedNextRun(status)
+                if (!nextRun) return dependency !== 'None' ? `After ${dependency}` : 'Never'
+                if (ultimateParent) return `≥ ${formatDate(nextRun)} (after ${ultimateParent})`
+                return formatDate(nextRun)
+              })()}
+            </span>
           </div>
         </div>
 
@@ -427,18 +560,61 @@ export default function LEIStatusPage() {
             </div>
           </div>
 
-          {/* Manual Level 2 trigger */}
+          {/* Manual job triggers with dependency-aware disable rules */}
           <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/10 flex items-center justify-between gap-4">
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              Trigger an intra-day Level 2 sync (RR → REPEX) independently of the daily schedule.
+              Manual triggers are available for each job/level. Buttons are disabled while a dependency is running.
             </p>
-            <button
-              onClick={triggerLevel2Sync}
-              className="shrink-0 px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
-              disabled={rrStatus?.status === 'RUNNING' || repexStatus?.status === 'RUNNING'}
-            >
-              ▶ Run Level 2 Now
-            </button>
+            <div className="shrink-0 flex flex-wrap items-center gap-2 justify-end">
+              <button
+                onClick={() => triggerJob('/api/v1/lei/sync/masterdata', 'Master data sync triggered')}
+                className="px-3 py-2 bg-cyan-600 text-white text-xs rounded-lg hover:bg-cyan-700 transition-colors disabled:opacity-50"
+                disabled={!canTriggerMasterData}
+                title={!canTriggerMasterData ? 'MASTER_DATA_SYNC is already running' : 'Trigger master/reference data sync'}
+              >
+                ▶ Run Reference Data
+              </button>
+              <button
+                onClick={() => triggerJob('/api/v1/lei/sync/full', 'Full sync triggered')}
+                className="px-3 py-2 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                disabled={!canTriggerFull}
+                title={!canTriggerFull ? 'Blocked while MASTER_DATA_SYNC or DAILY_FULL is running' : 'Trigger Level 1 full sync'}
+              >
+                ▶ Run Full Sync
+              </button>
+              <button
+                onClick={() => triggerJob('/api/v1/lei/sync/delta', 'Delta sync triggered')}
+                className="px-3 py-2 bg-gray-600 text-white text-xs rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50"
+                disabled={!canTriggerDelta}
+                title={!canTriggerDelta ? 'Blocked while DAILY_FULL or DAILY_DELTA is running' : 'Trigger delta sync'}
+              >
+                ▶ Run Delta
+              </button>
+              <button
+                onClick={triggerLevel2Sync}
+                className="px-3 py-2 bg-indigo-600 text-white text-xs rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                disabled={!canTriggerLevel2}
+                title={!canTriggerLevel2 ? 'Blocked while DAILY_FULL, LEVEL2_RR, or LEVEL2_REPEX is running' : 'Trigger full Level 2 pipeline (RR → REPEX)'}
+              >
+                ▶ Run Level 2
+              </button>
+              <button
+                onClick={() => triggerJob('/api/v1/lei/sync/level2/rr', 'LEVEL2_RR sync triggered')}
+                className="px-3 py-2 bg-violet-600 text-white text-xs rounded-lg hover:bg-violet-700 transition-colors disabled:opacity-50"
+                disabled={!canTriggerRr}
+                title={!canTriggerRr ? 'Blocked while DAILY_FULL or LEVEL2_RR is running' : 'Trigger LEVEL2_RR only'}
+              >
+                ▶ Run RR
+              </button>
+              <button
+                onClick={() => triggerJob('/api/v1/lei/sync/level2/repex', 'LEVEL2_REPEX sync triggered')}
+                className="px-3 py-2 bg-fuchsia-600 text-white text-xs rounded-lg hover:bg-fuchsia-700 transition-colors disabled:opacity-50"
+                disabled={!canTriggerRepex}
+                title={!canTriggerRepex ? 'Blocked while DAILY_FULL, LEVEL2_RR, or LEVEL2_REPEX is running' : 'Trigger LEVEL2_REPEX only'}
+              >
+                ▶ Run REPEX
+              </button>
+            </div>
           </div>
         </div>
 

@@ -541,6 +541,15 @@ Detailed documentation is available in the `docs/` directory:
 - [Deployment Guide](docs/deployment.md)
 - [Development Workflow](docs/development-workflow.md)
 
+**LEI Operations:**
+
+- [LEI Acquisition Guide](docs/lei/LEI_ACQUISITION.md)
+- [LEI Quick Start](docs/lei/LEI_QUICKSTART.md)
+
+Manual LEI sync endpoints (master data, full, delta, Level 2, RR, REPEX) and
+their dependency-aware conflict behavior (`202 Accepted` / `409 Conflict`) are
+documented in the LEI guides above.
+
 **Multi-Environment Setup:**
 
 - [Multi-Environment Setup Guide](docs/environments/multi-environment-setup.md)
