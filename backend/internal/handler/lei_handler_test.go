@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/techie2000/axiom/internal/domain"
 	"github.com/techie2000/axiom/internal/service"
 )
 
@@ -163,7 +164,7 @@ func TestTriggerMasterDataSync_ConflictPaths(t *testing.T) {
 			statuses: map[string]*domain.FileProcessingStatus{
 				"MASTER_DATA_SYNC": {JobType: "MASTER_DATA_SYNC", Status: "RUNNING"},
 			},
-		})
+		}, &schedulerServiceStub{})
 
 		resp := executePOST("/sync/masterdata", h.TriggerMasterDataSync)
 		if resp.Code != http.StatusConflict {
