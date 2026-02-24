@@ -1,0 +1,50 @@
+name: Apply MD013 fixes to PR #47 branch
+
+on:
+  push:
+    branches:
+      - 'copilot/merge-markdownlint-fixes'
+  workflow_dispatch:
+
+jobs:
+  apply-fixes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Apply markdownlint MD013 fixes to copilot/create-core-dev-uat-branches
+        run: |
+          git checkout copilot/create-core-dev-uat-branches
+          git checkout origin/copilot/merge-markdownlint-fixes -- \
+            .github/instructions/frontend-ui.instructions.md \
+            docs/security/SECURITY_UPDATE_SUMMARY.md \
+            docs/ui-patterns.md
+          git diff --stat HEAD
+          if git diff --cached --quiet; then
+            echo "No changes to apply (files may already be fixed)"
+          else
+            git commit -m "fix: apply MD013/line-length fixes merged from copilot/fix-markdownlint-line-length-errors"
+            git push origin copilot/create-core-dev-uat-branches
+            echo "Successfully pushed fixes to copilot/create-core-dev-uat-branches"
+          fi
+
+      - name: Close PR #48
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr close 48 \
+            --repo techie2000/axiom \
+            --comment "Markdownlint MD013/line-length fixes have been applied to \`copilot/create-core-dev-uat-branches\` (PR #47). Closing this PR as the changes are now in PR #47."
