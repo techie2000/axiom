@@ -51,11 +51,13 @@ info() { echo "➡  $*"; }
 ok()   { echo "✅ $*"; }
 warn() { echo "⚠️  $*"; }
 
-run() {
+# Renamed from 'run' to avoid clashing with any system 'run' command.
+# Arguments are executed via "$@" (not eval) to preserve quoting safely.
+gh_run() {
   if $DRY_RUN; then
     echo "[dry-run] $*"
   else
-    eval "$@"
+    "$@"
   fi
 }
 
@@ -63,10 +65,11 @@ run() {
 # Detect repository
 # ---------------------------------------------------------------------------
 if [ -z "$REPO" ]; then
-  # Try to detect from git remote
+  # Try to detect from git remote (handles both HTTPS and SSH URL formats).
+  # Strip any trailing .git suffix that git remotes often include.
   REMOTE_URL=$(git remote get-url origin 2>/dev/null || true)
-  if [[ "$REMOTE_URL" =~ github\.com[:/](.+/.+?)(\.git)?$ ]]; then
-    REPO="${BASH_REMATCH[1]}"
+  if [[ "$REMOTE_URL" =~ github\.com[:/]([^/]+/[^/]+) ]]; then
+    REPO="${BASH_REMATCH[1]%.git}"
   fi
 fi
 
@@ -107,15 +110,17 @@ for branch in "${BRANCHES[@]}"; do
     if $DRY_RUN; then
       echo "[dry-run] gh api --method POST repos/$REPO/git/refs -f ref=refs/heads/$branch -f sha=<HEAD sha of $SOURCE_BRANCH>"
     else
-      SOURCE_SHA=$(gh api "repos/$REPO/branches/$SOURCE_BRANCH" --jq '.commit.sha')
+      SOURCE_SHA=$(gh api "repos/$REPO/branches/$SOURCE_BRANCH" --jq '.commit.sha') \
+        || { echo "❌ Failed to get SHA for '$SOURCE_BRANCH'. Check REPO and token scopes."; exit 1; }
       gh api \
         --method POST \
         -H "Accept: application/vnd.github+json" \
         "repos/$REPO/git/refs" \
         -f "ref=refs/heads/$branch" \
-        -f "sha=$SOURCE_SHA"
+        -f "sha=$SOURCE_SHA" \
+        || { echo "❌ Failed to create branch '$branch'."; exit 1; }
+      ok "Created '$branch'."
     fi
-    ok "Created '$branch'."
   fi
 done
 echo ""
@@ -131,7 +136,7 @@ apply_protection() {
 
   info "Protecting '$branch' (required approvals: $required_approvals) ..."
 
-  run gh api \
+  if ! gh_run gh api \
     --method PUT \
     -H "Accept: application/vnd.github+json" \
     "repos/$REPO/branches/$branch/protection" \
@@ -153,6 +158,10 @@ apply_protection() {
   "required_conversation_resolution": true
 }
 EOF
+  then
+    echo "❌ Failed to apply protection to '$branch'. Check token scopes (repo + admin:repo_hook)."
+    exit 1
+  fi
 
   ok "Protected '$branch'."
 }
