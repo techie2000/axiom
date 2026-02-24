@@ -39,6 +39,8 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
 - [ADR-0005: RabbitMQ Async Processing](docs/adr/adr-0005-rabbitmq-async-processing.md): Message queue integration
 - [ADR-0006: Next.js and Tailwind Frontend](docs/adr/adr-0006-nextjs-tailwind-frontend.md): Frontend stack decisions
 - [ADR-0007: Docker Compose Local Dev](docs/adr/adr-0007-docker-compose-local-dev.md): Development environment
+- [ADR-0009: Git Branching Strategy](docs/adr/adr-0009-git-branching-strategy.md): Branch model and environment
+  promotion gates
 
 ## Deployment and Infrastructure
 
@@ -46,6 +48,13 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
 - [Docker Compose Dev](docker-compose.dev.yml): Development environment definition
 - [Docker Compose UAT](docker-compose.uat.yml): User Acceptance Testing environment
 - [Docker Compose Prod](docker-compose.prod.yml): Production environment configuration
+
+## Contributing
+
+- [Branching Strategy](docs/contributing/BRANCHING_STRATEGY.md): Branch naming, promotion workflow,
+  and protection rules (dev → uat → prod)
+- [Branch Setup Script](scripts/setup-branches.sh): gh CLI script to create and protect strategic
+  branches
 
 ## Security
 
