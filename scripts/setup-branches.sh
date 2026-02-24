@@ -68,7 +68,7 @@ if [ -z "$REPO" ]; then
   # Try to detect from git remote (handles both HTTPS and SSH URL formats).
   # Strip any trailing .git suffix that git remotes often include.
   REMOTE_URL=$(git remote get-url origin 2>/dev/null || true)
-  if [[ "$REMOTE_URL" =~ github\.com[:/](.+/.+) ]]; then
+  if [[ "$REMOTE_URL" =~ github\.com[:/]([^/]+/[^/]+) ]]; then
     REPO="${BASH_REMATCH[1]%.git}"
   fi
 fi
