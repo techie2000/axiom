@@ -15,7 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `main`, `dev`, `uat`, and `prod` branches; detects the target deployment environment from the
     branch name and reports it as part of the CI summary (satisfies IMP-003)
   - [`.github/workflows/promote-main-to-dev.yml`](.github/workflows/promote-main-to-dev.yml) —
-    nightly scheduled workflow (02:00 UTC) that opens a promotion pull request from `main` → `dev`
+    nightly scheduled workflow (01:00 UTC, before the 02:00 GLEIF LEI full-sync) that opens a
+    promotion pull request from `main` → `dev`
     whenever `main` is ahead; prevents branch drift accumulation (satisfies NEG-002 / MIT-002);
     also supports `workflow_dispatch` with an optional dry-run mode
 - **Branching strategy documentation** — formal Git branching model adopted (trunk-based with
