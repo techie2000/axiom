@@ -95,9 +95,9 @@ func executePOST(path string, handler gin.HandlerFunc) *httptest.ResponseRecorde
 	return w
 }
 
-// conflictErr returns an error that wraps service.ErrJobConflict and contains msg.
+// conflictErr returns an error that wraps service.ErrJobRunning and contains msg.
 func conflictErr(msg string) error {
-	return fmt.Errorf("%s: %w", msg, service.ErrJobConflict)
+	return fmt.Errorf("%s: %w", msg, service.ErrJobRunning)
 }
 
 func TestTriggerFullSync_ConflictPaths(t *testing.T) {

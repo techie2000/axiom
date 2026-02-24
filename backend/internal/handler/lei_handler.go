@@ -192,14 +192,14 @@ func (h *LEIHandler) GetAuditHistory(c *gin.Context) {
 }
 
 // replyTrigger converts the error returned by a service Trigger* method into the
-// appropriate HTTP response.  ErrJobConflict maps to 409 Conflict; any other
+// appropriate HTTP response.  ErrJobRunning maps to 409 Conflict; any other
 // non-nil error maps to 500 Internal Server Error; nil returns 202 Accepted.
 func replyTrigger(c *gin.Context, err error, acceptedMsg string) {
 	if err == nil {
 		c.JSON(http.StatusAccepted, gin.H{"message": acceptedMsg})
 		return
 	}
-	if errors.Is(err, service.ErrJobConflict) {
+	if errors.Is(err, service.ErrJobRunning) {
 		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 		return
 	}

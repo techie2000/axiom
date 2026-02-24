@@ -13,9 +13,9 @@ import (
 	"github.com/techie2000/axiom/internal/domain"
 )
 
-// ErrJobConflict is a sentinel returned by Trigger* methods when a requested job, or one of its
+// ErrJobRunning is a sentinel returned by Trigger* methods when a requested job, or one of its
 // dependencies, is already in the RUNNING state.
-var ErrJobConflict = errors.New("job conflict")
+var ErrJobRunning = errors.New("job running")
 
 // SchedulerService handles scheduled jobs for LEI data acquisition and master data sync
 type SchedulerService interface {
@@ -30,7 +30,7 @@ type SchedulerService interface {
 	RunLevel2REPEXSync() error
 	// Trigger* methods are the handler-facing entry points. They atomically validate that no
 	// conflicting job is running, claim the target job (set status to RUNNING) under a mutex, and
-	// then spawn a background goroutine to execute the actual work. They return ErrJobConflict
+	// then spawn a background goroutine to execute the actual work. They return ErrJobRunning
 	// (via errors.Is) when a blocking job is already running, or a plain error on infrastructure
 	// failures.
 	TriggerMasterDataSync() error
@@ -1434,7 +1434,7 @@ func (s *schedulerService) doLevel2RRAndREPEXWork(rrStatus *domain.FileProcessin
 
 // TriggerMasterDataSync atomically validates that MASTER_DATA_SYNC is not already running,
 // claims it (sets status to RUNNING), and launches the sync in a background goroutine.
-// Returns ErrJobConflict (via errors.Is) if the job is already running.
+// Returns ErrJobRunning (via errors.Is) if the job is already running.
 func (s *schedulerService) TriggerMasterDataSync() error {
 	s.triggerMu.Lock()
 	defer s.triggerMu.Unlock()
@@ -1444,7 +1444,7 @@ func (s *schedulerService) TriggerMasterDataSync() error {
 		return fmt.Errorf("failed to validate master data sync status: %w", err)
 	}
 	if st.Status == "RUNNING" {
-		return fmt.Errorf("MASTER_DATA_SYNC is already running: %w", ErrJobConflict)
+		return fmt.Errorf("MASTER_DATA_SYNC is already running: %w", ErrJobRunning)
 	}
 
 	now := time.Now()
@@ -1466,7 +1466,7 @@ func (s *schedulerService) TriggerMasterDataSync() error {
 
 // TriggerFullSync atomically validates that neither MASTER_DATA_SYNC nor DAILY_FULL is running,
 // claims DAILY_FULL, and launches the sync in a background goroutine.
-// Returns ErrJobConflict (via errors.Is) on a blocking conflict.
+// Returns ErrJobRunning (via errors.Is) on a blocking conflict.
 func (s *schedulerService) TriggerFullSync() error {
 	s.triggerMu.Lock()
 	defer s.triggerMu.Unlock()
@@ -1476,7 +1476,7 @@ func (s *schedulerService) TriggerFullSync() error {
 		return fmt.Errorf("failed to validate master data sync status: %w", err)
 	}
 	if masterDataStatus.Status == "RUNNING" {
-		return fmt.Errorf("cannot trigger DAILY_FULL while MASTER_DATA_SYNC is running: %w", ErrJobConflict)
+		return fmt.Errorf("cannot trigger DAILY_FULL while MASTER_DATA_SYNC is running: %w", ErrJobRunning)
 	}
 
 	fullStatus, err := s.leiService.GetProcessingStatus("DAILY_FULL")
@@ -1484,7 +1484,7 @@ func (s *schedulerService) TriggerFullSync() error {
 		return fmt.Errorf("failed to validate full sync status: %w", err)
 	}
 	if fullStatus.Status == "RUNNING" {
-		return fmt.Errorf("DAILY_FULL is already running: %w", ErrJobConflict)
+		return fmt.Errorf("DAILY_FULL is already running: %w", ErrJobRunning)
 	}
 
 	now := time.Now()
@@ -1506,7 +1506,7 @@ func (s *schedulerService) TriggerFullSync() error {
 
 // TriggerDeltaSync atomically validates that neither DAILY_FULL nor DAILY_DELTA is running,
 // claims DAILY_DELTA, and launches the sync in a background goroutine.
-// Returns ErrJobConflict (via errors.Is) on a blocking conflict.
+// Returns ErrJobRunning (via errors.Is) on a blocking conflict.
 func (s *schedulerService) TriggerDeltaSync() error {
 	s.triggerMu.Lock()
 	defer s.triggerMu.Unlock()
@@ -1516,7 +1516,7 @@ func (s *schedulerService) TriggerDeltaSync() error {
 		return fmt.Errorf("failed to validate full sync status: %w", err)
 	}
 	if fullStatus.Status == "RUNNING" {
-		return fmt.Errorf("cannot trigger DAILY_DELTA while DAILY_FULL is running: %w", ErrJobConflict)
+		return fmt.Errorf("cannot trigger DAILY_DELTA while DAILY_FULL is running: %w", ErrJobRunning)
 	}
 
 	deltaStatus, err := s.leiService.GetProcessingStatus("DAILY_DELTA")
@@ -1524,7 +1524,7 @@ func (s *schedulerService) TriggerDeltaSync() error {
 		return fmt.Errorf("failed to validate delta sync status: %w", err)
 	}
 	if deltaStatus.Status == "RUNNING" {
-		return fmt.Errorf("DAILY_DELTA is already running: %w", ErrJobConflict)
+		return fmt.Errorf("DAILY_DELTA is already running: %w", ErrJobRunning)
 	}
 
 	now := time.Now()
@@ -1546,7 +1546,7 @@ func (s *schedulerService) TriggerDeltaSync() error {
 
 // TriggerLevel2Sync atomically validates that DAILY_FULL, LEVEL2_RR, and LEVEL2_REPEX are all
 // idle, claims LEVEL2_RR, and launches the full Level 2 pipeline (RR → REPEX) in a background
-// goroutine.  Returns ErrJobConflict (via errors.Is) on a blocking conflict.
+// goroutine.  Returns ErrJobRunning (via errors.Is) on a blocking conflict.
 func (s *schedulerService) TriggerLevel2Sync() error {
 	s.triggerMu.Lock()
 	defer s.triggerMu.Unlock()
@@ -1556,7 +1556,7 @@ func (s *schedulerService) TriggerLevel2Sync() error {
 		return fmt.Errorf("failed to validate full sync status: %w", err)
 	}
 	if fullStatus.Status == "RUNNING" {
-		return fmt.Errorf("cannot trigger Level 2 while DAILY_FULL is running: %w", ErrJobConflict)
+		return fmt.Errorf("cannot trigger Level 2 while DAILY_FULL is running: %w", ErrJobRunning)
 	}
 
 	rrStatus, err := s.leiService.GetProcessingStatus("LEVEL2_RR")
@@ -1564,7 +1564,7 @@ func (s *schedulerService) TriggerLevel2Sync() error {
 		return fmt.Errorf("failed to validate LEVEL2_RR status: %w", err)
 	}
 	if rrStatus.Status == "RUNNING" {
-		return fmt.Errorf("cannot trigger Level 2 while LEVEL2_RR is running: %w", ErrJobConflict)
+		return fmt.Errorf("cannot trigger Level 2 while LEVEL2_RR is running: %w", ErrJobRunning)
 	}
 
 	repexStatus, err := s.leiService.GetProcessingStatus("LEVEL2_REPEX")
@@ -1572,7 +1572,7 @@ func (s *schedulerService) TriggerLevel2Sync() error {
 		return fmt.Errorf("failed to validate LEVEL2_REPEX status: %w", err)
 	}
 	if repexStatus.Status == "RUNNING" {
-		return fmt.Errorf("cannot trigger Level 2 while LEVEL2_REPEX is running: %w", ErrJobConflict)
+		return fmt.Errorf("cannot trigger Level 2 while LEVEL2_REPEX is running: %w", ErrJobRunning)
 	}
 
 	now := time.Now()
@@ -1594,7 +1594,7 @@ func (s *schedulerService) TriggerLevel2Sync() error {
 
 // TriggerLevel2RRSync atomically validates that DAILY_FULL and LEVEL2_RR are idle, claims
 // LEVEL2_RR, and launches the full Level 2 pipeline (RR → REPEX) in a background goroutine.
-// Returns ErrJobConflict (via errors.Is) on a blocking conflict.
+// Returns ErrJobRunning (via errors.Is) on a blocking conflict.
 func (s *schedulerService) TriggerLevel2RRSync() error {
 	s.triggerMu.Lock()
 	defer s.triggerMu.Unlock()
@@ -1604,7 +1604,7 @@ func (s *schedulerService) TriggerLevel2RRSync() error {
 		return fmt.Errorf("failed to validate full sync status: %w", err)
 	}
 	if fullStatus.Status == "RUNNING" {
-		return fmt.Errorf("cannot trigger LEVEL2_RR while DAILY_FULL is running: %w", ErrJobConflict)
+		return fmt.Errorf("cannot trigger LEVEL2_RR while DAILY_FULL is running: %w", ErrJobRunning)
 	}
 
 	rrStatus, err := s.leiService.GetProcessingStatus("LEVEL2_RR")
@@ -1612,7 +1612,7 @@ func (s *schedulerService) TriggerLevel2RRSync() error {
 		return fmt.Errorf("failed to validate LEVEL2_RR status: %w", err)
 	}
 	if rrStatus.Status == "RUNNING" {
-		return fmt.Errorf("LEVEL2_RR is already running: %w", ErrJobConflict)
+		return fmt.Errorf("LEVEL2_RR is already running: %w", ErrJobRunning)
 	}
 
 	now := time.Now()
@@ -1634,7 +1634,7 @@ func (s *schedulerService) TriggerLevel2RRSync() error {
 
 // TriggerLevel2REPEXSync atomically validates that DAILY_FULL, LEVEL2_RR, and LEVEL2_REPEX are
 // idle, claims LEVEL2_REPEX, and launches the REPEX-only sync in a background goroutine.
-// Returns ErrJobConflict (via errors.Is) on a blocking conflict.
+// Returns ErrJobRunning (via errors.Is) on a blocking conflict.
 func (s *schedulerService) TriggerLevel2REPEXSync() error {
 	s.triggerMu.Lock()
 	defer s.triggerMu.Unlock()
@@ -1644,7 +1644,7 @@ func (s *schedulerService) TriggerLevel2REPEXSync() error {
 		return fmt.Errorf("failed to validate full sync status: %w", err)
 	}
 	if fullStatus.Status == "RUNNING" {
-		return fmt.Errorf("cannot trigger LEVEL2_REPEX while DAILY_FULL is running: %w", ErrJobConflict)
+		return fmt.Errorf("cannot trigger LEVEL2_REPEX while DAILY_FULL is running: %w", ErrJobRunning)
 	}
 
 	rrStatus, err := s.leiService.GetProcessingStatus("LEVEL2_RR")
@@ -1652,7 +1652,7 @@ func (s *schedulerService) TriggerLevel2REPEXSync() error {
 		return fmt.Errorf("failed to validate LEVEL2_RR status: %w", err)
 	}
 	if rrStatus.Status == "RUNNING" {
-		return fmt.Errorf("cannot trigger LEVEL2_REPEX while LEVEL2_RR is running: %w", ErrJobConflict)
+		return fmt.Errorf("cannot trigger LEVEL2_REPEX while LEVEL2_RR is running: %w", ErrJobRunning)
 	}
 
 	repexStatus, err := s.leiService.GetProcessingStatus("LEVEL2_REPEX")
@@ -1660,7 +1660,7 @@ func (s *schedulerService) TriggerLevel2REPEXSync() error {
 		return fmt.Errorf("failed to validate LEVEL2_REPEX status: %w", err)
 	}
 	if repexStatus.Status == "RUNNING" {
-		return fmt.Errorf("LEVEL2_REPEX is already running: %w", ErrJobConflict)
+		return fmt.Errorf("LEVEL2_REPEX is already running: %w", ErrJobRunning)
 	}
 
 	now := time.Now()
