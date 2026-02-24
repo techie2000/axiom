@@ -200,6 +200,32 @@ func (h *LEIHandler) GetAuditHistory(c *gin.Context) {
 // @Failure 500 {object} map[string]string
 // @Router /api/v1/lei/sync/full [post]
 func (h *LEIHandler) TriggerFullSync(c *gin.Context) {
+	masterDataStatus, err := h.leiService.GetProcessingStatus("MASTER_DATA_SYNC")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to validate master data sync status"})
+		return
+	}
+
+	fullStatus, err := h.leiService.GetProcessingStatus("DAILY_FULL")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to validate full sync status"})
+		return
+	}
+
+	if masterDataStatus.Status == "RUNNING" {
+		c.JSON(http.StatusConflict, gin.H{
+			"error": "Cannot trigger Full Sync while MASTER_DATA_SYNC is running",
+		})
+		return
+	}
+
+	if fullStatus.Status == "RUNNING" {
+		c.JSON(http.StatusConflict, gin.H{
+			"error": "DAILY_FULL is already running",
+		})
+		return
+	}
+
 	go func() {
 		if err := h.schedulerService.RunDailyFullSync(); err != nil {
 			log.Error().Err(err).Msg("Failed to run daily full sync")
@@ -207,6 +233,32 @@ func (h *LEIHandler) TriggerFullSync(c *gin.Context) {
 	}()
 
 	c.JSON(http.StatusAccepted, gin.H{"message": "Full sync triggered"})
+}
+
+// TriggerMasterDataSync manually triggers a reference/master data sync
+// @Summary Trigger master data sync
+// @Description Manually trigger countries/currencies/languages synchronization
+// @Tags LEI
+// @Accept json
+// @Produce json
+// @Success 202 {object} map[string]string
+// @Failure 409 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/lei/sync/masterdata [post]
+func (h *LEIHandler) TriggerMasterDataSync(c *gin.Context) {
+	masterDataStatus, err := h.leiService.GetProcessingStatus("MASTER_DATA_SYNC")
+	if err == nil && masterDataStatus.Status == "RUNNING" {
+		c.JSON(http.StatusConflict, gin.H{"error": "MASTER_DATA_SYNC is already running"})
+		return
+	}
+
+	go func() {
+		if err := h.schedulerService.RunDailyMasterDataSync(); err != nil {
+			log.Error().Err(err).Msg("Failed to run master data sync")
+		}
+	}()
+
+	c.JSON(http.StatusAccepted, gin.H{"message": "Master data sync triggered"})
 }
 
 // TriggerDeltaSync manually triggers a delta sync
@@ -219,6 +271,28 @@ func (h *LEIHandler) TriggerFullSync(c *gin.Context) {
 // @Failure 500 {object} map[string]string
 // @Router /api/v1/lei/sync/delta [post]
 func (h *LEIHandler) TriggerDeltaSync(c *gin.Context) {
+	deltaStatus, err := h.leiService.GetProcessingStatus("DAILY_DELTA")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to validate delta sync status"})
+		return
+	}
+
+	if deltaStatus.Status == "RUNNING" {
+		c.JSON(http.StatusConflict, gin.H{"error": "DAILY_DELTA is already running"})
+		return
+	}
+
+	fullStatus, err := h.leiService.GetProcessingStatus("DAILY_FULL")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to validate full sync status"})
+		return
+	}
+
+	if fullStatus.Status == "RUNNING" {
+		c.JSON(http.StatusConflict, gin.H{"error": "Cannot trigger DAILY_DELTA while DAILY_FULL is running"})
+		return
+	}
+
 	go func() {
 		if err := h.schedulerService.RunDailyDeltaSync(); err != nil {
 			log.Error().Err(err).Msg("Failed to run daily delta sync")
@@ -239,6 +313,31 @@ func (h *LEIHandler) TriggerDeltaSync(c *gin.Context) {
 // @Failure 500 {object} map[string]string
 // @Router /api/v1/lei/sync/level2 [post]
 func (h *LEIHandler) TriggerLevel2Sync(c *gin.Context) {
+	fullStatus, err := h.leiService.GetProcessingStatus("DAILY_FULL")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to validate full sync status"})
+		return
+	}
+
+	if fullStatus.Status == "RUNNING" {
+		c.JSON(http.StatusConflict, gin.H{
+			"error": "Cannot trigger Level 2 while Full Sync (DAILY_FULL) is running",
+		})
+		return
+	}
+
+	rrStatus, rrErr := h.leiService.GetProcessingStatus("LEVEL2_RR")
+	if rrErr == nil && rrStatus.Status == "RUNNING" {
+		c.JSON(http.StatusConflict, gin.H{"error": "Cannot trigger Level 2 while LEVEL2_RR is running"})
+		return
+	}
+
+	repexStatus, repexErr := h.leiService.GetProcessingStatus("LEVEL2_REPEX")
+	if repexErr == nil && repexStatus.Status == "RUNNING" {
+		c.JSON(http.StatusConflict, gin.H{"error": "Cannot trigger Level 2 while LEVEL2_REPEX is running"})
+		return
+	}
+
 	go func() {
 		if err := h.schedulerService.RunLevel2Sync(); err != nil {
 			log.Error().Err(err).Msg("Failed to run Level 2 sync")
@@ -246,6 +345,84 @@ func (h *LEIHandler) TriggerLevel2Sync(c *gin.Context) {
 	}()
 
 	c.JSON(http.StatusAccepted, gin.H{"message": "Level 2 sync triggered (LEVEL2_RR → LEVEL2_REPEX)"})
+}
+
+// TriggerLevel2RRSync manually triggers Level 2 RR step
+// @Summary Trigger Level 2 RR sync
+// @Description Manually trigger the LEVEL2_RR job
+// @Tags LEI
+// @Accept json
+// @Produce json
+// @Success 202 {object} map[string]string
+// @Failure 409 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/lei/sync/level2/rr [post]
+func (h *LEIHandler) TriggerLevel2RRSync(c *gin.Context) {
+	fullStatus, err := h.leiService.GetProcessingStatus("DAILY_FULL")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to validate full sync status"})
+		return
+	}
+	if fullStatus.Status == "RUNNING" {
+		c.JSON(http.StatusConflict, gin.H{"error": "Cannot trigger LEVEL2_RR while DAILY_FULL is running"})
+		return
+	}
+
+	rrStatus, rrErr := h.leiService.GetProcessingStatus("LEVEL2_RR")
+	if rrErr == nil && rrStatus.Status == "RUNNING" {
+		c.JSON(http.StatusConflict, gin.H{"error": "LEVEL2_RR is already running"})
+		return
+	}
+
+	go func() {
+		if err := h.schedulerService.RunLevel2RRSync(); err != nil {
+			log.Error().Err(err).Msg("Failed to run LEVEL2_RR sync")
+		}
+	}()
+
+	c.JSON(http.StatusAccepted, gin.H{"message": "LEVEL2_RR sync triggered"})
+}
+
+// TriggerLevel2REPEXSync manually triggers Level 2 REPEX step
+// @Summary Trigger Level 2 REPEX sync
+// @Description Manually trigger the LEVEL2_REPEX job
+// @Tags LEI
+// @Accept json
+// @Produce json
+// @Success 202 {object} map[string]string
+// @Failure 409 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/lei/sync/level2/repex [post]
+func (h *LEIHandler) TriggerLevel2REPEXSync(c *gin.Context) {
+	fullStatus, err := h.leiService.GetProcessingStatus("DAILY_FULL")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to validate full sync status"})
+		return
+	}
+	if fullStatus.Status == "RUNNING" {
+		c.JSON(http.StatusConflict, gin.H{"error": "Cannot trigger LEVEL2_REPEX while DAILY_FULL is running"})
+		return
+	}
+
+	rrStatus, rrErr := h.leiService.GetProcessingStatus("LEVEL2_RR")
+	if rrErr == nil && rrStatus.Status == "RUNNING" {
+		c.JSON(http.StatusConflict, gin.H{"error": "Cannot trigger LEVEL2_REPEX while LEVEL2_RR is running"})
+		return
+	}
+
+	repexStatus, repexErr := h.leiService.GetProcessingStatus("LEVEL2_REPEX")
+	if repexErr == nil && repexStatus.Status == "RUNNING" {
+		c.JSON(http.StatusConflict, gin.H{"error": "LEVEL2_REPEX is already running"})
+		return
+	}
+
+	go func() {
+		if err := h.schedulerService.RunLevel2REPEXSync(); err != nil {
+			log.Error().Err(err).Msg("Failed to run LEVEL2_REPEX sync")
+		}
+	}()
+
+	c.JSON(http.StatusAccepted, gin.H{"message": "LEVEL2_REPEX sync triggered"})
 }
 
 // GetProcessingStatus retrieves processing status for a job type

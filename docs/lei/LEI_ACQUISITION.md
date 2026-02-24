@@ -165,9 +165,19 @@ Response: Array of audit records showing complete change history
 
 ### Sync Control Endpoints
 
+Manual sync endpoints return:
+
+- `202 Accepted` when the trigger is queued successfully.
+- `409 Conflict` when the job (or a required dependency) is currently `RUNNING`.
+
 #### `POST /api/v1/lei/sync/full`
 
 Manually trigger a full synchronization.
+
+Conflict conditions:
+
+- `MASTER_DATA_SYNC` is `RUNNING`
+- `DAILY_FULL` is `RUNNING`
 
 Response:
 
@@ -181,11 +191,85 @@ Response:
 
 Manually trigger a delta synchronization.
 
+Conflict conditions:
+
+- `DAILY_DELTA` is `RUNNING`
+- `DAILY_FULL` is `RUNNING`
+
 Response:
 
 ```json
 {
   "message": "Delta sync triggered"
+}
+```
+
+#### `POST /api/v1/lei/sync/masterdata`
+
+Manually trigger a master/reference data synchronization.
+
+Conflict conditions:
+
+- `MASTER_DATA_SYNC` is `RUNNING`
+
+Response:
+
+```json
+{
+  "message": "Master data sync triggered"
+}
+```
+
+#### `POST /api/v1/lei/sync/level2`
+
+Manually trigger the full Level 2 chain (`LEVEL2_RR` → `LEVEL2_REPEX`).
+
+Conflict conditions:
+
+- `DAILY_FULL` is `RUNNING`
+- `LEVEL2_RR` is `RUNNING`
+- `LEVEL2_REPEX` is `RUNNING`
+
+Response:
+
+```json
+{
+  "message": "Level 2 sync triggered (LEVEL2_RR → LEVEL2_REPEX)"
+}
+```
+
+#### `POST /api/v1/lei/sync/level2/rr`
+
+Manually trigger only the `LEVEL2_RR` job.
+
+Conflict conditions:
+
+- `DAILY_FULL` is `RUNNING`
+- `LEVEL2_RR` is `RUNNING`
+
+Response:
+
+```json
+{
+  "message": "LEVEL2_RR sync triggered"
+}
+```
+
+#### `POST /api/v1/lei/sync/level2/repex`
+
+Manually trigger only the `LEVEL2_REPEX` job.
+
+Conflict conditions:
+
+- `DAILY_FULL` is `RUNNING`
+- `LEVEL2_RR` is `RUNNING`
+- `LEVEL2_REPEX` is `RUNNING`
+
+Response:
+
+```json
+{
+  "message": "LEVEL2_REPEX sync triggered"
 }
 ```
 
