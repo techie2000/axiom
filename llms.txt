@@ -52,9 +52,13 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
 ## Contributing
 
 - [Branching Strategy](docs/contributing/BRANCHING_STRATEGY.md): Branch naming, promotion workflow,
-  and protection rules (dev → uat → prod)
+  and protection rules (dev → uat → prod); includes nightly auto-promotion behaviour
 - [Branch Setup Script](scripts/setup-branches.sh): gh CLI script to create and protect strategic
   branches
+- [CI Workflow](.github/workflows/ci.yml): Unified CI pipeline keyed off branch names for
+  environment detection (main, dev, uat, prod)
+- [Nightly Promotion Workflow](.github/workflows/promote-main-to-dev.yml): Scheduled workflow that
+  opens a promotion PR from main → dev each night to prevent branch drift
 
 ## Security
 

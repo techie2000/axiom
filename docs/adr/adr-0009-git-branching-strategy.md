@@ -98,6 +98,8 @@ logged, reviewable, and linked to a CI run.
 
 - **MIT-001**: Branch protection rules enforce PR-only merges; no direct pushes.
 - **MIT-002**: Automation (GitHub Actions) or periodic promotion PRs prevent long drift windows.
+  The [`promote-main-to-dev` workflow](.github/workflows/promote-main-to-dev.yml) implements this
+  by opening a promotion PR automatically at 02:00 UTC every day when `main` is ahead of `dev`.
 - **MIT-003**: Hotfix documentation provides a clear procedure for back-merging.
 
 ## Alternatives Considered
@@ -129,6 +131,8 @@ logged, reviewable, and linked to a CI run.
 - **IMP-002**: Branch protection must be configured in GitHub — see the setup script at
   [scripts/setup-branches.sh](../../scripts/setup-branches.sh).
 - **IMP-003**: CI/CD pipelines should key off branch names to select the deployment target.
+  The [`ci` workflow](.github/workflows/ci.yml) detects the target environment from the branch
+  name (`dev` → dev, `uat` → UAT, `prod` → production) and reports it in the CI summary job.
 
 ## References
 

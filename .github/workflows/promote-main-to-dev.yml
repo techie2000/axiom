@@ -1,0 +1,108 @@
+name: Nightly Promote main → dev
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # 02:00 UTC every day
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (check only, do not create PR)'
+        required: false
+        default: 'false'
+        type: boolean
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  promote:
+    name: Create promotion PR (main → dev)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if promotion is needed
+        id: check
+        run: |
+          git fetch origin main dev
+          AHEAD=$(git rev-list --count origin/dev..origin/main)
+          echo "commits_ahead=$AHEAD" >> "$GITHUB_OUTPUT"
+          if [ "$AHEAD" -gt 0 ]; then
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+            echo "ℹ️  main is $AHEAD commit(s) ahead of dev — promotion needed."
+          else
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+            echo "✅ dev is already up to date with main — no promotion needed."
+          fi
+
+      - name: Check for existing open promotion PR
+        id: existing
+        if: steps.check.outputs.needed == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: prs } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              head: `${context.repo.owner}:main`,
+              base: 'dev',
+            });
+            if (prs.length > 0) {
+              console.log(`ℹ️  Existing promotion PR found: #${prs[0].number} — skipping creation.`);
+              return 'true';
+            }
+            return 'false';
+
+      - name: Create promotion PR
+        if: |
+          steps.check.outputs.needed == 'true' &&
+          steps.existing.outputs.result == '"false"' &&
+          inputs.dry_run != 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const ahead = parseInt('${{ steps.check.outputs.commits_ahead }}', 10);
+            const today = new Date().toISOString().split('T')[0];
+            const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+            const body = [
+              '## Automated promotion: `main` → `dev`',
+              '',
+              `This PR was created automatically by the`,
+              `[nightly promotion workflow](.github/workflows/promote-main-to-dev.yml).`,
+              '',
+              `There ${ahead === 1 ? 'is' : 'are'} **${plural(ahead, 'commit')}** on \`main\`` +
+              ` that have not yet been promoted to \`dev\`.`,
+              '',
+              '### What to do',
+              '',
+              '- Review the diff and confirm the changes are safe to deploy to the dev environment.',
+              '- Ensure all CI checks pass.',
+              '- Merge this PR to trigger a dev deployment.',
+              '- To skip this promotion cycle, close this PR.',
+              '',
+              '---',
+              '*Automatically generated — do not modify the branch directly.*',
+            ].join('\n');
+
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `chore: nightly promotion main → dev (${today})`,
+              head: 'main',
+              base: 'dev',
+              body,
+            });
+            console.log(`✅ Created promotion PR #${pr.number}: ${pr.html_url}`);
+
+      - name: Dry run summary
+        if: inputs.dry_run == 'true'
+        run: |
+          AHEAD="${{ steps.check.outputs.commits_ahead }}"
+          echo "🔍 Dry run — no PR created."
+          echo "   main is $AHEAD commit(s) ahead of dev."

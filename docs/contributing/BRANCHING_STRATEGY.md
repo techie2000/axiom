@@ -68,14 +68,23 @@ clicked or the repository setting is enabled).
 
 ### Promoting to dev
 
-When `main` is ready to be deployed to the dev environment, open a PR:
+`main` → `dev` promotions happen **automatically every night** via the
+[`promote-main-to-dev` workflow](../../.github/workflows/promote-main-to-dev.yml).
+
+The workflow runs at **02:00 UTC daily**. When `main` is ahead of `dev`, it opens a pull request
+titled `chore: nightly promotion main → dev (YYYY-MM-DD)`. Review the diff, confirm CI passes,
+and merge to deploy to the dev environment. If no promotion is needed that day, the workflow exits
+without creating a PR. If a promotion PR is already open, no duplicate is created.
+
+You can also trigger the workflow manually from **Actions → Nightly Promote main → dev →
+Run workflow**. A `dry_run` option is available to see whether a PR _would_ be created without
+actually creating one.
+
+To promote immediately outside the nightly window, open a PR manually:
 
 ```text
 main → dev
 ```
-
-This is a fast-forward or merge commit. CI runs against the target, and on success the dev
-environment re-deploys.
 
 ### Promoting to UAT
 

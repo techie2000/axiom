@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **CI/CD automation for environment branches** — addresses IMP-003 and NEG-002 from
+  [ADR-0009](docs/adr/adr-0009-git-branching-strategy.md):
+  - [`.github/workflows/ci.yml`](.github/workflows/ci.yml) — unified CI pipeline that runs on
+    `main`, `dev`, `uat`, and `prod` branches; detects the target deployment environment from the
+    branch name and reports it as part of the CI summary (satisfies IMP-003)
+  - [`.github/workflows/promote-main-to-dev.yml`](.github/workflows/promote-main-to-dev.yml) —
+    nightly scheduled workflow (02:00 UTC) that opens a promotion pull request from `main` → `dev`
+    whenever `main` is ahead; prevents branch drift accumulation (satisfies NEG-002 / MIT-002);
+    also supports `workflow_dispatch` with an optional dry-run mode
 - **Branching strategy documentation** — formal Git branching model adopted (trunk-based with
   environment promotion gates):
   - [ADR-0009](docs/adr/adr-0009-git-branching-strategy.md) records the decision and rationale
@@ -17,6 +26,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     (`main → dev → uat → prod`), hotfix procedure, and branch protection settings
   - [`scripts/setup-branches.sh`](scripts/setup-branches.sh) automates creation and protection of
     `dev`, `uat`, and `prod` branches via the GitHub CLI
+
+### Fixed
+
+- `.github/workflows/lint.yml` — branch filter corrected from non-existent `develop` to `dev`,
+  and extended to also run on `uat` and `prod` pushes and pull requests
+- `.github/workflows/security-scan.yml` — branch filter corrected from `develop` to `dev`, `uat`,
+  `prod`
 
 ## [0.2.0] - 2026-02-20
 
