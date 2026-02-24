@@ -258,13 +258,13 @@ func (s *schedulerService) Start() error {
 
 	// Start goroutine for daily master data sync (runs daily at 1 AM)
 	go s.dailyMasterDataSyncLoop()
-	
+
 	// Start goroutine for daily full sync (runs every day at configured time)
 	go s.dailyFullSyncLoop()
-	
+
 	// Start goroutine for daily cleanup (runs daily at 3 AM)
 	go s.dailyCleanupLoop()
-	
+
 	return nil
 }
 
@@ -387,7 +387,7 @@ func (s *schedulerService) initializeNextRunTimes() {
 	// Migration 000026 seeds these rows, but this guard handles cases where the migration
 	// has not yet been applied (e.g. local dev without running migrations first).
 	type level2Def struct {
-		jobType         string
+		jobType          string
 		dependsOnJobType string
 	}
 	for _, def := range []level2Def{
