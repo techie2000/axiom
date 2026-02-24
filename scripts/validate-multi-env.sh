@@ -27,7 +27,7 @@ error() {
 
 # Check if required files exist
 echo "1. Checking configuration files..."
-files=(".env.dev" ".env.uat" ".env.prod" "docker-compose.dev.yml" "docker-compose.uat.yml" "docker-compose.prod.yml")
+files=(".env.main" ".env.dev" ".env.uat" ".env.prod" "docker-compose.main.yml" "docker-compose.dev.yml" "docker-compose.uat.yml" "docker-compose.prod.yml")
 for file in "${files[@]}"; do
     if [ -f "$file" ]; then
         success "$file exists"
@@ -40,7 +40,7 @@ echo ""
 
 # Validate docker-compose files
 echo "2. Validating docker-compose configurations..."
-envs=("dev" "uat" "prod")
+envs=("main" "dev" "uat" "prod")
 for env in "${envs[@]}"; do
     if docker compose --env-file ".env.$env" -f "docker-compose.$env.yml" config > /dev/null 2>&1; then
         success "docker-compose.$env.yml is valid"
@@ -53,6 +53,15 @@ echo ""
 
 # Check port configurations
 echo "3. Validating port configurations..."
+if grep -q "BACKEND_PORT=48080" .env.main && \
+   grep -q "FRONTEND_PORT=43000" .env.main && \
+   grep -q "POSTGRES_PORT=45432" .env.main; then
+    success "Main branch ports correctly configured (prefix: 4)"
+else
+    error "Main branch ports incorrectly configured"
+    exit 1
+fi
+
 if grep -q "BACKEND_PORT=18080" .env.dev && \
    grep -q "FRONTEND_PORT=13000" .env.dev && \
    grep -q "POSTGRES_PORT=15432" .env.dev; then
@@ -83,7 +92,7 @@ echo ""
 
 # Check Make targets
 echo "4. Validating Makefile targets..."
-make_targets=("docker-dev-up" "docker-uat-up" "docker-prod-up" "docker-all-up")
+make_targets=("docker-main-up" "docker-dev-up" "docker-uat-up" "docker-prod-up" "docker-all-up")
 for target in "${make_targets[@]}"; do
     if grep -q "^$target:" Makefile; then
         success "Makefile target '$target' exists"
