@@ -71,8 +71,11 @@ clicked or the repository setting is enabled).
 `main` → `dev` promotions happen **automatically every night** via the
 [`promote-main-to-dev` workflow](../../.github/workflows/promote-main-to-dev.yml).
 
-The workflow runs at **03:00 UTC daily** (one hour after the GLEIF LEI full-sync job to avoid
-resource contention). When `main` is ahead of `dev`, it opens a pull request titled
+The workflow runs at **01:00 UTC daily** — deliberately scheduled one hour *before* the GLEIF
+LEI full-sync job (02:00 UTC) so that if new code on `main` introduces any issues, they are
+caught immediately when the importer runs against the freshly promoted `dev` environment. The
+00:00 slot (LEI cleanup default) and 03:00 slot (`LEI_CLEANUP_TIME` override) are already taken
+by application scheduler jobs. When `main` is ahead of `dev`, it opens a pull request titled
 `chore: nightly promotion main → dev (YYYY-MM-DD)`. Review the diff, confirm CI passes,
 and merge to deploy to the dev environment. If no promotion is needed that day, the workflow exits
 without creating a PR. If a promotion PR is already open, no duplicate is created.

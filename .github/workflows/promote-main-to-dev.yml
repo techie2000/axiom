@@ -2,7 +2,9 @@ name: Nightly Promote main → dev
 
 on:
   schedule:
-    - cron: '0 3 * * *'  # 03:00 UTC every day (avoids clash with 02:00 GLEIF LEI sync)
+    - cron: '0 1 * * *'  # 01:00 UTC every day — runs BEFORE the 02:00 GLEIF LEI full-sync so
+                          # integration issues are caught early; 00:00 (LEI cleanup default) and
+                          # 03:00 (LEI_CLEANUP_TIME override) are already taken
   workflow_dispatch:
     inputs:
       dry_run:
