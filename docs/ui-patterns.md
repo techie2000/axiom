@@ -1,6 +1,7 @@
 # UI Patterns Guide
 
-Reusable UI patterns and components for the Axiom frontend. These patterns have been tested and optimized for performance, accessibility, and user experience.
+Reusable UI patterns and components for the Axiom frontend. These patterns have been tested and
+optimized for performance, accessibility, and user experience.
 
 ## Table of Contents
 
@@ -200,7 +201,8 @@ When creating a new Axiom page always use the shared components:
 
 ## Sticky Headers with Smooth Transitions
 
-**Use Case:** Data tables or lists where column headers must remain visible during vertical scrolling while preserving horizontal scroll capability.
+**Use Case:** Data tables or lists where column headers must remain visible during vertical
+scrolling while preserving horizontal scroll capability.
 
 **Decision Record:** See [ADR-0008](./adr/adr-0008-sticky-headers-with-smooth-transitions.md)
 
@@ -501,11 +503,13 @@ Example with ARIA:
 
 #### Header appears but is invisible
 **Problem:** Width or left is 0  
-**Solution:** Check that `tableContainerRef.current` exists before `showStickyHeader` becomes true. Call dimensions update immediately in useEffect.
+**Solution:** Check that `tableContainerRef.current` exists before `showStickyHeader` becomes true.
+Call dimensions update immediately in useEffect.
 
 #### Header doesn't appear at all
 **Problem:** `containerRect.top` never goes negative  
-**Solution:** Check that you're scrolling the window, not a nested scrollable div. If nested, attach scroll listener to that element instead.
+**Solution:** Check that you're scrolling the window, not a nested scrollable div. If nested,
+attach scroll listener to that element instead.
 
 #### Transition is choppy
 **Problem:** Browser reflow during scroll  
@@ -513,21 +517,27 @@ Example with ARIA:
 
 #### Header appears too early/late
 **Problem:** `topOffset` calculation incorrect  
-**Solution:** Measure your fixed top elements accurately. Use `element.offsetHeight` or `getBoundingClientRect().height`.
+**Solution:** Measure your fixed top elements accurately. Use `element.offsetHeight` or
+`getBoundingClientRect().height`.
 
 ---
 
 ## Frozen Columns Checklist
 
-Use this checklist for any table with frozen/sticky identity columns (for example `LEI` + `Legal Name`) to prevent divider drift and bleed-through.
+Use this checklist for any table with frozen/sticky identity columns (for example `LEI` + `Legal Name`)
+to prevent divider drift and bleed-through.
 
 - [ ] Apply sticky/frozen behavior identically to both header (`th`) and body (`td`) cells.
 - [ ] Derive frozen column width and left offset from measured rendered header widths (not hard-coded values only).
 - [ ] Use explicit background colors on frozen cells in both light and dark mode.
-- [ ] Use a consistent z-index stack so frozen body cells stay above scrolling cells, and frozen header cells stay above frozen body cells.
-- [ ] Render the separator seam using the same primitive for header and body (prefer inset right-edge seam inside the cell).
-- [ ] Avoid negative-offset seam techniques (such as `right: -1px`) that can create sub-pixel mismatch during horizontal scroll.
-- [ ] Verify seam behavior in all combinations: light/dark, narrow/expanded width, and after small + large horizontal scroll movements.
+- [ ] Use a consistent z-index stack so frozen body cells stay above scrolling cells, and frozen
+  header cells stay above frozen body cells.
+- [ ] Render the separator seam using the same primitive for header and body (prefer inset
+  right-edge seam inside the cell).
+- [ ] Avoid negative-offset seam techniques (such as `right: -1px`) that can create sub-pixel
+  mismatch during horizontal scroll.
+- [ ] Verify seam behavior in all combinations: light/dark, narrow/expanded width, and after
+  small + large horizontal scroll movements.
 - [ ] Verify no horizontal content bleeds through the frozen divider boundary at any scroll position.
 
 ---
