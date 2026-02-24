@@ -2,6 +2,7 @@ package handler
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -34,9 +35,13 @@ func (s *leiServiceStub) GetProcessingStatus(jobType string) (*domain.FileProces
 	return nil, errors.New("status not found")
 }
 
+// schedulerServiceStub satisfies the SchedulerService interface for handler tests.
+// triggerErrs configures which Trigger* calls should return errors.
+// called receives the name of each Trigger* method that succeeds.
 type schedulerServiceStub struct {
 	service.SchedulerService
-	called chan string
+	called      chan string
+	triggerErrs map[string]error
 }
 
 func (s *schedulerServiceStub) notify(name string) {
@@ -45,33 +50,60 @@ func (s *schedulerServiceStub) notify(name string) {
 	}
 }
 
-func (s *schedulerServiceStub) RunDailyFullSync() error {
-	s.notify("RunDailyFullSync")
+func (s *schedulerServiceStub) triggerErr(name string) error {
+	if s.triggerErrs != nil {
+		if err, ok := s.triggerErrs[name]; ok {
+			return err
+		}
+	}
 	return nil
 }
 
-func (s *schedulerServiceStub) RunDailyDeltaSync() error {
-	s.notify("RunDailyDeltaSync")
+func (s *schedulerServiceStub) TriggerFullSync() error {
+	if err := s.triggerErr("TriggerFullSync"); err != nil {
+		return err
+	}
+	s.notify("TriggerFullSync")
 	return nil
 }
 
-func (s *schedulerServiceStub) RunDailyMasterDataSync() error {
-	s.notify("RunDailyMasterDataSync")
+func (s *schedulerServiceStub) TriggerDeltaSync() error {
+	if err := s.triggerErr("TriggerDeltaSync"); err != nil {
+		return err
+	}
+	s.notify("TriggerDeltaSync")
 	return nil
 }
 
-func (s *schedulerServiceStub) RunLevel2Sync() error {
-	s.notify("RunLevel2Sync")
+func (s *schedulerServiceStub) TriggerMasterDataSync() error {
+	if err := s.triggerErr("TriggerMasterDataSync"); err != nil {
+		return err
+	}
+	s.notify("TriggerMasterDataSync")
 	return nil
 }
 
-func (s *schedulerServiceStub) RunLevel2RRSync() error {
-	s.notify("RunLevel2RRSync")
+func (s *schedulerServiceStub) TriggerLevel2Sync() error {
+	if err := s.triggerErr("TriggerLevel2Sync"); err != nil {
+		return err
+	}
+	s.notify("TriggerLevel2Sync")
 	return nil
 }
 
-func (s *schedulerServiceStub) RunLevel2REPEXSync() error {
-	s.notify("RunLevel2REPEXSync")
+func (s *schedulerServiceStub) TriggerLevel2RRSync() error {
+	if err := s.triggerErr("TriggerLevel2RRSync"); err != nil {
+		return err
+	}
+	s.notify("TriggerLevel2RRSync")
+	return nil
+}
+
+func (s *schedulerServiceStub) TriggerLevel2REPEXSync() error {
+	if err := s.triggerErr("TriggerLevel2REPEXSync"); err != nil {
+		return err
+	}
+	s.notify("TriggerLevel2REPEXSync")
 	return nil
 }
 
@@ -87,12 +119,12 @@ func executePOST(path string, handler gin.HandlerFunc) *httptest.ResponseRecorde
 
 func TestTriggerFullSync_ConflictPaths(t *testing.T) {
 	t.Run("conflict when master data is running", func(t *testing.T) {
-		h := NewLEIHandler(&leiServiceStub{
-			statuses: map[string]*domain.FileProcessingStatus{
-				"MASTER_DATA_SYNC": {JobType: "MASTER_DATA_SYNC", Status: "RUNNING"},
-				"DAILY_FULL":       {JobType: "DAILY_FULL", Status: "IDLE"},
+		stub := &schedulerServiceStub{
+			triggerErrs: map[string]error{
+				"TriggerFullSync": fmt.Errorf("cannot start Full Sync while MASTER_DATA_SYNC is running: %w", service.ErrJobRunning),
 			},
-		}, &schedulerServiceStub{})
+		}
+		h := NewLEIHandler(&leiServiceStub{}, stub)
 
 		resp := executePOST("/sync/full", h.TriggerFullSync)
 		if resp.Code != http.StatusConflict {
@@ -104,12 +136,12 @@ func TestTriggerFullSync_ConflictPaths(t *testing.T) {
 	})
 
 	t.Run("conflict when full sync already running", func(t *testing.T) {
-		h := NewLEIHandler(&leiServiceStub{
-			statuses: map[string]*domain.FileProcessingStatus{
-				"MASTER_DATA_SYNC": {JobType: "MASTER_DATA_SYNC", Status: "IDLE"},
-				"DAILY_FULL":       {JobType: "DAILY_FULL", Status: "RUNNING"},
+		stub := &schedulerServiceStub{
+			triggerErrs: map[string]error{
+				"TriggerFullSync": fmt.Errorf("DAILY_FULL is already running: %w", service.ErrJobRunning),
 			},
-		}, &schedulerServiceStub{})
+		}
+		h := NewLEIHandler(&leiServiceStub{}, stub)
 
 		resp := executePOST("/sync/full", h.TriggerFullSync)
 		if resp.Code != http.StatusConflict {
@@ -141,12 +173,12 @@ func TestTriggerMasterDataSync_ConflictPaths(t *testing.T) {
 
 func TestTriggerDeltaSync_ConflictPaths(t *testing.T) {
 	t.Run("conflict when delta is already running", func(t *testing.T) {
-		h := NewLEIHandler(&leiServiceStub{
-			statuses: map[string]*domain.FileProcessingStatus{
-				"DAILY_DELTA": {JobType: "DAILY_DELTA", Status: "RUNNING"},
-				"DAILY_FULL":  {JobType: "DAILY_FULL", Status: "IDLE"},
+		stub := &schedulerServiceStub{
+			triggerErrs: map[string]error{
+				"TriggerDeltaSync": fmt.Errorf("DAILY_DELTA is already running: %w", service.ErrJobRunning),
 			},
-		}, &schedulerServiceStub{})
+		}
+		h := NewLEIHandler(&leiServiceStub{}, stub)
 
 		resp := executePOST("/sync/delta", h.TriggerDeltaSync)
 		if resp.Code != http.StatusConflict {
@@ -158,12 +190,12 @@ func TestTriggerDeltaSync_ConflictPaths(t *testing.T) {
 	})
 
 	t.Run("conflict when full sync is running", func(t *testing.T) {
-		h := NewLEIHandler(&leiServiceStub{
-			statuses: map[string]*domain.FileProcessingStatus{
-				"DAILY_DELTA": {JobType: "DAILY_DELTA", Status: "IDLE"},
-				"DAILY_FULL":  {JobType: "DAILY_FULL", Status: "RUNNING"},
+		stub := &schedulerServiceStub{
+			triggerErrs: map[string]error{
+				"TriggerDeltaSync": fmt.Errorf("cannot start DAILY_DELTA while DAILY_FULL is running: %w", service.ErrJobRunning),
 			},
-		}, &schedulerServiceStub{})
+		}
+		h := NewLEIHandler(&leiServiceStub{}, stub)
 
 		resp := executePOST("/sync/delta", h.TriggerDeltaSync)
 		if resp.Code != http.StatusConflict {
@@ -178,43 +210,32 @@ func TestTriggerDeltaSync_ConflictPaths(t *testing.T) {
 func TestTriggerLevel2Sync_ConflictPaths(t *testing.T) {
 	testCases := []struct {
 		name          string
-		fullStatus    string
-		rrStatus      string
-		repexStatus   string
+		triggerErr    error
 		expectedMatch string
 	}{
 		{
 			name:          "conflict when full sync is running",
-			fullStatus:    "RUNNING",
-			rrStatus:      "IDLE",
-			repexStatus:   "IDLE",
+			triggerErr:    fmt.Errorf("cannot start Level 2 while DAILY_FULL is running: %w", service.ErrJobRunning),
 			expectedMatch: "DAILY_FULL",
 		},
 		{
 			name:          "conflict when rr is running",
-			fullStatus:    "IDLE",
-			rrStatus:      "RUNNING",
-			repexStatus:   "IDLE",
+			triggerErr:    fmt.Errorf("cannot start Level 2 while LEVEL2_RR is running: %w", service.ErrJobRunning),
 			expectedMatch: "LEVEL2_RR",
 		},
 		{
 			name:          "conflict when repex is running",
-			fullStatus:    "IDLE",
-			rrStatus:      "IDLE",
-			repexStatus:   "RUNNING",
+			triggerErr:    fmt.Errorf("cannot start Level 2 while LEVEL2_REPEX is running: %w", service.ErrJobRunning),
 			expectedMatch: "LEVEL2_REPEX",
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			h := NewLEIHandler(&leiServiceStub{
-				statuses: map[string]*domain.FileProcessingStatus{
-					"DAILY_FULL":   {JobType: "DAILY_FULL", Status: tc.fullStatus},
-					"LEVEL2_RR":    {JobType: "LEVEL2_RR", Status: tc.rrStatus},
-					"LEVEL2_REPEX": {JobType: "LEVEL2_REPEX", Status: tc.repexStatus},
-				},
-			}, &schedulerServiceStub{})
+			stub := &schedulerServiceStub{
+				triggerErrs: map[string]error{"TriggerLevel2Sync": tc.triggerErr},
+			}
+			h := NewLEIHandler(&leiServiceStub{}, stub)
 
 			resp := executePOST("/sync/level2", h.TriggerLevel2Sync)
 			if resp.Code != http.StatusConflict {
@@ -229,12 +250,12 @@ func TestTriggerLevel2Sync_ConflictPaths(t *testing.T) {
 
 func TestTriggerLevel2SubJobs_ConflictPaths(t *testing.T) {
 	t.Run("rr endpoint conflict when full running", func(t *testing.T) {
-		h := NewLEIHandler(&leiServiceStub{
-			statuses: map[string]*domain.FileProcessingStatus{
-				"DAILY_FULL": {JobType: "DAILY_FULL", Status: "RUNNING"},
-				"LEVEL2_RR":  {JobType: "LEVEL2_RR", Status: "IDLE"},
+		stub := &schedulerServiceStub{
+			triggerErrs: map[string]error{
+				"TriggerLevel2RRSync": fmt.Errorf("cannot start LEVEL2_RR while DAILY_FULL is running: %w", service.ErrJobRunning),
 			},
-		}, &schedulerServiceStub{})
+		}
+		h := NewLEIHandler(&leiServiceStub{}, stub)
 
 		resp := executePOST("/sync/level2/rr", h.TriggerLevel2RRSync)
 		if resp.Code != http.StatusConflict {
@@ -246,13 +267,12 @@ func TestTriggerLevel2SubJobs_ConflictPaths(t *testing.T) {
 	})
 
 	t.Run("repex endpoint conflict when rr running", func(t *testing.T) {
-		h := NewLEIHandler(&leiServiceStub{
-			statuses: map[string]*domain.FileProcessingStatus{
-				"DAILY_FULL":   {JobType: "DAILY_FULL", Status: "IDLE"},
-				"LEVEL2_RR":    {JobType: "LEVEL2_RR", Status: "RUNNING"},
-				"LEVEL2_REPEX": {JobType: "LEVEL2_REPEX", Status: "IDLE"},
+		stub := &schedulerServiceStub{
+			triggerErrs: map[string]error{
+				"TriggerLevel2REPEXSync": fmt.Errorf("cannot start LEVEL2_REPEX while LEVEL2_RR is running: %w", service.ErrJobRunning),
 			},
-		}, &schedulerServiceStub{})
+		}
+		h := NewLEIHandler(&leiServiceStub{}, stub)
 
 		resp := executePOST("/sync/level2/repex", h.TriggerLevel2REPEXSync)
 		if resp.Code != http.StatusConflict {
@@ -269,7 +289,6 @@ func TestTriggerManualSync_SuccessPaths(t *testing.T) {
 		name              string
 		path              string
 		handlerFactory    func(*LEIHandler) gin.HandlerFunc
-		statuses          map[string]*domain.FileProcessingStatus
 		expectedMessage   string
 		expectedScheduler string
 	}{
@@ -277,56 +296,50 @@ func TestTriggerManualSync_SuccessPaths(t *testing.T) {
 			name:              "master data accepted",
 			path:              "/sync/masterdata",
 			handlerFactory:    func(h *LEIHandler) gin.HandlerFunc { return h.TriggerMasterDataSync },
-			statuses:          map[string]*domain.FileProcessingStatus{"MASTER_DATA_SYNC": {JobType: "MASTER_DATA_SYNC", Status: "IDLE"}},
 			expectedMessage:   "Master data sync triggered",
-			expectedScheduler: "RunDailyMasterDataSync",
+			expectedScheduler: "TriggerMasterDataSync",
 		},
 		{
 			name:              "full accepted",
 			path:              "/sync/full",
 			handlerFactory:    func(h *LEIHandler) gin.HandlerFunc { return h.TriggerFullSync },
-			statuses:          map[string]*domain.FileProcessingStatus{"MASTER_DATA_SYNC": {JobType: "MASTER_DATA_SYNC", Status: "IDLE"}, "DAILY_FULL": {JobType: "DAILY_FULL", Status: "IDLE"}},
 			expectedMessage:   "Full sync triggered",
-			expectedScheduler: "RunDailyFullSync",
+			expectedScheduler: "TriggerFullSync",
 		},
 		{
 			name:              "delta accepted",
 			path:              "/sync/delta",
 			handlerFactory:    func(h *LEIHandler) gin.HandlerFunc { return h.TriggerDeltaSync },
-			statuses:          map[string]*domain.FileProcessingStatus{"DAILY_DELTA": {JobType: "DAILY_DELTA", Status: "IDLE"}, "DAILY_FULL": {JobType: "DAILY_FULL", Status: "IDLE"}},
 			expectedMessage:   "Delta sync triggered",
-			expectedScheduler: "RunDailyDeltaSync",
+			expectedScheduler: "TriggerDeltaSync",
 		},
 		{
 			name:              "level2 accepted",
 			path:              "/sync/level2",
 			handlerFactory:    func(h *LEIHandler) gin.HandlerFunc { return h.TriggerLevel2Sync },
-			statuses:          map[string]*domain.FileProcessingStatus{"DAILY_FULL": {JobType: "DAILY_FULL", Status: "IDLE"}, "LEVEL2_RR": {JobType: "LEVEL2_RR", Status: "IDLE"}, "LEVEL2_REPEX": {JobType: "LEVEL2_REPEX", Status: "IDLE"}},
 			expectedMessage:   "Level 2 sync triggered",
-			expectedScheduler: "RunLevel2Sync",
+			expectedScheduler: "TriggerLevel2Sync",
 		},
 		{
 			name:              "level2 rr accepted",
 			path:              "/sync/level2/rr",
 			handlerFactory:    func(h *LEIHandler) gin.HandlerFunc { return h.TriggerLevel2RRSync },
-			statuses:          map[string]*domain.FileProcessingStatus{"DAILY_FULL": {JobType: "DAILY_FULL", Status: "IDLE"}, "LEVEL2_RR": {JobType: "LEVEL2_RR", Status: "IDLE"}},
 			expectedMessage:   "LEVEL2_RR sync triggered",
-			expectedScheduler: "RunLevel2RRSync",
+			expectedScheduler: "TriggerLevel2RRSync",
 		},
 		{
 			name:              "level2 repex accepted",
 			path:              "/sync/level2/repex",
 			handlerFactory:    func(h *LEIHandler) gin.HandlerFunc { return h.TriggerLevel2REPEXSync },
-			statuses:          map[string]*domain.FileProcessingStatus{"DAILY_FULL": {JobType: "DAILY_FULL", Status: "IDLE"}, "LEVEL2_RR": {JobType: "LEVEL2_RR", Status: "IDLE"}, "LEVEL2_REPEX": {JobType: "LEVEL2_REPEX", Status: "IDLE"}},
 			expectedMessage:   "LEVEL2_REPEX sync triggered",
-			expectedScheduler: "RunLevel2REPEXSync",
+			expectedScheduler: "TriggerLevel2REPEXSync",
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			schedulerStub := &schedulerServiceStub{called: make(chan string, 1)}
-			h := NewLEIHandler(&leiServiceStub{statuses: tc.statuses}, schedulerStub)
+			h := NewLEIHandler(&leiServiceStub{}, schedulerStub)
 
 			resp := executePOST(tc.path, tc.handlerFactory(h))
 			if resp.Code != http.StatusAccepted {
@@ -349,83 +362,88 @@ func TestTriggerManualSync_SuccessPaths(t *testing.T) {
 }
 
 func TestTriggerManualSync_ErrorPaths(t *testing.T) {
-	t.Run("full returns 500 when master data status lookup fails", func(t *testing.T) {
-		h := NewLEIHandler(&leiServiceStub{
-			errs: map[string]error{
-				"MASTER_DATA_SYNC": errors.New("db unavailable"),
+	t.Run("full returns 500 on non-conflict service error", func(t *testing.T) {
+		stub := &schedulerServiceStub{
+			triggerErrs: map[string]error{
+				"TriggerFullSync": errors.New("db unavailable"),
 			},
-		}, &schedulerServiceStub{})
+		}
+		h := NewLEIHandler(&leiServiceStub{}, stub)
 
 		resp := executePOST("/sync/full", h.TriggerFullSync)
 		if resp.Code != http.StatusInternalServerError {
 			t.Fatalf("expected status %d, got %d", http.StatusInternalServerError, resp.Code)
 		}
-		if !strings.Contains(resp.Body.String(), "master data sync status") {
-			t.Fatalf("expected master data validation error, got %s", resp.Body.String())
+		if !strings.Contains(resp.Body.String(), "Failed to trigger full sync") {
+			t.Fatalf("expected generic error message, got %s", resp.Body.String())
 		}
 	})
 
-	t.Run("delta returns 500 when delta status lookup fails", func(t *testing.T) {
-		h := NewLEIHandler(&leiServiceStub{
-			errs: map[string]error{
-				"DAILY_DELTA": errors.New("db unavailable"),
+	t.Run("delta returns 500 on non-conflict service error", func(t *testing.T) {
+		stub := &schedulerServiceStub{
+			triggerErrs: map[string]error{
+				"TriggerDeltaSync": errors.New("db unavailable"),
 			},
-		}, &schedulerServiceStub{})
+		}
+		h := NewLEIHandler(&leiServiceStub{}, stub)
 
 		resp := executePOST("/sync/delta", h.TriggerDeltaSync)
 		if resp.Code != http.StatusInternalServerError {
 			t.Fatalf("expected status %d, got %d", http.StatusInternalServerError, resp.Code)
 		}
-		if !strings.Contains(resp.Body.String(), "delta sync status") {
-			t.Fatalf("expected delta validation error, got %s", resp.Body.String())
+		if !strings.Contains(resp.Body.String(), "Failed to trigger delta sync") {
+			t.Fatalf("expected generic error message, got %s", resp.Body.String())
 		}
 	})
 
-	t.Run("level2 returns 500 when full status lookup fails", func(t *testing.T) {
-		h := NewLEIHandler(&leiServiceStub{
-			errs: map[string]error{
-				"DAILY_FULL": errors.New("db unavailable"),
+	t.Run("level2 returns 500 on non-conflict service error", func(t *testing.T) {
+		stub := &schedulerServiceStub{
+			triggerErrs: map[string]error{
+				"TriggerLevel2Sync": errors.New("db unavailable"),
 			},
-		}, &schedulerServiceStub{})
+		}
+		h := NewLEIHandler(&leiServiceStub{}, stub)
 
 		resp := executePOST("/sync/level2", h.TriggerLevel2Sync)
 		if resp.Code != http.StatusInternalServerError {
 			t.Fatalf("expected status %d, got %d", http.StatusInternalServerError, resp.Code)
 		}
-		if !strings.Contains(resp.Body.String(), "full sync status") {
-			t.Fatalf("expected full sync validation error, got %s", resp.Body.String())
+		if !strings.Contains(resp.Body.String(), "Failed to trigger Level 2 sync") {
+			t.Fatalf("expected generic error message, got %s", resp.Body.String())
 		}
 	})
 
-	t.Run("level2 rr returns 500 when full status lookup fails", func(t *testing.T) {
-		h := NewLEIHandler(&leiServiceStub{
-			errs: map[string]error{
-				"DAILY_FULL": errors.New("db unavailable"),
+	t.Run("level2 rr returns 500 on non-conflict service error", func(t *testing.T) {
+		stub := &schedulerServiceStub{
+			triggerErrs: map[string]error{
+				"TriggerLevel2RRSync": errors.New("db unavailable"),
 			},
-		}, &schedulerServiceStub{})
+		}
+		h := NewLEIHandler(&leiServiceStub{}, stub)
 
 		resp := executePOST("/sync/level2/rr", h.TriggerLevel2RRSync)
 		if resp.Code != http.StatusInternalServerError {
 			t.Fatalf("expected status %d, got %d", http.StatusInternalServerError, resp.Code)
 		}
-		if !strings.Contains(resp.Body.String(), "full sync status") {
-			t.Fatalf("expected full sync validation error, got %s", resp.Body.String())
+		if !strings.Contains(resp.Body.String(), "Failed to trigger LEVEL2_RR sync") {
+			t.Fatalf("expected generic error message, got %s", resp.Body.String())
 		}
 	})
 
-	t.Run("level2 repex returns 500 when full status lookup fails", func(t *testing.T) {
-		h := NewLEIHandler(&leiServiceStub{
-			errs: map[string]error{
-				"DAILY_FULL": errors.New("db unavailable"),
+	t.Run("level2 repex returns 500 on non-conflict service error", func(t *testing.T) {
+		stub := &schedulerServiceStub{
+			triggerErrs: map[string]error{
+				"TriggerLevel2REPEXSync": errors.New("db unavailable"),
 			},
-		}, &schedulerServiceStub{})
+		}
+		h := NewLEIHandler(&leiServiceStub{}, stub)
 
 		resp := executePOST("/sync/level2/repex", h.TriggerLevel2REPEXSync)
 		if resp.Code != http.StatusInternalServerError {
 			t.Fatalf("expected status %d, got %d", http.StatusInternalServerError, resp.Code)
 		}
-		if !strings.Contains(resp.Body.String(), "full sync status") {
-			t.Fatalf("expected full sync validation error, got %s", resp.Body.String())
+		if !strings.Contains(resp.Body.String(), "Failed to trigger LEVEL2_REPEX sync") {
+			t.Fatalf("expected generic error message, got %s", resp.Body.String())
 		}
 	})
 }
