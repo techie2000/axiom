@@ -98,8 +98,10 @@ logged, reviewable, and linked to a CI run.
 
 - **MIT-001**: Branch protection rules enforce PR-only merges; no direct pushes.
 - **MIT-002**: Automation (GitHub Actions) or periodic promotion PRs prevent long drift windows.
-  The [`promote-main-to-dev` workflow](.github/workflows/promote-main-to-dev.yml) implements this
-  by opening a promotion PR automatically at 01:00 UTC every day when `main` is ahead of `dev`.
+  Three scheduled workflows implement this across the full promotion chain:
+  - [`promote-main-to-dev`](.github/workflows/promote-main-to-dev.yml) — daily at 01:00 UTC
+  - [`promote-dev-to-uat`](.github/workflows/promote-dev-to-uat.yml) — weekly (Monday 01:00 UTC)
+  - [`promote-uat-to-prod`](.github/workflows/promote-uat-to-prod.yml) — monthly (1st at 01:00 UTC)
 - **MIT-003**: Hotfix documentation provides a clear procedure for back-merging.
 
 ## Alternatives Considered

@@ -15,10 +15,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `main`, `dev`, `uat`, and `prod` branches; detects the target deployment environment from the
     branch name and reports it as part of the CI summary (satisfies IMP-003)
   - [`.github/workflows/promote-main-to-dev.yml`](.github/workflows/promote-main-to-dev.yml) —
-    nightly scheduled workflow (01:00 UTC, before the 02:00 GLEIF LEI full-sync) that opens a
-    promotion pull request from `main` → `dev`
-    whenever `main` is ahead; prevents branch drift accumulation (satisfies NEG-002 / MIT-002);
-    also supports `workflow_dispatch` with an optional dry-run mode
+    nightly scheduled workflow (01:00 UTC daily, before the 02:00 GLEIF LEI full-sync) that opens
+    a promotion pull request from `main` → `dev` whenever `main` is ahead; prevents branch drift
+    accumulation (satisfies NEG-002 / MIT-002); also supports `workflow_dispatch` with dry-run
+  - [`.github/workflows/promote-dev-to-uat.yml`](.github/workflows/promote-dev-to-uat.yml) —
+    weekly scheduled workflow (01:00 UTC every Monday) that opens a promotion pull request from
+    `dev` → `uat` whenever `dev` is ahead; requires at least one review before merging
+  - [`.github/workflows/promote-uat-to-prod.yml`](.github/workflows/promote-uat-to-prod.yml) —
+    monthly scheduled workflow (01:00 UTC on the 1st of each month) that opens a promotion pull
+    request from `uat` → `prod` whenever `uat` is ahead; requires at least two reviews and
+    coordinated team communication before merging
 - **Branching strategy documentation** — formal Git branching model adopted (trunk-based with
   environment promotion gates):
   - [ADR-0009](docs/adr/adr-0009-git-branching-strategy.md) records the decision and rationale

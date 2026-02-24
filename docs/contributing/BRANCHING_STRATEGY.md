@@ -92,25 +92,43 @@ main → dev
 
 ### Promoting to UAT
 
-After dev validation, open a PR:
+`dev` → `uat` promotions happen **automatically every Monday** via the
+[`promote-dev-to-uat` workflow](../../.github/workflows/promote-dev-to-uat.yml).
+
+The workflow runs at **01:00 UTC every Monday**. When `dev` is ahead of `uat`, it opens a pull
+request titled `chore: weekly promotion dev → uat (YYYY-MM-DD)`. Obtain **at least one review**
+before merging. If `uat` is already up to date, or a promotion PR is already open, no action is
+taken.
+
+You can also trigger the workflow manually from **Actions → Weekly Promote dev → uat →
+Run workflow**. A `dry_run` option is available.
+
+To promote immediately outside the weekly window, open a PR manually:
 
 ```text
 dev → uat
 ```
 
-Obtain at least one review before merging. The UAT environment re-deploys on merge.
-
 ### Promoting to production
 
-After UAT sign-off, open a PR:
+`uat` → `prod` promotions happen **automatically on the 1st of each month** via the
+[`promote-uat-to-prod` workflow](../../.github/workflows/promote-uat-to-prod.yml).
+
+The workflow runs at **01:00 UTC on the 1st of every month**. When `uat` is ahead of `prod`, it
+opens a pull request titled `chore: monthly promotion uat → prod (YYYY-MM-DD)`. Require **at
+least two reviews** before merging. Coordinate with the team before merging — production
+deployments should be planned and communicated in advance. Tag the merge commit with a version
+number following the conventions in [`VERSION`](../../VERSION) and the version management
+instructions.
+
+You can also trigger the workflow manually from **Actions → Monthly Promote uat → prod →
+Run workflow**. A `dry_run` option is available.
+
+To promote immediately outside the monthly window, open a PR manually:
 
 ```text
 uat → prod
 ```
-
-Require at least one review (ideally two for high-risk changes). The production environment
-re-deploys on merge. Tag the merge commit with a version number following the conventions in
-[`VERSION`](../../VERSION) and the version management instructions.
 
 ---
 
