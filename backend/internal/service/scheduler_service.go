@@ -1436,246 +1436,246 @@ func (s *schedulerService) doLevel2RRAndREPEXWork(rrStatus *domain.FileProcessin
 // claims it (sets status to RUNNING), and launches the sync in a background goroutine.
 // Returns ErrJobConflict (via errors.Is) if the job is already running.
 func (s *schedulerService) TriggerMasterDataSync() error {
-s.triggerMu.Lock()
-defer s.triggerMu.Unlock()
+	s.triggerMu.Lock()
+	defer s.triggerMu.Unlock()
 
-st, err := s.leiService.GetProcessingStatus("MASTER_DATA_SYNC")
-if err != nil {
-return fmt.Errorf("failed to validate master data sync status: %w", err)
-}
-if st.Status == "RUNNING" {
-return fmt.Errorf("MASTER_DATA_SYNC is already running: %w", ErrJobConflict)
-}
+	st, err := s.leiService.GetProcessingStatus("MASTER_DATA_SYNC")
+	if err != nil {
+		return fmt.Errorf("failed to validate master data sync status: %w", err)
+	}
+	if st.Status == "RUNNING" {
+		return fmt.Errorf("MASTER_DATA_SYNC is already running: %w", ErrJobConflict)
+	}
 
-now := time.Now()
-st.Status = "RUNNING"
-st.LastRunAt = &now
-st.ErrorMessage = ""
-if err := s.leiService.UpdateProcessingStatus(st); err != nil {
-return fmt.Errorf("failed to claim MASTER_DATA_SYNC job: %w", err)
-}
+	now := time.Now()
+	st.Status = "RUNNING"
+	st.LastRunAt = &now
+	st.ErrorMessage = ""
+	if err := s.leiService.UpdateProcessingStatus(st); err != nil {
+		return fmt.Errorf("failed to claim MASTER_DATA_SYNC job: %w", err)
+	}
 
-go func() {
-if err := s.doMasterDataSyncWork(st, now); err != nil {
-log.Error().Err(err).Msg("Failed to run master data sync (handler-triggered)")
-}
-}()
+	go func() {
+		if err := s.doMasterDataSyncWork(st, now); err != nil {
+			log.Error().Err(err).Msg("Failed to run master data sync (handler-triggered)")
+		}
+	}()
 
-return nil
+	return nil
 }
 
 // TriggerFullSync atomically validates that neither MASTER_DATA_SYNC nor DAILY_FULL is running,
 // claims DAILY_FULL, and launches the sync in a background goroutine.
 // Returns ErrJobConflict (via errors.Is) on a blocking conflict.
 func (s *schedulerService) TriggerFullSync() error {
-s.triggerMu.Lock()
-defer s.triggerMu.Unlock()
+	s.triggerMu.Lock()
+	defer s.triggerMu.Unlock()
 
-masterDataStatus, err := s.leiService.GetProcessingStatus("MASTER_DATA_SYNC")
-if err != nil {
-return fmt.Errorf("failed to validate master data sync status: %w", err)
-}
-if masterDataStatus.Status == "RUNNING" {
-return fmt.Errorf("cannot trigger DAILY_FULL while MASTER_DATA_SYNC is running: %w", ErrJobConflict)
-}
+	masterDataStatus, err := s.leiService.GetProcessingStatus("MASTER_DATA_SYNC")
+	if err != nil {
+		return fmt.Errorf("failed to validate master data sync status: %w", err)
+	}
+	if masterDataStatus.Status == "RUNNING" {
+		return fmt.Errorf("cannot trigger DAILY_FULL while MASTER_DATA_SYNC is running: %w", ErrJobConflict)
+	}
 
-fullStatus, err := s.leiService.GetProcessingStatus("DAILY_FULL")
-if err != nil {
-return fmt.Errorf("failed to validate full sync status: %w", err)
-}
-if fullStatus.Status == "RUNNING" {
-return fmt.Errorf("DAILY_FULL is already running: %w", ErrJobConflict)
-}
+	fullStatus, err := s.leiService.GetProcessingStatus("DAILY_FULL")
+	if err != nil {
+		return fmt.Errorf("failed to validate full sync status: %w", err)
+	}
+	if fullStatus.Status == "RUNNING" {
+		return fmt.Errorf("DAILY_FULL is already running: %w", ErrJobConflict)
+	}
 
-now := time.Now()
-fullStatus.Status = "RUNNING"
-fullStatus.LastRunAt = &now
-fullStatus.ErrorMessage = ""
-if err := s.leiService.UpdateProcessingStatus(fullStatus); err != nil {
-return fmt.Errorf("failed to claim DAILY_FULL job: %w", err)
-}
+	now := time.Now()
+	fullStatus.Status = "RUNNING"
+	fullStatus.LastRunAt = &now
+	fullStatus.ErrorMessage = ""
+	if err := s.leiService.UpdateProcessingStatus(fullStatus); err != nil {
+		return fmt.Errorf("failed to claim DAILY_FULL job: %w", err)
+	}
 
-go func() {
-if err := s.doFullSyncWork(fullStatus, now); err != nil {
-log.Error().Err(err).Msg("Failed to run daily full sync (handler-triggered)")
-}
-}()
+	go func() {
+		if err := s.doFullSyncWork(fullStatus, now); err != nil {
+			log.Error().Err(err).Msg("Failed to run daily full sync (handler-triggered)")
+		}
+	}()
 
-return nil
+	return nil
 }
 
 // TriggerDeltaSync atomically validates that neither DAILY_FULL nor DAILY_DELTA is running,
 // claims DAILY_DELTA, and launches the sync in a background goroutine.
 // Returns ErrJobConflict (via errors.Is) on a blocking conflict.
 func (s *schedulerService) TriggerDeltaSync() error {
-s.triggerMu.Lock()
-defer s.triggerMu.Unlock()
+	s.triggerMu.Lock()
+	defer s.triggerMu.Unlock()
 
-fullStatus, err := s.leiService.GetProcessingStatus("DAILY_FULL")
-if err != nil {
-return fmt.Errorf("failed to validate full sync status: %w", err)
-}
-if fullStatus.Status == "RUNNING" {
-return fmt.Errorf("cannot trigger DAILY_DELTA while DAILY_FULL is running: %w", ErrJobConflict)
-}
+	fullStatus, err := s.leiService.GetProcessingStatus("DAILY_FULL")
+	if err != nil {
+		return fmt.Errorf("failed to validate full sync status: %w", err)
+	}
+	if fullStatus.Status == "RUNNING" {
+		return fmt.Errorf("cannot trigger DAILY_DELTA while DAILY_FULL is running: %w", ErrJobConflict)
+	}
 
-deltaStatus, err := s.leiService.GetProcessingStatus("DAILY_DELTA")
-if err != nil {
-return fmt.Errorf("failed to validate delta sync status: %w", err)
-}
-if deltaStatus.Status == "RUNNING" {
-return fmt.Errorf("DAILY_DELTA is already running: %w", ErrJobConflict)
-}
+	deltaStatus, err := s.leiService.GetProcessingStatus("DAILY_DELTA")
+	if err != nil {
+		return fmt.Errorf("failed to validate delta sync status: %w", err)
+	}
+	if deltaStatus.Status == "RUNNING" {
+		return fmt.Errorf("DAILY_DELTA is already running: %w", ErrJobConflict)
+	}
 
-now := time.Now()
-deltaStatus.Status = "RUNNING"
-deltaStatus.LastRunAt = &now
-deltaStatus.ErrorMessage = ""
-if err := s.leiService.UpdateProcessingStatus(deltaStatus); err != nil {
-return fmt.Errorf("failed to claim DAILY_DELTA job: %w", err)
-}
+	now := time.Now()
+	deltaStatus.Status = "RUNNING"
+	deltaStatus.LastRunAt = &now
+	deltaStatus.ErrorMessage = ""
+	if err := s.leiService.UpdateProcessingStatus(deltaStatus); err != nil {
+		return fmt.Errorf("failed to claim DAILY_DELTA job: %w", err)
+	}
 
-go func() {
-if err := s.doDeltaSyncWork(deltaStatus, now); err != nil {
-log.Error().Err(err).Msg("Failed to run daily delta sync (handler-triggered)")
-}
-}()
+	go func() {
+		if err := s.doDeltaSyncWork(deltaStatus, now); err != nil {
+			log.Error().Err(err).Msg("Failed to run daily delta sync (handler-triggered)")
+		}
+	}()
 
-return nil
+	return nil
 }
 
 // TriggerLevel2Sync atomically validates that DAILY_FULL, LEVEL2_RR, and LEVEL2_REPEX are all
 // idle, claims LEVEL2_RR, and launches the full Level 2 pipeline (RR → REPEX) in a background
 // goroutine.  Returns ErrJobConflict (via errors.Is) on a blocking conflict.
 func (s *schedulerService) TriggerLevel2Sync() error {
-s.triggerMu.Lock()
-defer s.triggerMu.Unlock()
+	s.triggerMu.Lock()
+	defer s.triggerMu.Unlock()
 
-fullStatus, err := s.leiService.GetProcessingStatus("DAILY_FULL")
-if err != nil {
-return fmt.Errorf("failed to validate full sync status: %w", err)
-}
-if fullStatus.Status == "RUNNING" {
-return fmt.Errorf("cannot trigger Level 2 while DAILY_FULL is running: %w", ErrJobConflict)
-}
+	fullStatus, err := s.leiService.GetProcessingStatus("DAILY_FULL")
+	if err != nil {
+		return fmt.Errorf("failed to validate full sync status: %w", err)
+	}
+	if fullStatus.Status == "RUNNING" {
+		return fmt.Errorf("cannot trigger Level 2 while DAILY_FULL is running: %w", ErrJobConflict)
+	}
 
-rrStatus, err := s.leiService.GetProcessingStatus("LEVEL2_RR")
-if err != nil {
-return fmt.Errorf("failed to validate LEVEL2_RR status: %w", err)
-}
-if rrStatus.Status == "RUNNING" {
-return fmt.Errorf("cannot trigger Level 2 while LEVEL2_RR is running: %w", ErrJobConflict)
-}
+	rrStatus, err := s.leiService.GetProcessingStatus("LEVEL2_RR")
+	if err != nil {
+		return fmt.Errorf("failed to validate LEVEL2_RR status: %w", err)
+	}
+	if rrStatus.Status == "RUNNING" {
+		return fmt.Errorf("cannot trigger Level 2 while LEVEL2_RR is running: %w", ErrJobConflict)
+	}
 
-repexStatus, err := s.leiService.GetProcessingStatus("LEVEL2_REPEX")
-if err != nil {
-return fmt.Errorf("failed to validate LEVEL2_REPEX status: %w", err)
-}
-if repexStatus.Status == "RUNNING" {
-return fmt.Errorf("cannot trigger Level 2 while LEVEL2_REPEX is running: %w", ErrJobConflict)
-}
+	repexStatus, err := s.leiService.GetProcessingStatus("LEVEL2_REPEX")
+	if err != nil {
+		return fmt.Errorf("failed to validate LEVEL2_REPEX status: %w", err)
+	}
+	if repexStatus.Status == "RUNNING" {
+		return fmt.Errorf("cannot trigger Level 2 while LEVEL2_REPEX is running: %w", ErrJobConflict)
+	}
 
-now := time.Now()
-rrStatus.Status = "RUNNING"
-rrStatus.LastRunAt = &now
-rrStatus.ErrorMessage = ""
-if err := s.leiService.UpdateProcessingStatus(rrStatus); err != nil {
-return fmt.Errorf("failed to claim LEVEL2_RR job: %w", err)
-}
+	now := time.Now()
+	rrStatus.Status = "RUNNING"
+	rrStatus.LastRunAt = &now
+	rrStatus.ErrorMessage = ""
+	if err := s.leiService.UpdateProcessingStatus(rrStatus); err != nil {
+		return fmt.Errorf("failed to claim LEVEL2_RR job: %w", err)
+	}
 
-go func() {
-if err := s.doLevel2RRAndREPEXWork(rrStatus, now); err != nil {
-log.Error().Err(err).Msg("Failed to run Level 2 sync (handler-triggered)")
-}
-}()
+	go func() {
+		if err := s.doLevel2RRAndREPEXWork(rrStatus, now); err != nil {
+			log.Error().Err(err).Msg("Failed to run Level 2 sync (handler-triggered)")
+		}
+	}()
 
-return nil
+	return nil
 }
 
 // TriggerLevel2RRSync atomically validates that DAILY_FULL and LEVEL2_RR are idle, claims
 // LEVEL2_RR, and launches the full Level 2 pipeline (RR → REPEX) in a background goroutine.
 // Returns ErrJobConflict (via errors.Is) on a blocking conflict.
 func (s *schedulerService) TriggerLevel2RRSync() error {
-s.triggerMu.Lock()
-defer s.triggerMu.Unlock()
+	s.triggerMu.Lock()
+	defer s.triggerMu.Unlock()
 
-fullStatus, err := s.leiService.GetProcessingStatus("DAILY_FULL")
-if err != nil {
-return fmt.Errorf("failed to validate full sync status: %w", err)
-}
-if fullStatus.Status == "RUNNING" {
-return fmt.Errorf("cannot trigger LEVEL2_RR while DAILY_FULL is running: %w", ErrJobConflict)
-}
+	fullStatus, err := s.leiService.GetProcessingStatus("DAILY_FULL")
+	if err != nil {
+		return fmt.Errorf("failed to validate full sync status: %w", err)
+	}
+	if fullStatus.Status == "RUNNING" {
+		return fmt.Errorf("cannot trigger LEVEL2_RR while DAILY_FULL is running: %w", ErrJobConflict)
+	}
 
-rrStatus, err := s.leiService.GetProcessingStatus("LEVEL2_RR")
-if err != nil {
-return fmt.Errorf("failed to validate LEVEL2_RR status: %w", err)
-}
-if rrStatus.Status == "RUNNING" {
-return fmt.Errorf("LEVEL2_RR is already running: %w", ErrJobConflict)
-}
+	rrStatus, err := s.leiService.GetProcessingStatus("LEVEL2_RR")
+	if err != nil {
+		return fmt.Errorf("failed to validate LEVEL2_RR status: %w", err)
+	}
+	if rrStatus.Status == "RUNNING" {
+		return fmt.Errorf("LEVEL2_RR is already running: %w", ErrJobConflict)
+	}
 
-now := time.Now()
-rrStatus.Status = "RUNNING"
-rrStatus.LastRunAt = &now
-rrStatus.ErrorMessage = ""
-if err := s.leiService.UpdateProcessingStatus(rrStatus); err != nil {
-return fmt.Errorf("failed to claim LEVEL2_RR job: %w", err)
-}
+	now := time.Now()
+	rrStatus.Status = "RUNNING"
+	rrStatus.LastRunAt = &now
+	rrStatus.ErrorMessage = ""
+	if err := s.leiService.UpdateProcessingStatus(rrStatus); err != nil {
+		return fmt.Errorf("failed to claim LEVEL2_RR job: %w", err)
+	}
 
-go func() {
-if err := s.doLevel2RRAndREPEXWork(rrStatus, now); err != nil {
-log.Error().Err(err).Msg("Failed to run LEVEL2_RR sync (handler-triggered)")
-}
-}()
+	go func() {
+		if err := s.doLevel2RRAndREPEXWork(rrStatus, now); err != nil {
+			log.Error().Err(err).Msg("Failed to run LEVEL2_RR sync (handler-triggered)")
+		}
+	}()
 
-return nil
+	return nil
 }
 
 // TriggerLevel2REPEXSync atomically validates that DAILY_FULL, LEVEL2_RR, and LEVEL2_REPEX are
 // idle, claims LEVEL2_REPEX, and launches the REPEX-only sync in a background goroutine.
 // Returns ErrJobConflict (via errors.Is) on a blocking conflict.
 func (s *schedulerService) TriggerLevel2REPEXSync() error {
-s.triggerMu.Lock()
-defer s.triggerMu.Unlock()
+	s.triggerMu.Lock()
+	defer s.triggerMu.Unlock()
 
-fullStatus, err := s.leiService.GetProcessingStatus("DAILY_FULL")
-if err != nil {
-return fmt.Errorf("failed to validate full sync status: %w", err)
-}
-if fullStatus.Status == "RUNNING" {
-return fmt.Errorf("cannot trigger LEVEL2_REPEX while DAILY_FULL is running: %w", ErrJobConflict)
-}
+	fullStatus, err := s.leiService.GetProcessingStatus("DAILY_FULL")
+	if err != nil {
+		return fmt.Errorf("failed to validate full sync status: %w", err)
+	}
+	if fullStatus.Status == "RUNNING" {
+		return fmt.Errorf("cannot trigger LEVEL2_REPEX while DAILY_FULL is running: %w", ErrJobConflict)
+	}
 
-rrStatus, err := s.leiService.GetProcessingStatus("LEVEL2_RR")
-if err != nil {
-return fmt.Errorf("failed to validate LEVEL2_RR status: %w", err)
-}
-if rrStatus.Status == "RUNNING" {
-return fmt.Errorf("cannot trigger LEVEL2_REPEX while LEVEL2_RR is running: %w", ErrJobConflict)
-}
+	rrStatus, err := s.leiService.GetProcessingStatus("LEVEL2_RR")
+	if err != nil {
+		return fmt.Errorf("failed to validate LEVEL2_RR status: %w", err)
+	}
+	if rrStatus.Status == "RUNNING" {
+		return fmt.Errorf("cannot trigger LEVEL2_REPEX while LEVEL2_RR is running: %w", ErrJobConflict)
+	}
 
-repexStatus, err := s.leiService.GetProcessingStatus("LEVEL2_REPEX")
-if err != nil {
-return fmt.Errorf("failed to validate LEVEL2_REPEX status: %w", err)
-}
-if repexStatus.Status == "RUNNING" {
-return fmt.Errorf("LEVEL2_REPEX is already running: %w", ErrJobConflict)
-}
+	repexStatus, err := s.leiService.GetProcessingStatus("LEVEL2_REPEX")
+	if err != nil {
+		return fmt.Errorf("failed to validate LEVEL2_REPEX status: %w", err)
+	}
+	if repexStatus.Status == "RUNNING" {
+		return fmt.Errorf("LEVEL2_REPEX is already running: %w", ErrJobConflict)
+	}
 
-now := time.Now()
-repexStatus.Status = "RUNNING"
-repexStatus.LastRunAt = &now
-repexStatus.ErrorMessage = ""
-if err := s.leiService.UpdateProcessingStatus(repexStatus); err != nil {
-return fmt.Errorf("failed to claim LEVEL2_REPEX job: %w", err)
-}
+	now := time.Now()
+	repexStatus.Status = "RUNNING"
+	repexStatus.LastRunAt = &now
+	repexStatus.ErrorMessage = ""
+	if err := s.leiService.UpdateProcessingStatus(repexStatus); err != nil {
+		return fmt.Errorf("failed to claim LEVEL2_REPEX job: %w", err)
+	}
 
-go func() {
-if err := s.doREPEXWork(repexStatus, now); err != nil {
-log.Error().Err(err).Msg("Failed to run LEVEL2_REPEX sync (handler-triggered)")
-}
-}()
+	go func() {
+		if err := s.doREPEXWork(repexStatus, now); err != nil {
+			log.Error().Err(err).Msg("Failed to run LEVEL2_REPEX sync (handler-triggered)")
+		}
+	}()
 
-return nil
+	return nil
 }
