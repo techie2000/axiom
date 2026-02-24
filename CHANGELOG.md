@@ -18,6 +18,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - [`scripts/setup-branches.sh`](scripts/setup-branches.sh) automates creation and protection of
     `dev`, `uat`, and `prod` branches via the GitHub CLI
 
+- **GLEIF Level 2 "who owns whom" data acquisition** — the scheduler now downloads and processes
+  two additional GLEIF golden-copy datasets after each successful Level 1 (LEI records) full sync:
+  - **Relationship Records (RR)** — directional ownership / consolidation relationships between
+    legal entities (e.g. `IS_DIRECTLY_CONSOLIDATED_BY`, `IS_ULTIMATELY_CONSOLIDATED_BY`)
+  - **Reporting Exceptions (REPEX)** — cases where an entity cannot disclose its parent, with the
+    reason code (e.g. `NO_KNOWN_PERSON`, `NATURAL_PERSONS`)
+  - New database tables: `lei_raw.lei_relationship_records` and `lei_raw.lei_reporting_exceptions`
+    (migration `000025`)
+  - New `LEILevel2Service` interface and implementation for download and upsert processing
+  - New `LEILevel2Repository` for persistence with conflict-safe upserts
+  - `SchedulerService.RunLevel2Sync()` implements the dependent-job pattern: Level 2 data is
+    fetched and loaded only after the Level 1 sync completes successfully, ensuring all LEI codes
+    referenced by Level 2 records already exist in the database
+
 ## [0.2.0] - 2026-02-20
 
 ### Added

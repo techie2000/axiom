@@ -91,7 +91,7 @@ func main() {
 	}
 
 	// Initialize scheduler service for LEI data acquisition and master data sync (with config for schedules)
-	schedulerService := service.NewSchedulerService(services.LEI, services.MasterData, cfg)
+	schedulerService := service.NewSchedulerService(services.LEI, services.LEILevel2, services.MasterData, cfg)
 
 	// Start scheduler
 	if err := schedulerService.Start(); err != nil {

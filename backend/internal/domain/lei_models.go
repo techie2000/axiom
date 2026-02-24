@@ -217,3 +217,62 @@ type LEIChangeDetection struct {
 	OldValue  interface{} `json:"old_value"`
 	NewValue  interface{} `json:"new_value"`
 }
+
+// LEIRelationshipRecord represents a GLEIF Level 2 Relationship Record (RR golden-copy).
+// Each record encodes a directional ownership or consolidation relationship between two legal
+// entities identified by their LEI codes. These records are populated after the Level 1
+// (lei_records) sync completes because they reference LEIs that must already exist.
+type LEIRelationshipRecord struct {
+	ID   uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	// StartNodeLEI is the LEI of the child / controlled entity.
+	StartNodeLEI string `gorm:"size:20;not null;index" json:"start_node_lei"`
+	// EndNodeLEI is the LEI of the parent / controlling entity.
+	EndNodeLEI string `gorm:"size:20;not null;index" json:"end_node_lei"`
+
+	RelationshipType   string `gorm:"size:100;not null" json:"relationship_type"`
+	RelationshipStatus string `gorm:"size:50;not null" json:"relationship_status"`
+
+	RelationshipPeriods     JSONBString `gorm:"type:jsonb" json:"relationship_periods"`
+	RelationshipQualifiers  JSONBString `gorm:"type:jsonb" json:"relationship_qualifiers"`
+	RelationshipQuantifiers JSONBString `gorm:"type:jsonb" json:"relationship_quantifiers"`
+
+	RegistrationStatus       string     `gorm:"size:50" json:"registration_status"`
+	InitialRegistrationDate  *time.Time `json:"initial_registration_date"`
+	LastUpdateDate           *time.Time `json:"last_update_date"`
+	NextRenewalDate          *time.Time `json:"next_renewal_date"`
+	ManagingLOU              string     `gorm:"size:20" json:"managing_lou"`
+	ValidationSources        string     `gorm:"size:100" json:"validation_sources"`
+	ValidationDocuments      string     `gorm:"size:100" json:"validation_documents"`
+	ValidationReference      string     `gorm:"size:500" json:"validation_reference"`
+
+	SourceFileID *uuid.UUID `gorm:"type:uuid" json:"source_file_id"`
+
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// TableName overrides the table name for LEIRelationshipRecord.
+func (LEIRelationshipRecord) TableName() string {
+	return "lei_raw.lei_relationship_records"
+}
+
+// LEIReportingException represents a GLEIF Level 2 Reporting Exception (REPEX golden-copy).
+// Each record indicates that a legal entity cannot or will not disclose its parent ownership
+// relationship, along with the category and reason for that exception.
+type LEIReportingException struct {
+	ID                 uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	LEI                string    `gorm:"size:20;not null;index" json:"lei"`
+	ExceptionCategory  string    `gorm:"size:100;not null" json:"exception_category"`
+	ExceptionReason    string    `gorm:"size:100;not null" json:"exception_reason"`
+	ExceptionReference string    `gorm:"size:500" json:"exception_reference"`
+
+	SourceFileID *uuid.UUID `gorm:"type:uuid" json:"source_file_id"`
+
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// TableName overrides the table name for LEIReportingException.
+func (LEIReportingException) TableName() string {
+	return "lei_raw.lei_reporting_exceptions"
+}
