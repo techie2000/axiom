@@ -45,6 +45,7 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
 ## Deployment and Infrastructure
 
 - [Docker Setup](docker/README.md): Container configuration, Dockerfiles, and deployment instructions
+- [Docker Compose Main](docker-compose.main.yml): Main branch environment for intraday development and fixes
 - [Docker Compose Dev](docker-compose.dev.yml): Development environment definition
 - [Docker Compose UAT](docker-compose.uat.yml): User Acceptance Testing environment
 - [Docker Compose Prod](docker-compose.prod.yml): Production environment configuration

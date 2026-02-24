@@ -1,5 +1,5 @@
 .PHONY: help build run test clean migrate-up migrate-down docker-up docker-down
-.PHONY: docker-dev-up docker-dev-down docker-uat-up docker-uat-down docker-prod-up docker-prod-down
+.PHONY: docker-main-up docker-main-down docker-dev-up docker-dev-down docker-uat-up docker-uat-down docker-prod-up docker-prod-down
 .PHONY: docker-all-up docker-all-down docker-all-status validate-env
 .PHONY: lint lint-docs lint-docs-fix lint-all install-hooks
 .PHONY: smoke-api smoke-ssi
@@ -36,6 +36,35 @@ docker-down: ## Stop all services (default/legacy)
 
 docker-logs: ## Show logs from all services (default/legacy)
 	docker-compose logs -f
+
+# Main branch environment (intraday development/fixes)
+docker-main-up: ## Start main branch environment (ports: 48080, 43000, 45432)
+	@if command -v bash >/dev/null 2>&1; then \
+		bash scripts/upgrade-postgres.sh main --yes; \
+	elif command -v pwsh >/dev/null 2>&1; then \
+		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/upgrade-postgres.ps1 -Environment main -Yes; \
+	else \
+		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run PostgreSQL upgrade precheck."; \
+		exit 1; \
+	fi
+	docker-compose --env-file .env.main -f docker-compose.main.yml up -d
+
+docker-main-down: ## Stop main branch environment
+	docker-compose --env-file .env.main -f docker-compose.main.yml down
+
+docker-main-logs: ## Show logs from main branch environment
+	docker-compose --env-file .env.main -f docker-compose.main.yml logs -f
+
+docker-main-restart: ## Restart main branch environment
+	@if command -v bash >/dev/null 2>&1; then \
+		bash scripts/upgrade-postgres.sh main --yes; \
+	elif command -v pwsh >/dev/null 2>&1; then \
+		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/upgrade-postgres.ps1 -Environment main -Yes; \
+	else \
+		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run PostgreSQL upgrade precheck."; \
+		exit 1; \
+	fi
+	docker-compose --env-file .env.main -f docker-compose.main.yml restart
 
 # Development environment
 docker-dev-up: ## Start development environment (ports: 18080, 13000, 15432)
@@ -125,7 +154,9 @@ docker-prod-restart: ## Restart production environment
 	docker-compose --env-file .env.prod -f docker-compose.prod.yml restart
 
 # All environments
-docker-all-up: ## Start all environments (dev, uat, prod)
+docker-all-up: ## Start all environments (main, dev, uat, prod)
+	@echo "Starting main branch environment..."
+	@$(MAKE) docker-main-up
 	@echo "Starting development environment..."
 	@$(MAKE) docker-dev-up
 	@echo "Starting UAT environment..."
@@ -135,6 +166,8 @@ docker-all-up: ## Start all environments (dev, uat, prod)
 	@echo "All environments started!"
 
 docker-all-down: ## Stop all environments
+	@echo "Stopping main branch environment..."
+	@$(MAKE) docker-main-down
 	@echo "Stopping development environment..."
 	@$(MAKE) docker-dev-down
 	@echo "Stopping UAT environment..."
@@ -144,6 +177,9 @@ docker-all-down: ## Stop all environments
 	@echo "All environments stopped!"
 
 docker-all-status: ## Show status of all environments
+	@echo "=== Main Branch Environment ==="
+	@docker-compose --env-file .env.main -f docker-compose.main.yml ps || true
+	@echo ""
 	@echo "=== Development Environment ==="
 	@docker-compose --env-file .env.dev -f docker-compose.dev.yml ps || true
 	@echo ""
@@ -172,6 +208,12 @@ migrate-dev-up: ## Run migrations on development database
 migrate-dev-down: ## Rollback migrations on development database
 	migrate -path backend/migrations -database "postgresql://axiom:axiom_dev_pass@localhost:15432/axiom_dev?sslmode=disable" down
 
+migrate-main-up: ## Run migrations on main branch database
+	migrate -path backend/migrations -database "postgresql://axiom:axiom_main_pass@localhost:45432/axiom_main?sslmode=disable" up
+
+migrate-main-down: ## Rollback migrations on main branch database
+	migrate -path backend/migrations -database "postgresql://axiom:axiom_main_pass@localhost:45432/axiom_main?sslmode=disable" down
+
 migrate-uat-up: ## Run migrations on UAT database
 	migrate -path backend/migrations -database "postgresql://axiom:axiom_uat_pass@localhost:25432/axiom_uat?sslmode=disable" up
 
@@ -185,6 +227,9 @@ migrate-prod-down: ## Rollback migrations on production database
 	migrate -path backend/migrations -database "postgresql://axiom:axiom_prod_pass@localhost:35432/axiom_prod?sslmode=disable" down
 
 # PostgreSQL major-version upgrade (data migration)
+pg-upgrade-main: ## Migrate main branch PostgreSQL data to the current major version
+	@bash scripts/upgrade-postgres.sh main
+
 pg-upgrade-dev: ## Migrate dev PostgreSQL data to the current major version
 	@bash scripts/upgrade-postgres.sh dev
 
