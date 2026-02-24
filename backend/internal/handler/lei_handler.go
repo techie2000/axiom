@@ -224,6 +224,10 @@ func (h *LEIHandler) TriggerFullSync(c *gin.Context) {
 // @Failure 500 {object} map[string]string
 // @Router /api/v1/lei/sync/masterdata [post]
 func (h *LEIHandler) TriggerMasterDataSync(c *gin.Context) {
+	if st, err := h.leiService.GetProcessingStatus("MASTER_DATA_SYNC"); err == nil && st.Status == "RUNNING" {
+		c.JSON(http.StatusConflict, gin.H{"error": "MASTER_DATA_SYNC is already running"})
+		return
+	}
 	if err := h.schedulerService.TriggerMasterDataSync(); err != nil {
 		if errors.Is(err, service.ErrJobRunning) {
 			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
