@@ -55,8 +55,8 @@ services:
       SERVER_PORT: ${SERVER_PORT}
       SERVER_MODE: ${SERVER_MODE}
       LEI_DATADIR: ${LEI_DATADIR}
-      LEI_KEEP_FULL_FILES: ${LEI_KEEP_FULL_FILES}
-      LEI_KEEP_DELTA_FILES: ${LEI_KEEP_DELTA_FILES}
+      LEI_KEEPFULLFILES: ${LEI_KEEPFULLFILES}
+      LEI_KEEPDELTAFILES: ${LEI_KEEPDELTAFILES}
       CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:13000,http://localhost:23000,http://localhost:33000,http://localhost:43000"
       CORS_ALLOWED_METHODS: "GET,POST,PUT,DELETE,OPTIONS"
       CORS_ALLOWED_HEADERS: "Origin,Content-Type,Authorization,Accept"
