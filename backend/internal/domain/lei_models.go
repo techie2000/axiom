@@ -191,7 +191,7 @@ func (SourceFile) TableName() string {
 // FileProcessingStatus represents the overall status of file processing jobs
 type FileProcessingStatus struct {
 	ID            uuid.UUID  `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
-	JobType       string     `gorm:"size:50;not null" json:"job_type"` // DAILY_FULL, DAILY_DELTA, MANUAL
+	JobType       string     `gorm:"size:50;not null" json:"job_type"` // DAILY_FULL, DAILY_DELTA, LEVEL2_RR, LEVEL2_REPEX
 	Status        string     `gorm:"size:20;not null" json:"status"`   // IDLE, RUNNING, COMPLETED, FAILED
 	LastRunAt     *time.Time `json:"last_run_at"`
 	NextRunAt     *time.Time `json:"next_run_at"`
@@ -199,6 +199,11 @@ type FileProcessingStatus struct {
 
 	CurrentSourceFileID *uuid.UUID  `gorm:"type:uuid" json:"current_source_file_id"`
 	CurrentSourceFile   *SourceFile `gorm:"foreignKey:CurrentSourceFileID" json:"current_source_file,omitempty"`
+
+	// DependsOnJobType is the JobType of the upstream job that must complete successfully
+	// before this job can run.  Empty string means this is a root job with no dependency.
+	// Known chain: DAILY_FULL → LEVEL2_RR → LEVEL2_REPEX.
+	DependsOnJobType string `gorm:"size:50" json:"depends_on_job_type"`
 
 	ErrorMessage string `gorm:"type:text" json:"error_message"`
 

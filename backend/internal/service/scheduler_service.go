@@ -217,24 +217,28 @@ func (s *schedulerService) Start() error {
 
 	// Check for initial data load on startup (one-time check)
 	if !resumed {
-		count, err := s.leiService.CountLEIRecords()
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to count LEI records during startup")
-		} else if count == 0 {
-			log.Info().Msg("Database is empty, triggering initial full sync")
-			go func() {
-				if err := s.RunDailyFullSync(); err != nil {
-					log.Error().Err(err).Msg("Failed to run initial full sync")
-					return
-				}
-				// Level 2 sync is a dependent job: run it after Level 1 is complete.
-				log.Info().Msg("Initial Level 1 sync succeeded, triggering initial Level 2 sync")
-				if err := s.RunLevel2Sync(); err != nil {
-					log.Error().Err(err).Msg("Failed to run initial Level 2 sync")
-				}
-			}()
-		} else {
-			log.Info().Int64("existing_records", count).Msg("Database has existing records, waiting for scheduled full sync")
+		// Level 1 is not mid-file. Check if Level 2 jobs need recovery before
+		// deciding whether to trigger a fresh Level 1 load.
+		if !s.resumeFailedLevel2OnStartup() {
+			count, err := s.leiService.CountLEIRecords()
+			if err != nil {
+				log.Error().Err(err).Msg("Failed to count LEI records during startup")
+			} else if count == 0 {
+				log.Info().Msg("Database is empty, triggering initial full sync")
+				go func() {
+					if err := s.RunDailyFullSync(); err != nil {
+						log.Error().Err(err).Msg("Failed to run initial full sync")
+						return
+					}
+					// Level 2 sync is a dependent job: run it after Level 1 is complete.
+					log.Info().Msg("Initial Level 1 sync succeeded, triggering initial Level 2 sync")
+					if err := s.RunLevel2Sync(); err != nil {
+						log.Error().Err(err).Msg("Failed to run initial Level 2 sync")
+					}
+				}()
+			} else {
+				log.Info().Int64("existing_records", count).Msg("Database has existing records, waiting for scheduled full sync")
+			}
 		}
 	}
 
@@ -270,33 +274,19 @@ func (s *schedulerService) Stop() {
 func (s *schedulerService) cleanupStuckJobStatuses() {
 	log.Info().Msg("Checking for stuck job statuses from previous sessions")
 
-	// Check DAILY_FULL status
-	fullStatus, err := s.leiService.GetProcessingStatus("DAILY_FULL")
-	if err == nil && fullStatus.Status == "RUNNING" {
-		log.Warn().
-			Str("job_type", "DAILY_FULL").
-			Time("last_run", *fullStatus.LastRunAt).
-			Msg("Resetting stuck RUNNING status to IDLE (process was interrupted)")
-		fullStatus.Status = "IDLE"
-		fullStatus.CurrentSourceFileID = nil
-		fullStatus.ErrorMessage = "Previous run was interrupted"
-		if err := s.leiService.UpdateProcessingStatus(fullStatus); err != nil {
-			log.Error().Err(err).Msg("Failed to reset DAILY_FULL status")
-		}
-	}
-
-	// Check DAILY_DELTA status
-	deltaStatus, err := s.leiService.GetProcessingStatus("DAILY_DELTA")
-	if err == nil && deltaStatus.Status == "RUNNING" {
-		log.Warn().
-			Str("job_type", "DAILY_DELTA").
-			Time("last_run", *deltaStatus.LastRunAt).
-			Msg("Resetting stuck RUNNING status to IDLE (process was interrupted)")
-		deltaStatus.Status = "IDLE"
-		deltaStatus.CurrentSourceFileID = nil
-		deltaStatus.ErrorMessage = "Previous run was interrupted"
-		if err := s.leiService.UpdateProcessingStatus(deltaStatus); err != nil {
-			log.Error().Err(err).Msg("Failed to reset DAILY_DELTA status")
+	jobTypes := []string{"DAILY_FULL", "DAILY_DELTA", "LEVEL2_RR", "LEVEL2_REPEX"}
+	for _, jobType := range jobTypes {
+		st, err := s.leiService.GetProcessingStatus(jobType)
+		if err == nil && st.Status == "RUNNING" {
+			log.Warn().
+				Str("job_type", jobType).
+				Msg("Resetting stuck RUNNING status to FAILED (process was interrupted)")
+			st.Status = "FAILED"
+			st.CurrentSourceFileID = nil
+			st.ErrorMessage = "Previous run was interrupted by process restart"
+			if err := s.leiService.UpdateProcessingStatus(st); err != nil {
+				log.Error().Err(err).Str("job_type", jobType).Msg("Failed to reset stuck job status")
+			}
 		}
 	}
 
@@ -358,7 +348,86 @@ func (s *schedulerService) initializeNextRunTimes() {
 			Msg("DAILY_DELTA job status created")
 	}
 
+	// Ensure LEVEL2_RR and LEVEL2_REPEX rows exist with the correct dependency metadata.
+	// Migration 000026 seeds these rows, but this guard handles cases where the migration
+	// has not yet been applied (e.g. local dev without running migrations first).
+	type level2Def struct {
+		jobType         string
+		dependsOnJobType string
+	}
+	for _, def := range []level2Def{
+		{"LEVEL2_RR", "DAILY_FULL"},
+		{"LEVEL2_REPEX", "LEVEL2_RR"},
+	} {
+		st, getErr := s.leiService.GetProcessingStatus(def.jobType)
+		if getErr != nil {
+			// Row doesn't exist — create it with the dependency metadata.
+			now := time.Now()
+			newSt := &domain.FileProcessingStatus{
+				JobType:          def.jobType,
+				Status:           "IDLE",
+				DependsOnJobType: def.dependsOnJobType,
+				CreatedAt:        now,
+				UpdatedAt:        now,
+			}
+			if createErr := s.leiService.UpdateProcessingStatus(newSt); createErr != nil {
+				log.Error().Err(createErr).Str("job_type", def.jobType).Msg("Failed to create Level 2 job status row")
+			} else {
+				log.Info().Str("job_type", def.jobType).Str("depends_on", def.dependsOnJobType).Msg("Level 2 job status row created")
+			}
+		} else if st.DependsOnJobType == "" {
+			// Row exists but dependency column was not yet set (pre-migration 000026).
+			st.DependsOnJobType = def.dependsOnJobType
+			if updateErr := s.leiService.UpdateProcessingStatus(st); updateErr != nil {
+				log.Error().Err(updateErr).Str("job_type", def.jobType).Msg("Failed to set depends_on_job_type on Level 2 job row")
+			}
+		}
+	}
+
 	log.Info().Msg("Next_run_at initialization completed")
+}
+
+// resumeFailedLevel2OnStartup checks whether Level 2 jobs were left in FAILED status from a
+// previous run in which Level 1 (DAILY_FULL) had already completed successfully.
+// If so it resumes Level 2 from the earliest failed step rather than re-running Level 1.
+// Returns true if a recovery goroutine was launched so the caller can skip the initial-load check.
+func (s *schedulerService) resumeFailedLevel2OnStartup() bool {
+	// Level 1 must have completed at least once to consider Level 2 recovery.
+	fullStatus, err := s.leiService.GetProcessingStatus("DAILY_FULL")
+	if err != nil || fullStatus.LastSuccessAt == nil {
+		return false
+	}
+
+	rrStatus, rrErr := s.leiService.GetProcessingStatus("LEVEL2_RR")
+	repexStatus, repexErr := s.leiService.GetProcessingStatus("LEVEL2_REPEX")
+
+	rrFailed := rrErr == nil && rrStatus.Status == "FAILED"
+	repexFailed := repexErr == nil && repexStatus.Status == "FAILED"
+	rrSucceeded := rrErr == nil && rrStatus.Status == "IDLE" && rrStatus.LastSuccessAt != nil
+
+	switch {
+	case rrFailed:
+		// RR failed — re-run both RR then REPEX.
+		log.Info().Msg("LEVEL2_RR is FAILED and DAILY_FULL succeeded — resuming Level 2 sync from RR step")
+		go func() {
+			if err := s.runLevel2SyncFrom("LEVEL2_RR"); err != nil {
+				log.Error().Err(err).Msg("Failed to resume Level 2 sync from RR on startup")
+			}
+		}()
+		return true
+
+	case repexFailed && rrSucceeded:
+		// RR succeeded but REPEX failed — skip RR and resume from REPEX only.
+		log.Info().Msg("LEVEL2_REPEX is FAILED and LEVEL2_RR succeeded — resuming Level 2 sync from REPEX step")
+		go func() {
+			if err := s.runLevel2SyncFrom("LEVEL2_REPEX"); err != nil {
+				log.Error().Err(err).Msg("Failed to resume Level 2 sync from REPEX on startup")
+			}
+		}()
+		return true
+	}
+
+	return false
 }
 
 func (s *schedulerService) resumeInterruptedFullSyncOnStartup() (bool, error) {
@@ -994,62 +1063,78 @@ func (s *schedulerService) RunDailyMasterDataSync() error {
 // Exceptions). This is a dependent job that must run after RunDailyFullSync completes because
 // Level 2 records reference LEI codes that must already be present in lei_raw.lei_records.
 func (s *schedulerService) RunLevel2Sync() error {
-	log.Info().Msg("Starting Level 2 sync (who owns whom)")
+	return s.runLevel2SyncFrom("LEVEL2_RR")
+}
+
+// runLevel2SyncFrom processes Level 2 sub-jobs beginning at startFrom.
+//
+//	"LEVEL2_RR"    — run RR first, then REPEX (the normal full Level 2 flow)
+//	"LEVEL2_REPEX" — skip RR (already succeeded) and run REPEX only (recovery path)
+func (s *schedulerService) runLevel2SyncFrom(startFrom string) error {
+	log.Info().Str("start_from", startFrom).Msg("Starting Level 2 sync (who owns whom)")
 
 	var rrErr error
 
 	// --- Relationship Records (RR) ---
-	rrStatus, err := s.leiService.GetProcessingStatus("LEVEL2_RR")
-	if err != nil {
-		rrStatus = &domain.FileProcessingStatus{
-			JobType: "LEVEL2_RR",
-			Status:  "IDLE",
-		}
-	}
-
-	if rrStatus.Status == "RUNNING" {
-		log.Warn().Msg("Level 2 RR sync already running, skipping")
-	} else {
-		now := time.Now()
-		rrStatus.Status = "RUNNING"
-		rrStatus.ErrorMessage = ""
-		rrStatus.LastRunAt = &now
-		if updateErr := s.leiService.UpdateProcessingStatus(rrStatus); updateErr != nil {
-			log.Warn().Err(updateErr).Msg("Failed to update LEVEL2_RR status to RUNNING")
+	if startFrom != "LEVEL2_REPEX" {
+		rrStatus, err := s.leiService.GetProcessingStatus("LEVEL2_RR")
+		if err != nil {
+			rrStatus = &domain.FileProcessingStatus{
+				JobType:          "LEVEL2_RR",
+				Status:           "IDLE",
+				DependsOnJobType: "DAILY_FULL",
+			}
 		}
 
-		rrFile, downloadErr := s.leiLevel2Service.DownloadRRFile()
-		if downloadErr != nil {
-			if strings.Contains(downloadErr.Error(), "duplicate file already processed") {
-				log.Info().Msg("No new RR file available (duplicate hash detected)")
-				rrStatus.Status = "IDLE"
-				rrStatus.LastSuccessAt = &now
-				rrStatus.ErrorMessage = ""
-			} else {
-				log.Error().Err(downloadErr).Msg("Failed to download RR file")
-				rrStatus.Status = "FAILED"
-				rrStatus.ErrorMessage = downloadErr.Error()
-				rrErr = downloadErr
-			}
-			if updateErr := s.leiService.UpdateProcessingStatus(rrStatus); updateErr != nil {
-				log.Warn().Err(updateErr).Msg("Failed to update LEVEL2_RR status after download failure")
-			}
+		if rrStatus.Status == "RUNNING" {
+			log.Warn().Msg("Level 2 RR sync already running, skipping")
 		} else {
-			if processErr := s.leiLevel2Service.ProcessRRFile(rrFile.ID); processErr != nil {
-				log.Error().Err(processErr).Msg("Failed to process RR file")
-				rrStatus.Status = "FAILED"
-				rrStatus.ErrorMessage = processErr.Error()
-				rrErr = processErr
-			} else {
-				now = time.Now()
-				rrStatus.Status = "IDLE"
-				rrStatus.LastSuccessAt = &now
-				rrStatus.ErrorMessage = ""
-				log.Info().Msg("Level 2 RR sync completed successfully")
-			}
+			now := time.Now()
+			rrStatus.Status = "RUNNING"
+			rrStatus.ErrorMessage = ""
+			rrStatus.LastRunAt = &now
 			if updateErr := s.leiService.UpdateProcessingStatus(rrStatus); updateErr != nil {
-				log.Warn().Err(updateErr).Msg("Failed to update LEVEL2_RR status after processing")
+				log.Warn().Err(updateErr).Msg("Failed to update LEVEL2_RR status to RUNNING")
 			}
+
+			rrFile, downloadErr := s.leiLevel2Service.DownloadRRFile()
+			if downloadErr != nil {
+				if strings.Contains(downloadErr.Error(), "duplicate file already processed") {
+					log.Info().Msg("No new RR file available (duplicate hash detected)")
+					rrStatus.Status = "IDLE"
+					rrStatus.LastSuccessAt = &now
+					rrStatus.ErrorMessage = ""
+				} else {
+					log.Error().Err(downloadErr).Msg("Failed to download RR file")
+					rrStatus.Status = "FAILED"
+					rrStatus.ErrorMessage = downloadErr.Error()
+					rrErr = downloadErr
+				}
+				if updateErr := s.leiService.UpdateProcessingStatus(rrStatus); updateErr != nil {
+					log.Warn().Err(updateErr).Msg("Failed to update LEVEL2_RR status after download failure")
+				}
+			} else {
+				if processErr := s.leiLevel2Service.ProcessRRFile(rrFile.ID); processErr != nil {
+					log.Error().Err(processErr).Msg("Failed to process RR file")
+					rrStatus.Status = "FAILED"
+					rrStatus.ErrorMessage = processErr.Error()
+					rrErr = processErr
+				} else {
+					now = time.Now()
+					rrStatus.Status = "IDLE"
+					rrStatus.LastSuccessAt = &now
+					rrStatus.ErrorMessage = ""
+					log.Info().Msg("Level 2 RR sync completed successfully")
+				}
+				if updateErr := s.leiService.UpdateProcessingStatus(rrStatus); updateErr != nil {
+					log.Warn().Err(updateErr).Msg("Failed to update LEVEL2_RR status after processing")
+				}
+			}
+		}
+
+		// If RR failed, do not attempt REPEX — it depends on RR data being current.
+		if rrErr != nil {
+			return rrErr
 		}
 	}
 
@@ -1057,15 +1142,15 @@ func (s *schedulerService) RunLevel2Sync() error {
 	repexStatus, err := s.leiService.GetProcessingStatus("LEVEL2_REPEX")
 	if err != nil {
 		repexStatus = &domain.FileProcessingStatus{
-			JobType: "LEVEL2_REPEX",
-			Status:  "IDLE",
+			JobType:          "LEVEL2_REPEX",
+			Status:           "IDLE",
+			DependsOnJobType: "LEVEL2_RR",
 		}
 	}
 
 	if repexStatus.Status == "RUNNING" {
 		log.Warn().Msg("Level 2 REPEX sync already running, skipping")
-		// Still return any RR error so the caller is aware of partial failures.
-		return rrErr
+		return nil
 	}
 
 	now := time.Now()
@@ -1083,18 +1168,19 @@ func (s *schedulerService) RunLevel2Sync() error {
 			repexStatus.Status = "IDLE"
 			repexStatus.LastSuccessAt = &now
 			repexStatus.ErrorMessage = ""
-		} else {
-			log.Error().Err(downloadErr).Msg("Failed to download REPEX file")
-			repexStatus.Status = "FAILED"
-			repexStatus.ErrorMessage = downloadErr.Error()
+			if updateErr := s.leiService.UpdateProcessingStatus(repexStatus); updateErr != nil {
+				log.Warn().Err(updateErr).Msg("Failed to update LEVEL2_REPEX status after duplicate detection")
+			}
+			log.Info().Msg("Level 2 sync (who owns whom) completed successfully")
+			return nil
 		}
+		log.Error().Err(downloadErr).Msg("Failed to download REPEX file")
+		repexStatus.Status = "FAILED"
+		repexStatus.ErrorMessage = downloadErr.Error()
 		if updateErr := s.leiService.UpdateProcessingStatus(repexStatus); updateErr != nil {
 			log.Warn().Err(updateErr).Msg("Failed to update LEVEL2_REPEX status after download failure")
 		}
-		if downloadErr != nil && !strings.Contains(downloadErr.Error(), "duplicate file already processed") {
-			return downloadErr
-		}
-		return rrErr
+		return downloadErr
 	}
 
 	if processErr := s.leiLevel2Service.ProcessREPEXFile(repexFile.ID); processErr != nil {

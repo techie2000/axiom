@@ -32,6 +32,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     fetched and loaded only after the Level 1 sync completes successfully, ensuring all LEI codes
     referenced by Level 2 records already exist in the database
 
+- **Explicit job dependency tracking** — the dependency chain between scheduler jobs is now stored
+  in the database and used for smart recovery on startup (migration `000026`):
+  - New `depends_on_job_type` column in `lei_raw.file_processing_status` records which parent job
+    must succeed before a child job can run (`DAILY_FULL → LEVEL2_RR → LEVEL2_REPEX`)
+  - Seeded rows for `LEVEL2_RR` and `LEVEL2_REPEX` ensure the full pipeline is visible in the
+    status table from the very first migration run — no job rows appear "missing" until first run
+  - On startup, `resumeFailedLevel2OnStartup()` inspects status rows and resumes from the earliest
+    failed Level 2 step: if only REPEX failed the scheduler restarts from REPEX, skipping a
+    redundant Level 1 or RR re-run; if RR failed the scheduler re-runs RR then REPEX
+  - A stuck `RUNNING` job (process crashed mid-run) is now correctly reset to `FAILED` rather than
+    `IDLE` so the recovery logic can distinguish an interrupted run from a clean stop
+
 ## [0.2.0] - 2026-02-20
 
 ### Added
