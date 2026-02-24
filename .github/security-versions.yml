@@ -3,7 +3,7 @@
 # Last updated: 2026-02-19
 
 version_tracking:
-  last_updated: "2026-02-19T11:38:00Z"
+  last_updated: "2026-02-23T18:18:00Z"
   automated_updates_enabled: true
   
 alpine_packages:
@@ -49,12 +49,12 @@ alpine_packages:
         - docker/Dockerfile.backend.clean
     
     wget:
-      version: "1.25.0-r0"
-      reason: "Used to download golang-migrate binary"
-      updated: "2026-02-15"
+      version: "removed"
+      reason: "wget no longer used in runtime stage; migrate is now built from source in builder stage"
+      updated: "2026-02-23"
       severity: "MEDIUM"
       files:
-        - docker/Dockerfile.backend
+        - docker/Dockerfile.backend (removed from runtime stage)
 
 go_modules:
   # Go module dependencies
@@ -176,12 +176,13 @@ external_tools:
   # External tools and binaries
   golang_migrate:
     version: "v4.18.1"
-    url: "https://github.com/golang-migrate/migrate/releases/download/v4.18.1/migrate.linux-amd64.tar.gz"
-    reason: "Database migration tool"
-    updated: "2026-02-15"
+    url: "Built from source via: go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.18.1"
+    reason: "Database migration tool - built from source to use current Go toolchain, avoiding stdlib CVEs in pre-built binaries"
+    updated: "2026-02-23"
     severity: "MEDIUM"
     files:
-      - docker/Dockerfile.backend
+      - docker/Dockerfile.backend (builder stage)
+      - docker/Dockerfile.backend.clean (builder stage)
 
 update_schedule:
   # Automated update schedule

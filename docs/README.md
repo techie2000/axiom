@@ -21,6 +21,14 @@ Located in [adr/](./adr/):
 - [ADR-0006: Next.js + Tailwind Frontend](./adr/adr-0006-nextjs-tailwind-frontend.md)
 - [ADR-0007: Docker Compose Local Development](./adr/adr-0007-docker-compose-local-dev.md)
 - [ADR-0008: Sticky Headers with Smooth Transitions](./adr/adr-0008-sticky-headers-with-smooth-transitions.md)
+- [ADR-0009: Git Branching Strategy](./adr/adr-0009-git-branching-strategy.md)
+
+### 🤝 Contributing
+
+Located in [contributing/](./contributing/):
+
+- [**Branching Strategy**](./contributing/BRANCHING_STRATEGY.md) - Branch naming, promotion workflow,
+  protection rules, and hotfix procedure
 
 ### 🎨 Frontend Patterns
 
@@ -103,6 +111,11 @@ Located in [performance/](./performance/):
 2. **Architectural decisions** → [ADR Directory](./adr/)
 3. **Performance strategy** → [Performance Analysis](./performance/LEI_SEARCH_PERFORMANCE_ANALYSIS.md)
 
+### For Contributors
+
+1. **Branching and promotion workflow** → [Branching Strategy](./contributing/BRANCHING_STRATEGY.md)
+2. **Branch setup script** → [scripts/setup-branches.sh](../scripts/setup-branches.sh)
+
 ---
 
 ## 📊 Project Status
@@ -133,6 +146,8 @@ When adding new documentation:
 2. Update this README.md index
 3. Use relative links for cross-references
 4. Follow existing naming conventions (UPPERCASE_WITH_UNDERSCORES.md)
+5. Follow the [Branching Strategy](./contributing/BRANCHING_STRATEGY.md) for branch naming and
+   promotion
 
 ---
 
@@ -147,4 +162,4 @@ When adding new documentation:
 
 ## Last Updated
 
-February 18, 2026
+February 24, 2026

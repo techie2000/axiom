@@ -23,6 +23,11 @@ ENV GOINSECURE="*"
 ENV GOPRIVATE="*"
 RUN git config --global http.sslVerify false && go mod download
 
+# Build migrate from source using the same Go toolchain (avoids stdlib CVE in pre-compiled binaries)
+# security-scan-managed
+# hadolint ignore=DL3062
+RUN CGO_ENABLED=0 GOOS=linux go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.18.1
+
 # Copy source code
 COPY . .
 
@@ -35,15 +40,10 @@ FROM alpine:3.21
 # Security: Upgrade libssl3 to address CVE vulnerabilities (Alert #117)
 # Version 3.3.6-r0 addresses critical SSL/TLS vulnerabilities
 # security-scan-managed
-RUN apk add --no-cache --upgrade libssl3=3.3.6-r0
+RUN apk add --no-cache --upgrade libssl3=3.3.6-r0 ca-certificates=20250911-r0
 
-# Install migrate binary for startup migration step in /root/start.sh
-RUN apk --no-cache add ca-certificates=20250911-r0 wget=1.25.0-r0 && \
-    wget --no-check-certificate --progress=dot:giga -O migrate.tar.gz https://github.com/golang-migrate/migrate/releases/download/v4.18.1/migrate.linux-amd64.tar.gz && \
-    tar xvzf migrate.tar.gz && \
-    mv migrate /usr/local/bin/migrate && \
-    chmod +x /usr/local/bin/migrate && \
-    rm migrate.tar.gz
+# Copy migrate from builder (compiled with current Go toolchain, no pre-built binary CVEs)
+COPY --from=builder /go/bin/migrate /usr/local/bin/migrate
 
 WORKDIR /root/
 

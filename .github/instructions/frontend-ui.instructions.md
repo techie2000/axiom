@@ -201,7 +201,8 @@ EVERY visual change:
 ### Filter Bar Consistency (Required)
 - Keep page structure consistent: **Header → Info/Error Alert (if any) → Stats Cards → Filter Bar → Data Table**.
 - Do **not** place filter controls above stats cards on list/report pages.
-- Filter controls must be wrapped in a visible bordered container (LEI pattern), e.g. `bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm rounded-lg p-6`.
+- Filter controls must be wrapped in a visible bordered container (LEI pattern), e.g.
+  `bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm rounded-lg p-6`.
 - Provide a `Clear Filters` action whenever a page has two or more filters (search counts as a filter).
 - Show `Clear Filters` only when at least one filter is active (LEI Records behavior).
 - `Clear Filters` should reset all filter inputs to default values in one click.
@@ -212,47 +213,69 @@ EVERY visual change:
 
 ### Column Selector Standard (Required)
 - Any page with a `Columns` control must list **all table columns** (core + optional), not only optional columns.
-- Core columns may be toggled off by users; preserve usability by defining a `defaultVisible` preset and a `Reset Default` action.
+- Core columns may be toggled off by users; preserve usability by defining a `defaultVisible`
+  preset and a `Reset Default` action.
 - Include `Select All` and `Reset Default` actions in the selector.
 - The `Columns` count should reflect current visible column count.
 - Use the LEI Records pattern as the baseline implementation for grouped or ungrouped column selectors.
 
 ### Table Width Toggle Standard (Required)
 - Pages with wide data tables and optional columns must provide an `Expand/Normal` width toggle in the page header.
-- Use `max-w-full` when expanded and `max-w-7xl` when normal, with `transition-all duration-300` for consistent behavior.
-- Default to expanded width (`expandedWidth = true`) on pages where selected optional columns would otherwise force immediate horizontal scrolling.
-- Keep horizontal scrolling as a fallback only; do not rely on horizontal scrolling as the primary way to access newly enabled columns.
+- Use `max-w-full` when expanded and `max-w-7xl` when normal, with `transition-all duration-300`
+  for consistent behavior.
+- Default to expanded width (`expandedWidth = true`) on pages where selected optional columns would
+  otherwise force immediate horizontal scrolling.
+- Keep horizontal scrolling as a fallback only; do not rely on horizontal scrolling as the primary
+  way to access newly enabled columns.
 
 ### Wide Table Scroll & Freeze Standard (Required)
 - Wide data tables must provide a **top horizontal scrollbar** synchronized with the main table body scrollbar.
-- Sticky/fixed headers must stay horizontally synchronized with the data body at all times (single shared scroll position).
-- Table header rows/cells must remain visible at the top of the viewport while vertically scrolling the page (`sticky top-0` with explicit background and z-index).
-- When any filter is active on a wide-table page, render a sticky **Active Filters** summary bar above the table header that remains visible during vertical scroll.
+- Sticky/fixed headers must stay horizontally synchronized with the data body at all times
+  (single shared scroll position).
+- Table header rows/cells must remain visible at the top of the viewport while vertically scrolling
+  the page (`sticky top-0` with explicit background and z-index).
+- When any filter is active on a wide-table page, render a sticky **Active Filters** summary bar
+  above the table header that remains visible during vertical scroll.
 - The Active Filters bar must show removable filter chips and include a single **Clear All** action (LEI pattern).
 - The sticky header offset must account for the Active Filters bar height so header and bar do not overlap.
 - Freeze primary identity columns using sticky positioning so key context remains visible during horizontal scrolling.
 - For LEI-style entity tables, freeze `LEI` and `Legal Name` by default when visible.
 - Apply the same sticky/frozen behavior consistently to both header (`th`) and body (`td`) cells.
 - Ensure frozen cells define explicit background and z-index layers so content does not bleed through during scroll.
-- Frozen column widths and left offsets must be derived from measured rendered header widths (not hard-coded constants alone) to prevent seam drift during horizontal scroll.
-- Add an explicit light+dark separator seam on frozen columns (for example border or inset shadow) so horizontally scrolled cells cannot bleed through divider boundaries.
-- Use the **same seam rendering technique** for both frozen header (`th`) and body (`td`) cells; do not mix different seam primitives between header and body.
-- Prefer an **inset right-edge seam** (for example an inset box-shadow) rendered inside frozen cells over offset pseudo-elements.
-- Avoid negative-offset pseudo-element seams (`right: -1px` style patterns) on frozen cells because clipping and sub-pixel scroll can create header/body seam-width mismatch and reintroduce bleed.
+- Frozen column widths and left offsets must be derived from measured rendered header widths
+  (not hard-coded constants alone) to prevent seam drift during horizontal scroll.
+- Add an explicit light+dark separator seam on frozen columns (for example border or inset shadow)
+  so horizontally scrolled cells cannot bleed through divider boundaries.
+- Use the **same seam rendering technique** for both frozen header (`th`) and body (`td`) cells;
+  do not mix different seam primitives between header and body.
+- Prefer an **inset right-edge seam** (for example an inset box-shadow) rendered inside frozen cells
+  over offset pseudo-elements.
+- Avoid negative-offset pseudo-element seams (`right: -1px` style patterns) on frozen cells because
+  clipping and sub-pixel scroll can create header/body seam-width mismatch and reintroduce bleed.
 
 ### Wide Table UX Baseline (Required)
-- For any page with table overflow risk (many columns or long values), implement the full baseline by default: `Expand/Normal` width toggle, top synced horizontal scrollbar, sticky/fixed header on vertical scroll, and sticky Active Filters bar when filters are active.
-- Keep behavior consistent with LEI/Countries/Currencies/Languages implementations; do not create alternate page-specific variants unless explicitly required.
-- Use shared component `frontend/app/components/SyncedWideTable.tsx` for top-scrollbar synchronization and sticky/fixed header behavior; do not duplicate this scaffolding per page.
-- Horizontal overflow detection must be based on actual rendered table width vs. container width; do not rely on static assumptions.
-- Table wrapper styles must not clip sticky/fixed elements (`overflow-hidden` should not block sticky headers or top scrollbars).
-- Preserve z-index layering order: Active Filters bar above sticky header, sticky header above table body, dropdowns/modals above all table layers.
-- If a page has filters, include `Clear Filters`; if active filters are displayed in sticky summary chips, include `Clear All` there as well.
+- For any page with table overflow risk (many columns or long values), implement the full baseline
+  by default: `Expand/Normal` width toggle, top synced horizontal scrollbar, sticky/fixed header
+  on vertical scroll, and sticky Active Filters bar when filters are active.
+- Keep behavior consistent with LEI/Countries/Currencies/Languages implementations; do not create
+  alternate page-specific variants unless explicitly required.
+- Use shared component `frontend/app/components/SyncedWideTable.tsx` for top-scrollbar
+  synchronization and sticky/fixed header behavior; do not duplicate this scaffolding per page.
+- Horizontal overflow detection must be based on actual rendered table width vs. container width;
+  do not rely on static assumptions.
+- Table wrapper styles must not clip sticky/fixed elements (`overflow-hidden` should not block
+  sticky headers or top scrollbars).
+- Preserve z-index layering order: Active Filters bar above sticky header, sticky header above
+  table body, dropdowns/modals above all table layers.
+- If a page has filters, include `Clear Filters`; if active filters are displayed in sticky summary
+  chips, include `Clear All` there as well.
 
 ### Keyboard Shortcut Baseline (Required)
-- Use consistent keyboard shortcuts for interactive overlays across pages (column selectors, dropdown panels, popovers, dialogs).
+- Use consistent keyboard shortcuts for interactive overlays across pages (column selectors,
+  dropdown panels, popovers, dialogs).
 - Pressing `Escape` must close the top-most open overlay element first.
-- Implement keyboard handlers with proper cleanup (`addEventListener`/`removeEventListener`) to avoid leaks and duplicate bindings.
+- Implement keyboard handlers with proper cleanup (`addEventListener`/`removeEventListener`)
+  to avoid leaks and duplicate bindings.
 - Do not create page-specific shortcut behavior that conflicts with existing LEI patterns unless explicitly required.
 
 ### Table Row Hover Contrast Standard (Required)
@@ -263,40 +286,56 @@ EVERY visual change:
 
 ### Table Cell Content Visibility Standard (Required)
 - Do not truncate critical table data values by default (avoid `truncate` for primary business fields).
-- Cells containing potentially long values (for example description, names, free-text references) must wrap and expand row height.
+- Cells containing potentially long values (for example description, names, free-text references)
+  must wrap and expand row height.
 - Use wrapping classes such as `whitespace-normal break-words leading-relaxed` to keep full values visible.
 - Use top alignment (`align-top`) on multi-line cells to preserve readability across rows.
 
 ### Protected API Fallback Standard (Required)
-- Pages backed by protected APIs must attempt authenticated fetch using existing client token keys (`token`, `jwt`, `authToken`, `access_token`).
+- Pages backed by protected APIs must attempt authenticated fetch using existing client token keys
+  (`token`, `jwt`, `authToken`, `access_token`).
 - On `401`/`403` or API unavailability, render approved sample data instead of an empty/broken page.
-- Always show a clear data-source banner indicating whether data is from API (`✅ Data Source`) or sample fallback (`📋 Notice`).
+- Always show a clear data-source banner indicating whether data is from API (`✅ Data Source`) or
+  sample fallback (`📋 Notice`).
 - Sample records must use realistic but non-sensitive values and must not include restricted tenant-specific naming.
 
 ### Virtual/Derived Columns Standard (Required)
-- Prefer **virtual/derived UI columns** for deterministic display data (for example, country flag emoji from ISO alpha-2 country code).
-- Do not persist deterministic presentation-only fields in database schemas or initial seed data unless there is a clear business requirement.
+- Prefer **virtual/derived UI columns** for deterministic display data (for example, country flag
+  emoji from ISO alpha-2 country code).
+- Do not persist deterministic presentation-only fields in database schemas or initial seed data
+  unless there is a clear business requirement.
 - Implement derived value logic in a reusable utility and consume it across pages to ensure consistency.
-- For country flags, use the shared helper in `frontend/app/lib/country-flag.ts` instead of duplicating conversion logic.
-- Render country flags via shared component `frontend/app/components/CountryFlag.tsx` to ensure consistent display across OS/browser font differences.
-- Do not define page-local helpers such as `getFlagEmoji*`, `getFlagImageUrl*`, or `renderCountryFlag*`; import and use the shared utility/component.
-- If a page does not yet have a finalized table/list layout (for example, placeholder/coming-soon pages), defer derived column rendering until the page schema is defined.
+- For country flags, use the shared helper in `frontend/app/lib/country-flag.ts` instead of
+  duplicating conversion logic.
+- Render country flags via shared component `frontend/app/components/CountryFlag.tsx` to ensure
+  consistent display across OS/browser font differences.
+- Do not define page-local helpers such as `getFlagEmoji*`, `getFlagImageUrl*`, or
+  `renderCountryFlag*`; import and use the shared utility/component.
+- If a page does not yet have a finalized table/list layout (for example, placeholder/coming-soon
+  pages), defer derived column rendering until the page schema is defined.
 
 ### Code vs Name Display Standard (Required)
-- When reference data has both machine codes and human-readable names (for example: continent, language, legal form, region), provide a single page-level toggle to switch display mode between names and codes.
-- Reuse the LEI pattern text and behavior (`🏷️ Display: Names` / `🏷️ Display: Codes`) for consistency unless a page has explicit UX requirements.
-- Apply the selected mode consistently to table headers, table cells, and filter option labels that render those reference values.
+- When reference data has both machine codes and human-readable names (for example: continent,
+  language, legal form, region), provide a single page-level toggle to switch display mode between
+  names and codes.
+- Reuse the LEI pattern text and behavior (`🏷️ Display: Names` / `🏷️ Display: Codes`) for
+  consistency unless a page has explicit UX requirements.
+- Apply the selected mode consistently to table headers, table cells, and filter option labels
+  that render those reference values.
 - Keep filter query values stable (code-backed where possible); only the visible labels should change with display mode.
 
 ### Landing Cards Standard (Required)
 - Cards within the same landing-page section must use a shared component and identical interaction/visual behavior.
-- In the **Master Data Management** section, cards (Instruments, Accounts, SSI, Code Mappings) must keep consistent structure:
+- In the **Master Data Management** section, cards (Instruments, Accounts, SSI, Code Mappings) must
+  keep consistent structure:
   title, description, single `Protected` badge, icon placement, min height, and hover behavior.
-- Do not add special-case badges or card-specific layout differences within the same section unless explicitly requested.
+- Do not add special-case badges or card-specific layout differences within the same section
+  unless explicitly requested.
 
 ### Status Label Formatting Standard (Required)
 - Do not render raw backend enum values directly in user-facing UI (for example `IN_PROGRESS`, `FAILED`, `DAILY_FULL`).
-- Use shared formatter `frontend/app/lib/status-label.ts` for status labels (`formatStatusLabel`) across pages/components.
+- Use shared formatter `frontend/app/lib/status-label.ts` for status labels (`formatStatusLabel`)
+  across pages/components.
 - Prefer shared utilities over per-page inline status-format helpers to keep capitalization and wording consistent.
 - Keep status **logic** based on original enum values and apply formatting only at render time.
 
@@ -321,7 +360,8 @@ EVERY visual change:
 #### Keyboard Shortcuts (Required)
 **All popups, modals, dropdowns, and overlays MUST support ESC key to close.**
 
-Users should never be forced to use the mouse to close UI elements. Implement keyboard shortcuts for all interactive overlays:
+Users should never be forced to use the mouse to close UI elements. Implement keyboard shortcuts
+for all interactive overlays:
 
 ##### ✅ REQUIRED Implementation Pattern
 

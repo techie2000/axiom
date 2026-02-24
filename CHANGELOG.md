@@ -7,9 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
+### Added
 
-- Nothing yet
+- **Branching strategy documentation** — formal Git branching model adopted (trunk-based with
+  environment promotion gates):
+  - [ADR-0009](docs/adr/adr-0009-git-branching-strategy.md) records the decision and rationale
+  - [docs/contributing/BRANCHING_STRATEGY.md](docs/contributing/BRANCHING_STRATEGY.md) provides
+    the day-to-day workflow guide covering branch naming, promotion flow
+    (`main → dev → uat → prod`), hotfix procedure, and branch protection settings
+  - [`scripts/setup-branches.sh`](scripts/setup-branches.sh) automates creation and protection of
+    `dev`, `uat`, and `prod` branches via the GitHub CLI
 
 ## [0.2.0] - 2026-02-20
 
