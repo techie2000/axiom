@@ -191,22 +191,6 @@ func (h *LEIHandler) GetAuditHistory(c *gin.Context) {
 	c.JSON(http.StatusOK, audits)
 }
 
-// replyTrigger converts the error returned by a service Trigger* method into the
-// appropriate HTTP response.  ErrJobRunning maps to 409 Conflict; any other
-// non-nil error maps to 500 Internal Server Error; nil returns 202 Accepted.
-func replyTrigger(c *gin.Context, err error, acceptedMsg string) {
-	if err == nil {
-		c.JSON(http.StatusAccepted, gin.H{"message": acceptedMsg})
-		return
-	}
-	if errors.Is(err, service.ErrJobRunning) {
-		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
-		return
-	}
-	log.Error().Err(err).Str("handler", c.FullPath()).Msg("Trigger failed")
-	c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-}
-
 // TriggerFullSync manually triggers a full sync
 // @Summary Trigger full LEI sync
 // @Description Manually trigger a full LEI data synchronization

@@ -117,11 +117,6 @@ func executePOST(path string, handler gin.HandlerFunc) *httptest.ResponseRecorde
 	return w
 }
 
-// conflictErr returns an error that wraps service.ErrJobRunning and contains msg.
-func conflictErr(msg string) error {
-	return fmt.Errorf("%s: %w", msg, service.ErrJobRunning)
-}
-
 func TestTriggerFullSync_ConflictPaths(t *testing.T) {
 	t.Run("conflict when master data is running", func(t *testing.T) {
 		stub := &schedulerServiceStub{
