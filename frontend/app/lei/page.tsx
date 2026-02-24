@@ -203,6 +203,50 @@ export default function LEIStatusPage() {
     return ''
   }
 
+  // For chained jobs (LEVEL2_RR, LEVEL2_REPEX) that have no fixed next_run_at, walk up the
+  // dependency chain to find the earliest possible run time from the ultimate parent's schedule.
+  const getChainedNextRun = (status: ProcessingStatus | null): { nextRun: string | null; ultimateParent: string | null } => {
+    if (!status) return { nextRun: null, ultimateParent: null }
+
+    if (status.next_run_at && !status.next_run_at.startsWith('0001-')) {
+      return { nextRun: status.next_run_at, ultimateParent: null }
+    }
+
+    const dep = status.depends_on_job_type
+    if (!dep || dep === 'NONE') return { nextRun: null, ultimateParent: null }
+
+    const statusByType: Record<string, ProcessingStatus | null> = {
+      MASTER_DATA_SYNC: masterDataStatus,
+      DAILY_FULL: fullStatus,
+      DAILY_DELTA: deltaStatus,
+      LEVEL2_RR: rrStatus,
+      LEVEL2_REPEX: repexStatus,
+    }
+
+    const visited = new Set<string>()
+    let currentDep: string | null = dep
+    let ultimateParent = dep
+
+    while (currentDep) {
+      if (visited.has(currentDep)) break
+      visited.add(currentDep)
+
+      const parentSt: ProcessingStatus | null = statusByType[currentDep] ?? null
+      if (!parentSt) break
+
+      if (parentSt.next_run_at && !parentSt.next_run_at.startsWith('0001-')) {
+        return { nextRun: parentSt.next_run_at, ultimateParent }
+      }
+
+      const nextDep: string | undefined = parentSt.depends_on_job_type || undefined
+      if (!nextDep || nextDep === 'NONE') break
+      ultimateParent = nextDep
+      currentDep = nextDep
+    }
+
+    return { nextRun: null, ultimateParent: dep }
+  }
+
   const isMasterDataRunning = masterDataStatus?.status === 'RUNNING'
   const isFullSyncRunning = fullStatus?.status === 'RUNNING'
   const isDeltaRunning = deltaStatus?.status === 'RUNNING'
@@ -355,7 +399,14 @@ export default function LEIStatusPage() {
           </div>
           <div className="flex justify-between">
             <span className="text-gray-600 dark:text-gray-400">Next Run:</span>
-            <span className="font-medium text-gray-900 dark:text-white">{formatDate(status.next_run_at)}</span>
+            <span className="font-medium text-gray-900 dark:text-white">
+              {(() => {
+                const { nextRun, ultimateParent } = getChainedNextRun(status)
+                if (!nextRun) return dependency !== 'None' ? `After ${dependency}` : 'Never'
+                if (ultimateParent) return `≥ ${formatDate(nextRun)} (after ${ultimateParent})`
+                return formatDate(nextRun)
+              })()}
+            </span>
           </div>
         </div>
 
