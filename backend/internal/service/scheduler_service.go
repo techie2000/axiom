@@ -827,6 +827,12 @@ func (s *schedulerService) RunDailyDeltaSync() error {
 		log.Error().Err(err).Msg("Failed to update processing status")
 	}
 
+	return s.doDeltaSyncWork(status, now)
+}
+
+// doDeltaSyncWork executes the download-and-process pipeline for a DAILY_DELTA job whose status
+// has already been set to RUNNING by the caller.
+func (s *schedulerService) doDeltaSyncWork(status *domain.FileProcessingStatus, now time.Time) error {
 	// Download delta file
 	sourceFile, err := s.leiService.DownloadDeltaFile()
 	if err != nil {
@@ -918,6 +924,12 @@ func (s *schedulerService) RunDailyFullSync() error {
 		log.Error().Err(err).Msg("Failed to update processing status")
 	}
 
+	return s.doFullSyncWork(status, now)
+}
+
+// doFullSyncWork executes the download-and-process pipeline for a DAILY_FULL job whose status
+// has already been set to RUNNING by the caller.
+func (s *schedulerService) doFullSyncWork(status *domain.FileProcessingStatus, now time.Time) error {
 	// Download full file
 	sourceFile, err := s.leiService.DownloadFullFile()
 	if err != nil {
@@ -1125,6 +1137,12 @@ func (s *schedulerService) RunDailyMasterDataSync() error {
 	st.ErrorMessage = ""
 	_ = s.leiService.UpdateProcessingStatus(st)
 
+	return s.doMasterDataSyncWork(st, now)
+}
+
+// doMasterDataSyncWork checks for and applies master data updates for a MASTER_DATA_SYNC job
+// whose status has already been set to RUNNING by the caller.
+func (s *schedulerService) doMasterDataSyncWork(st *domain.FileProcessingStatus, now time.Time) error {
 	// Check if master data files have been updated
 	hasUpdates, err := s.masterDataService.CheckForUpdates()
 	if err != nil {
@@ -1225,8 +1243,6 @@ func (s *schedulerService) calculateNextMasterDataRun() *time.Time {
 func (s *schedulerService) runLevel2SyncFrom(startFrom string) error {
 	log.Info().Str("start_from", startFrom).Msg("Starting Level 2 sync (who owns whom)")
 
-	var rrErr error
-
 	// --- Relationship Records (RR) ---
 	if startFrom != "LEVEL2_REPEX" {
 		rrStatus, err := s.leiService.GetProcessingStatus("LEVEL2_RR")
@@ -1249,44 +1265,10 @@ func (s *schedulerService) runLevel2SyncFrom(startFrom string) error {
 				log.Warn().Err(updateErr).Msg("Failed to update LEVEL2_RR status to RUNNING")
 			}
 
-			rrFile, downloadErr := s.leiLevel2Service.DownloadRRFile()
-			if downloadErr != nil {
-				if strings.Contains(downloadErr.Error(), "duplicate file already processed") {
-					log.Info().Msg("No new RR file available (duplicate hash detected)")
-					rrStatus.Status = "IDLE"
-					rrStatus.LastSuccessAt = &now
-					rrStatus.ErrorMessage = ""
-				} else {
-					log.Error().Err(downloadErr).Msg("Failed to download RR file")
-					rrStatus.Status = "FAILED"
-					rrStatus.ErrorMessage = downloadErr.Error()
-					rrErr = downloadErr
-				}
-				if updateErr := s.leiService.UpdateProcessingStatus(rrStatus); updateErr != nil {
-					log.Warn().Err(updateErr).Msg("Failed to update LEVEL2_RR status after download failure")
-				}
-			} else {
-				if processErr := s.leiLevel2Service.ProcessRRFile(rrFile.ID); processErr != nil {
-					log.Error().Err(processErr).Msg("Failed to process RR file")
-					rrStatus.Status = "FAILED"
-					rrStatus.ErrorMessage = processErr.Error()
-					rrErr = processErr
-				} else {
-					now = time.Now()
-					rrStatus.Status = "IDLE"
-					rrStatus.LastSuccessAt = &now
-					rrStatus.ErrorMessage = ""
-					log.Info().Msg("Level 2 RR sync completed successfully")
-				}
-				if updateErr := s.leiService.UpdateProcessingStatus(rrStatus); updateErr != nil {
-					log.Warn().Err(updateErr).Msg("Failed to update LEVEL2_RR status after processing")
-				}
+			if rrErr := s.doRRWork(rrStatus, now); rrErr != nil {
+				// If RR failed, do not attempt REPEX — it depends on RR data being current.
+				return rrErr
 			}
-		}
-
-		// If RR failed, do not attempt REPEX — it depends on RR data being current.
-		if rrErr != nil {
-			return rrErr
 		}
 	}
 
@@ -1313,6 +1295,57 @@ func (s *schedulerService) runLevel2SyncFrom(startFrom string) error {
 		log.Warn().Err(updateErr).Msg("Failed to update LEVEL2_REPEX status to RUNNING")
 	}
 
+	return s.doREPEXWork(repexStatus, now)
+}
+
+// doRRWork executes the download-and-process pipeline for a LEVEL2_RR job whose status has
+// already been set to RUNNING by the caller. It updates the status record on completion.
+func (s *schedulerService) doRRWork(rrStatus *domain.FileProcessingStatus, now time.Time) error {
+	rrFile, downloadErr := s.leiLevel2Service.DownloadRRFile()
+	if downloadErr != nil {
+		if strings.Contains(downloadErr.Error(), "duplicate file already processed") {
+			log.Info().Msg("No new RR file available (duplicate hash detected)")
+			rrStatus.Status = "IDLE"
+			rrStatus.LastSuccessAt = &now
+			rrStatus.ErrorMessage = ""
+		} else {
+			log.Error().Err(downloadErr).Msg("Failed to download RR file")
+			rrStatus.Status = "FAILED"
+			rrStatus.ErrorMessage = downloadErr.Error()
+		}
+		if updateErr := s.leiService.UpdateProcessingStatus(rrStatus); updateErr != nil {
+			log.Warn().Err(updateErr).Msg("Failed to update LEVEL2_RR status after download failure")
+		}
+		if rrStatus.Status == "FAILED" {
+			return downloadErr
+		}
+		return nil
+	}
+
+	if processErr := s.leiLevel2Service.ProcessRRFile(rrFile.ID); processErr != nil {
+		log.Error().Err(processErr).Msg("Failed to process RR file")
+		rrStatus.Status = "FAILED"
+		rrStatus.ErrorMessage = processErr.Error()
+		if updateErr := s.leiService.UpdateProcessingStatus(rrStatus); updateErr != nil {
+			log.Warn().Err(updateErr).Msg("Failed to update LEVEL2_RR status after processing")
+		}
+		return processErr
+	}
+
+	successNow := time.Now()
+	rrStatus.Status = "IDLE"
+	rrStatus.LastSuccessAt = &successNow
+	rrStatus.ErrorMessage = ""
+	log.Info().Msg("Level 2 RR sync completed successfully")
+	if updateErr := s.leiService.UpdateProcessingStatus(rrStatus); updateErr != nil {
+		log.Warn().Err(updateErr).Msg("Failed to update LEVEL2_RR status after processing")
+	}
+	return nil
+}
+
+// doREPEXWork executes the download-and-process pipeline for a LEVEL2_REPEX job whose status has
+// already been set to RUNNING by the caller. It updates the status record on completion.
+func (s *schedulerService) doREPEXWork(repexStatus *domain.FileProcessingStatus, now time.Time) error {
 	repexFile, downloadErr := s.leiLevel2Service.DownloadREPEXFile()
 	if downloadErr != nil {
 		if strings.Contains(downloadErr.Error(), "duplicate file already processed") {
@@ -1345,9 +1378,9 @@ func (s *schedulerService) runLevel2SyncFrom(startFrom string) error {
 		return processErr
 	}
 
-	now = time.Now()
+	successNow := time.Now()
 	repexStatus.Status = "IDLE"
-	repexStatus.LastSuccessAt = &now
+	repexStatus.LastSuccessAt = &successNow
 	repexStatus.ErrorMessage = ""
 	if updateErr := s.leiService.UpdateProcessingStatus(repexStatus); updateErr != nil {
 		log.Warn().Err(updateErr).Msg("Failed to update LEVEL2_REPEX status after success")
