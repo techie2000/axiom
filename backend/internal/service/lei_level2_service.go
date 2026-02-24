@@ -2,6 +2,7 @@ package service
 
 import (
 	"archive/zip"
+	"bufio"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -68,6 +69,30 @@ type leiLevel2Service struct {
 	repo    repository.LEILevel2Repository
 	leiRepo repository.LEIRepository // used to store SourceFile records
 	dataDir string
+}
+
+func shouldSkipDuplicateHash(existing *domain.SourceFile) bool {
+	if existing == nil {
+		return false
+	}
+
+	if existing.ProcessingStatus != "COMPLETED" {
+		return false
+	}
+
+	if existing.FailedRecords > 0 {
+		return false
+	}
+
+	if existing.ProcessedRecords <= 0 {
+		return false
+	}
+
+	if existing.TotalRecords > 0 && existing.ProcessedRecords < existing.TotalRecords {
+		return false
+	}
+
+	return true
 }
 
 // NewLEILevel2Service creates a new LEILevel2Service.
@@ -205,9 +230,9 @@ func (s *leiLevel2Service) downloadLevel2File(
 
 	fileHash := hex.EncodeToString(hasher.Sum(nil))
 
-	// Check for duplicate (already processed)
+	// Check for duplicate (already processed successfully)
 	existing, err := s.leiRepo.FindSourceFileByHash(fileHash)
-	if err == nil && existing != nil && existing.ProcessingStatus == "COMPLETED" {
+	if err == nil && shouldSkipDuplicateHash(existing) {
 		log.Info().
 			Str("file_type", fileType).
 			Str("hash", fileHash).
@@ -216,6 +241,16 @@ func (s *leiLevel2Service) downloadLevel2File(
 			log.Warn().Err(removeErr).Str("file", filePath).Msg("Failed to remove duplicate download")
 		}
 		return nil, fmt.Errorf("duplicate file already processed: %s", fileHash)
+	}
+
+	if err == nil && existing != nil {
+		log.Info().
+			Str("file_type", fileType).
+			Str("hash", fileHash).
+			Str("previous_status", existing.ProcessingStatus).
+			Int("previous_processed", existing.ProcessedRecords).
+			Int("previous_failed", existing.FailedRecords).
+			Msg("Reprocessing duplicate Level 2 file because previous run was not fully successful")
 	}
 
 	// Parse publication date
@@ -262,32 +297,76 @@ func (s *leiLevel2Service) downloadLevel2File(
 
 // rawRRRecord is the JSON Lines structure for a single GLEIF RR record.
 type rawRRRecord struct {
-	LEI          string `json:"LEI"`
-	Relationship struct {
-		StartNode struct {
-			NodeID     string `json:"NodeID"`
-			NodeIDType string `json:"NodeIDType"`
-		} `json:"StartNode"`
-		EndNode struct {
-			NodeID     string `json:"NodeID"`
-			NodeIDType string `json:"NodeIDType"`
-		} `json:"EndNode"`
-		RelationshipType     string            `json:"RelationshipType"`
-		RelationshipStatus   string            `json:"RelationshipStatus"`
-		RelationshipPeriods  []json.RawMessage `json:"RelationshipPeriods"`
-		RelationshipQualifiers  []json.RawMessage `json:"RelationshipQualifiers"`
-		RelationshipQuantifiers []json.RawMessage `json:"RelationshipQuantifiers"`
-	} `json:"Relationship"`
-	Registration struct {
-		InitialRegistrationDate string `json:"InitialRegistrationDate"`
-		LastUpdateDate          string `json:"LastUpdateDate"`
-		NextRenewalDate         string `json:"NextRenewalDate"`
-		RegistrationStatus      string `json:"RegistrationStatus"`
-		ManagingLOU             string `json:"ManagingLOU"`
-		ValidationSources       string `json:"ValidationSources"`
-		ValidationDocuments     string `json:"ValidationDocuments"`
-		ValidationReference     string `json:"ValidationReference"`
-	} `json:"Registration"`
+	RelationshipRecord rrPayload `json:"RelationshipRecord"`
+	rrPayload
+}
+
+type gleifString string
+
+func (s *gleifString) UnmarshalJSON(data []byte) error {
+	if len(data) == 0 || string(data) == "null" {
+		*s = ""
+		return nil
+	}
+
+	var plain string
+	if err := json.Unmarshal(data, &plain); err == nil {
+		*s = gleifString(plain)
+		return nil
+	}
+
+	var wrapped struct {
+		Value string `json:"$"`
+	}
+	if err := json.Unmarshal(data, &wrapped); err == nil {
+		*s = gleifString(wrapped.Value)
+		return nil
+	}
+
+	return fmt.Errorf("unsupported GLEIF string format: %s", string(data))
+}
+
+func (s gleifString) String() string {
+	return strings.TrimSpace(string(s))
+}
+
+type rrPayload struct {
+	Relationship rrRelationship `json:"Relationship"`
+	Registration rrRegistration `json:"Registration"`
+}
+
+type rrRelationship struct {
+	StartNode               rrNode          `json:"StartNode"`
+	EndNode                 rrNode          `json:"EndNode"`
+	RelationshipType        gleifString     `json:"RelationshipType"`
+	RelationshipStatus      gleifString     `json:"RelationshipStatus"`
+	RelationshipPeriods     json.RawMessage `json:"RelationshipPeriods"`
+	RelationshipQualifiers  json.RawMessage `json:"RelationshipQualifiers"`
+	RelationshipQuantifiers json.RawMessage `json:"RelationshipQuantifiers"`
+}
+
+type rrNode struct {
+	NodeID     gleifString `json:"NodeID"`
+	NodeIDType gleifString `json:"NodeIDType"`
+}
+
+type rrRegistration struct {
+	InitialRegistrationDate gleifString `json:"InitialRegistrationDate"`
+	LastUpdateDate          gleifString `json:"LastUpdateDate"`
+	NextRenewalDate         gleifString `json:"NextRenewalDate"`
+	RegistrationStatus      gleifString `json:"RegistrationStatus"`
+	ManagingLOU             gleifString `json:"ManagingLOU"`
+	ValidationSources       gleifString `json:"ValidationSources"`
+	ValidationDocuments     gleifString `json:"ValidationDocuments"`
+	ValidationReference     gleifString `json:"ValidationReference"`
+}
+
+func (raw *rawRRRecord) payload() rrPayload {
+	if raw.RelationshipRecord.Relationship.StartNode.NodeID.String() != "" ||
+		raw.RelationshipRecord.Relationship.EndNode.NodeID.String() != "" {
+		return raw.RelationshipRecord
+	}
+	return raw.rrPayload
 }
 
 // ProcessRRFile reads a downloaded RR ZIP file and upserts all relationship records.
@@ -382,7 +461,15 @@ func (s *leiLevel2Service) processRRZip(filePath string, sourceFileID uuid.UUID)
 }
 
 func (s *leiLevel2Service) parseAndUpsertRR(r io.Reader, sourceFileID uuid.UUID) (processed, failed int, err error) {
-	decoder := json.NewDecoder(r)
+	reader := bufio.NewReader(r)
+	peek, _ := reader.Peek(256)
+	header := strings.ToLower(string(peek))
+	decoder := json.NewDecoder(reader)
+
+	if strings.Contains(header, "\"relations\"") {
+		return s.parseAndUpsertRRWrapped(decoder, sourceFileID)
+	}
+
 	for {
 		var raw rawRRRecord
 		if decErr := decoder.Decode(&raw); decErr != nil {
@@ -423,49 +510,134 @@ func (s *leiLevel2Service) parseAndUpsertRR(r io.Reader, sourceFileID uuid.UUID)
 	return processed, failed, nil
 }
 
+func (s *leiLevel2Service) parseAndUpsertRRWrapped(decoder *json.Decoder, sourceFileID uuid.UUID) (processed, failed int, err error) {
+	startTok, err := decoder.Token()
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to read RR wrapper start token: %w", err)
+	}
+	startDelim, ok := startTok.(json.Delim)
+	if !ok || startDelim != '{' {
+		return 0, 0, fmt.Errorf("invalid RR wrapper start token: %v", startTok)
+	}
+
+	foundRelations := false
+	for decoder.More() {
+		keyTok, keyErr := decoder.Token()
+		if keyErr != nil {
+			return processed, failed, fmt.Errorf("failed to read RR wrapper key: %w", keyErr)
+		}
+		key, ok := keyTok.(string)
+		if !ok {
+			return processed, failed, fmt.Errorf("invalid RR wrapper key token: %v", keyTok)
+		}
+
+		if key != "relations" {
+			var discard json.RawMessage
+			if decErr := decoder.Decode(&discard); decErr != nil {
+				return processed, failed, fmt.Errorf("failed to skip RR wrapper key %q: %w", key, decErr)
+			}
+			continue
+		}
+
+		foundRelations = true
+		arrStartTok, arrErr := decoder.Token()
+		if arrErr != nil {
+			return processed, failed, fmt.Errorf("failed to read relations array start: %w", arrErr)
+		}
+		arrStart, ok := arrStartTok.(json.Delim)
+		if !ok || arrStart != '[' {
+			return processed, failed, fmt.Errorf("invalid relations array start token: %v", arrStartTok)
+		}
+
+		for decoder.More() {
+			var raw rawRRRecord
+			if decErr := decoder.Decode(&raw); decErr != nil {
+				log.Warn().Err(decErr).Msg("Failed to decode RR JSON record in relations array, skipping")
+				failed++
+				continue
+			}
+
+			record, mapErr := mapRawRRToRelationshipRecord(&raw, sourceFileID)
+			if mapErr != nil {
+				log.Warn().Err(mapErr).Msg("Failed to map RR record, skipping")
+				failed++
+				continue
+			}
+
+			if upsertErr := s.repo.UpsertRelationshipRecord(record); upsertErr != nil {
+				log.Warn().
+					Err(upsertErr).
+					Str("start_lei", record.StartNodeLEI).
+					Str("end_lei", record.EndNodeLEI).
+					Msg("Failed to upsert relationship record, skipping")
+				failed++
+				continue
+			}
+
+			processed++
+			if processed%10000 == 0 {
+				log.Info().Int("processed", processed).Int("failed", failed).Msg("RR processing progress")
+			}
+		}
+
+		arrEndTok, arrEndErr := decoder.Token()
+		if arrEndErr != nil {
+			return processed, failed, fmt.Errorf("failed to read relations array end: %w", arrEndErr)
+		}
+		arrEnd, ok := arrEndTok.(json.Delim)
+		if !ok || arrEnd != ']' {
+			return processed, failed, fmt.Errorf("invalid relations array end token: %v", arrEndTok)
+		}
+	}
+
+	objEndTok, objEndErr := decoder.Token()
+	if objEndErr != nil {
+		return processed, failed, fmt.Errorf("failed to read RR wrapper end token: %w", objEndErr)
+	}
+	objEnd, ok := objEndTok.(json.Delim)
+	if !ok || objEnd != '}' {
+		return processed, failed, fmt.Errorf("invalid RR wrapper end token: %v", objEndTok)
+	}
+
+	if !foundRelations {
+		return processed, failed, fmt.Errorf("RR payload missing relations array")
+	}
+
+	return processed, failed, nil
+}
+
 func mapRawRRToRelationshipRecord(raw *rawRRRecord, sourceFileID uuid.UUID) (*domain.LEIRelationshipRecord, error) {
-	if raw.Relationship.StartNode.NodeID == "" || raw.Relationship.EndNode.NodeID == "" {
+	payload := raw.payload()
+	if payload.Relationship.StartNode.NodeID.String() == "" || payload.Relationship.EndNode.NodeID.String() == "" {
 		return nil, fmt.Errorf("missing start or end node LEI")
 	}
 
 	record := &domain.LEIRelationshipRecord{
-		StartNodeLEI:        raw.Relationship.StartNode.NodeID,
-		EndNodeLEI:          raw.Relationship.EndNode.NodeID,
-		RelationshipType:    raw.Relationship.RelationshipType,
-		RelationshipStatus:  raw.Relationship.RelationshipStatus,
-		RegistrationStatus:  raw.Registration.RegistrationStatus,
-		ManagingLOU:         raw.Registration.ManagingLOU,
-		ValidationSources:   raw.Registration.ValidationSources,
-		ValidationDocuments: raw.Registration.ValidationDocuments,
-		ValidationReference: raw.Registration.ValidationReference,
+		StartNodeLEI:        payload.Relationship.StartNode.NodeID.String(),
+		EndNodeLEI:          payload.Relationship.EndNode.NodeID.String(),
+		RelationshipType:    payload.Relationship.RelationshipType.String(),
+		RelationshipStatus:  payload.Relationship.RelationshipStatus.String(),
+		RegistrationStatus:  payload.Registration.RegistrationStatus.String(),
+		ManagingLOU:         payload.Registration.ManagingLOU.String(),
+		ValidationSources:   payload.Registration.ValidationSources.String(),
+		ValidationDocuments: payload.Registration.ValidationDocuments.String(),
+		ValidationReference: payload.Registration.ValidationReference.String(),
 		SourceFileID:        &sourceFileID,
 	}
 
-	if len(raw.Relationship.RelationshipPeriods) > 0 {
-		b, err := json.Marshal(raw.Relationship.RelationshipPeriods)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal RelationshipPeriods: %w", err)
-		}
-		record.RelationshipPeriods = domain.JSONBString(b)
+	if len(payload.Relationship.RelationshipPeriods) > 0 && string(payload.Relationship.RelationshipPeriods) != "null" {
+		record.RelationshipPeriods = domain.JSONBString(payload.Relationship.RelationshipPeriods)
 	}
-	if len(raw.Relationship.RelationshipQualifiers) > 0 {
-		b, err := json.Marshal(raw.Relationship.RelationshipQualifiers)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal RelationshipQualifiers: %w", err)
-		}
-		record.RelationshipQualifiers = domain.JSONBString(b)
+	if len(payload.Relationship.RelationshipQualifiers) > 0 && string(payload.Relationship.RelationshipQualifiers) != "null" {
+		record.RelationshipQualifiers = domain.JSONBString(payload.Relationship.RelationshipQualifiers)
 	}
-	if len(raw.Relationship.RelationshipQuantifiers) > 0 {
-		b, err := json.Marshal(raw.Relationship.RelationshipQuantifiers)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal RelationshipQuantifiers: %w", err)
-		}
-		record.RelationshipQuantifiers = domain.JSONBString(b)
+	if len(payload.Relationship.RelationshipQuantifiers) > 0 && string(payload.Relationship.RelationshipQuantifiers) != "null" {
+		record.RelationshipQuantifiers = domain.JSONBString(payload.Relationship.RelationshipQuantifiers)
 	}
 
-	record.InitialRegistrationDate = parseGLEIFTime(raw.Registration.InitialRegistrationDate)
-	record.LastUpdateDate = parseGLEIFTime(raw.Registration.LastUpdateDate)
-	record.NextRenewalDate = parseGLEIFTime(raw.Registration.NextRenewalDate)
+	record.InitialRegistrationDate = parseGLEIFTime(payload.Registration.InitialRegistrationDate.String())
+	record.LastUpdateDate = parseGLEIFTime(payload.Registration.LastUpdateDate.String())
+	record.NextRenewalDate = parseGLEIFTime(payload.Registration.NextRenewalDate.String())
 
 	return record, nil
 }
@@ -474,10 +646,49 @@ func mapRawRRToRelationshipRecord(raw *rawRRRecord, sourceFileID uuid.UUID) (*do
 
 // rawREPEXRecord is the JSON Lines structure for a single GLEIF REPEX record.
 type rawREPEXRecord struct {
-	LEI               string `json:"LEI"`
-	ExceptionCategory string `json:"ExceptionCategory"`
-	ExceptionReason   string `json:"ExceptionReason"`
-	ExceptionReference string `json:"ExceptionReference"`
+	LEI                gleifString   `json:"LEI"`
+	ExceptionCategory  gleifString   `json:"ExceptionCategory"`
+	ExceptionReason    gleifStringList `json:"ExceptionReason"`
+	ExceptionReference gleifString   `json:"ExceptionReference"`
+}
+
+type gleifStringList []gleifString
+
+func (l *gleifStringList) UnmarshalJSON(data []byte) error {
+	if len(data) == 0 || string(data) == "null" {
+		*l = nil
+		return nil
+	}
+
+	var list []gleifString
+	if err := json.Unmarshal(data, &list); err == nil {
+		*l = gleifStringList(list)
+		return nil
+	}
+
+	var single gleifString
+	if err := json.Unmarshal(data, &single); err == nil {
+		*l = gleifStringList{single}
+		return nil
+	}
+
+	return fmt.Errorf("unsupported GLEIF list format: %s", string(data))
+}
+
+func joinGLEIFReasons(reasons []gleifString) string {
+	if len(reasons) == 0 {
+		return ""
+	}
+
+	parts := make([]string, 0, len(reasons))
+	for _, reason := range reasons {
+		v := reason.String()
+		if v != "" {
+			parts = append(parts, v)
+		}
+	}
+
+	return strings.Join(parts, ",")
 }
 
 // ProcessREPEXFile reads a downloaded REPEX ZIP file and upserts all reporting exceptions.
@@ -572,7 +783,15 @@ func (s *leiLevel2Service) processREPEXZip(filePath string, sourceFileID uuid.UU
 }
 
 func (s *leiLevel2Service) parseAndUpsertREPEX(r io.Reader, sourceFileID uuid.UUID) (processed, failed int, err error) {
-	decoder := json.NewDecoder(r)
+	reader := bufio.NewReader(r)
+	peek, _ := reader.Peek(256)
+	header := strings.ToLower(string(peek))
+	decoder := json.NewDecoder(reader)
+
+	if strings.Contains(header, "\"exceptions\"") {
+		return s.parseAndUpsertREPEXWrapped(decoder, sourceFileID)
+	}
+
 	for {
 		var raw rawREPEXRecord
 		if decErr := decoder.Decode(&raw); decErr != nil {
@@ -588,17 +807,17 @@ func (s *leiLevel2Service) parseAndUpsertREPEX(r io.Reader, sourceFileID uuid.UU
 		}
 
 		exc := &domain.LEIReportingException{
-			LEI:                raw.LEI,
-			ExceptionCategory:  raw.ExceptionCategory,
-			ExceptionReason:    raw.ExceptionReason,
-			ExceptionReference: raw.ExceptionReference,
+			LEI:                raw.LEI.String(),
+			ExceptionCategory:  raw.ExceptionCategory.String(),
+			ExceptionReason:    joinGLEIFReasons(raw.ExceptionReason),
+			ExceptionReference: raw.ExceptionReference.String(),
 			SourceFileID:       &sourceFileID,
 		}
 
 		if upsertErr := s.repo.UpsertReportingException(exc); upsertErr != nil {
 			log.Warn().
 				Err(upsertErr).
-				Str("lei", raw.LEI).
+				Str("lei", raw.LEI.String()).
 				Msg("Failed to upsert reporting exception, skipping")
 			failed++
 			continue
@@ -608,6 +827,102 @@ func (s *leiLevel2Service) parseAndUpsertREPEX(r io.Reader, sourceFileID uuid.UU
 		if processed%10000 == 0 {
 			log.Info().Int("processed", processed).Int("failed", failed).Msg("REPEX processing progress")
 		}
+	}
+
+	return processed, failed, nil
+}
+
+func (s *leiLevel2Service) parseAndUpsertREPEXWrapped(decoder *json.Decoder, sourceFileID uuid.UUID) (processed, failed int, err error) {
+	startTok, err := decoder.Token()
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to read REPEX wrapper start token: %w", err)
+	}
+	startDelim, ok := startTok.(json.Delim)
+	if !ok || startDelim != '{' {
+		return 0, 0, fmt.Errorf("invalid REPEX wrapper start token: %v", startTok)
+	}
+
+	foundExceptions := false
+	for decoder.More() {
+		keyTok, keyErr := decoder.Token()
+		if keyErr != nil {
+			return processed, failed, fmt.Errorf("failed to read REPEX wrapper key: %w", keyErr)
+		}
+		key, ok := keyTok.(string)
+		if !ok {
+			return processed, failed, fmt.Errorf("invalid REPEX wrapper key token: %v", keyTok)
+		}
+
+		if key != "exceptions" {
+			var discard json.RawMessage
+			if decErr := decoder.Decode(&discard); decErr != nil {
+				return processed, failed, fmt.Errorf("failed to skip REPEX wrapper key %q: %w", key, decErr)
+			}
+			continue
+		}
+
+		foundExceptions = true
+		arrStartTok, arrErr := decoder.Token()
+		if arrErr != nil {
+			return processed, failed, fmt.Errorf("failed to read exceptions array start: %w", arrErr)
+		}
+		arrStart, ok := arrStartTok.(json.Delim)
+		if !ok || arrStart != '[' {
+			return processed, failed, fmt.Errorf("invalid exceptions array start token: %v", arrStartTok)
+		}
+
+		for decoder.More() {
+			var raw rawREPEXRecord
+			if decErr := decoder.Decode(&raw); decErr != nil {
+				log.Warn().Err(decErr).Msg("Failed to decode REPEX JSON record in exceptions array, skipping")
+				failed++
+				continue
+			}
+
+			exc := &domain.LEIReportingException{
+				LEI:                raw.LEI.String(),
+				ExceptionCategory:  raw.ExceptionCategory.String(),
+				ExceptionReason:    joinGLEIFReasons(raw.ExceptionReason),
+				ExceptionReference: raw.ExceptionReference.String(),
+				SourceFileID:       &sourceFileID,
+			}
+
+			if upsertErr := s.repo.UpsertReportingException(exc); upsertErr != nil {
+				log.Warn().
+					Err(upsertErr).
+					Str("lei", raw.LEI.String()).
+					Msg("Failed to upsert reporting exception, skipping")
+				failed++
+				continue
+			}
+
+			processed++
+			if processed%10000 == 0 {
+				log.Info().Int("processed", processed).Int("failed", failed).Msg("REPEX processing progress")
+			}
+		}
+
+		arrEndTok, arrEndErr := decoder.Token()
+		if arrEndErr != nil {
+			return processed, failed, fmt.Errorf("failed to read exceptions array end: %w", arrEndErr)
+		}
+		arrEnd, ok := arrEndTok.(json.Delim)
+		if !ok || arrEnd != ']' {
+			return processed, failed, fmt.Errorf("invalid exceptions array end token: %v", arrEndTok)
+		}
+	}
+
+	objEndTok, objEndErr := decoder.Token()
+	if objEndErr != nil {
+		return processed, failed, fmt.Errorf("failed to read REPEX wrapper end token: %w", objEndErr)
+	}
+	objEnd, ok := objEndTok.(json.Delim)
+	if !ok || objEnd != '}' {
+		return processed, failed, fmt.Errorf("invalid REPEX wrapper end token: %v", objEndTok)
+	}
+
+	if !foundExceptions {
+		return processed, failed, fmt.Errorf("REPEX payload missing exceptions array")
 	}
 
 	return processed, failed, nil

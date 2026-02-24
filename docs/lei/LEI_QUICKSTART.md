@@ -166,6 +166,17 @@ curl -X GET "http://localhost:8080/api/v1/lei/5493001KJTIIGC8Y1R12/audit?limit=5
 
 ### Manual Triggers
 
+All manual trigger endpoints return `202 Accepted` when accepted and
+`409 Conflict` when the target job (or one of its dependencies) is currently
+`RUNNING`.
+
+Trigger master/reference data sync:
+
+```bash
+curl -X POST http://localhost:8080/api/v1/lei/sync/masterdata \
+  -H "Authorization: Bearer $TOKEN"
+```
+
 Trigger delta sync (still available as manual endpoint):
 
 ```bash
@@ -177,6 +188,27 @@ Trigger full sync:
 
 ```bash
 curl -X POST http://localhost:8080/api/v1/lei/sync/full \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+Trigger Level 2 full chain (RR → REPEX):
+
+```bash
+curl -X POST http://localhost:8080/api/v1/lei/sync/level2 \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+Trigger Level 2 RR only:
+
+```bash
+curl -X POST http://localhost:8080/api/v1/lei/sync/level2/rr \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+Trigger Level 2 REPEX only:
+
+```bash
+curl -X POST http://localhost:8080/api/v1/lei/sync/level2/repex \
   -H "Authorization: Bearer $TOKEN"
 ```
 
