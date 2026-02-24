@@ -9,14 +9,14 @@ services:
     ports:
       - "${POSTGRES_PORT}:5432"
     volumes:
-      - postgres_data_dev:/var/lib/postgresql/data
+      - postgres_data_main:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 5
     networks:
-      - axiom-dev
+      - axiom-main
 
   rabbitmq:
     image: rabbitmq:4.2-management-alpine
@@ -28,20 +28,21 @@ services:
       - "${RABBITMQ_PORT}:5672"
       - "${RABBITMQ_MGMT_PORT}:15672"
     volumes:
-      - rabbitmq_data_dev:/var/lib/rabbitmq
-      - rabbitmq_log_dev:/var/log/rabbitmq
+      - rabbitmq_data_main:/var/lib/rabbitmq
+      - rabbitmq_log_main:/var/log/rabbitmq
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
       interval: 5s
       timeout: 5s
       retries: 5
     networks:
-      - axiom-dev
+      - axiom-main
 
   backend:
     build:
       context: ./backend
-      # Dev image with migration startup script and corporate TLS workarounds
+      # Main image uses the dev Dockerfile variant with migration startup script and
+      # corporate TLS workarounds, matching the intraday development use-case.
       dockerfile: ../docker/Dockerfile.backend
     container_name: ${COMPOSE_PROJECT_NAME}-backend
     environment:
@@ -63,8 +64,8 @@ services:
     ports:
       - "${BACKEND_PORT}:8080"
     volumes:
-      - ./data/dev/lei:/root/data/lei  # Bind mount for developer access (dev environment)
-      - ./log/dev:/root/log             # Persist logs for debugging (dev environment)
+      - ./data/main/lei:/root/data/lei  # Bind mount for developer access (main environment)
+      - ./log/main:/root/log            # Persist logs for debugging (main environment)
       - ./backend/config.yaml:/root/config/config.yaml:ro  # Mount config file with CORS settings
     depends_on:
       postgres:
@@ -73,7 +74,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - axiom-dev
+      - axiom-main
 
   frontend:
     build:
@@ -90,23 +91,23 @@ services:
       # Mount source code for hot reload
       - ./frontend:/app
       # Prevent node_modules and .next from being overwritten
-      - frontend_node_modules_dev:/app/node_modules
-      - frontend_next_dev:/app/.next
+      - frontend_node_modules_main:/app/node_modules
+      - frontend_next_main:/app/.next
     command: npm run dev
     depends_on:
       - backend
     restart: unless-stopped
     networks:
-      - axiom-dev
+      - axiom-main
 
 volumes:
-  postgres_data_dev:
-  rabbitmq_data_dev:
-  rabbitmq_log_dev:
-  frontend_node_modules_dev:
-  frontend_next_dev:
-  # lei_data_dev removed - using bind mount at ./data/dev/lei for developer access
+  postgres_data_main:
+  rabbitmq_data_main:
+  rabbitmq_log_main:
+  frontend_node_modules_main:
+  frontend_next_main:
+  # lei_data_main removed - using bind mount at ./data/main/lei for developer access
 
 networks:
-  axiom-dev:
+  axiom-main:
     name: ${COMPOSE_PROJECT_NAME}-network

@@ -45,6 +45,7 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
 ## Deployment and Infrastructure
 
 - [Docker Setup](docker/README.md): Container configuration, Dockerfiles, and deployment instructions
+- [Docker Compose Main](docker-compose.main.yml): Main branch environment for intraday development and fixes
 - [Docker Compose Dev](docker-compose.dev.yml): Development environment definition
 - [Docker Compose UAT](docker-compose.uat.yml): User Acceptance Testing environment
 - [Docker Compose Prod](docker-compose.prod.yml): Production environment configuration
@@ -52,9 +53,17 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
 ## Contributing
 
 - [Branching Strategy](docs/contributing/BRANCHING_STRATEGY.md): Branch naming, promotion workflow,
-  and protection rules (dev → uat → prod)
+  and protection rules (dev → uat → prod); includes automated promotion behaviour at all levels
 - [Branch Setup Script](scripts/setup-branches.sh): gh CLI script to create and protect strategic
   branches
+- [CI Workflow](.github/workflows/ci.yml): Unified CI pipeline keyed off branch names for
+  environment detection (main, dev, uat, prod)
+- [Nightly Promotion Workflow](.github/workflows/promote-main-to-dev.yml): Scheduled workflow that
+  opens a promotion PR from main → dev each night to prevent branch drift
+- [Weekly Promotion Workflow](.github/workflows/promote-dev-to-uat.yml): Scheduled workflow that
+  opens a promotion PR from dev → uat every Monday
+- [Monthly Promotion Workflow](.github/workflows/promote-uat-to-prod.yml): Scheduled workflow that
+  opens a promotion PR from uat → prod on the 1st of each month
 
 ## Security
 
