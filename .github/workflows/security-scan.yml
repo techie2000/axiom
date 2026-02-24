@@ -5,7 +5,7 @@ on:
     - cron: '0 0 * * 0'  # Weekly on Sunday at midnight UTC
   workflow_dispatch:
   push:
-    branches: [main, develop]
+    branches: [main, dev, uat, prod]
     paths:
       - 'docker/**'
       - 'backend/go.mod'
