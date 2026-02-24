@@ -1,0 +1,219 @@
+---
+post_title: "Git Branching Strategy"
+author1: "techie2000"
+post_slug: "branching-strategy"
+microsoft_alias: "techie2000"
+featured_image: "https://placehold.co/1200x630.png"
+categories: ["devops"]
+tags: ["git", "branching", "workflow", "contributing"]
+ai_note: "AI-assisted draft based on repository state and user request."
+summary: "Day-to-day guide for working with Axiom's trunk-based branching strategy and environment
+  promotion branches."
+post_date: "2026-02-24"
+---
+
+## Overview
+
+Axiom uses a **trunk-based strategy with environment promotion branches**. The short version:
+
+- `main` is where you branch from and merge back to — it is always the integration baseline.
+- `dev`, `uat`, and `prod` are long-lived promotion gates that track what is deployed in each
+  environment.
+- Short-lived branches (`feature/*`, `bugfix/*`, `hotfix/*`, `chore/*`) live only as long as
+  the work they carry.
+
+For the architectural rationale see
+[ADR-0009](../adr/adr-0009-git-branching-strategy.md).
+
+---
+
+## Branch Reference
+
+| Branch | Role | Protected | Who merges |
+| ------ | ---- | --------- | ---------- |
+| `main` | Active development integration (trunk) | ✅ Yes | PR only |
+| `dev` | Mirrors the dev environment | ✅ Yes | PR from `main` |
+| `uat` | Mirrors the UAT environment | ✅ Yes | PR from `dev` |
+| `prod` | Mirrors the production environment | ✅ Yes | PR from `uat` |
+| `feature/*` | New feature work | ❌ No | Deleted after merge |
+| `bugfix/*` | Non-urgent bug fixes | ❌ No | Deleted after merge |
+| `hotfix/*` | Urgent production fixes | ❌ No | Deleted after merge |
+| `chore/*` | Maintenance, deps, docs, refactor | ❌ No | Deleted after merge |
+
+---
+
+## Day-to-Day Workflows
+
+### Starting new work
+
+Always branch from `main`:
+
+```bash
+git checkout main
+git pull origin main
+git checkout -b feature/my-new-feature   # or bugfix/..., chore/..., etc.
+```
+
+### Submitting work
+
+Push your branch and open a pull request targeting **`main`**:
+
+```bash
+git push origin feature/my-new-feature
+# Open PR: feature/my-new-feature → main
+```
+
+Delete the branch after merge (GitHub does this automatically when the "Delete branch" button is
+clicked or the repository setting is enabled).
+
+### Promoting to dev
+
+When `main` is ready to be deployed to the dev environment, open a PR:
+
+```text
+main → dev
+```
+
+This is a fast-forward or merge commit. CI runs against the target, and on success the dev
+environment re-deploys.
+
+### Promoting to UAT
+
+After dev validation, open a PR:
+
+```text
+dev → uat
+```
+
+Obtain at least one review before merging. The UAT environment re-deploys on merge.
+
+### Promoting to production
+
+After UAT sign-off, open a PR:
+
+```text
+uat → prod
+```
+
+Require at least one review (ideally two for high-risk changes). The production environment
+re-deploys on merge. Tag the merge commit with a version number following the conventions in
+[`VERSION`](../../VERSION) and the version management instructions.
+
+---
+
+## Hotfix Workflow
+
+Use this when a critical issue must be fixed in production without waiting for the normal
+`main → dev → uat → prod` pipeline.
+
+```bash
+# 1. Branch from prod
+git checkout prod
+git pull origin prod
+git checkout -b hotfix/short-description
+
+# 2. Fix, test, commit
+# ...
+
+# 3. PR: hotfix/short-description → prod
+#    (requires at least one review)
+
+# 4. After merging to prod, back-merge to main so the fix is not lost
+git checkout main
+git pull origin main
+git merge --no-ff hotfix/short-description
+git push origin main
+
+# 5. Delete the hotfix branch
+git push origin --delete hotfix/short-description
+```
+
+> **Important:** Always back-merge a hotfix into `main` immediately after it lands in `prod`.
+> Skipping this step causes the fix to be overwritten during the next normal promotion.
+
+---
+
+## Branch Naming
+
+| Prefix | When to use | Examples |
+| ------ | ----------- | -------- |
+| `feature/` | New functionality | `feature/lei-search-filter` |
+| `bugfix/` | Non-urgent bug fixes | `bugfix/lei-status-badge` |
+| `hotfix/` | Urgent production fixes | `hotfix/jwt-expiry-crash` |
+| `chore/` | Maintenance, deps, docs, refactor | `chore/bump-go-dependencies` |
+
+Use `kebab-case`, keep names concise, and include the issue number where applicable:
+`feature/123-add-account-pagination`.
+
+---
+
+## Branch Protection Settings
+
+The following settings should be applied to `main`, `dev`, `uat`, and `prod` via
+**GitHub → Settings → Branches → Branch protection rules**.
+
+### Recommended settings for all four branches
+
+- [ ] **Require a pull request before merging** — prevents direct pushes.
+- [ ] **Require approvals** — at least 1 reviewer for `main`, `dev`, and `uat`; at least 2 for `prod`.
+- [ ] **Dismiss stale pull request approvals when new commits are pushed** — keeps reviews fresh.
+- [ ] **Require status checks to pass before merging** — attach CI jobs (lint, test, build).
+- [ ] **Require branches to be up to date before merging** — prevents "works on my machine" merges.
+- [ ] **Do not allow bypassing the above settings** — even admins go through PRs.
+- [ ] **Restrict who can push to matching branches** — limit to maintainers.
+- [ ] **Allow force pushes** — **disabled** on all four branches.
+- [ ] **Allow deletions** — **disabled** on all four branches.
+
+### Additional recommended settings for `prod`
+
+- [ ] **Require conversation resolution before merging**.
+- [ ] **Require deployments to succeed before merging** (if deployment environments are configured
+  in GitHub Actions).
+
+---
+
+## Setting Up Branches
+
+### Automated setup (recommended)
+
+Run the provided script. It requires the [GitHub CLI (`gh`)](https://cli.github.com/) and a token
+with `repo` and `admin:repo_hook` scopes:
+
+```bash
+bash scripts/setup-branches.sh
+```
+
+The script creates `dev`, `uat`, and `prod` from the current `main` HEAD and applies the branch
+protection rules listed above.
+
+### Manual setup via GitHub UI
+
+1. Navigate to **GitHub → Your repo → Code → branches**.
+2. Click **"New branch"**, name it `dev`, source from `main`. Repeat for `uat` and `prod`.
+3. Navigate to **Settings → Branches → Add branch protection rule** and configure each branch
+   using the settings listed in the section above.
+
+---
+
+## Frequently Asked Questions
+
+**Q: Can I push directly to `main`?**
+No. Branch protection requires a pull request. Use a `chore/` or `feature/` branch even for small
+changes.
+
+**Q: Do I need to keep `dev`, `uat`, and `prod` in sync manually?**
+No. Promote via PRs on a schedule that matches your release cadence. Frequent small promotions are
+better than large batches.
+
+**Q: What if my feature branch is out of date with `main`?**
+Rebase or merge `main` into your branch before opening or updating a PR:
+
+```bash
+git fetch origin
+git rebase origin/main
+# or: git merge origin/main
+```
+
+**Q: Who can approve promotion PRs?**
+Any repository collaborator with write access can approve. For `prod` promotions, aim for
+sign-off from at least one other team member.
