@@ -19,6 +19,8 @@ interface LEIStatus {
 export default function LEIStatusCard() {
   const [fullStatus, setFullStatus] = useState<LEIStatus | null>(null)
   const [deltaStatus, setDeltaStatus] = useState<LEIStatus | null>(null)
+  const [rrStatus, setRrStatus] = useState<LEIStatus | null>(null)
+  const [repexStatus, setRepexStatus] = useState<LEIStatus | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -26,19 +28,17 @@ export default function LEIStatusCard() {
       try {
         const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
         
-        const [fullRes, deltaRes] = await Promise.all([
+        const [fullRes, deltaRes, rrRes, repexRes] = await Promise.all([
           fetch(`${API_URL}/api/v1/lei/status/DAILY_FULL`, { cache: 'no-store' }),
-          fetch(`${API_URL}/api/v1/lei/status/DAILY_DELTA`, { cache: 'no-store' })
+          fetch(`${API_URL}/api/v1/lei/status/DAILY_DELTA`, { cache: 'no-store' }),
+          fetch(`${API_URL}/api/v1/lei/status/LEVEL2_RR`, { cache: 'no-store' }),
+          fetch(`${API_URL}/api/v1/lei/status/LEVEL2_REPEX`, { cache: 'no-store' }),
         ])
 
-        if (fullRes.ok) {
-          const full = await fullRes.json()
-          setFullStatus(full)
-        }
-        if (deltaRes.ok) {
-          const delta = await deltaRes.json()
-          setDeltaStatus(delta)
-        }
+        if (fullRes.ok) setFullStatus(await fullRes.json())
+        if (deltaRes.ok) setDeltaStatus(await deltaRes.json())
+        if (rrRes.ok) setRrStatus(await rrRes.json())
+        if (repexRes.ok) setRepexStatus(await repexRes.json())
       } catch (error) {
         console.error('Failed to fetch LEI status:', error)
       } finally {
@@ -47,7 +47,7 @@ export default function LEIStatusCard() {
     }
 
     fetchStatus()
-    const interval = setInterval(fetchStatus, 5000) // Refresh every 5 seconds
+    const interval = setInterval(fetchStatus, 5000)
 
     return () => clearInterval(interval)
   }, [])
@@ -80,10 +80,11 @@ export default function LEIStatusCard() {
   }
 
   const getOverallStatus = () => {
-    // Prioritize FAILED > RUNNING > IDLE > COMPLETED
-    if (fullStatus?.status === 'FAILED' || deltaStatus?.status === 'FAILED') return 'Failed'
-    if (fullStatus?.status === 'RUNNING' || deltaStatus?.status === 'RUNNING') return 'Running'
-    if (fullStatus?.status === 'IDLE' || deltaStatus?.status === 'IDLE') return 'Idle'
+    // Prioritize FAILED > RUNNING > IDLE > COMPLETED (across all jobs)
+    const all = [fullStatus, deltaStatus, rrStatus, repexStatus]
+    if (all.some(s => s?.status === 'FAILED')) return 'Failed'
+    if (all.some(s => s?.status === 'RUNNING')) return 'Running'
+    if (all.some(s => s?.status === 'IDLE')) return 'Idle'
     return 'Completed'
   }
 
@@ -104,6 +105,8 @@ export default function LEIStatusCard() {
 
   const fullHealth = getHealthIndicator(fullStatus)
   const deltaHealth = getHealthIndicator(deltaStatus)
+  const rrHealth = getHealthIndicator(rrStatus)
+  const repexHealth = getHealthIndicator(repexStatus)
   const totalRecords = fullStatus?.current_source_file?.total_records || 0
 
   return (
@@ -123,6 +126,14 @@ export default function LEIStatusCard() {
                 <div className="flex items-center gap-1" title={`Delta Sync: ${deltaHealth.label}`}>
                   <div className={`w-3 h-3 rounded-full ${deltaHealth.color}`}></div>
                   <span className="text-xs text-gray-500 dark:text-gray-400">Delta</span>
+                </div>
+                <div className="flex items-center gap-1" title={`Level 2 RR: ${rrHealth.label}`}>
+                  <div className={`w-3 h-3 rounded-full ${rrHealth.color}`}></div>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">L2-RR</span>
+                </div>
+                <div className="flex items-center gap-1" title={`Level 2 REPEX: ${repexHealth.label}`}>
+                  <div className={`w-3 h-3 rounded-full ${repexHealth.color}`}></div>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">L2-REPEX</span>
                 </div>
               </div>
             )}

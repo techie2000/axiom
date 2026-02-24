@@ -358,6 +358,7 @@ func setupRouter(cfg *config.Config, h *handler.Handlers) *gin.Engine {
 			{
 				lei.POST("/sync/full", h.LEI.TriggerFullSync)
 				lei.POST("/sync/delta", h.LEI.TriggerDeltaSync)
+				lei.POST("/sync/level2", h.LEI.TriggerLevel2Sync)
 				lei.POST("/source-file/:id/resume", h.LEI.ResumeProcessing)
 			}
 

@@ -228,13 +228,33 @@ func (h *LEIHandler) TriggerDeltaSync(c *gin.Context) {
 	c.JSON(http.StatusAccepted, gin.H{"message": "Delta sync triggered"})
 }
 
+// TriggerLevel2Sync manually triggers a Level 2 (Relationship Records + Reporting Exceptions) sync
+// @Summary Trigger Level 2 LEI sync
+// @Description Manually trigger a GLEIF Level 2 data synchronization (RR + REPEX). Runs independently of the
+// scheduled Level 1 full sync so an operator can re-run just the Level 2 pipeline intra-day.
+// @Tags LEI
+// @Accept json
+// @Produce json
+// @Success 202 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/lei/sync/level2 [post]
+func (h *LEIHandler) TriggerLevel2Sync(c *gin.Context) {
+	go func() {
+		if err := h.schedulerService.RunLevel2Sync(); err != nil {
+			log.Error().Err(err).Msg("Failed to run Level 2 sync")
+		}
+	}()
+
+	c.JSON(http.StatusAccepted, gin.H{"message": "Level 2 sync triggered (LEVEL2_RR → LEVEL2_REPEX)"})
+}
+
 // GetProcessingStatus retrieves processing status for a job type
 // @Summary Get processing status
 // @Description Get the current processing status for LEI sync jobs
 // @Tags LEI
 // @Accept json
 // @Produce json
-// @Param jobType path string true "Job type (DAILY_FULL or DAILY_DELTA)"
+// @Param jobType path string true "Job type (DAILY_FULL, DAILY_DELTA, LEVEL2_RR, or LEVEL2_REPEX)"
 // @Success 200 {object} domain.FileProcessingStatus
 // @Failure 404 {object} map[string]string
 // @Failure 500 {object} map[string]string
