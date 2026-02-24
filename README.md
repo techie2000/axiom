@@ -422,8 +422,6 @@ API documentation is available via Swagger UI at:
 - Production: http://localhost:38080/swagger/index.html
 - Legacy/Local: http://localhost:8080/swagger/index.html
 
-TODO: Replace the production Swagger URL with the confirmed production base URL.
-
 ## Configuration
 
 Configuration is managed through environment variables and config files:
