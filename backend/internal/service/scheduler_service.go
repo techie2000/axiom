@@ -226,6 +226,14 @@ func (s *schedulerService) Start() error {
 			} else if count == 0 {
 				log.Info().Msg("Database is empty, triggering initial full sync")
 				go func() {
+					// Ensure reference data is current before downloading LEI records.
+					// main.go already ran LoadAllMasterData unconditionally on startup,
+					// so RunDailyMasterDataSync here primarily updates file_processing_status
+					// to make the pipeline visible in the UI. A sync error is non-fatal
+					// because the master data is already in the database.
+					if err := s.RunDailyMasterDataSync(); err != nil {
+						log.Error().Err(err).Msg("Initial master data sync check failed; continuing with LEI sync")
+					}
 					if err := s.RunDailyFullSync(); err != nil {
 						log.Error().Err(err).Msg("Failed to run initial full sync")
 						return
@@ -252,9 +260,6 @@ func (s *schedulerService) Start() error {
 	// Start goroutine for daily cleanup (runs daily at 3 AM)
 	go s.dailyCleanupLoop()
 
-	// Start goroutine for daily master data sync (runs daily at 4 AM)
-	go s.dailyMasterDataSyncLoop()
-
 	return nil
 }
 
@@ -274,7 +279,7 @@ func (s *schedulerService) Stop() {
 func (s *schedulerService) cleanupStuckJobStatuses() {
 	log.Info().Msg("Checking for stuck job statuses from previous sessions")
 
-	jobTypes := []string{"DAILY_FULL", "DAILY_DELTA", "LEVEL2_RR", "LEVEL2_REPEX"}
+	jobTypes := []string{"MASTER_DATA_SYNC", "DAILY_FULL", "DAILY_DELTA", "LEVEL2_RR", "LEVEL2_REPEX"}
 	for _, jobType := range jobTypes {
 		st, err := s.leiService.GetProcessingStatus(jobType)
 		if err == nil && st.Status == "RUNNING" {
@@ -346,6 +351,24 @@ func (s *schedulerService) initializeNextRunTimes() {
 		log.Info().
 			Time("next_run", *nextRun).
 			Msg("DAILY_DELTA job status created")
+	}
+
+	// Ensure MASTER_DATA_SYNC row exists (root job — no parent dependency).
+	// Migration 000027 seeds this row, but this guard handles environments where
+	// migrations have not yet been applied (e.g. local dev).
+	if _, mdErr := s.leiService.GetProcessingStatus("MASTER_DATA_SYNC"); mdErr != nil {
+		now := time.Now()
+		newMD := &domain.FileProcessingStatus{
+			JobType:   "MASTER_DATA_SYNC",
+			Status:    "IDLE",
+			CreatedAt: now,
+			UpdatedAt: now,
+		}
+		if createErr := s.leiService.UpdateProcessingStatus(newMD); createErr != nil {
+			log.Error().Err(createErr).Msg("Failed to create MASTER_DATA_SYNC job status row")
+		} else {
+			log.Info().Msg("MASTER_DATA_SYNC job status row created")
+		}
 	}
 
 	// Ensure LEVEL2_RR and LEVEL2_REPEX rows exist with the correct dependency metadata.
@@ -710,7 +733,12 @@ func (s *schedulerService) dailyFullSyncLoop() {
 
 		select {
 		case <-time.After(duration):
-			if err := s.RunDailyFullSync(); err != nil {
+			// Reference data (countries, currencies, continents, languages) must be current
+			// before LEI records are downloaded, because new countries referenced by GLEIF
+			// data may not yet exist in the database.
+			if err := s.RunDailyMasterDataSync(); err != nil {
+				log.Error().Err(err).Msg("Master data sync failed; aborting full sync chain")
+			} else if err := s.RunDailyFullSync(); err != nil {
 				log.Error().Err(err).Msg("Failed to run scheduled full sync")
 			} else {
 				// Level 2 sync is a dependent job: it must run after Level 1 completes
@@ -1031,19 +1059,52 @@ func (s *schedulerService) dailyMasterDataSyncLoop() {
 	}
 }
 
-// RunDailyMasterDataSync checks for master data updates and reloads if needed
+// RunDailyMasterDataSync checks for master data updates and reloads if needed.
+// It updates file_processing_status so the job is visible in the UI pipeline.
+// Reference data (countries, currencies, continents, languages) must be current before
+// GLEIF LEI records are processed, as new countries may be referenced by incoming LEI data.
 func (s *schedulerService) RunDailyMasterDataSync() error {
 	log.Info().Msg("Starting daily master data sync check")
+
+	// Fetch or initialise the status row.
+	st, err := s.leiService.GetProcessingStatus("MASTER_DATA_SYNC")
+	if err != nil {
+		now := time.Now()
+		st = &domain.FileProcessingStatus{
+			JobType:   "MASTER_DATA_SYNC",
+			Status:    "IDLE",
+			CreatedAt: now,
+			UpdatedAt: now,
+		}
+	}
+
+	if st.Status == "RUNNING" {
+		log.Warn().Msg("Master data sync already running, skipping")
+		return nil
+	}
+
+	now := time.Now()
+	st.Status = "RUNNING"
+	st.LastRunAt = &now
+	st.ErrorMessage = ""
+	_ = s.leiService.UpdateProcessingStatus(st)
 
 	// Check if master data files have been updated
 	hasUpdates, err := s.masterDataService.CheckForUpdates()
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to check for master data updates")
+		st.Status = "FAILED"
+		st.ErrorMessage = err.Error()
+		_ = s.leiService.UpdateProcessingStatus(st)
 		return err
 	}
 
 	if !hasUpdates {
 		log.Info().Msg("No master data updates detected")
+		successNow := time.Now()
+		st.Status = "IDLE"
+		st.LastSuccessAt = &successNow
+		_ = s.leiService.UpdateProcessingStatus(st)
 		return nil
 	}
 
@@ -1052,8 +1113,17 @@ func (s *schedulerService) RunDailyMasterDataSync() error {
 	// Reload all master data
 	if err := s.masterDataService.LoadAllMasterData(); err != nil {
 		log.Error().Err(err).Msg("Failed to reload master data")
+		st.Status = "FAILED"
+		st.ErrorMessage = err.Error()
+		_ = s.leiService.UpdateProcessingStatus(st)
 		return err
 	}
+
+	successNow := time.Now()
+	st.Status = "IDLE"
+	st.LastSuccessAt = &successNow
+	st.ErrorMessage = ""
+	_ = s.leiService.UpdateProcessingStatus(st)
 
 	log.Info().Msg("Daily master data sync completed successfully")
 	return nil

@@ -17,6 +17,7 @@ interface LEIStatus {
 }
 
 export default function LEIStatusCard() {
+  const [masterDataStatus, setMasterDataStatus] = useState<LEIStatus | null>(null)
   const [fullStatus, setFullStatus] = useState<LEIStatus | null>(null)
   const [deltaStatus, setDeltaStatus] = useState<LEIStatus | null>(null)
   const [rrStatus, setRrStatus] = useState<LEIStatus | null>(null)
@@ -28,13 +29,15 @@ export default function LEIStatusCard() {
       try {
         const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
         
-        const [fullRes, deltaRes, rrRes, repexRes] = await Promise.all([
+        const [mdRes, fullRes, deltaRes, rrRes, repexRes] = await Promise.all([
+          fetch(`${API_URL}/api/v1/lei/status/MASTER_DATA_SYNC`, { cache: 'no-store' }),
           fetch(`${API_URL}/api/v1/lei/status/DAILY_FULL`, { cache: 'no-store' }),
           fetch(`${API_URL}/api/v1/lei/status/DAILY_DELTA`, { cache: 'no-store' }),
           fetch(`${API_URL}/api/v1/lei/status/LEVEL2_RR`, { cache: 'no-store' }),
           fetch(`${API_URL}/api/v1/lei/status/LEVEL2_REPEX`, { cache: 'no-store' }),
         ])
 
+        if (mdRes.ok) setMasterDataStatus(await mdRes.json())
         if (fullRes.ok) setFullStatus(await fullRes.json())
         if (deltaRes.ok) setDeltaStatus(await deltaRes.json())
         if (rrRes.ok) setRrStatus(await rrRes.json())
@@ -81,7 +84,7 @@ export default function LEIStatusCard() {
 
   const getOverallStatus = () => {
     // Prioritize FAILED > RUNNING > IDLE > COMPLETED (across all jobs)
-    const all = [fullStatus, deltaStatus, rrStatus, repexStatus]
+    const all = [masterDataStatus, fullStatus, deltaStatus, rrStatus, repexStatus]
     if (all.some(s => s?.status === 'FAILED')) return 'Failed'
     if (all.some(s => s?.status === 'RUNNING')) return 'Running'
     if (all.some(s => s?.status === 'IDLE')) return 'Idle'
@@ -107,6 +110,7 @@ export default function LEIStatusCard() {
   const deltaHealth = getHealthIndicator(deltaStatus)
   const rrHealth = getHealthIndicator(rrStatus)
   const repexHealth = getHealthIndicator(repexStatus)
+  const masterDataHealth = getHealthIndicator(masterDataStatus)
   const totalRecords = fullStatus?.current_source_file?.total_records || 0
 
   return (
@@ -119,6 +123,10 @@ export default function LEIStatusCard() {
             </h3>
             {!loading && (
               <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1" title={`Ref Data Sync: ${masterDataHealth.label}`}>
+                  <div className={`w-3 h-3 rounded-full ${masterDataHealth.color}`}></div>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">RefData</span>
+                </div>
                 <div className="flex items-center gap-1" title={`Full Sync: ${fullHealth.label}`}>
                   <div className={`w-3 h-3 rounded-full ${fullHealth.color}`}></div>
                   <span className="text-xs text-gray-500 dark:text-gray-400">Full</span>

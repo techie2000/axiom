@@ -31,6 +31,7 @@ interface ProcessingStatus {
 }
 
 export default function LEIStatusPage() {
+  const [masterDataStatus, setMasterDataStatus] = useState<ProcessingStatus | null>(null)
   const [fullStatus, setFullStatus] = useState<ProcessingStatus | null>(null)
   const [deltaStatus, setDeltaStatus] = useState<ProcessingStatus | null>(null)
   const [rrStatus, setRrStatus] = useState<ProcessingStatus | null>(null)
@@ -46,13 +47,15 @@ export default function LEIStatusPage() {
 
   const fetchStatus = async () => {
     try {
-      const [fullResponse, deltaResponse, rrResponse, repexResponse] = await Promise.all([
+      const [mdResponse, fullResponse, deltaResponse, rrResponse, repexResponse] = await Promise.all([
+        fetch(`${API_BASE_URL}/api/v1/lei/status/MASTER_DATA_SYNC`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
         fetch(`${API_BASE_URL}/api/v1/lei/status/DAILY_FULL`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
         fetch(`${API_BASE_URL}/api/v1/lei/status/DAILY_DELTA`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
         fetch(`${API_BASE_URL}/api/v1/lei/status/LEVEL2_RR`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
         fetch(`${API_BASE_URL}/api/v1/lei/status/LEVEL2_REPEX`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
       ])
 
+      if (mdResponse?.ok) setMasterDataStatus(await mdResponse.json())
       if (fullResponse?.ok) setFullStatus(await fullResponse.json())
       if (deltaResponse?.ok) setDeltaStatus(await deltaResponse.json())
       if (rrResponse?.ok) setRrStatus(await rrResponse.json())
@@ -370,28 +373,47 @@ export default function LEIStatusPage() {
         <div className="mb-8 bg-white dark:bg-white/5 rounded-lg shadow-md p-6 border-2 border-gray-200 dark:border-white/10 backdrop-blur-sm">
           <h2 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">Job Pipeline</h2>
           <div className="space-y-1">
-            {/* Level 1 root jobs */}
+            {/* Root: Master Data Sync */}
             <div className="flex items-center gap-3 py-3 border-b border-gray-200 dark:border-white/10">
-              <div className={`w-3 h-3 rounded-full shrink-0 ${fullStatus ? getStatusDot(fullStatus.status) : 'bg-gray-400'}`} />
+              <div className={`w-3 h-3 rounded-full shrink-0 ${masterDataStatus ? getStatusDot(masterDataStatus.status) : 'bg-gray-400'}`} />
               <div className="flex-1 flex items-center gap-2 flex-wrap">
-                <span className="font-semibold text-sm text-gray-900 dark:text-white">Level 1 — Full Sync (DAILY_FULL)</span>
-                {fullStatus && (
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${getStatusColor(fullStatus.status)}`}>
-                    {fullStatus.status}
+                <span className="font-semibold text-sm text-gray-900 dark:text-white">Reference Data Sync (MASTER_DATA_SYNC)</span>
+                {masterDataStatus && (
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${getStatusColor(masterDataStatus.status)}`}>
+                    {masterDataStatus.status}
                   </span>
                 )}
-                <span className="text-xs text-gray-500 dark:text-gray-400">root job · daily</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">root job · daily · countries, currencies, languages</span>
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400 text-right shrink-0">
-                {formatDate(fullStatus?.last_success_at ?? null)}
+                {formatDate(masterDataStatus?.last_success_at ?? null)}
               </div>
             </div>
 
-            {/* Level 2 dependent sub-jobs — indented */}
+            {/* Level 1 Full Sync — depends on MASTER_DATA_SYNC */}
             <div className="pl-6 border-l-2 border-dashed border-gray-300 dark:border-white/10 ml-1.5">
-              {renderLevel2SubJob('Level 2 — Relationship Records (LEVEL2_RR)', rrStatus, 'DAILY_FULL')}
+              <div className="flex items-center gap-3 py-3 border-b border-gray-200 dark:border-white/10">
+                <div className={`w-3 h-3 rounded-full shrink-0 ${fullStatus ? getStatusDot(fullStatus.status) : 'bg-gray-400'}`} />
+                <div className="flex-1 flex items-center gap-2 flex-wrap">
+                  <span className="font-semibold text-sm text-gray-900 dark:text-white">Level 1 — Full Sync (DAILY_FULL)</span>
+                  {fullStatus && (
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${getStatusColor(fullStatus.status)}`}>
+                      {fullStatus.status}
+                    </span>
+                  )}
+                  <span className="text-xs text-gray-500 dark:text-gray-400">depends on: MASTER_DATA_SYNC</span>
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 text-right shrink-0">
+                  {formatDate(fullStatus?.last_success_at ?? null)}
+                </div>
+              </div>
+
+              {/* Level 2 dependent sub-jobs — indented under DAILY_FULL */}
               <div className="pl-6 border-l-2 border-dashed border-gray-300 dark:border-white/10 ml-1.5">
-                {renderLevel2SubJob('Level 2 — Reporting Exceptions (LEVEL2_REPEX)', repexStatus, 'LEVEL2_RR')}
+                {renderLevel2SubJob('Level 2 — Relationship Records (LEVEL2_RR)', rrStatus, 'DAILY_FULL')}
+                <div className="pl-6 border-l-2 border-dashed border-gray-300 dark:border-white/10 ml-1.5">
+                  {renderLevel2SubJob('Level 2 — Reporting Exceptions (LEVEL2_REPEX)', repexStatus, 'LEVEL2_RR')}
+                </div>
               </div>
             </div>
 
@@ -422,18 +444,22 @@ export default function LEIStatusPage() {
 
         {/* Detailed Status Cards */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          {renderStatusCard('Reference Data Sync', masterDataStatus, false)}
           {renderStatusCard(`Full Sync (${getFrequencyLabel(fullStatus)})`, fullStatus, false)}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          {renderStatusCard('Level 2 — Relationship Records', rrStatus, false)}
+          {renderStatusCard('Level 2 — Reporting Exceptions', repexStatus, false)}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           <div className="relative">
             {renderStatusCard(`Delta Sync (${getFrequencyLabel(deltaStatus)})`, deltaStatus, true)}
             <div className="absolute top-4 right-4 bg-gray-500 text-white text-xs px-2 py-1 rounded">
               DISABLED
             </div>
           </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          {renderStatusCard('Level 2 — Relationship Records', rrStatus, false)}
-          {renderStatusCard('Level 2 — Reporting Exceptions', repexStatus, false)}
         </div>
 
         {/* Legend */}
