@@ -174,7 +174,9 @@ If you encounter issues:
 
 ✅ **All security vulnerabilities identified have been addressed**
 
-This PR brings the Axiom project up to date with the latest secure base images and dependencies, addressing all known CVEs and preparing for upcoming EOL dates. The updates are backward compatible and require no code changes.
+This PR brings the Axiom project up to date with the latest secure base images and dependencies,
+addressing all known CVEs and preparing for upcoming EOL dates. The updates are backward compatible
+and require no code changes.
 
 **Recommended Action**: Merge and deploy to dev environment for verification.
 
