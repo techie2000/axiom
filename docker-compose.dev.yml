@@ -63,8 +63,8 @@ services:
     ports:
       - "${BACKEND_PORT}:8080"
     volumes:
-      - ./data/lei:/root/data/lei      # Bind Mount for easy dev access
-      - ./log:/root/log                 # Persist logs for debugging
+      - ./data/dev/lei:/root/data/lei  # Bind mount for developer access (dev environment)
+      - ./log/dev:/root/log             # Persist logs for debugging (dev environment)
       - ./backend/config.yaml:/root/config/config.yaml:ro  # Mount config file with CORS settings
     depends_on:
       postgres:
@@ -105,7 +105,7 @@ volumes:
   rabbitmq_log_dev:
   frontend_node_modules_dev:
   frontend_next_dev:
-  # lei_data_dev removed - using bind mount in dev for easy filesystem access
+  # lei_data_dev removed - using bind mount at ./data/dev/lei for developer access
 
 networks:
   axiom-dev:
