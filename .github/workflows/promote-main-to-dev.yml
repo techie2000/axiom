@@ -2,7 +2,7 @@ name: Nightly Promote main → dev
 
 on:
   schedule:
-    - cron: '0 2 * * *'  # 02:00 UTC every day
+    - cron: '0 3 * * *'  # 03:00 UTC every day (avoids clash with 02:00 GLEIF LEI sync)
   workflow_dispatch:
     inputs:
       dry_run:

@@ -71,8 +71,9 @@ clicked or the repository setting is enabled).
 `main` → `dev` promotions happen **automatically every night** via the
 [`promote-main-to-dev` workflow](../../.github/workflows/promote-main-to-dev.yml).
 
-The workflow runs at **02:00 UTC daily**. When `main` is ahead of `dev`, it opens a pull request
-titled `chore: nightly promotion main → dev (YYYY-MM-DD)`. Review the diff, confirm CI passes,
+The workflow runs at **03:00 UTC daily** (one hour after the GLEIF LEI full-sync job to avoid
+resource contention). When `main` is ahead of `dev`, it opens a pull request titled
+`chore: nightly promotion main → dev (YYYY-MM-DD)`. Review the diff, confirm CI passes,
 and merge to deploy to the dev environment. If no promotion is needed that day, the workflow exits
 without creating a PR. If a promotion PR is already open, no duplicate is created.
 
