@@ -254,12 +254,15 @@ func (s *schedulerService) Start() error {
 	// Delta files cause issues and don't provide enough benefit for daily operations
 	// go s.dailyDeltaSyncLoop()
 
+	// Start goroutine for daily master data sync (runs daily at 1 AM)
+	go s.dailyMasterDataSyncLoop()
+	
 	// Start goroutine for daily full sync (runs every day at configured time)
 	go s.dailyFullSyncLoop()
-
+	
 	// Start goroutine for daily cleanup (runs daily at 3 AM)
 	go s.dailyCleanupLoop()
-
+	
 	return nil
 }
 
@@ -1034,7 +1037,7 @@ func (s *schedulerService) dailyMasterDataSyncLoop() {
 	masterDataSyncMinute := 0
 
 	for {
-		// Calculate next run time (daily at 4:00 AM)
+		// Calculate next run time (daily at 1:00 AM)
 		now := time.Now()
 		nextRun := time.Date(now.Year(), now.Month(), now.Day(), masterDataSyncHour, masterDataSyncMinute, 0, 0, now.Location())
 		if nextRun.Before(now) {
