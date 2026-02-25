@@ -386,6 +386,7 @@ func TestSanitizeSourceFileProgress(t *testing.T) {
 	}
 }
 
+
 // TestProcessRecordsArray_CheckpointFrequency verifies that UpdateSourceFile is
 // called once for every sourceFileProgressCheckpointInterval (5 000) records
 // processed, plus a mandatory final call at the end of processing.
