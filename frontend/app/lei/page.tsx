@@ -30,6 +30,13 @@ interface ProcessingStatus {
   error_message: string
 }
 
+interface MasterDataCounts {
+  countries: number
+  currencies: number
+  languages: number
+  total: number
+}
+
 export default function LEIStatusPage() {
   const [masterDataStatus, setMasterDataStatus] = useState<ProcessingStatus | null>(null)
   const [fullStatus, setFullStatus] = useState<ProcessingStatus | null>(null)
@@ -41,6 +48,7 @@ export default function LEIStatusPage() {
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [triggerMessage, setTriggerMessage] = useState<string | null>(null)
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({})
+  const [masterDataCounts, setMasterDataCounts] = useState<MasterDataCounts | null>(null)
 
   const API_BASE_URL = typeof window !== 'undefined'
     ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080')
@@ -48,12 +56,24 @@ export default function LEIStatusPage() {
 
   const fetchStatus = async () => {
     try {
-      const [mdResponse, fullResponse, deltaResponse, rrResponse, repexResponse] = await Promise.all([
+      const [
+        mdResponse,
+        fullResponse,
+        deltaResponse,
+        rrResponse,
+        repexResponse,
+        countriesResponse,
+        currenciesResponse,
+        languagesResponse,
+      ] = await Promise.all([
         fetch(`${API_BASE_URL}/api/v1/lei/status/MASTER_DATA_SYNC`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
         fetch(`${API_BASE_URL}/api/v1/lei/status/DAILY_FULL`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
         fetch(`${API_BASE_URL}/api/v1/lei/status/DAILY_DELTA`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
         fetch(`${API_BASE_URL}/api/v1/lei/status/LEVEL2_RR`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
         fetch(`${API_BASE_URL}/api/v1/lei/status/LEVEL2_REPEX`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
+        fetch(`${API_BASE_URL}/api/v1/countries?limit=5000&offset=0`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
+        fetch(`${API_BASE_URL}/api/v1/currencies?limit=5000&offset=0`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
+        fetch(`${API_BASE_URL}/api/v1/languages?limit=5000&offset=0`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
       ])
 
       if (mdResponse?.ok) setMasterDataStatus(await mdResponse.json())
@@ -61,6 +81,25 @@ export default function LEIStatusPage() {
       if (deltaResponse?.ok) setDeltaStatus(await deltaResponse.json())
       if (rrResponse?.ok) setRrStatus(await rrResponse.json())
       if (repexResponse?.ok) setRepexStatus(await repexResponse.json())
+
+      if (countriesResponse?.ok && currenciesResponse?.ok && languagesResponse?.ok) {
+        const [countries, currencies, languages] = await Promise.all([
+          countriesResponse.json(),
+          currenciesResponse.json(),
+          languagesResponse.json(),
+        ])
+
+        const countriesCount = Array.isArray(countries) ? countries.length : 0
+        const currenciesCount = Array.isArray(currencies) ? currencies.length : 0
+        const languagesCount = Array.isArray(languages) ? languages.length : 0
+
+        setMasterDataCounts({
+          countries: countriesCount,
+          currencies: currenciesCount,
+          languages: languagesCount,
+          total: countriesCount + currenciesCount + languagesCount,
+        })
+      }
 
       setError(null)
     } catch (err) {
@@ -323,6 +362,14 @@ export default function LEIStatusPage() {
 
     const progress = calculateProgress(status)
     const file = status.current_source_file
+    const isMasterDataJob = jobKey === 'MASTER_DATA_SYNC'
+    const fallbackTotalRecords = isMasterDataJob ? (masterDataCounts?.total ?? 0) : 0
+    const totalRecords = file ? file.total_records : fallbackTotalRecords
+    const successfulProcessed = file
+      ? Math.max(file.processed_records - file.failed_records, 0)
+      : fallbackTotalRecords
+    const failedRecords = file ? file.failed_records : 0
+    const currentFileLabel = file?.file_name || (isMasterDataJob ? 'Master datasets (countries, currencies, languages)' : '-')
     const frequency = getFrequencyLabel(status)
     const dependency = status.depends_on_job_type && status.depends_on_job_type !== 'NONE'
       ? getJobDisplayName(status.depends_on_job_type)
@@ -384,7 +431,7 @@ export default function LEIStatusPage() {
           <div className="flex justify-between">
             <span className="text-gray-600 dark:text-gray-400">Current File:</span>
             <span className="font-medium text-gray-900 dark:text-white truncate max-w-[70%] text-right">
-              {file?.file_name || '-'}
+              {currentFileLabel}
             </span>
           </div>
         </div>
@@ -425,20 +472,20 @@ export default function LEIStatusPage() {
                 <div className="flex justify-between">
                   <span className="text-gray-600 dark:text-gray-400">Total Records:</span>
                   <span className="font-medium text-gray-900 dark:text-white">
-                    {file ? file.total_records.toLocaleString() : '-'}
+                    {totalRecords > 0 ? totalRecords.toLocaleString() : '-'}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600 dark:text-gray-400">Successfully Processed:</span>
                   <span className="font-medium text-green-600 dark:text-green-400">
-                    {file ? Math.max(file.processed_records - file.failed_records, 0).toLocaleString() : '-'}
+                    {totalRecords > 0 ? successfulProcessed.toLocaleString() : '-'}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600 dark:text-gray-400">Failed Records:</span>
-                  <span className={`font-medium ${file && file.failed_records > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-gray-900 dark:text-white'}`}>
-                    {file
-                      ? `${file.failed_records > 0 ? '⚠️ ' : ''}${file.failed_records.toLocaleString()}`
+                  <span className={`font-medium ${failedRecords > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-gray-900 dark:text-white'}`}>
+                    {totalRecords > 0
+                      ? `${failedRecords > 0 ? '⚠️ ' : ''}${failedRecords.toLocaleString()}`
                       : '-'}
                   </span>
                 </div>
@@ -448,11 +495,17 @@ export default function LEIStatusPage() {
             <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mb-4">
               <h3 className="font-semibold mb-2 text-sm text-gray-700 dark:text-gray-200">Current File</h3>
               <div className="space-y-1 text-sm text-gray-900 dark:text-gray-100">
-                <p className="truncate"><span className="font-medium text-gray-700 dark:text-gray-300">Name:</span> {file?.file_name || '-'}</p>
-                <p><span className="font-medium text-gray-700 dark:text-gray-300">Status:</span> {file?.processing_status || '-'}</p>
-                <p><span className="font-medium text-gray-700 dark:text-gray-300">Total Records:</span> {file ? file.total_records.toLocaleString() : '-'}</p>
-                <p><span className="font-medium text-gray-700 dark:text-gray-300">Processed:</span> {file ? `${file.processed_records.toLocaleString()} records` : '-'}</p>
+                <p className="truncate"><span className="font-medium text-gray-700 dark:text-gray-300">Name:</span> {currentFileLabel}</p>
+                <p><span className="font-medium text-gray-700 dark:text-gray-300">Status:</span> {file?.processing_status || status.status}</p>
+                <p><span className="font-medium text-gray-700 dark:text-gray-300">Total Records:</span> {totalRecords > 0 ? totalRecords.toLocaleString() : '-'}</p>
+                <p><span className="font-medium text-gray-700 dark:text-gray-300">Processed:</span> {totalRecords > 0 ? `${successfulProcessed.toLocaleString()} records` : '-'}</p>
                 <p className="truncate"><span className="font-medium text-gray-700 dark:text-gray-300">Last LEI:</span> {file?.last_processed_lei || '-'}</p>
+                {isMasterDataJob && masterDataCounts && (
+                  <p>
+                    <span className="font-medium text-gray-700 dark:text-gray-300">Breakdown:</span>{' '}
+                    {`Countries ${masterDataCounts.countries.toLocaleString()}, Currencies ${masterDataCounts.currencies.toLocaleString()}, Languages ${masterDataCounts.languages.toLocaleString()}`}
+                  </p>
+                )}
                 {file?.failure_category && (
                   <p className="text-red-600 dark:text-red-400">
                     <span className="font-medium">Error Category:</span> {file.failure_category}
