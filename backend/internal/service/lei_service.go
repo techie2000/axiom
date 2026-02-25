@@ -796,13 +796,15 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 			// Track records processed in this session (use batch size, not DB results)
 			processedRecords += len(batch)
 
-			// Update source file with cumulative progress (checkpointed to reduce DB write pressure)
+			// Always keep LastProcessedLEI in sync so the mandatory final UpdateSourceFile
+			// call reflects the actual last record, even for batches that do not hit a
+			// checkpoint boundary (e.g. files smaller than sourceFileProgressCheckpointInterval).
 			cumulativeProcessed = capProcessedRecords(progressTotalRecords, checkpointProcessed+processedRecords)
+			sourceFile.LastProcessedLEI = normalizeLEICodePointer(lastProcessedLEI)
 			if processedRecords%sourceFileProgressCheckpointInterval == 0 {
 				sourceFile.TotalRecords = progressTotalRecords
 				sourceFile.ProcessedRecords = cumulativeProcessed
 				sourceFile.FailedRecords = failedRecords
-				sourceFile.LastProcessedLEI = normalizeLEICodePointer(lastProcessedLEI)
 				if err := s.repo.UpdateSourceFile(sourceFile); err != nil {
 					log.Error().Err(err).Msg("Failed to update source file progress checkpoint")
 				}

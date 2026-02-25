@@ -13,6 +13,123 @@ import (
 	"github.com/techie2000/axiom/internal/repository"
 )
 
+// stubLEIRepo is a minimal LEIRepository stub for unit testing.
+// Only BatchUpsertLEIRecords and UpdateSourceFile are exercised by processRecordsArray.
+type stubLEIRepo struct {
+	batchErr           error
+	updateSourceFileFn func(file *domain.SourceFile)
+	updateCalls        []*domain.SourceFile // snapshots of sourceFile at each UpdateSourceFile call
+}
+
+func (r *stubLEIRepo) BatchUpsertLEIRecords(records []*domain.LEIRecord) (int, int, error) {
+	if r.batchErr != nil {
+		return 0, 0, r.batchErr
+	}
+	return len(records), 0, nil
+}
+
+func (r *stubLEIRepo) UpdateSourceFile(file *domain.SourceFile) error {
+	cp := *file
+	r.updateCalls = append(r.updateCalls, &cp)
+	if r.updateSourceFileFn != nil {
+		r.updateSourceFileFn(file)
+	}
+	return nil
+}
+
+// Remaining interface methods – all no-ops required to satisfy repository.LEIRepository.
+func (r *stubLEIRepo) CreateLEIRecord(*domain.LEIRecord) error                                    { return nil }
+func (r *stubLEIRepo) FindLEIByLEI(string) (*domain.LEIRecord, error)                             { return nil, nil }
+func (r *stubLEIRepo) FindLEIByID(string) (*domain.LEIRecord, error)                              { return nil, nil }
+func (r *stubLEIRepo) FindAllLEI(int, int) ([]*domain.LEIRecord, error)                           { return nil, nil }
+func (r *stubLEIRepo) FindAllLEIWithFilters(int, int, string, string, string, string, string, string, string) ([]*domain.LEIRecord, error) {
+	return nil, nil
+}
+func (r *stubLEIRepo) CountLEIRecords() (int64, error)                              { return 0, nil }
+func (r *stubLEIRepo) GetDistinctCountries() ([]string, error)                      { return nil, nil }
+func (r *stubLEIRepo) GetDistinctRegions() ([]string, error)                        { return nil, nil }
+func (r *stubLEIRepo) GetDistinctLegalForms() ([]string, error)                     { return nil, nil }
+func (r *stubLEIRepo) UpdateLEIRecord(*domain.LEIRecord) error                      { return nil }
+func (r *stubLEIRepo) UpsertLEIRecord(*domain.LEIRecord) (bool, error) {
+	panic("unexpected call to stubLEIRepo.UpsertLEIRecord")
+}
+
+func (r *stubLEIRepo) DeleteLEI(string) error {
+	panic("unexpected call to stubLEIRepo.DeleteLEI")
+}
+
+func (r *stubLEIRepo) CreateSourceFile(*domain.SourceFile) error {
+	panic("unexpected call to stubLEIRepo.CreateSourceFile")
+}
+
+func (r *stubLEIRepo) FindSourceFileByID(string) (*domain.SourceFile, error) {
+	panic("unexpected call to stubLEIRepo.FindSourceFileByID")
+}
+
+func (r *stubLEIRepo) FindSourceFileByHash(string) (*domain.SourceFile, error) {
+	panic("unexpected call to stubLEIRepo.FindSourceFileByHash")
+}
+
+func (r *stubLEIRepo) FindLatestSourceFile(string) (*domain.SourceFile, error) {
+	panic("unexpected call to stubLEIRepo.FindLatestSourceFile")
+}
+
+func (r *stubLEIRepo) FindPendingSourceFiles() ([]*domain.SourceFile, error) {
+	panic("unexpected call to stubLEIRepo.FindPendingSourceFiles")
+}
+
+func (r *stubLEIRepo) FindRetryableFailedFiles() ([]*domain.SourceFile, error) {
+	panic("unexpected call to stubLEIRepo.FindRetryableFailedFiles")
+}
+
+func (r *stubLEIRepo) ResetFailedFileForRetry(uuid.UUID) error {
+	panic("unexpected call to stubLEIRepo.ResetFailedFileForRetry")
+}
+
+func (r *stubLEIRepo) FindProcessingStatus(string) (*domain.FileProcessingStatus, error) {
+	panic("unexpected call to stubLEIRepo.FindProcessingStatus")
+}
+
+func (r *stubLEIRepo) UpdateProcessingStatus(*domain.FileProcessingStatus) error {
+	panic("unexpected call to stubLEIRepo.UpdateProcessingStatus")
+}
+
+func (r *stubLEIRepo) CreateAuditRecord(*domain.LEIRecordAudit) error {
+	panic("unexpected call to stubLEIRepo.CreateAuditRecord")
+}
+
+func (r *stubLEIRepo) FindAuditHistoryByLEI(string, int) ([]*domain.LEIRecordAudit, error) {
+	panic("unexpected call to stubLEIRepo.FindAuditHistoryByLEI")
+}
+
+var _ repository.LEIRepository = (*stubLEIRepo)(nil) // compile-time interface check
+
+// testLEICode returns a deterministic, valid 20-character LEI code for index i.
+// Format: "5493001KTEST" (12 chars) + zero-padded i (6 digits) + i%100 (2 digits).
+func testLEICode(i int) string {
+	return fmt.Sprintf("5493001KTEST%06d%02d", i, i%100)
+}
+
+// leiArrayDecoder builds an in-memory JSON array of n minimal LEI records and
+// returns a *json.Decoder positioned at the start of that array, ready to be
+// handed to processRecordsArray.
+func leiArrayDecoder(n int) *json.Decoder {
+	var buf bytes.Buffer
+	buf.WriteString("[")
+	for i := 1; i <= n; i++ {
+		if i > 1 {
+			buf.WriteByte(',')
+		}
+		lei := testLEICode(i)
+		fmt.Fprintf(&buf,
+			`{"LEI":{"$":%q},"Entity":{"LegalName":{"$":"E"},"LegalAddress":{"Country":{"$":"US"}}},"Registration":{}}`,
+			lei,
+		)
+	}
+	buf.WriteString("]")
+	return json.NewDecoder(&buf)
+}
+
 func TestIsTerminalJSONDecodeError(t *testing.T) {
 	tests := []struct {
 		name string
@@ -303,60 +420,6 @@ func TestSanitizeSourceFileProgress(t *testing.T) {
 	}
 }
 
-// --- helpers for processRecordsArray tests ---
-
-// checkpointStubRepo is a minimal stub of repository.LEIRepository that records
-// every UpdateSourceFile call so tests can assert checkpoint frequency and
-// the LastProcessedLEI value persisted at each call.
-type checkpointStubRepo struct {
-	repository.LEIRepository // satisfies interface; unused methods panic on call
-	updateCalls []sfUpdate
-}
-
-type sfUpdate struct {
-	processedRecords int
-	lastProcessedLEI *string // nil-safe copy taken at call time
-}
-
-func (r *checkpointStubRepo) BatchUpsertLEIRecords(records []*domain.LEIRecord) (int, int, error) {
-	return 0, len(records), nil
-}
-
-func (r *checkpointStubRepo) UpdateSourceFile(f *domain.SourceFile) error {
-	snap := sfUpdate{processedRecords: f.ProcessedRecords}
-	if f.LastProcessedLEI != nil {
-		s := *f.LastProcessedLEI
-		snap.lastProcessedLEI = &s
-	}
-	r.updateCalls = append(r.updateCalls, snap)
-	return nil
-}
-
-// testLEICode returns a deterministic, valid 20-character LEI code for index i.
-// Format: "5493001KTEST" (12 chars) + zero-padded i (6 digits) + i%100 (2 digits).
-func testLEICode(i int) string {
-	return fmt.Sprintf("5493001KTEST%06d%02d", i, i%100)
-}
-
-// leiArrayDecoder builds an in-memory JSON array of n minimal LEI records and
-// returns a *json.Decoder positioned at the start of that array, ready to be
-// handed to processRecordsArray.
-func leiArrayDecoder(n int) *json.Decoder {
-	var buf bytes.Buffer
-	buf.WriteString("[")
-	for i := 1; i <= n; i++ {
-		if i > 1 {
-			buf.WriteByte(',')
-		}
-		lei := testLEICode(i)
-		fmt.Fprintf(&buf,
-			`{"LEI":{"$":%q},"Entity":{"LegalName":{"$":"E"},"LegalAddress":{"Country":{"$":"US"}}},"Registration":{}}`,
-			lei,
-		)
-	}
-	buf.WriteString("]")
-	return json.NewDecoder(&buf)
-}
 
 // TestProcessRecordsArray_CheckpointFrequency verifies that UpdateSourceFile is
 // called once for every sourceFileProgressCheckpointInterval (5 000) records
@@ -366,7 +429,7 @@ func TestProcessRecordsArray_CheckpointFrequency(t *testing.T) {
 	// 2 checkpoints (at 5 000 and 10 000) + 1 final = 3 calls.
 	const wantCalls = 3
 
-	stub := &checkpointStubRepo{}
+	stub := &stubLEIRepo{}
 	svc := &leiService{repo: stub}
 	sf := &domain.SourceFile{ID: uuid.New()}
 
@@ -381,31 +444,31 @@ func TestProcessRecordsArray_CheckpointFrequency(t *testing.T) {
 	// Each checkpoint call must land on an exact 5 000-record boundary.
 	wantCheckpoints := []int{5000, 10000}
 	for idx, want := range wantCheckpoints {
-		if got := stub.updateCalls[idx].processedRecords; got != want {
+		if got := stub.updateCalls[idx].ProcessedRecords; got != want {
 			t.Errorf("checkpoint call %d: expected processedRecords=%d, got %d", idx+1, want, got)
 		}
 	}
 
 	// The final call must reflect the full record count.
-	if got := stub.updateCalls[wantCalls-1].processedRecords; got != totalRecords {
+	if got := stub.updateCalls[wantCalls-1].ProcessedRecords; got != totalRecords {
 		t.Errorf("final UpdateSourceFile call: expected processedRecords=%d, got %d", totalRecords, got)
 	}
 }
 
 // TestProcessRecordsArray_FinalUpdatePersistsLastLEI verifies that the
-// LastProcessedLEI written during the last checkpoint is preserved in the
-// mandatory final UpdateSourceFile call, and that ProcessedRecords in that
-// final call reflects every record actually processed (including those after
-// the last checkpoint boundary).
+// LastProcessedLEI in the mandatory final UpdateSourceFile call reflects the
+// actual last record processed, and that ProcessedRecords reflects every record
+// actually processed (including those after the last checkpoint boundary).
 func TestProcessRecordsArray_FinalUpdatePersistsLastLEI(t *testing.T) {
 	// 5 001 records: checkpoint fires at 5 000 (sets LastProcessedLEI to the
 	// 5 000th record's LEI); the remaining 1 record is flushed without hitting
 	// another checkpoint; the final UpdateSourceFile carries processedRecords=5 001
-	// and the LastProcessedLEI written at the 5 000-record checkpoint.
+	// and LastProcessedLEI for the 5 001st record.
 	const totalRecords = 5001
 	expectedCheckpointLEI := testLEICode(5000) // LEI captured at the checkpoint
+	expectedFinalLEI := testLEICode(5001)       // actual last record's LEI
 
-	stub := &checkpointStubRepo{}
+	stub := &stubLEIRepo{}
 	svc := &leiService{repo: stub}
 	sf := &domain.SourceFile{ID: uuid.New()}
 
@@ -419,24 +482,24 @@ func TestProcessRecordsArray_FinalUpdatePersistsLastLEI(t *testing.T) {
 	}
 
 	checkpoint := stub.updateCalls[0]
-	if checkpoint.processedRecords != 5000 {
-		t.Errorf("checkpoint call: expected processedRecords=5000, got %d", checkpoint.processedRecords)
+	if checkpoint.ProcessedRecords != 5000 {
+		t.Errorf("checkpoint call: expected processedRecords=5000, got %d", checkpoint.ProcessedRecords)
 	}
-	if checkpoint.lastProcessedLEI == nil {
+	if checkpoint.LastProcessedLEI == nil {
 		t.Error("checkpoint call: LastProcessedLEI is nil, want non-nil")
-	} else if *checkpoint.lastProcessedLEI != expectedCheckpointLEI {
-		t.Errorf("checkpoint call: LastProcessedLEI=%q, want %q", *checkpoint.lastProcessedLEI, expectedCheckpointLEI)
+	} else if *checkpoint.LastProcessedLEI != expectedCheckpointLEI {
+		t.Errorf("checkpoint call: LastProcessedLEI=%q, want %q", *checkpoint.LastProcessedLEI, expectedCheckpointLEI)
 	}
 
 	final := stub.updateCalls[1]
-	if final.processedRecords != totalRecords {
-		t.Errorf("final call: expected processedRecords=%d, got %d", totalRecords, final.processedRecords)
+	if final.ProcessedRecords != totalRecords {
+		t.Errorf("final call: expected processedRecords=%d, got %d", totalRecords, final.ProcessedRecords)
 	}
-	// The final UpdateSourceFile does not re-set LastProcessedLEI; it carries
-	// through the value written during the last checkpoint.
-	if final.lastProcessedLEI == nil {
-		t.Error("final call: LastProcessedLEI is nil, want value from last checkpoint")
-	} else if *final.lastProcessedLEI != expectedCheckpointLEI {
-		t.Errorf("final call: LastProcessedLEI=%q, want %q (from checkpoint)", *final.lastProcessedLEI, expectedCheckpointLEI)
+	// LastProcessedLEI is kept in sync after every batch flush, so the final
+	// call carries the actual last record's LEI rather than the checkpoint LEI.
+	if final.LastProcessedLEI == nil {
+		t.Error("final call: LastProcessedLEI is nil, want last record's LEI")
+	} else if *final.LastProcessedLEI != expectedFinalLEI {
+		t.Errorf("final call: LastProcessedLEI=%q, want %q (actual last record)", *final.LastProcessedLEI, expectedFinalLEI)
 	}
 }
