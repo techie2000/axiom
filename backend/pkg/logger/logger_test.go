@@ -33,3 +33,12 @@ func TestInitFallsBackToStdoutOnInvalidLogPath(t *testing.T) {
 	Init("info")
 	Info().Msg("logger fallback test")
 }
+
+func TestCloseCanBeCalledMultipleTimes(t *testing.T) {
+	// Initialize logger to simulate normal usage before closing.
+	Init("info")
+
+	// Close should be safe to call multiple times without panicking.
+	Close()
+	Close()
+}
