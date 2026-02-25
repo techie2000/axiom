@@ -15,5 +15,3 @@ ON lei_raw.lei_records (BTRIM(entity_legal_form))
 WHERE deleted_at IS NULL
 AND entity_legal_form IS NOT NULL
 AND BTRIM(entity_legal_form) <> '';
-
-ANALYZE lei_raw.lei_records;
