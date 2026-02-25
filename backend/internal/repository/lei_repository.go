@@ -352,9 +352,10 @@ func (r *leiRepository) GetDistinctRegions() ([]string, error) {
 
 	var legalRegions []string
 	if err := r.db.Model(&domain.LEIRecord{}).
-		Distinct("legal_address_region").
-		Where("legal_address_region IS NOT NULL AND TRIM(legal_address_region) != ''").
-		Pluck("legal_address_region", &legalRegions).Error; err != nil {
+		Distinct("BTRIM(legal_address_region)").
+		Where("legal_address_region IS NOT NULL AND BTRIM(legal_address_region) <> ''").
+		Order("BTRIM(legal_address_region) ASC").
+		Pluck("BTRIM(legal_address_region)", &legalRegions).Error; err != nil {
 		return nil, err
 	}
 
@@ -367,9 +368,10 @@ func (r *leiRepository) GetDistinctRegions() ([]string, error) {
 
 	var hqRegions []string
 	if err := r.db.Model(&domain.LEIRecord{}).
-		Distinct("hq_address_region").
-		Where("hq_address_region IS NOT NULL AND TRIM(hq_address_region) != ''").
-		Pluck("hq_address_region", &hqRegions).Error; err != nil {
+		Distinct("BTRIM(hq_address_region)").
+		Where("hq_address_region IS NOT NULL AND BTRIM(hq_address_region) <> ''").
+		Order("BTRIM(hq_address_region) ASC").
+		Pluck("BTRIM(hq_address_region)", &hqRegions).Error; err != nil {
 		return nil, err
 	}
 
@@ -396,10 +398,10 @@ func (r *leiRepository) GetDistinctRegions() ([]string, error) {
 func (r *leiRepository) GetDistinctLegalForms() ([]string, error) {
 	var legalForms []string
 	err := r.db.Model(&domain.LEIRecord{}).
-		Distinct("entity_legal_form").
-		Where("entity_legal_form IS NOT NULL AND TRIM(entity_legal_form) != ''").
-		Order("entity_legal_form ASC").
-		Pluck("entity_legal_form", &legalForms).Error
+		Distinct("BTRIM(entity_legal_form)").
+		Where("entity_legal_form IS NOT NULL AND BTRIM(entity_legal_form) <> ''").
+		Order("BTRIM(entity_legal_form) ASC").
+		Pluck("BTRIM(entity_legal_form)", &legalForms).Error
 	if err != nil {
 		return nil, err
 	}
