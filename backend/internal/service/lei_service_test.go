@@ -50,22 +50,56 @@ func (r *stubLEIRepo) GetDistinctCountries() ([]string, error)                  
 func (r *stubLEIRepo) GetDistinctRegions() ([]string, error)                        { return nil, nil }
 func (r *stubLEIRepo) GetDistinctLegalForms() ([]string, error)                     { return nil, nil }
 func (r *stubLEIRepo) UpdateLEIRecord(*domain.LEIRecord) error                      { return nil }
-func (r *stubLEIRepo) UpsertLEIRecord(*domain.LEIRecord) (bool, error)              { return false, nil }
-func (r *stubLEIRepo) DeleteLEI(string) error                                       { return nil }
-func (r *stubLEIRepo) CreateSourceFile(*domain.SourceFile) error                    { return nil }
-func (r *stubLEIRepo) FindSourceFileByID(string) (*domain.SourceFile, error)        { return nil, nil }
-func (r *stubLEIRepo) FindSourceFileByHash(string) (*domain.SourceFile, error)      { return nil, nil }
-func (r *stubLEIRepo) FindLatestSourceFile(string) (*domain.SourceFile, error)      { return nil, nil }
-func (r *stubLEIRepo) FindPendingSourceFiles() ([]*domain.SourceFile, error)        { return nil, nil }
-func (r *stubLEIRepo) FindRetryableFailedFiles() ([]*domain.SourceFile, error)      { return nil, nil }
-func (r *stubLEIRepo) ResetFailedFileForRetry(uuid.UUID) error                      { return nil }
-func (r *stubLEIRepo) FindProcessingStatus(string) (*domain.FileProcessingStatus, error) {
-	return nil, nil
+func (r *stubLEIRepo) UpsertLEIRecord(*domain.LEIRecord) (bool, error) {
+	panic("unexpected call to stubLEIRepo.UpsertLEIRecord")
 }
-func (r *stubLEIRepo) UpdateProcessingStatus(*domain.FileProcessingStatus) error { return nil }
-func (r *stubLEIRepo) CreateAuditRecord(*domain.LEIRecordAudit) error            { return nil }
+
+func (r *stubLEIRepo) DeleteLEI(string) error {
+	panic("unexpected call to stubLEIRepo.DeleteLEI")
+}
+
+func (r *stubLEIRepo) CreateSourceFile(*domain.SourceFile) error {
+	panic("unexpected call to stubLEIRepo.CreateSourceFile")
+}
+
+func (r *stubLEIRepo) FindSourceFileByID(string) (*domain.SourceFile, error) {
+	panic("unexpected call to stubLEIRepo.FindSourceFileByID")
+}
+
+func (r *stubLEIRepo) FindSourceFileByHash(string) (*domain.SourceFile, error) {
+	panic("unexpected call to stubLEIRepo.FindSourceFileByHash")
+}
+
+func (r *stubLEIRepo) FindLatestSourceFile(string) (*domain.SourceFile, error) {
+	panic("unexpected call to stubLEIRepo.FindLatestSourceFile")
+}
+
+func (r *stubLEIRepo) FindPendingSourceFiles() ([]*domain.SourceFile, error) {
+	panic("unexpected call to stubLEIRepo.FindPendingSourceFiles")
+}
+
+func (r *stubLEIRepo) FindRetryableFailedFiles() ([]*domain.SourceFile, error) {
+	panic("unexpected call to stubLEIRepo.FindRetryableFailedFiles")
+}
+
+func (r *stubLEIRepo) ResetFailedFileForRetry(uuid.UUID) error {
+	panic("unexpected call to stubLEIRepo.ResetFailedFileForRetry")
+}
+
+func (r *stubLEIRepo) FindProcessingStatus(string) (*domain.FileProcessingStatus, error) {
+	panic("unexpected call to stubLEIRepo.FindProcessingStatus")
+}
+
+func (r *stubLEIRepo) UpdateProcessingStatus(*domain.FileProcessingStatus) error {
+	panic("unexpected call to stubLEIRepo.UpdateProcessingStatus")
+}
+
+func (r *stubLEIRepo) CreateAuditRecord(*domain.LEIRecordAudit) error {
+	panic("unexpected call to stubLEIRepo.CreateAuditRecord")
+}
+
 func (r *stubLEIRepo) FindAuditHistoryByLEI(string, int) ([]*domain.LEIRecordAudit, error) {
-	return nil, nil
+	panic("unexpected call to stubLEIRepo.FindAuditHistoryByLEI")
 }
 
 var _ repository.LEIRepository = (*stubLEIRepo)(nil) // compile-time interface check
