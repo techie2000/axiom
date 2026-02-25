@@ -1,17 +1,31 @@
 package logger
 
 import (
+	"fmt"
+	"io"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
 var logger zerolog.Logger
+var fileSink *os.File
+
+func Close() {
+	if fileSink != nil {
+		_ = fileSink.Close()
+		fileSink = nil
+	}
+}
 
 // Init initializes the logger
 func Init(level string) {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+
+	Close()
 
 	logLevel := zerolog.InfoLevel
 	switch level {
@@ -23,7 +37,23 @@ func Init(level string) {
 		logLevel = zerolog.ErrorLevel
 	}
 
-	logger = zerolog.New(os.Stdout).
+	output := io.Writer(os.Stdout)
+	logFilePath := strings.TrimSpace(os.Getenv("LOG_FILE_PATH"))
+	if logFilePath != "" {
+		if err := os.MkdirAll(filepath.Dir(logFilePath), 0755); err != nil {
+			fmt.Fprintf(os.Stderr, "logger: failed to create log directory for %s: %v\n", logFilePath, err)
+		} else {
+			file, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "logger: failed to open log file %s: %v\n", logFilePath, err)
+			} else {
+				fileSink = file
+				output = io.MultiWriter(os.Stdout, file)
+			}
+		}
+	}
+
+	logger = zerolog.New(output).
 		Level(logLevel).
 		With().
 		Timestamp().
