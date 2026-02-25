@@ -466,7 +466,7 @@ server:
 
 | Variable | Default | Description |
 | -------- | ------- | ----------- |
-| `LOG_FILE_PATH` | _(unset)_ | Optional log file path. Mirrors backend logs to stdout and file. Unset = stdout only. |
+| `LOG_FILE_PATH` | _(unset)_ | Optional log file path. App default unset = stdout only. Empty value disables file mirroring; .env.* files may override. |
 
 See [LEI Configuration](docs/lei/LEI_ACQUISITION.md#environment-variables) for detailed scheduler options.
 
