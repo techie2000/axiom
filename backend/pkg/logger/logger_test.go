@@ -26,7 +26,7 @@ func TestInitWritesToFileWhenConfigured(t *testing.T) {
 }
 
 func TestInitFallsBackToStdoutOnInvalidLogPath(t *testing.T) {
-	invalidPath := t.TempDir()
+	invalidPath := filepath.Join(t.TempDir(), "nonexistent", "backend.log")
 	t.Setenv("LOG_FILE_PATH", invalidPath)
 	t.Cleanup(Close)
 
