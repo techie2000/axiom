@@ -430,7 +430,7 @@ func (r *leiRepository) UpsertLEIRecord(record *domain.LEIRecord) (bool, error) 
 
 	// Check for an existing row inside the transaction.
 	var existing domain.LEIRecord
-	err := tx.Where("lei = ?", record.LEI).Preload("SourceFile").First(&existing).Error
+	err := tx.Where("lei = ?", record.LEI).First(&existing).Error
 
 	if err != nil && err != gorm.ErrRecordNotFound {
 		tx.Rollback()
