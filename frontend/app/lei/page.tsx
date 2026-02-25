@@ -170,10 +170,10 @@ export default function LEIStatusPage() {
   useEffect(() => {
     const handleEscapeKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        if (fullExpanded) {
-          setFullExpanded(false)
-        } else if (rrExpanded) {
+        if (rrExpanded) {
           setRrExpanded(false)
+        } else if (fullExpanded) {
+          setFullExpanded(false)
         }
       }
     }
