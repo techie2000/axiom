@@ -425,6 +425,7 @@ func (r *leiRepository) UpsertLEIRecord(record *domain.LEIRecord) (bool, error) 
 	defer func() {
 		if p := recover(); p != nil {
 			tx.Rollback()
+			panic(p) // re-panic after rollback so the caller sees the failure
 		}
 	}()
 

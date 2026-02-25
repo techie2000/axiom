@@ -1342,7 +1342,7 @@ func (s *leiService) GetDistinctRegions() ([]string, error) {
 	now := time.Now()
 
 	s.lookupCacheMu.RLock()
-	if len(s.distinctRegions) > 0 && now.Sub(s.distinctRegionsCachedAt) < distinctLookupCacheTTL {
+	if !s.distinctRegionsCachedAt.IsZero() && now.Sub(s.distinctRegionsCachedAt) < distinctLookupCacheTTL {
 		cached := cloneStringSlice(s.distinctRegions)
 		s.lookupCacheMu.RUnlock()
 		return cached, nil
@@ -1367,7 +1367,7 @@ func (s *leiService) GetDistinctLegalForms() ([]string, error) {
 	now := time.Now()
 
 	s.lookupCacheMu.RLock()
-	if len(s.distinctLegalForms) > 0 && now.Sub(s.distinctLegalFormsCachedAt) < distinctLookupCacheTTL {
+	if !s.distinctLegalFormsCachedAt.IsZero() && now.Sub(s.distinctLegalFormsCachedAt) < distinctLookupCacheTTL {
 		cached := cloneStringSlice(s.distinctLegalForms)
 		s.lookupCacheMu.RUnlock()
 		return cached, nil
