@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS lei_raw.lei_relationship_records_audit (
     action              VARCHAR(20) NOT NULL,
     record_snapshot     JSONB       NOT NULL,
     changed_fields      JSONB,
-    source_file_id      UUID,
+    source_file_id      UUID REFERENCES lei_raw.source_files(id),
     changed_by          VARCHAR(100) NOT NULL DEFAULT 'system',
     created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT pk_lei_rr_audit PRIMARY KEY (id)
