@@ -186,6 +186,25 @@ export default function LEIStatusPage() {
     }
   }
 
+  const getJobDisplayName = (jobType: string): string => {
+    switch (jobType) {
+      case 'MASTER_DATA_SYNC':
+        return 'Reference Data (MASTER_DATA_SYNC)'
+      case 'DAILY_FULL':
+        return 'Level 1 — LEI Records (DAILY_FULL)'
+      case 'DAILY_DELTA':
+        return 'Level 1 — LEI Records Delta (DAILY_DELTA)'
+      case 'LEVEL2_RR':
+        return 'Level 2 — Relationship Records (LEVEL2_RR)'
+      case 'LEVEL2_REPEX':
+        return 'Level 2 — Reporting Exceptions (LEVEL2_REPEX)'
+      default:
+        return jobType
+    }
+  }
+
+  const getCardId = (jobType: string): string => `card-${jobType.toLowerCase()}`
+
   const calculateProgress = (status: ProcessingStatus | null): number => {
     if (!status?.current_source_file) return 0
     const file = status.current_source_file
@@ -260,10 +279,10 @@ export default function LEIStatusPage() {
   const canTriggerRr = !isRrRunning && !isFullSyncRunning
   const canTriggerRepex = !isRepexRunning && !isRrRunning && !isFullSyncRunning
 
-  const renderStatusCard = (title: string, status: ProcessingStatus | null, isDisabled: boolean = false) => {
+  const renderStatusCard = (title: string, status: ProcessingStatus | null, isDisabled: boolean = false, cardId?: string) => {
     if (!status) {
       return (
-        <div className={`rounded-lg shadow-md p-6 border-2 ${
+        <div id={cardId} className={`rounded-lg shadow-md p-6 border-2 ${
           isDisabled
             ? 'bg-gray-100 dark:bg-gray-800/30 border-gray-300 dark:border-gray-700 opacity-60'
             : 'bg-white/5 backdrop-blur-sm border-white/10'
@@ -278,11 +297,11 @@ export default function LEIStatusPage() {
     const file = status.current_source_file
     const frequency = getFrequencyLabel(status)
     const dependency = status.depends_on_job_type && status.depends_on_job_type !== 'NONE'
-      ? status.depends_on_job_type
+      ? getJobDisplayName(status.depends_on_job_type)
       : 'None'
 
     return (
-      <div className={`rounded-lg shadow-md p-6 border-2 ${
+      <div id={cardId} className={`rounded-lg shadow-md p-6 border-2 ${
         isDisabled
           ? 'bg-gray-100 dark:bg-gray-800/30 border-gray-300 dark:border-gray-700 opacity-60'
           : 'bg-white/5 backdrop-blur-sm border-white/10'
@@ -415,7 +434,8 @@ export default function LEIStatusPage() {
     )
   }
 
-  const renderLevel2SubJob = (label: string, status: ProcessingStatus | null, dependsOn: string) => {
+  const renderLevel2SubJob = (jobType: 'LEVEL2_RR' | 'LEVEL2_REPEX', status: ProcessingStatus | null, dependsOn: string) => {
+    const label = getJobDisplayName(jobType)
     const badge = status
       ? <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${getStatusColor(status.status)}`}>{status.status}</span>
       : <span className="px-2 py-0.5 rounded-full text-xs font-semibold border bg-gray-100 text-gray-500 border-gray-300 dark:bg-gray-700 dark:text-gray-400 dark:border-gray-600">UNKNOWN</span>
@@ -428,9 +448,9 @@ export default function LEIStatusPage() {
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-semibold text-sm text-gray-900 dark:text-white">{label}</span>
+            <a href={`#${getCardId(jobType)}`} className="font-semibold text-sm text-blue-700 hover:underline dark:text-blue-300">{label}</a>
             {badge}
-            <span className="text-xs text-gray-500 dark:text-gray-400">depends on: {dependsOn}</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">depends on: {getJobDisplayName(dependsOn)}</span>
           </div>
           {status && (
             <div className="mt-1 space-y-0.5 text-xs text-gray-600 dark:text-gray-400">
@@ -504,7 +524,7 @@ export default function LEIStatusPage() {
             <div className="flex items-center gap-3 py-3 border-b border-gray-200 dark:border-white/10">
               <div className={`w-3 h-3 rounded-full shrink-0 ${masterDataStatus ? getStatusDot(masterDataStatus.status) : 'bg-gray-400'}`} />
               <div className="flex-1 flex items-center gap-2 flex-wrap">
-                <span className="font-semibold text-sm text-gray-900 dark:text-white">Reference Data Sync (MASTER_DATA_SYNC)</span>
+                <a href={`#${getCardId('MASTER_DATA_SYNC')}`} className="font-semibold text-sm text-blue-700 hover:underline dark:text-blue-300">{getJobDisplayName('MASTER_DATA_SYNC')}</a>
                 {masterDataStatus && (
                   <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${getStatusColor(masterDataStatus.status)}`}>
                     {masterDataStatus.status}
@@ -522,7 +542,7 @@ export default function LEIStatusPage() {
               <div className="flex items-center gap-3 py-3 border-b border-gray-200 dark:border-white/10">
                 <div className={`w-3 h-3 rounded-full shrink-0 ${fullStatus ? getStatusDot(fullStatus.status) : 'bg-gray-400'}`} />
                 <div className="flex-1 flex items-center gap-2 flex-wrap">
-                  <span className="font-semibold text-sm text-gray-900 dark:text-white">Level 1 — Full Sync (DAILY_FULL)</span>
+                  <a href={`#${getCardId('DAILY_FULL')}`} className="font-semibold text-sm text-blue-700 hover:underline dark:text-blue-300">{getJobDisplayName('DAILY_FULL')}</a>
                   {fullStatus && (
                     <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${getStatusColor(fullStatus.status)}`}>
                       {fullStatus.status}
@@ -537,9 +557,9 @@ export default function LEIStatusPage() {
 
               {/* Level 2 dependent sub-jobs — indented under DAILY_FULL */}
               <div className="pl-6 border-l-2 border-dashed border-gray-300 dark:border-white/10 ml-1.5">
-                {renderLevel2SubJob('Level 2 — Relationship Records (LEVEL2_RR)', rrStatus, 'DAILY_FULL')}
+                {renderLevel2SubJob('LEVEL2_RR', rrStatus, 'DAILY_FULL')}
                 <div className="pl-6 border-l-2 border-dashed border-gray-300 dark:border-white/10 ml-1.5">
-                  {renderLevel2SubJob('Level 2 — Reporting Exceptions (LEVEL2_REPEX)', repexStatus, 'LEVEL2_RR')}
+                  {renderLevel2SubJob('LEVEL2_REPEX', repexStatus, 'LEVEL2_RR')}
                 </div>
               </div>
             </div>
@@ -548,7 +568,7 @@ export default function LEIStatusPage() {
             <div className="flex items-center gap-3 py-3 opacity-50">
               <div className={`w-3 h-3 rounded-full shrink-0 ${deltaStatus ? getStatusDot(deltaStatus.status) : 'bg-gray-400'}`} />
               <div className="flex-1 flex items-center gap-2 flex-wrap">
-                <span className="font-semibold text-sm text-gray-900 dark:text-white">Level 1 — Delta Sync (DAILY_DELTA)</span>
+                <a href={`#${getCardId('DAILY_DELTA')}`} className="font-semibold text-sm text-blue-700 hover:underline dark:text-blue-300">{getJobDisplayName('DAILY_DELTA')}</a>
                 <span className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded">DISABLED</span>
               </div>
             </div>
@@ -569,12 +589,12 @@ export default function LEIStatusPage() {
                 ▶ Run Reference Data
               </button>
               <button
-                onClick={() => triggerJob('/api/v1/lei/sync/full', 'Full sync triggered')}
+                onClick={() => triggerJob('/api/v1/lei/sync/full', 'Level 1 LEI Records sync triggered (DAILY_FULL)')}
                 className="px-3 py-2 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
                 disabled={!canTriggerFull}
-                title={!canTriggerFull ? 'Blocked while MASTER_DATA_SYNC or DAILY_FULL is running' : 'Trigger Level 1 full sync'}
+                title={!canTriggerFull ? 'Blocked while MASTER_DATA_SYNC or DAILY_FULL is running' : 'Trigger Level 1 LEI Records sync (DAILY_FULL)'}
               >
-                ▶ Run Full Sync
+                ▶ Run LEI Records
               </button>
               <button
                 onClick={() => triggerJob('/api/v1/lei/sync/delta', 'Delta sync triggered')}
@@ -593,18 +613,18 @@ export default function LEIStatusPage() {
                 ▶ Run Level 2
               </button>
               <button
-                onClick={() => triggerJob('/api/v1/lei/sync/level2/rr', 'LEVEL2_RR sync triggered')}
+                onClick={() => triggerJob('/api/v1/lei/sync/level2/rr', 'Level 2 Relationship Records sync triggered (LEVEL2_RR)')}
                 className="px-3 py-2 bg-violet-600 text-white text-xs rounded-lg hover:bg-violet-700 transition-colors disabled:opacity-50"
                 disabled={!canTriggerRr}
-                title={!canTriggerRr ? 'Blocked while DAILY_FULL or LEVEL2_RR is running' : 'Trigger LEVEL2_RR only'}
+                title={!canTriggerRr ? 'Blocked while DAILY_FULL or LEVEL2_RR is running' : 'Trigger Level 2 Relationship Records sync only (LEVEL2_RR)'}
               >
                 ▶ Run RR
               </button>
               <button
-                onClick={() => triggerJob('/api/v1/lei/sync/level2/repex', 'LEVEL2_REPEX sync triggered')}
+                onClick={() => triggerJob('/api/v1/lei/sync/level2/repex', 'Level 2 Reporting Exceptions sync triggered (LEVEL2_REPEX)')}
                 className="px-3 py-2 bg-fuchsia-600 text-white text-xs rounded-lg hover:bg-fuchsia-700 transition-colors disabled:opacity-50"
                 disabled={!canTriggerRepex}
-                title={!canTriggerRepex ? 'Blocked while DAILY_FULL, LEVEL2_RR, or LEVEL2_REPEX is running' : 'Trigger LEVEL2_REPEX only'}
+                title={!canTriggerRepex ? 'Blocked while DAILY_FULL, LEVEL2_RR, or LEVEL2_REPEX is running' : 'Trigger Level 2 Reporting Exceptions sync only (LEVEL2_REPEX)'}
               >
                 ▶ Run REPEX
               </button>
@@ -613,19 +633,13 @@ export default function LEIStatusPage() {
         </div>
 
         {/* Detailed Status Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          {renderStatusCard('Reference Data Sync', masterDataStatus, false)}
-          {renderStatusCard(`Full Sync (${getFrequencyLabel(fullStatus)})`, fullStatus, false)}
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          {renderStatusCard('Level 2 — Relationship Records', rrStatus, false)}
-          {renderStatusCard('Level 2 — Reporting Exceptions', repexStatus, false)}
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div className="space-y-6 mb-6">
+          {renderStatusCard(getJobDisplayName('MASTER_DATA_SYNC'), masterDataStatus, false, getCardId('MASTER_DATA_SYNC'))}
+          {renderStatusCard(getJobDisplayName('DAILY_FULL'), fullStatus, false, getCardId('DAILY_FULL'))}
+          {renderStatusCard(getJobDisplayName('LEVEL2_RR'), rrStatus, false, getCardId('LEVEL2_RR'))}
+          {renderStatusCard(getJobDisplayName('LEVEL2_REPEX'), repexStatus, false, getCardId('LEVEL2_REPEX'))}
           <div className="relative">
-            {renderStatusCard(`Delta Sync (${getFrequencyLabel(deltaStatus)})`, deltaStatus, true)}
+            {renderStatusCard(getJobDisplayName('DAILY_DELTA'), deltaStatus, true, getCardId('DAILY_DELTA'))}
             <div className="absolute top-4 right-4 bg-gray-500 text-white text-xs px-2 py-1 rounded">
               DISABLED
             </div>

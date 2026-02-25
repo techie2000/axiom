@@ -117,11 +117,16 @@ Response:
 {
   "id": "...",
   "job_type": "DAILY_FULL",
+  "job_label": "Level 1 — LEI Records (DAILY_FULL)",
   "status": "RUNNING",
+  "depends_on_job_type": "MASTER_DATA_SYNC",
+  "depends_on_job_label": "Reference Data (MASTER_DATA_SYNC)",
   "last_run_at": "2026-02-10T14:30:00Z",
   "current_source_file": {
     "id": "...",
     "file_name": "lei-FULL-20260210-143000.json.zip",
+    "job_type": "DAILY_FULL",
+    "job_label": "Level 1 — LEI Records (DAILY_FULL)",
     "processing_status": "IN_PROGRESS",
     "total_records": 2500000,
     "processed_records": 150000,

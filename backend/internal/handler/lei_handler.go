@@ -206,11 +206,11 @@ func (h *LEIHandler) TriggerFullSync(c *gin.Context) {
 		if errors.Is(err, service.ErrJobRunning) {
 			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to trigger full sync"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to trigger Level 1 LEI Records sync (DAILY_FULL)"})
 		}
 		return
 	}
-	c.JSON(http.StatusAccepted, gin.H{"message": "Full sync triggered"})
+	c.JSON(http.StatusAccepted, gin.H{"message": "Level 1 LEI Records sync triggered (DAILY_FULL)"})
 }
 
 // TriggerMasterDataSync manually triggers a reference/master data sync
@@ -299,11 +299,11 @@ func (h *LEIHandler) TriggerLevel2RRSync(c *gin.Context) {
 		if errors.Is(err, service.ErrJobRunning) {
 			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to trigger LEVEL2_RR sync"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to trigger Level 2 Relationship Records sync (LEVEL2_RR)"})
 		}
 		return
 	}
-	c.JSON(http.StatusAccepted, gin.H{"message": "LEVEL2_RR sync triggered"})
+	c.JSON(http.StatusAccepted, gin.H{"message": "Level 2 Relationship Records sync triggered (LEVEL2_RR)"})
 }
 
 // TriggerLevel2REPEXSync manually triggers Level 2 REPEX step
@@ -321,11 +321,11 @@ func (h *LEIHandler) TriggerLevel2REPEXSync(c *gin.Context) {
 		if errors.Is(err, service.ErrJobRunning) {
 			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to trigger LEVEL2_REPEX sync"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to trigger Level 2 Reporting Exceptions sync (LEVEL2_REPEX)"})
 		}
 		return
 	}
-	c.JSON(http.StatusAccepted, gin.H{"message": "LEVEL2_REPEX sync triggered"})
+	c.JSON(http.StatusAccepted, gin.H{"message": "Level 2 Reporting Exceptions sync triggered (LEVEL2_REPEX)"})
 }
 
 // GetProcessingStatus retrieves processing status for a job type
