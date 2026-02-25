@@ -16,7 +16,12 @@ var fileSink *os.File
 
 func Close() {
 	if fileSink != nil {
-		_ = fileSink.Close()
+		if err := fileSink.Sync(); err != nil {
+			fmt.Fprintf(os.Stderr, "logger: failed to sync log file: %v\n", err)
+		}
+		if err := fileSink.Close(); err != nil {
+			fmt.Fprintf(os.Stderr, "logger: failed to close log file: %v\n", err)
+		}
 		fileSink = nil
 	}
 }
