@@ -156,6 +156,8 @@ type SourceFile struct {
 	ID              uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
 	FileName        string    `gorm:"size:500;not null" json:"file_name"`
 	FileType        string    `gorm:"size:20;not null" json:"file_type"` // FULL, DELTA
+	JobType         string    `gorm:"size:50" json:"job_type"`
+	JobLabel        string    `gorm:"size:120" json:"job_label"`
 	FileURL         string    `gorm:"size:1000;not null" json:"file_url"`
 	FileSize        int64     `json:"file_size"`
 	FileHash        string    `gorm:"size:64" json:"file_hash"` // SHA-256 hash
@@ -190,12 +192,14 @@ func (SourceFile) TableName() string {
 
 // FileProcessingStatus represents the overall status of file processing jobs
 type FileProcessingStatus struct {
-	ID            uuid.UUID  `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
-	JobType       string     `gorm:"size:50;not null" json:"job_type"` // DAILY_FULL, DAILY_DELTA, LEVEL2_RR, LEVEL2_REPEX
-	Status        string     `gorm:"size:20;not null" json:"status"`   // IDLE, RUNNING, COMPLETED, FAILED
-	LastRunAt     *time.Time `json:"last_run_at"`
-	NextRunAt     *time.Time `json:"next_run_at"`
-	LastSuccessAt *time.Time `json:"last_success_at"`
+	ID                uuid.UUID  `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	JobType           string     `gorm:"size:50;not null" json:"job_type"` // DAILY_FULL, DAILY_DELTA, LEVEL2_RR, LEVEL2_REPEX
+	JobLabel          string     `gorm:"size:120" json:"job_label"`
+	Status            string     `gorm:"size:20;not null" json:"status"` // IDLE, RUNNING, COMPLETED, FAILED
+	LastRunAt         *time.Time `json:"last_run_at"`
+	NextRunAt         *time.Time `json:"next_run_at"`
+	LastSuccessAt     *time.Time `json:"last_success_at"`
+	DependsOnJobLabel string     `gorm:"size:120" json:"depends_on_job_label"`
 
 	CurrentSourceFileID *uuid.UUID  `gorm:"type:uuid" json:"current_source_file_id"`
 	CurrentSourceFile   *SourceFile `gorm:"foreignKey:CurrentSourceFileID" json:"current_source_file,omitempty"`
@@ -214,6 +218,44 @@ type FileProcessingStatus struct {
 // TableName overrides the table name
 func (FileProcessingStatus) TableName() string {
 	return "lei_raw.file_processing_status"
+}
+
+// JobTypeDisplayName returns the human-readable job label used in API/UI and persisted metadata.
+func JobTypeDisplayName(jobType string) string {
+	switch jobType {
+	case "MASTER_DATA_SYNC":
+		return "Reference Data (MASTER_DATA_SYNC)"
+	case "LEVEL1_FULL":
+		return "Level 1 — LEI Records (LEVEL1_FULL)"
+	case "LEVEL1_DELTA":
+		return "Level 1 — LEI Records Delta (LEVEL1_DELTA)"
+	case "DAILY_FULL":
+		return "Level 1 — LEI Records (DAILY_FULL)"
+	case "DAILY_DELTA":
+		return "Level 1 — LEI Records Delta (DAILY_DELTA)"
+	case "LEVEL2_RR":
+		return "Level 2 — Relationship Records (LEVEL2_RR)"
+	case "LEVEL2_REPEX":
+		return "Level 2 — Reporting Exceptions (LEVEL2_REPEX)"
+	default:
+		return jobType
+	}
+}
+
+// JobTypeFromFileType maps source file type values to canonical LEI job types.
+func JobTypeFromFileType(fileType string) string {
+	switch fileType {
+	case "FULL":
+		return "LEVEL1_FULL"
+	case "DELTA":
+		return "LEVEL1_DELTA"
+	case "RR", "RR_FULL":
+		return "LEVEL2_RR"
+	case "REPEX", "REPEX_FULL":
+		return "LEVEL2_REPEX"
+	default:
+		return ""
+	}
 }
 
 // LEIChangeDetection represents changes detected between old and new LEI records

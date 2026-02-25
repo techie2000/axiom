@@ -267,9 +267,12 @@ func (s *leiLevel2Service) downloadLevel2File(
 	}
 
 	now := time.Now()
+	jobType := domain.JobTypeFromFileType(fileType)
 	sourceFile := &domain.SourceFile{
 		FileName:         fileName,
 		FileType:         fileType,
+		JobType:          jobType,
+		JobLabel:         domain.JobTypeDisplayName(jobType),
 		FileURL:          url,
 		FileSize:         size,
 		FileHash:         fileHash,

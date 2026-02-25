@@ -1,0 +1,3 @@
+DROP INDEX IF EXISTS lei_raw.idx_lei_records_legal_form_trimmed_active;
+DROP INDEX IF EXISTS lei_raw.idx_lei_records_hq_region_trimmed_active;
+DROP INDEX IF EXISTS lei_raw.idx_lei_records_legal_region_trimmed_active;
