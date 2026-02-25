@@ -40,6 +40,7 @@ export default function LEIStatusPage() {
   const [error, setError] = useState<string | null>(null)
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [triggerMessage, setTriggerMessage] = useState<string | null>(null)
+  const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({})
 
   const API_BASE_URL = typeof window !== 'undefined'
     ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080')
@@ -279,7 +280,34 @@ export default function LEIStatusPage() {
   const canTriggerRr = !isRrRunning && !isFullSyncRunning
   const canTriggerRepex = !isRepexRunning && !isRrRunning && !isFullSyncRunning
 
-  const renderStatusCard = (title: string, status: ProcessingStatus | null, isDisabled: boolean = false, cardId?: string) => {
+  const getCardExpandState = (jobKey: string, status: ProcessingStatus | null): boolean => {
+    if (status?.status === 'RUNNING') {
+      return true
+    }
+    return expandedCards[jobKey] === true
+  }
+
+  const toggleCardExpand = (jobKey: string) => {
+    setExpandedCards(prev => ({
+      ...prev,
+      [jobKey]: !(prev[jobKey] === true),
+    }))
+  }
+
+  const getNextRunDisplay = (status: ProcessingStatus | null, dependency: string): string => {
+    const { nextRun, ultimateParent } = getChainedNextRun(status)
+    if (!nextRun) return dependency !== 'None' ? `After ${dependency}` : 'Never'
+    if (ultimateParent) return `≥ ${formatDate(nextRun)} (after ${ultimateParent})`
+    return formatDate(nextRun)
+  }
+
+  const renderStatusCard = (
+    title: string,
+    status: ProcessingStatus | null,
+    isDisabled: boolean = false,
+    cardId?: string,
+    jobKey: string = 'unknown',
+  ) => {
     if (!status) {
       return (
         <div id={cardId} className={`rounded-lg shadow-md p-6 border-2 ${
@@ -299,6 +327,8 @@ export default function LEIStatusPage() {
     const dependency = status.depends_on_job_type && status.depends_on_job_type !== 'NONE'
       ? getJobDisplayName(status.depends_on_job_type)
       : 'None'
+    const isExpanded = getCardExpandState(jobKey, status)
+    const canToggle = status.status !== 'RUNNING'
 
     return (
       <div id={cardId} className={`rounded-lg shadow-md p-6 border-2 ${
@@ -308,9 +338,19 @@ export default function LEIStatusPage() {
       }`}>
         <div className="flex justify-between items-start mb-4">
           <h2 className="text-2xl font-bold">{title}</h2>
-          <span className={`px-3 py-1 rounded-full text-sm font-semibold border-2 ${getStatusColor(status.status)}`}>
-            {status.status}
-          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => toggleCardExpand(jobKey)}
+              disabled={!canToggle}
+              className="px-3 py-1 rounded-full text-xs font-semibold border border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700 disabled:opacity-60 disabled:cursor-not-allowed"
+              title={canToggle ? (isExpanded ? 'Collapse details' : 'Expand details') : 'Running jobs stay expanded'}
+            >
+              {isExpanded ? 'Collapse' : 'Expand'}
+            </button>
+            <span className={`px-3 py-1 rounded-full text-sm font-semibold border-2 ${getStatusColor(status.status)}`}>
+              {status.status}
+            </span>
+          </div>
         </div>
 
         <div className="mb-4 bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
@@ -326,82 +366,7 @@ export default function LEIStatusPage() {
           </div>
         </div>
 
-        {file && status.status === 'RUNNING' && (
-          <div className="mb-6">
-            {file.total_records > 0 ? (
-              <>
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="font-medium text-gray-900 dark:text-white">Processing Progress</span>
-                  <span className="text-gray-600 dark:text-gray-400">
-                    {file.processed_records.toLocaleString()} / {file.total_records.toLocaleString()} records ({progress.toFixed(1)}%)
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden">
-                  <div
-                    className="bg-blue-600 dark:bg-blue-500 h-4 rounded-full transition-all duration-500 ease-out"
-                    style={{ width: `${Math.min(progress, 100)}%` }}
-                  />
-                </div>
-              </>
-            ) : (
-              <div className="text-sm text-gray-600 dark:text-gray-400">
-                <p className="mb-2">⏳ Downloading file... ({file.processed_records.toLocaleString()} records processed)</p>
-                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden">
-                  <div className="bg-blue-600 dark:bg-blue-500 h-4 rounded-full animate-pulse" style={{ width: '30%' }} />
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className="mb-4 bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-          <h3 className="font-semibold mb-2 text-sm text-gray-700 dark:text-gray-200">Processing Summary</h3>
-          <div className="space-y-1 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-600 dark:text-gray-400">Total Records:</span>
-              <span className="font-medium text-gray-900 dark:text-white">
-                {file ? file.total_records.toLocaleString() : '-'}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600 dark:text-gray-400">Successfully Processed:</span>
-              <span className="font-medium text-green-600 dark:text-green-400">
-                {file ? Math.max(file.processed_records - file.failed_records, 0).toLocaleString() : '-'}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600 dark:text-gray-400">Failed Records:</span>
-              <span className={`font-medium ${file && file.failed_records > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-gray-900 dark:text-white'}`}>
-                {file
-                  ? `${file.failed_records > 0 ? '⚠️ ' : ''}${file.failed_records.toLocaleString()}`
-                  : '-'}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mb-4">
-          <h3 className="font-semibold mb-2 text-sm text-gray-700 dark:text-gray-200">Current File</h3>
-          <div className="space-y-1 text-sm text-gray-900 dark:text-gray-100">
-            <p className="truncate"><span className="font-medium text-gray-700 dark:text-gray-300">Name:</span> {file?.file_name || '-'}</p>
-            <p><span className="font-medium text-gray-700 dark:text-gray-300">Status:</span> {file?.processing_status || '-'}</p>
-            <p><span className="font-medium text-gray-700 dark:text-gray-300">Total Records:</span> {file ? file.total_records.toLocaleString() : '-'}</p>
-            <p><span className="font-medium text-gray-700 dark:text-gray-300">Processed:</span> {file ? `${file.processed_records.toLocaleString()} records` : '-'}</p>
-            <p className="truncate"><span className="font-medium text-gray-700 dark:text-gray-300">Last LEI:</span> {file?.last_processed_lei || '-'}</p>
-            {file?.failure_category && (
-              <p className="text-red-600 dark:text-red-400">
-                <span className="font-medium">Error Category:</span> {file.failure_category}
-              </p>
-            )}
-            {file?.processing_error && (
-              <p className="text-red-600 dark:text-red-400 text-xs mt-2">
-                <span className="font-medium">Error:</span> {file.processing_error}
-              </p>
-            )}
-          </div>
-        </div>
-
-        <div className="space-y-2 text-sm">
+        <div className="space-y-2 text-sm mb-4">
           <div className="flex justify-between">
             <span className="text-gray-600 dark:text-gray-400">Last Run:</span>
             <span className="font-medium text-gray-900 dark:text-white">{formatDate(status.last_run_at)}</span>
@@ -413,15 +378,95 @@ export default function LEIStatusPage() {
           <div className="flex justify-between">
             <span className="text-gray-600 dark:text-gray-400">Next Run:</span>
             <span className="font-medium text-gray-900 dark:text-white">
-              {(() => {
-                const { nextRun, ultimateParent } = getChainedNextRun(status)
-                if (!nextRun) return dependency !== 'None' ? `After ${dependency}` : 'Never'
-                if (ultimateParent) return `≥ ${formatDate(nextRun)} (after ${ultimateParent})`
-                return formatDate(nextRun)
-              })()}
+              {getNextRunDisplay(status, dependency)}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-600 dark:text-gray-400">Current File:</span>
+            <span className="font-medium text-gray-900 dark:text-white truncate max-w-[70%] text-right">
+              {file?.file_name || '-'}
             </span>
           </div>
         </div>
+
+        {isExpanded && (
+          <>
+            {file && status.status === 'RUNNING' && (
+              <div className="mb-6">
+                {file.total_records > 0 ? (
+                  <>
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="font-medium text-gray-900 dark:text-white">Processing Progress</span>
+                      <span className="text-gray-600 dark:text-gray-400">
+                        {file.processed_records.toLocaleString()} / {file.total_records.toLocaleString()} records ({progress.toFixed(1)}%)
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden">
+                      <div
+                        className="bg-blue-600 dark:bg-blue-500 h-4 rounded-full transition-all duration-500 ease-out"
+                        style={{ width: `${Math.min(progress, 100)}%` }}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    <p className="mb-2">⏳ Downloading file... ({file.processed_records.toLocaleString()} records processed)</p>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden">
+                      <div className="bg-blue-600 dark:bg-blue-500 h-4 rounded-full animate-pulse" style={{ width: '30%' }} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="mb-4 bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+              <h3 className="font-semibold mb-2 text-sm text-gray-700 dark:text-gray-200">Processing Summary</h3>
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Total Records:</span>
+                  <span className="font-medium text-gray-900 dark:text-white">
+                    {file ? file.total_records.toLocaleString() : '-'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Successfully Processed:</span>
+                  <span className="font-medium text-green-600 dark:text-green-400">
+                    {file ? Math.max(file.processed_records - file.failed_records, 0).toLocaleString() : '-'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Failed Records:</span>
+                  <span className={`font-medium ${file && file.failed_records > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-gray-900 dark:text-white'}`}>
+                    {file
+                      ? `${file.failed_records > 0 ? '⚠️ ' : ''}${file.failed_records.toLocaleString()}`
+                      : '-'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mb-4">
+              <h3 className="font-semibold mb-2 text-sm text-gray-700 dark:text-gray-200">Current File</h3>
+              <div className="space-y-1 text-sm text-gray-900 dark:text-gray-100">
+                <p className="truncate"><span className="font-medium text-gray-700 dark:text-gray-300">Name:</span> {file?.file_name || '-'}</p>
+                <p><span className="font-medium text-gray-700 dark:text-gray-300">Status:</span> {file?.processing_status || '-'}</p>
+                <p><span className="font-medium text-gray-700 dark:text-gray-300">Total Records:</span> {file ? file.total_records.toLocaleString() : '-'}</p>
+                <p><span className="font-medium text-gray-700 dark:text-gray-300">Processed:</span> {file ? `${file.processed_records.toLocaleString()} records` : '-'}</p>
+                <p className="truncate"><span className="font-medium text-gray-700 dark:text-gray-300">Last LEI:</span> {file?.last_processed_lei || '-'}</p>
+                {file?.failure_category && (
+                  <p className="text-red-600 dark:text-red-400">
+                    <span className="font-medium">Error Category:</span> {file.failure_category}
+                  </p>
+                )}
+                {file?.processing_error && (
+                  <p className="text-red-600 dark:text-red-400 text-xs mt-2">
+                    <span className="font-medium">Error:</span> {file.processing_error}
+                  </p>
+                )}
+              </div>
+            </div>
+          </>
+        )}
 
         {status.error_message && (
           <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
@@ -634,12 +679,12 @@ export default function LEIStatusPage() {
 
         {/* Detailed Status Cards */}
         <div className="space-y-6 mb-6">
-          {renderStatusCard(getJobDisplayName('MASTER_DATA_SYNC'), masterDataStatus, false, getCardId('MASTER_DATA_SYNC'))}
-          {renderStatusCard(getJobDisplayName('DAILY_FULL'), fullStatus, false, getCardId('DAILY_FULL'))}
-          {renderStatusCard(getJobDisplayName('LEVEL2_RR'), rrStatus, false, getCardId('LEVEL2_RR'))}
-          {renderStatusCard(getJobDisplayName('LEVEL2_REPEX'), repexStatus, false, getCardId('LEVEL2_REPEX'))}
+          {renderStatusCard(getJobDisplayName('MASTER_DATA_SYNC'), masterDataStatus, false, getCardId('MASTER_DATA_SYNC'), 'MASTER_DATA_SYNC')}
+          {renderStatusCard(getJobDisplayName('DAILY_FULL'), fullStatus, false, getCardId('DAILY_FULL'), 'DAILY_FULL')}
+          {renderStatusCard(getJobDisplayName('LEVEL2_RR'), rrStatus, false, getCardId('LEVEL2_RR'), 'LEVEL2_RR')}
+          {renderStatusCard(getJobDisplayName('LEVEL2_REPEX'), repexStatus, false, getCardId('LEVEL2_REPEX'), 'LEVEL2_REPEX')}
           <div className="relative">
-            {renderStatusCard(getJobDisplayName('DAILY_DELTA'), deltaStatus, true, getCardId('DAILY_DELTA'))}
+            {renderStatusCard(getJobDisplayName('DAILY_DELTA'), deltaStatus, true, getCardId('DAILY_DELTA'), 'DAILY_DELTA')}
             <div className="absolute top-4 right-4 bg-gray-500 text-white text-xs px-2 py-1 rounded">
               DISABLED
             </div>
