@@ -891,7 +891,33 @@ func (r *leiRepository) FindLatestSourceFile(fileType string) (*domain.SourceFil
 
 // UpdateSourceFile updates a source file record
 func (r *leiRepository) UpdateSourceFile(file *domain.SourceFile) error {
-	return r.db.Save(file).Error
+	if file == nil {
+		return fmt.Errorf("source file is nil")
+	}
+
+	updates := map[string]interface{}{
+		"processing_status":      file.ProcessingStatus,
+		"total_records":         file.TotalRecords,
+		"processed_records":     file.ProcessedRecords,
+		"failed_records":        file.FailedRecords,
+		"last_processed_lei": func() interface{} {
+			if file.LastProcessedLEI == nil {
+				return nil
+			}
+			return nullableLEICode(*file.LastProcessedLEI)
+		}(),
+		"processing_started_at": file.ProcessingStartedAt,
+		"processing_completed_at": file.ProcessingCompletedAt,
+		"processing_error":      file.ProcessingError,
+		"retry_count":           file.RetryCount,
+		"max_retries":           file.MaxRetries,
+		"failure_category":      file.FailureCategory,
+		"updated_at":            gorm.Expr("NOW()"),
+	}
+
+	return r.db.Model(&domain.SourceFile{}).
+		Where("id = ?", file.ID).
+		Updates(updates).Error
 }
 
 // FindPendingSourceFiles finds all source files pending processing
