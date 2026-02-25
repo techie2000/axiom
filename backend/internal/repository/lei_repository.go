@@ -668,40 +668,77 @@ func (r *leiRepository) BatchUpsertLEIRecords(records []*domain.LEIRecord) (int,
 				updated_at = NOW(),
 				updated_by = 'system'
 			WHERE
-				lei_raw.lei_records.legal_name IS DISTINCT FROM EXCLUDED.legal_name OR
-				lei_raw.lei_records.transliterated_legal_name IS DISTINCT FROM EXCLUDED.transliterated_legal_name OR
-				lei_raw.lei_records.other_names IS DISTINCT FROM EXCLUDED.other_names OR
-				lei_raw.lei_records.entity_status IS DISTINCT FROM EXCLUDED.entity_status OR
-				lei_raw.lei_records.legal_address_line_1 IS DISTINCT FROM EXCLUDED.legal_address_line_1 OR
-				lei_raw.lei_records.legal_address_line_2 IS DISTINCT FROM EXCLUDED.legal_address_line_2 OR
-				lei_raw.lei_records.legal_address_line_3 IS DISTINCT FROM EXCLUDED.legal_address_line_3 OR
-				lei_raw.lei_records.legal_address_line_4 IS DISTINCT FROM EXCLUDED.legal_address_line_4 OR
-				lei_raw.lei_records.legal_address_city IS DISTINCT FROM EXCLUDED.legal_address_city OR
-				lei_raw.lei_records.legal_address_region IS DISTINCT FROM EXCLUDED.legal_address_region OR
-				lei_raw.lei_records.legal_address_country IS DISTINCT FROM EXCLUDED.legal_address_country OR
-				lei_raw.lei_records.legal_address_postal_code IS DISTINCT FROM EXCLUDED.legal_address_postal_code OR
-				lei_raw.lei_records.hq_address_line_1 IS DISTINCT FROM EXCLUDED.hq_address_line_1 OR
-				lei_raw.lei_records.hq_address_line_2 IS DISTINCT FROM EXCLUDED.hq_address_line_2 OR
-				lei_raw.lei_records.hq_address_line_3 IS DISTINCT FROM EXCLUDED.hq_address_line_3 OR
-				lei_raw.lei_records.hq_address_line_4 IS DISTINCT FROM EXCLUDED.hq_address_line_4 OR
-				lei_raw.lei_records.hq_address_city IS DISTINCT FROM EXCLUDED.hq_address_city OR
-				lei_raw.lei_records.hq_address_region IS DISTINCT FROM EXCLUDED.hq_address_region OR
-				lei_raw.lei_records.hq_address_country IS DISTINCT FROM EXCLUDED.hq_address_country OR
-				lei_raw.lei_records.hq_address_postal_code IS DISTINCT FROM EXCLUDED.hq_address_postal_code OR
-				lei_raw.lei_records.registration_authority IS DISTINCT FROM EXCLUDED.registration_authority OR
-				lei_raw.lei_records.registration_authority_id IS DISTINCT FROM EXCLUDED.registration_authority_id OR
-				lei_raw.lei_records.registration_number IS DISTINCT FROM EXCLUDED.registration_number OR
-				lei_raw.lei_records.entity_category IS DISTINCT FROM EXCLUDED.entity_category OR
-				lei_raw.lei_records.entity_sub_category IS DISTINCT FROM EXCLUDED.entity_sub_category OR
-				lei_raw.lei_records.entity_legal_form IS DISTINCT FROM EXCLUDED.entity_legal_form OR
-				lei_raw.lei_records.successor_lei IS DISTINCT FROM EXCLUDED.successor_lei OR
-				lei_raw.lei_records.validation_authority IS DISTINCT FROM EXCLUDED.validation_authority OR
-				lei_raw.lei_records.initial_registration_date IS DISTINCT FROM EXCLUDED.initial_registration_date OR
-				lei_raw.lei_records.last_update_date IS DISTINCT FROM EXCLUDED.last_update_date OR
-				lei_raw.lei_records.next_renewal_date IS DISTINCT FROM EXCLUDED.next_renewal_date OR
-				lei_raw.lei_records.managing_lou IS DISTINCT FROM EXCLUDED.managing_lou OR
-				lei_raw.lei_records.validation_sources IS DISTINCT FROM EXCLUDED.validation_sources OR
-				lei_raw.lei_records.source_file_id IS DISTINCT FROM EXCLUDED.source_file_id
+				(
+					lei_raw.lei_records.legal_name,
+					lei_raw.lei_records.transliterated_legal_name,
+					lei_raw.lei_records.other_names,
+					lei_raw.lei_records.entity_status,
+					lei_raw.lei_records.legal_address_line_1,
+					lei_raw.lei_records.legal_address_line_2,
+					lei_raw.lei_records.legal_address_line_3,
+					lei_raw.lei_records.legal_address_line_4,
+					lei_raw.lei_records.legal_address_city,
+					lei_raw.lei_records.legal_address_region,
+					lei_raw.lei_records.legal_address_country,
+					lei_raw.lei_records.legal_address_postal_code,
+					lei_raw.lei_records.hq_address_line_1,
+					lei_raw.lei_records.hq_address_line_2,
+					lei_raw.lei_records.hq_address_line_3,
+					lei_raw.lei_records.hq_address_line_4,
+					lei_raw.lei_records.hq_address_city,
+					lei_raw.lei_records.hq_address_region,
+					lei_raw.lei_records.hq_address_country,
+					lei_raw.lei_records.hq_address_postal_code,
+					lei_raw.lei_records.registration_authority,
+					lei_raw.lei_records.registration_authority_id,
+					lei_raw.lei_records.registration_number,
+					lei_raw.lei_records.entity_category,
+					lei_raw.lei_records.entity_sub_category,
+					lei_raw.lei_records.entity_legal_form,
+					lei_raw.lei_records.successor_lei,
+					lei_raw.lei_records.validation_authority,
+					lei_raw.lei_records.initial_registration_date,
+					lei_raw.lei_records.last_update_date,
+					lei_raw.lei_records.next_renewal_date,
+					lei_raw.lei_records.managing_lou,
+					lei_raw.lei_records.validation_sources,
+					lei_raw.lei_records.source_file_id
+				) IS DISTINCT FROM (
+					EXCLUDED.legal_name,
+					EXCLUDED.transliterated_legal_name,
+					EXCLUDED.other_names,
+					EXCLUDED.entity_status,
+					EXCLUDED.legal_address_line_1,
+					EXCLUDED.legal_address_line_2,
+					EXCLUDED.legal_address_line_3,
+					EXCLUDED.legal_address_line_4,
+					EXCLUDED.legal_address_city,
+					EXCLUDED.legal_address_region,
+					EXCLUDED.legal_address_country,
+					EXCLUDED.legal_address_postal_code,
+					EXCLUDED.hq_address_line_1,
+					EXCLUDED.hq_address_line_2,
+					EXCLUDED.hq_address_line_3,
+					EXCLUDED.hq_address_line_4,
+					EXCLUDED.hq_address_city,
+					EXCLUDED.hq_address_region,
+					EXCLUDED.hq_address_country,
+					EXCLUDED.hq_address_postal_code,
+					EXCLUDED.registration_authority,
+					EXCLUDED.registration_authority_id,
+					EXCLUDED.registration_number,
+					EXCLUDED.entity_category,
+					EXCLUDED.entity_sub_category,
+					EXCLUDED.entity_legal_form,
+					EXCLUDED.successor_lei,
+					EXCLUDED.validation_authority,
+					EXCLUDED.initial_registration_date,
+					EXCLUDED.last_update_date,
+					EXCLUDED.next_renewal_date,
+					EXCLUDED.managing_lou,
+					EXCLUDED.validation_sources,
+					EXCLUDED.source_file_id
+				)
 	`, strings.Join(valueStrings, ","))
 
 		// Execute batch upsert using Exec (better placeholder handling than Raw)
