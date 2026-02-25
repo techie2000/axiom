@@ -352,9 +352,10 @@ func (r *leiRepository) GetDistinctRegions() ([]string, error) {
 
 	var legalRegions []string
 	if err := r.db.Model(&domain.LEIRecord{}).
-		Distinct("legal_address_region").
-		Where("legal_address_region IS NOT NULL AND TRIM(legal_address_region) != ''").
-		Pluck("legal_address_region", &legalRegions).Error; err != nil {
+		Distinct("BTRIM(legal_address_region)").
+		Where("legal_address_region IS NOT NULL AND BTRIM(legal_address_region) <> ''").
+		Order("BTRIM(legal_address_region) ASC").
+		Pluck("BTRIM(legal_address_region)", &legalRegions).Error; err != nil {
 		return nil, err
 	}
 
@@ -367,9 +368,10 @@ func (r *leiRepository) GetDistinctRegions() ([]string, error) {
 
 	var hqRegions []string
 	if err := r.db.Model(&domain.LEIRecord{}).
-		Distinct("hq_address_region").
-		Where("hq_address_region IS NOT NULL AND TRIM(hq_address_region) != ''").
-		Pluck("hq_address_region", &hqRegions).Error; err != nil {
+		Distinct("BTRIM(hq_address_region)").
+		Where("hq_address_region IS NOT NULL AND BTRIM(hq_address_region) <> ''").
+		Order("BTRIM(hq_address_region) ASC").
+		Pluck("BTRIM(hq_address_region)", &hqRegions).Error; err != nil {
 		return nil, err
 	}
 
@@ -396,10 +398,10 @@ func (r *leiRepository) GetDistinctRegions() ([]string, error) {
 func (r *leiRepository) GetDistinctLegalForms() ([]string, error) {
 	var legalForms []string
 	err := r.db.Model(&domain.LEIRecord{}).
-		Distinct("entity_legal_form").
-		Where("entity_legal_form IS NOT NULL AND TRIM(entity_legal_form) != ''").
-		Order("entity_legal_form ASC").
-		Pluck("entity_legal_form", &legalForms).Error
+		Distinct("BTRIM(entity_legal_form)").
+		Where("entity_legal_form IS NOT NULL AND BTRIM(entity_legal_form) <> ''").
+		Order("BTRIM(entity_legal_form) ASC").
+		Pluck("BTRIM(entity_legal_form)", &legalForms).Error
 	if err != nil {
 		return nil, err
 	}
@@ -411,20 +413,39 @@ func (r *leiRepository) UpdateLEIRecord(record *domain.LEIRecord) error {
 	return r.db.Save(record).Error
 }
 
-// UpsertLEIRecord creates or updates an LEI record with change detection
-// Returns true if updated, false if created
+// UpsertLEIRecord creates or updates an LEI record with change detection.
+// Returns true if updated, false if created.
+// The select, upsert, and audit insert are wrapped in a single transaction for atomicity,
+// consistent with BatchUpsertLEIRecords and the Level 2 single-upsert pattern.
 func (r *leiRepository) UpsertLEIRecord(record *domain.LEIRecord) (bool, error) {
-	existing, err := r.FindLEIByLEI(record.LEI)
+	tx := r.db.Begin()
+	if tx.Error != nil {
+		return false, tx.Error
+	}
+	defer func() {
+		if p := recover(); p != nil {
+			tx.Rollback()
+		}
+	}()
 
-	// If not found, create new record
+	// Check for an existing row inside the transaction.
+	var existing domain.LEIRecord
+	err := tx.Where("lei = ?", record.LEI).Preload("SourceFile").First(&existing).Error
+
+	if err != nil && err != gorm.ErrRecordNotFound {
+		tx.Rollback()
+		return false, err
+	}
+
 	if err == gorm.ErrRecordNotFound {
+		// New record – insert it.
 		record.CreatedBy = "system"
 		record.UpdatedBy = "system"
-		if err := r.CreateLEIRecord(record); err != nil {
-			return false, err
+		if createErr := tx.Create(record).Error; createErr != nil {
+			tx.Rollback()
+			return false, createErr
 		}
 
-		// Create audit record for creation
 		auditRecord := &domain.LEIRecordAudit{
 			LEIRecordID:    record.ID,
 			LEI:            record.LEI,
@@ -434,43 +455,40 @@ func (r *leiRepository) UpsertLEIRecord(record *domain.LEIRecord) (bool, error) 
 			SourceFileID:   record.SourceFileID,
 			ChangedBy:      "system",
 		}
-		if err := r.CreateAuditRecord(auditRecord); err != nil {
-			return false, fmt.Errorf("failed to create audit record: %w", err)
+		if auditErr := tx.Create(auditRecord).Error; auditErr != nil {
+			tx.Rollback()
+			return false, fmt.Errorf("failed to create audit record: %w", auditErr)
 		}
 
-		return false, nil
+		return false, tx.Commit().Error
 	}
 
-	if err != nil {
-		return false, err
-	}
-
-	// Detect changes
-	changes := r.detectChanges(existing, record)
-
-	// If no changes detected, don't update
+	// Detect changes between the existing and new record.
+	changes := r.detectChanges(&existing, record)
 	if len(changes) == 0 {
+		// No meaningful change – rollback the no-op and return.
+		tx.Rollback()
 		return false, nil
 	}
 
-	// Convert changes to JSON
 	changesJSON, err := json.Marshal(changes)
 	if err != nil {
+		tx.Rollback()
 		return false, fmt.Errorf("failed to marshal changes: %w", err)
 	}
 
-	// Update the record
+	// Preserve immutable fields from the existing record before saving.
 	record.ID = existing.ID
 	record.CreatedAt = existing.CreatedAt
 	record.CreatedBy = existing.CreatedBy
 	record.UpdatedBy = "system"
 	record.ChangedFields = domain.JSONBString(changesJSON)
 
-	if err := r.UpdateLEIRecord(record); err != nil {
-		return false, err
+	if saveErr := tx.Save(record).Error; saveErr != nil {
+		tx.Rollback()
+		return false, saveErr
 	}
 
-	// Create audit record for update
 	auditRecord := &domain.LEIRecordAudit{
 		LEIRecordID:    record.ID,
 		LEI:            record.LEI,
@@ -480,11 +498,12 @@ func (r *leiRepository) UpsertLEIRecord(record *domain.LEIRecord) (bool, error) 
 		SourceFileID:   record.SourceFileID,
 		ChangedBy:      "system",
 	}
-	if err := r.CreateAuditRecord(auditRecord); err != nil {
-		return false, fmt.Errorf("failed to create audit record: %w", err)
+	if auditErr := tx.Create(auditRecord).Error; auditErr != nil {
+		tx.Rollback()
+		return false, fmt.Errorf("failed to create audit record: %w", auditErr)
 	}
 
-	return true, nil
+	return true, tx.Commit().Error
 }
 
 // BatchUpsertLEIRecords performs batch upsert of LEI records with full audit trail
