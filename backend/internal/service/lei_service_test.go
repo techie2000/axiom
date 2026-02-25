@@ -1,13 +1,106 @@
 package service
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/techie2000/axiom/internal/domain"
+	"github.com/techie2000/axiom/internal/repository"
 )
+
+// stubLEIRepo is a minimal LEIRepository stub for unit testing.
+// Only BatchUpsertLEIRecords and UpdateSourceFile are exercised by processRecordsArray.
+type stubLEIRepo struct {
+	batchErr           error
+	updateSourceFileFn func(file *domain.SourceFile)
+	updateCalls        []*domain.SourceFile // snapshots of sourceFile at each UpdateSourceFile call
+}
+
+func (r *stubLEIRepo) BatchUpsertLEIRecords(records []*domain.LEIRecord) (int, int, error) {
+	if r.batchErr != nil {
+		return 0, 0, r.batchErr
+	}
+	return len(records), 0, nil
+}
+
+func (r *stubLEIRepo) UpdateSourceFile(file *domain.SourceFile) error {
+	cp := *file
+	r.updateCalls = append(r.updateCalls, &cp)
+	if r.updateSourceFileFn != nil {
+		r.updateSourceFileFn(file)
+	}
+	return nil
+}
+
+// Remaining interface methods – all no-ops required to satisfy repository.LEIRepository.
+func (r *stubLEIRepo) CreateLEIRecord(*domain.LEIRecord) error                                    { return nil }
+func (r *stubLEIRepo) FindLEIByLEI(string) (*domain.LEIRecord, error)                             { return nil, nil }
+func (r *stubLEIRepo) FindLEIByID(string) (*domain.LEIRecord, error)                              { return nil, nil }
+func (r *stubLEIRepo) FindAllLEI(int, int) ([]*domain.LEIRecord, error)                           { return nil, nil }
+func (r *stubLEIRepo) FindAllLEIWithFilters(int, int, string, string, string, string, string, string, string) ([]*domain.LEIRecord, error) {
+	return nil, nil
+}
+func (r *stubLEIRepo) CountLEIRecords() (int64, error)                              { return 0, nil }
+func (r *stubLEIRepo) GetDistinctCountries() ([]string, error)                      { return nil, nil }
+func (r *stubLEIRepo) GetDistinctRegions() ([]string, error)                        { return nil, nil }
+func (r *stubLEIRepo) GetDistinctLegalForms() ([]string, error)                     { return nil, nil }
+func (r *stubLEIRepo) UpdateLEIRecord(*domain.LEIRecord) error                      { return nil }
+func (r *stubLEIRepo) UpsertLEIRecord(*domain.LEIRecord) (bool, error)              { return false, nil }
+func (r *stubLEIRepo) DeleteLEI(string) error                                       { return nil }
+func (r *stubLEIRepo) CreateSourceFile(*domain.SourceFile) error                    { return nil }
+func (r *stubLEIRepo) FindSourceFileByID(string) (*domain.SourceFile, error)        { return nil, nil }
+func (r *stubLEIRepo) FindSourceFileByHash(string) (*domain.SourceFile, error)      { return nil, nil }
+func (r *stubLEIRepo) FindLatestSourceFile(string) (*domain.SourceFile, error)      { return nil, nil }
+func (r *stubLEIRepo) FindPendingSourceFiles() ([]*domain.SourceFile, error)        { return nil, nil }
+func (r *stubLEIRepo) FindRetryableFailedFiles() ([]*domain.SourceFile, error)      { return nil, nil }
+func (r *stubLEIRepo) ResetFailedFileForRetry(uuid.UUID) error                      { return nil }
+func (r *stubLEIRepo) FindProcessingStatus(string) (*domain.FileProcessingStatus, error) {
+	return nil, nil
+}
+func (r *stubLEIRepo) UpdateProcessingStatus(*domain.FileProcessingStatus) error { return nil }
+func (r *stubLEIRepo) CreateAuditRecord(*domain.LEIRecordAudit) error            { return nil }
+func (r *stubLEIRepo) FindAuditHistoryByLEI(string, int) ([]*domain.LEIRecordAudit, error) {
+	return nil, nil
+}
+
+var _ repository.LEIRepository = (*stubLEIRepo)(nil) // compile-time interface check
+
+// makeTestLEIArrayJSON builds a JSON array of n minimal valid LEI records,
+// ready for a json.Decoder positioned at the start of the array.
+// Generated LEI codes follow the pattern 5493001KJTIIG<5-digit-index>12 (20 chars, valid pattern).
+func makeTestLEIArrayJSON(n int) *strings.Reader {
+	var buf bytes.Buffer
+	buf.WriteByte('[')
+	for i := 0; i < n; i++ {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		lei := fmt.Sprintf("5493001KJTIIG%05d12", i)
+		fmt.Fprintf(&buf, `{"LEI":{"$":%q},"Entity":{"LegalName":{"$":"Entity %d"},"EntityStatus":{"$":"ACTIVE"}},"Registration":{"ManagingLOU":{"$":"5493001KJTIIGC8Y1R12"}}}`, lei, i)
+	}
+	buf.WriteByte(']')
+	return strings.NewReader(buf.String())
+}
+
+// newTestSourceFile returns a minimal SourceFile suitable for processRecordsArray tests.
+func newTestSourceFile() *domain.SourceFile {
+	now := time.Now()
+	return &domain.SourceFile{
+		ID:              uuid.New(),
+		FileName:        "test.json",
+		FileType:        "FULL",
+		FileURL:         "http://example.com/test.json",
+		ProcessingStatus: "IN_PROGRESS",
+		ProcessingStartedAt: &now,
+	}
+}
 
 func TestIsTerminalJSONDecodeError(t *testing.T) {
 	tests := []struct {
@@ -296,5 +389,87 @@ func TestSanitizeSourceFileProgress(t *testing.T) {
 
 	if sourceFile.FailedRecords != 60 {
 		t.Fatalf("expected failed records to be capped at processed, got %d", sourceFile.FailedRecords)
+	}
+}
+
+// TestProcessRecordsArray_FinalUpdatePersistsLastProcessedLEI verifies that the final
+// UpdateSourceFile call always carries the correct LastProcessedLEI, even when the total
+// record count is less than the checkpoint interval (5 000) so no intermediate checkpoint
+// is written during processing.
+func TestProcessRecordsArray_FinalUpdatePersistsLastProcessedLEI(t *testing.T) {
+	const recordCount = 5
+	stub := &stubLEIRepo{}
+	svc := &leiService{repo: stub}
+
+	sf := newTestSourceFile()
+	decoder := json.NewDecoder(makeTestLEIArrayJSON(recordCount))
+
+	if err := svc.processRecordsArray(decoder, sf, ""); err != nil {
+		t.Fatalf("processRecordsArray returned unexpected error: %v", err)
+	}
+
+	if len(stub.updateCalls) == 0 {
+		t.Fatal("expected at least one UpdateSourceFile call (final update), got none")
+	}
+
+	finalUpdate := stub.updateCalls[len(stub.updateCalls)-1]
+	if finalUpdate.LastProcessedLEI == nil {
+		t.Fatal("final UpdateSourceFile call had nil LastProcessedLEI; expected last LEI code")
+	}
+
+	// The last LEI in the generated set has index recordCount-1.
+	wantLEI := fmt.Sprintf("5493001KJTIIG%05d12", recordCount-1)
+	if *finalUpdate.LastProcessedLEI != wantLEI {
+		t.Fatalf("final LastProcessedLEI = %q, want %q", *finalUpdate.LastProcessedLEI, wantLEI)
+	}
+
+	if finalUpdate.ProcessedRecords != recordCount {
+		t.Fatalf("final ProcessedRecords = %d, want %d", finalUpdate.ProcessedRecords, recordCount)
+	}
+}
+
+// TestProcessRecordsArray_CheckpointIntervalAndFinalLEI verifies two properties for a run
+// that crosses the 5 000-record checkpoint boundary:
+//  1. At least one intermediate checkpoint UpdateSourceFile is issued.
+//  2. The final UpdateSourceFile call carries the correct LastProcessedLEI.
+func TestProcessRecordsArray_CheckpointIntervalAndFinalLEI(t *testing.T) {
+	const recordCount = 5001 // one record beyond the first checkpoint (5 000)
+	stub := &stubLEIRepo{}
+	svc := &leiService{repo: stub}
+
+	sf := newTestSourceFile()
+	sf.TotalRecords = recordCount
+	decoder := json.NewDecoder(makeTestLEIArrayJSON(recordCount))
+
+	if err := svc.processRecordsArray(decoder, sf, ""); err != nil {
+		t.Fatalf("processRecordsArray returned unexpected error: %v", err)
+	}
+
+	// Expect: one checkpoint at processedRecords==5000 and one final update.
+	if len(stub.updateCalls) < 2 {
+		t.Fatalf("expected at least 2 UpdateSourceFile calls (1 checkpoint + 1 final), got %d", len(stub.updateCalls))
+	}
+
+	// The first call should be the checkpoint at 5 000 processed records.
+	checkpoint := stub.updateCalls[0]
+	if checkpoint.ProcessedRecords != 5000 {
+		t.Fatalf("checkpoint ProcessedRecords = %d, want 5000", checkpoint.ProcessedRecords)
+	}
+	if checkpoint.LastProcessedLEI == nil {
+		t.Fatal("checkpoint LastProcessedLEI is nil; expected a valid LEI code")
+	}
+
+	// The final call should reflect all 5 001 records and the very last LEI.
+	finalUpdate := stub.updateCalls[len(stub.updateCalls)-1]
+	if finalUpdate.ProcessedRecords != recordCount {
+		t.Fatalf("final ProcessedRecords = %d, want %d", finalUpdate.ProcessedRecords, recordCount)
+	}
+	if finalUpdate.LastProcessedLEI == nil {
+		t.Fatal("final UpdateSourceFile call had nil LastProcessedLEI")
+	}
+
+	wantLEI := fmt.Sprintf("5493001KJTIIG%05d12", recordCount-1)
+	if *finalUpdate.LastProcessedLEI != wantLEI {
+		t.Fatalf("final LastProcessedLEI = %q, want %q", *finalUpdate.LastProcessedLEI, wantLEI)
 	}
 }
