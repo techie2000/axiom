@@ -10,6 +10,7 @@ These rules are enforced by SQLFluff and should be followed when writing SQL cod
 - **NO indentation at root level**: Top-level SQL statements (ALTER, CREATE, DROP, etc.) start at column 1
 - **Use 4 spaces** for nested indentation (within parentheses, subqueries, etc.)
 - **DO NOT use tabs** - always use spaces
+- **Continuation lines in top-level WHERE clauses must also start at column 1** when SQLFluff enforces LT02
 
 ```sql
 -- ❌ BAD: Indented root level
@@ -19,6 +20,20 @@ These rules are enforced by SQLFluff and should be followed when writing SQL cod
 -- ✅ GOOD: No indentation at root level
 ALTER TABLE lei_raw.source_files
     ADD COLUMN retry_count INTEGER;
+
+-- ❌ BAD: Indented continuation predicates at top level
+CREATE INDEX idx_example
+ON lei_raw.lei_records (BTRIM(entity_legal_form))
+WHERE deleted_at IS NULL
+    AND entity_legal_form IS NOT NULL
+    AND BTRIM(entity_legal_form) <> '';
+
+-- ✅ GOOD: Continuation predicates aligned at column 1
+CREATE INDEX idx_example
+ON lei_raw.lei_records (BTRIM(entity_legal_form))
+WHERE deleted_at IS NULL
+AND entity_legal_form IS NOT NULL
+AND BTRIM(entity_legal_form) <> '';
 ```
 
 ### Trailing Whitespace (LT01)
@@ -207,6 +222,24 @@ COMMENT ON COLUMN source_files.retry_count IS
 | CP04 | Types UPPERCASE | `INTEGER`, `VARCHAR` |
 | CP04 | Literals UPPERCASE | `NULL`, `TRUE`, `FALSE` |
 | RF04 | Avoid keyword names | Don't use `user`, `order` as identifiers |
+
+## Required SQL Validation Workflow
+
+When editing any `.sql` file (especially migrations), follow this workflow before commit:
+
+1. **Lint check is mandatory**
+    - Run: `sqlfluff lint backend/migrations/*.sql`
+    - Or verify no SQLFluff diagnostics remain in VS Code Problems panel.
+
+2. **Fix lint issues in the same change**
+    - Prefer deterministic formatting fixes immediately after SQL edits.
+    - Do not leave LT02/LT01/LT08 issues for follow-up commits.
+
+3. **Re-check after fixes**
+    - Re-run lint/diagnostics and confirm clean output for changed SQL files.
+
+4. **Do not commit SQL with known SQLFluff errors**
+    - SQL formatting compliance is part of the definition of done.
 
 ## Database Documentation with COMMENT ON
 
