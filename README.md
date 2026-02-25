@@ -466,7 +466,15 @@ server:
 
 | Variable | Default | Description |
 | -------- | ------- | ----------- |
-| `LOG_FILE_PATH` | _(unset)_ | Optional log file path. App default unset = stdout only. Empty value disables file mirroring; .env.* files may override. |
+| `LOG_FILE_PATH` | _(unset)_ | Log file path. Unset = stdout only. `.env.*` files set this per environment. |
+| `LOG_MAX_SIZE_MB` | `10` | Max log file size in MB before rotation. |
+| `LOG_MAX_BACKUPS` | `3` | Max number of rotated log files to retain. |
+| `LOG_MAX_AGE_DAYS` | `7` | Max age in days for rotated log files. |
+| `LOG_COMPRESS` | `false` | Compress rotated log files with gzip (`true`/`false`). |
+
+Retention defaults apply only when `LOG_FILE_PATH` is set. The `.env.*` files in this repo set
+environment-appropriate values (dev: 10 MB / 3 files / 7 days; uat: 25 MB / 5 / 14 days;
+prod: 50 MB / 10 files / 30 days).
 
 See [LEI Configuration](docs/lei/LEI_ACQUISITION.md#environment-variables) for detailed scheduler options.
 
