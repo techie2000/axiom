@@ -228,7 +228,7 @@ type LEIChangeDetection struct {
 // entities identified by their LEI codes. These records are populated after the Level 1
 // (lei_records) sync completes because they reference LEIs that must already exist.
 type LEIRelationshipRecord struct {
-	ID   uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	ID uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
 	// StartNodeLEI is the LEI of the child / controlled entity.
 	StartNodeLEI string `gorm:"size:20;not null;index" json:"start_node_lei"`
 	// EndNodeLEI is the LEI of the parent / controlling entity.
@@ -241,14 +241,14 @@ type LEIRelationshipRecord struct {
 	RelationshipQualifiers  JSONBString `gorm:"type:jsonb" json:"relationship_qualifiers"`
 	RelationshipQuantifiers JSONBString `gorm:"type:jsonb" json:"relationship_quantifiers"`
 
-	RegistrationStatus       string     `gorm:"size:50" json:"registration_status"`
-	InitialRegistrationDate  *time.Time `json:"initial_registration_date"`
-	LastUpdateDate           *time.Time `json:"last_update_date"`
-	NextRenewalDate          *time.Time `json:"next_renewal_date"`
-	ManagingLOU              string     `gorm:"size:20" json:"managing_lou"`
-	ValidationSources        string     `gorm:"size:100" json:"validation_sources"`
-	ValidationDocuments      string     `gorm:"size:100" json:"validation_documents"`
-	ValidationReference      string     `gorm:"size:500" json:"validation_reference"`
+	RegistrationStatus      string     `gorm:"size:50" json:"registration_status"`
+	InitialRegistrationDate *time.Time `json:"initial_registration_date"`
+	LastUpdateDate          *time.Time `json:"last_update_date"`
+	NextRenewalDate         *time.Time `json:"next_renewal_date"`
+	ManagingLOU             string     `gorm:"size:20" json:"managing_lou"`
+	ValidationSources       string     `gorm:"size:100" json:"validation_sources"`
+	ValidationDocuments     string     `gorm:"size:100" json:"validation_documents"`
+	ValidationReference     string     `gorm:"size:500" json:"validation_reference"`
 
 	SourceFileID *uuid.UUID `gorm:"type:uuid" json:"source_file_id"`
 
@@ -268,7 +268,7 @@ type LEIReportingException struct {
 	ID                 uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
 	LEI                string    `gorm:"size:20;not null;index" json:"lei"`
 	ExceptionCategory  string    `gorm:"size:100;not null" json:"exception_category"`
-	ExceptionReason    string    `gorm:"size:100;not null" json:"exception_reason"`
+	ExceptionReason    string    `gorm:"size:200;not null" json:"exception_reason"`
 	ExceptionReference string    `gorm:"size:500" json:"exception_reference"`
 
 	SourceFileID *uuid.UUID `gorm:"type:uuid" json:"source_file_id"`

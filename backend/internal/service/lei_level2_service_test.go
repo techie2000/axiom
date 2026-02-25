@@ -136,3 +136,47 @@ func TestGleifStringList_UnmarshalAndJoin(t *testing.T) {
 		t.Fatalf("unexpected single reason: %s", got)
 	}
 }
+
+func TestGleifString_UnmarshalArrayWrapped(t *testing.T) {
+	var value gleifString
+	if err := json.Unmarshal([]byte(`[{"$":"Datenschutz"}]`), &value); err != nil {
+		t.Fatalf("array wrapped unmarshal failed: %v", err)
+	}
+	if got := value.String(); got != "Datenschutz" {
+		t.Fatalf("unexpected array wrapped value: %s", got)
+	}
+
+	if err := json.Unmarshal([]byte(`[{"$":"One"}, {"$":"Two"}]`), &value); err != nil {
+		t.Fatalf("multi array wrapped unmarshal failed: %v", err)
+	}
+	if got := value.String(); got != "One,Two" {
+		t.Fatalf("unexpected multi array wrapped value: %s", got)
+	}
+}
+
+func TestRawREPEXRecord_UnmarshalArrayWrappedReference(t *testing.T) {
+	rawJSON := `{
+		"LEI": {"$": "5493001KJTIIGC8Y1R12"},
+		"ExceptionCategory": {"$": "NON_PUBLIC"},
+		"ExceptionReason": [{"$": "NON_CONSOLIDATING"}],
+		"ExceptionReference": [{"$": "Datenschutz"}]
+	}`
+
+	var raw rawREPEXRecord
+	if err := json.Unmarshal([]byte(rawJSON), &raw); err != nil {
+		t.Fatalf("raw REPEX unmarshal failed: %v", err)
+	}
+
+	if raw.LEI.String() != "5493001KJTIIGC8Y1R12" {
+		t.Fatalf("unexpected LEI: %s", raw.LEI.String())
+	}
+	if raw.ExceptionCategory.String() != "NON_PUBLIC" {
+		t.Fatalf("unexpected category: %s", raw.ExceptionCategory.String())
+	}
+	if got := joinGLEIFReasons(raw.ExceptionReason); got != "NON_CONSOLIDATING" {
+		t.Fatalf("unexpected reason: %s", got)
+	}
+	if raw.ExceptionReference.String() != "Datenschutz" {
+		t.Fatalf("unexpected reference: %s", raw.ExceptionReference.String())
+	}
+}

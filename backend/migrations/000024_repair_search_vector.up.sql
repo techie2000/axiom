@@ -6,10 +6,14 @@ ALTER TABLE lei_raw.lei_records
 ADD COLUMN IF NOT EXISTS search_vector TSVECTOR;
 
 UPDATE lei_raw.lei_records
-SET search_vector =
-    SETWEIGHT(TO_TSVECTOR('simple', COALESCE(legal_name, '')), 'A')
-    || SETWEIGHT(TO_TSVECTOR('simple', COALESCE(transliterated_legal_name, '')), 'B')
-    || SETWEIGHT(TO_TSVECTOR('simple', COALESCE(other_names::TEXT, '')), 'C')
+SET
+    search_vector = TSVECTOR_CONCAT(
+        TSVECTOR_CONCAT(
+            SETWEIGHT(TO_TSVECTOR('simple', COALESCE(legal_name, '')), 'A'),
+            SETWEIGHT(TO_TSVECTOR('simple', COALESCE(transliterated_legal_name, '')), 'B')
+        ),
+        SETWEIGHT(TO_TSVECTOR('simple', COALESCE(other_names::TEXT, '')), 'C')
+    )
 WHERE search_vector IS NULL;
 
 CREATE INDEX IF NOT EXISTS idx_lei_records_search_vector
@@ -19,9 +23,13 @@ CREATE OR REPLACE FUNCTION lei_raw.lei_records_search_vector_update()
 RETURNS TRIGGER AS $$
 BEGIN
     NEW.search_vector :=
-        SETWEIGHT(TO_TSVECTOR('simple', COALESCE(NEW.legal_name, '')), 'A')
-        || SETWEIGHT(TO_TSVECTOR('simple', COALESCE(NEW.transliterated_legal_name, '')), 'B')
-        || SETWEIGHT(TO_TSVECTOR('simple', COALESCE(NEW.other_names::TEXT, '')), 'C');
+        TSVECTOR_CONCAT(
+            TSVECTOR_CONCAT(
+                SETWEIGHT(TO_TSVECTOR('simple', COALESCE(NEW.legal_name, '')), 'A'),
+                SETWEIGHT(TO_TSVECTOR('simple', COALESCE(NEW.transliterated_legal_name, '')), 'B')
+            ),
+            SETWEIGHT(TO_TSVECTOR('simple', COALESCE(NEW.other_names::TEXT, '')), 'C')
+        );
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;

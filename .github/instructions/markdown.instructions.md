@@ -50,16 +50,17 @@ Follow these guidelines for formatting and structuring your markdown content:
     ❌ BAD:
     A high-performance service that monitors directories for CSV files and converts them to JSON format with routing capabilities.
     ```
-- **Links**: Use markdown link syntax like `[Architecture](../../docs/architecture.md)`.
-  Ensure that link text is descriptive and targets a valid path.
+- **Links**: Use markdown link syntax with descriptive text and valid targets.
+  For docs references in instruction files, prefer plain text paths (for example `docs/architecture.md`) to avoid
+  false prompts-diagnostics missing-file warnings.
 - **No Placeholder Targets**: Do not use placeholder link/image targets in markdown examples
   (for example `path/to/file`, `IMAGE_URL`, `your-file.md`). Use real repository paths or plain text.
 - **File References**: **CRITICAL** - Always hyperlink file and document references. Use relative paths appropriate
   to file location.
   - ✅ **GOOD** (from `.github/instructions/`):
-    See [architecture.md](../../docs/architecture.md) for system design details
-  - ✅ **GOOD** (from `.github/instructions/`): Configuration in [config.yaml](../../backend/config.yaml)
-  - ✅ **GOOD** (from `.github/instructions/`): Refer to [README.md](../../README.md) for setup instructions
+    See docs/architecture.md for system design details
+  - ✅ **GOOD** (from `.github/instructions/`): Configuration in backend/config.yaml
+  - ✅ **GOOD** (from `.github/instructions/`): Refer to README.md for setup instructions
   - ❌ **BAD**: `See architecture.md for details` (not hyperlinked)
   - ❌ **BAD**: `Configuration in config.yaml` (not hyperlinked)
   - This applies to: ADRs, configuration files, documentation files, source code files, test files, and any other

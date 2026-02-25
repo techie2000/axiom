@@ -24,6 +24,8 @@ import (
 // The response includes rr and repex keys alongside lei2.
 const GLEIFLevel2PublishesURL = "https://goldencopy.gleif.org/api/v2/golden-copies/publishes/latest"
 
+const level2UpsertBatchSize = 1000
+
 // LEILevel2Service downloads and processes GLEIF Level 2 data:
 //   - Relationship Records (RR)  – who owns whom
 //   - Reporting Exceptions (REPEX) – entities that cannot disclose their parent
@@ -323,6 +325,28 @@ func (s *gleifString) UnmarshalJSON(data []byte) error {
 		return nil
 	}
 
+	var list []json.RawMessage
+	if err := json.Unmarshal(data, &list); err == nil {
+		if len(list) == 0 {
+			*s = ""
+			return nil
+		}
+
+		values := make([]string, 0, len(list))
+		for _, item := range list {
+			var nested gleifString
+			if itemErr := json.Unmarshal(item, &nested); itemErr != nil {
+				return fmt.Errorf("unsupported GLEIF string list item format: %s", string(item))
+			}
+			if nested.String() != "" {
+				values = append(values, nested.String())
+			}
+		}
+
+		*s = gleifString(strings.Join(values, ","))
+		return nil
+	}
+
 	return fmt.Errorf("unsupported GLEIF string format: %s", string(data))
 }
 
@@ -470,6 +494,8 @@ func (s *leiLevel2Service) parseAndUpsertRR(r io.Reader, sourceFileID uuid.UUID)
 		return s.parseAndUpsertRRWrapped(decoder, sourceFileID)
 	}
 
+	batch := make([]*domain.LEIRelationshipRecord, 0, level2UpsertBatchSize)
+
 	for {
 		var raw rawRRRecord
 		if decErr := decoder.Decode(&raw); decErr != nil {
@@ -491,21 +517,29 @@ func (s *leiLevel2Service) parseAndUpsertRR(r io.Reader, sourceFileID uuid.UUID)
 			continue
 		}
 
-		if upsertErr := s.repo.UpsertRelationshipRecord(record); upsertErr != nil {
-			log.Warn().
-				Err(upsertErr).
-				Str("start_lei", record.StartNodeLEI).
-				Str("end_lei", record.EndNodeLEI).
-				Msg("Failed to upsert relationship record, skipping")
-			failed++
+		batch = append(batch, record)
+		if len(batch) < level2UpsertBatchSize {
 			continue
 		}
 
-		processed++
+		batchProcessed, batchFailed, flushErr := s.flushRRBatch(batch)
+		if flushErr != nil {
+			return processed, failed, flushErr
+		}
+		processed += batchProcessed
+		failed += batchFailed
 		if processed%10000 == 0 {
 			log.Info().Int("processed", processed).Int("failed", failed).Msg("RR processing progress")
 		}
+		batch = batch[:0]
 	}
+
+	batchProcessed, batchFailed, flushErr := s.flushRRBatch(batch)
+	if flushErr != nil {
+		return processed, failed, flushErr
+	}
+	processed += batchProcessed
+	failed += batchFailed
 
 	return processed, failed, nil
 }
@@ -549,6 +583,8 @@ func (s *leiLevel2Service) parseAndUpsertRRWrapped(decoder *json.Decoder, source
 			return processed, failed, fmt.Errorf("invalid relations array start token: %v", arrStartTok)
 		}
 
+		batch := make([]*domain.LEIRelationshipRecord, 0, level2UpsertBatchSize)
+
 		for decoder.More() {
 			var raw rawRRRecord
 			if decErr := decoder.Decode(&raw); decErr != nil {
@@ -564,21 +600,29 @@ func (s *leiLevel2Service) parseAndUpsertRRWrapped(decoder *json.Decoder, source
 				continue
 			}
 
-			if upsertErr := s.repo.UpsertRelationshipRecord(record); upsertErr != nil {
-				log.Warn().
-					Err(upsertErr).
-					Str("start_lei", record.StartNodeLEI).
-					Str("end_lei", record.EndNodeLEI).
-					Msg("Failed to upsert relationship record, skipping")
-				failed++
+			batch = append(batch, record)
+			if len(batch) < level2UpsertBatchSize {
 				continue
 			}
 
-			processed++
+			batchProcessed, batchFailed, flushErr := s.flushRRBatch(batch)
+			if flushErr != nil {
+				return processed, failed, flushErr
+			}
+			processed += batchProcessed
+			failed += batchFailed
 			if processed%10000 == 0 {
 				log.Info().Int("processed", processed).Int("failed", failed).Msg("RR processing progress")
 			}
+			batch = batch[:0]
 		}
+
+		batchProcessed, batchFailed, flushErr := s.flushRRBatch(batch)
+		if flushErr != nil {
+			return processed, failed, flushErr
+		}
+		processed += batchProcessed
+		failed += batchFailed
 
 		arrEndTok, arrEndErr := decoder.Token()
 		if arrEndErr != nil {
@@ -642,14 +686,41 @@ func mapRawRRToRelationshipRecord(raw *rawRRRecord, sourceFileID uuid.UUID) (*do
 	return record, nil
 }
 
+func (s *leiLevel2Service) flushRRBatch(batch []*domain.LEIRelationshipRecord) (processed int, failed int, err error) {
+	if len(batch) == 0 {
+		return 0, 0, nil
+	}
+
+	if batchErr := s.repo.BatchUpsertRelationshipRecords(batch); batchErr == nil {
+		return len(batch), 0, nil
+	} else {
+		log.Warn().Err(batchErr).Int("batch_size", len(batch)).Msg("RR batch upsert failed, falling back to row-by-row")
+	}
+
+	for _, record := range batch {
+		if upsertErr := s.repo.UpsertRelationshipRecord(record); upsertErr != nil {
+			log.Warn().
+				Err(upsertErr).
+				Str("start_lei", record.StartNodeLEI).
+				Str("end_lei", record.EndNodeLEI).
+				Msg("Failed to upsert relationship record, skipping")
+			failed++
+			continue
+		}
+		processed++
+	}
+
+	return processed, failed, nil
+}
+
 // --- Reporting Exceptions (REPEX) processing ---
 
 // rawREPEXRecord is the JSON Lines structure for a single GLEIF REPEX record.
 type rawREPEXRecord struct {
-	LEI                gleifString   `json:"LEI"`
-	ExceptionCategory  gleifString   `json:"ExceptionCategory"`
+	LEI                gleifString     `json:"LEI"`
+	ExceptionCategory  gleifString     `json:"ExceptionCategory"`
 	ExceptionReason    gleifStringList `json:"ExceptionReason"`
-	ExceptionReference gleifString   `json:"ExceptionReference"`
+	ExceptionReference gleifString     `json:"ExceptionReference"`
 }
 
 type gleifStringList []gleifString
@@ -792,6 +863,8 @@ func (s *leiLevel2Service) parseAndUpsertREPEX(r io.Reader, sourceFileID uuid.UU
 		return s.parseAndUpsertREPEXWrapped(decoder, sourceFileID)
 	}
 
+	batch := make([]*domain.LEIReportingException, 0, level2UpsertBatchSize)
+
 	for {
 		var raw rawREPEXRecord
 		if decErr := decoder.Decode(&raw); decErr != nil {
@@ -814,20 +887,29 @@ func (s *leiLevel2Service) parseAndUpsertREPEX(r io.Reader, sourceFileID uuid.UU
 			SourceFileID:       &sourceFileID,
 		}
 
-		if upsertErr := s.repo.UpsertReportingException(exc); upsertErr != nil {
-			log.Warn().
-				Err(upsertErr).
-				Str("lei", raw.LEI.String()).
-				Msg("Failed to upsert reporting exception, skipping")
-			failed++
+		batch = append(batch, exc)
+		if len(batch) < level2UpsertBatchSize {
 			continue
 		}
 
-		processed++
+		batchProcessed, batchFailed, flushErr := s.flushREPEXBatch(batch)
+		if flushErr != nil {
+			return processed, failed, flushErr
+		}
+		processed += batchProcessed
+		failed += batchFailed
 		if processed%10000 == 0 {
 			log.Info().Int("processed", processed).Int("failed", failed).Msg("REPEX processing progress")
 		}
+		batch = batch[:0]
 	}
+
+	batchProcessed, batchFailed, flushErr := s.flushREPEXBatch(batch)
+	if flushErr != nil {
+		return processed, failed, flushErr
+	}
+	processed += batchProcessed
+	failed += batchFailed
 
 	return processed, failed, nil
 }
@@ -871,6 +953,8 @@ func (s *leiLevel2Service) parseAndUpsertREPEXWrapped(decoder *json.Decoder, sou
 			return processed, failed, fmt.Errorf("invalid exceptions array start token: %v", arrStartTok)
 		}
 
+		batch := make([]*domain.LEIReportingException, 0, level2UpsertBatchSize)
+
 		for decoder.More() {
 			var raw rawREPEXRecord
 			if decErr := decoder.Decode(&raw); decErr != nil {
@@ -887,20 +971,29 @@ func (s *leiLevel2Service) parseAndUpsertREPEXWrapped(decoder *json.Decoder, sou
 				SourceFileID:       &sourceFileID,
 			}
 
-			if upsertErr := s.repo.UpsertReportingException(exc); upsertErr != nil {
-				log.Warn().
-					Err(upsertErr).
-					Str("lei", raw.LEI.String()).
-					Msg("Failed to upsert reporting exception, skipping")
-				failed++
+			batch = append(batch, exc)
+			if len(batch) < level2UpsertBatchSize {
 				continue
 			}
 
-			processed++
+			batchProcessed, batchFailed, flushErr := s.flushREPEXBatch(batch)
+			if flushErr != nil {
+				return processed, failed, flushErr
+			}
+			processed += batchProcessed
+			failed += batchFailed
 			if processed%10000 == 0 {
 				log.Info().Int("processed", processed).Int("failed", failed).Msg("REPEX processing progress")
 			}
+			batch = batch[:0]
 		}
+
+		batchProcessed, batchFailed, flushErr := s.flushREPEXBatch(batch)
+		if flushErr != nil {
+			return processed, failed, flushErr
+		}
+		processed += batchProcessed
+		failed += batchFailed
 
 		arrEndTok, arrEndErr := decoder.Token()
 		if arrEndErr != nil {
@@ -923,6 +1016,32 @@ func (s *leiLevel2Service) parseAndUpsertREPEXWrapped(decoder *json.Decoder, sou
 
 	if !foundExceptions {
 		return processed, failed, fmt.Errorf("REPEX payload missing exceptions array")
+	}
+
+	return processed, failed, nil
+}
+
+func (s *leiLevel2Service) flushREPEXBatch(batch []*domain.LEIReportingException) (processed int, failed int, err error) {
+	if len(batch) == 0 {
+		return 0, 0, nil
+	}
+
+	if batchErr := s.repo.BatchUpsertReportingExceptions(batch); batchErr == nil {
+		return len(batch), 0, nil
+	} else {
+		log.Warn().Err(batchErr).Int("batch_size", len(batch)).Msg("REPEX batch upsert failed, falling back to row-by-row")
+	}
+
+	for _, exc := range batch {
+		if upsertErr := s.repo.UpsertReportingException(exc); upsertErr != nil {
+			log.Warn().
+				Err(upsertErr).
+				Str("lei", exc.LEI).
+				Msg("Failed to upsert reporting exception, skipping")
+			failed++
+			continue
+		}
+		processed++
 	}
 
 	return processed, failed, nil

@@ -526,7 +526,8 @@ export default function MyComponent() {
 
 **Always** use the shared components from `frontend/app/components/` — do **not** duplicate inline
 markup that already exists as a component. See the full reference in
-[docs/ui-patterns.md](../../docs/ui-patterns.md).
+docs/ui-patterns.md.
+Keep this as plain text (not a markdown link) because the prompts diagnostics provider can report a false missing-file error.
 
 ### PageHeader
 
@@ -668,7 +669,7 @@ useEffect(() => {
 - [Tailwind CSS Documentation](https://tailwindcss.com/docs)
 - [ISO 8601 Date Format](https://en.wikipedia.org/wiki/ISO_8601)
 - [Web Content Accessibility Guidelines (WCAG)](https://www.w3.org/WAI/WCAG21/quickref/)
-- [Axiom UI Patterns Guide](../../docs/ui-patterns.md)
+- Axiom UI Patterns Guide: docs/ui-patterns.md
 
 ---
 

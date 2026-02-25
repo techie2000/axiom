@@ -14,6 +14,7 @@ import (
 type LEILevel2Repository interface {
 	// Relationship Records
 	UpsertRelationshipRecord(record *domain.LEIRelationshipRecord) error
+	BatchUpsertRelationshipRecords(records []*domain.LEIRelationshipRecord) error
 	FindRelationshipsByStartLEI(lei string) ([]*domain.LEIRelationshipRecord, error)
 	FindRelationshipsByEndLEI(lei string) ([]*domain.LEIRelationshipRecord, error)
 	CountRelationshipRecords() (int64, error)
@@ -21,6 +22,7 @@ type LEILevel2Repository interface {
 
 	// Reporting Exceptions
 	UpsertReportingException(exc *domain.LEIReportingException) error
+	BatchUpsertReportingExceptions(exceptions []*domain.LEIReportingException) error
 	FindReportingExceptionsByLEI(lei string) ([]*domain.LEIReportingException, error)
 	CountReportingExceptions() (int64, error)
 	DeleteReportingExceptionsBySourceFile(sourceFileID uuid.UUID) error
@@ -67,6 +69,45 @@ func (r *leiLevel2Repository) UpsertRelationshipRecord(record *domain.LEIRelatio
 			"updated_at",
 		}),
 	}).Create(record).Error
+}
+
+// BatchUpsertRelationshipRecords inserts or updates relationship records in bulk.
+func (r *leiLevel2Repository) BatchUpsertRelationshipRecords(records []*domain.LEIRelationshipRecord) error {
+	if len(records) == 0 {
+		return nil
+	}
+
+	now := time.Now()
+	for _, record := range records {
+		record.UpdatedAt = now
+		if record.CreatedAt.IsZero() {
+			record.CreatedAt = now
+		}
+	}
+
+	return r.db.Clauses(clause.OnConflict{
+		Columns: []clause.Column{
+			{Name: "start_node_lei"},
+			{Name: "end_node_lei"},
+			{Name: "relationship_type"},
+		},
+		DoUpdates: clause.AssignmentColumns([]string{
+			"relationship_status",
+			"relationship_periods",
+			"relationship_qualifiers",
+			"relationship_quantifiers",
+			"registration_status",
+			"initial_registration_date",
+			"last_update_date",
+			"next_renewal_date",
+			"managing_lou",
+			"validation_sources",
+			"validation_documents",
+			"validation_reference",
+			"source_file_id",
+			"updated_at",
+		}),
+	}).CreateInBatches(records, 500).Error
 }
 
 // FindRelationshipsByStartLEI returns all active relationship records where the child entity
@@ -120,6 +161,34 @@ func (r *leiLevel2Repository) UpsertReportingException(exc *domain.LEIReportingE
 			"updated_at",
 		}),
 	}).Create(exc).Error
+}
+
+// BatchUpsertReportingExceptions inserts or updates reporting exceptions in bulk.
+func (r *leiLevel2Repository) BatchUpsertReportingExceptions(exceptions []*domain.LEIReportingException) error {
+	if len(exceptions) == 0 {
+		return nil
+	}
+
+	now := time.Now()
+	for _, exc := range exceptions {
+		exc.UpdatedAt = now
+		if exc.CreatedAt.IsZero() {
+			exc.CreatedAt = now
+		}
+	}
+
+	return r.db.Clauses(clause.OnConflict{
+		Columns: []clause.Column{
+			{Name: "lei"},
+			{Name: "exception_category"},
+		},
+		DoUpdates: clause.AssignmentColumns([]string{
+			"exception_reason",
+			"exception_reference",
+			"source_file_id",
+			"updated_at",
+		}),
+	}).CreateInBatches(exceptions, 500).Error
 }
 
 // FindReportingExceptionsByLEI returns all reporting exceptions for the given LEI.
