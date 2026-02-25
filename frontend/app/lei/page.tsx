@@ -335,58 +335,52 @@ export default function LEIStatusPage() {
           </div>
         )}
 
-        {file && (status.status === 'COMPLETED' || status.status === 'IDLE' || file.failed_records > 0) && (
-          <div className="mb-4 bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-            <h3 className="font-semibold mb-2 text-sm text-gray-700 dark:text-gray-200">Processing Summary</h3>
-            <div className="space-y-1 text-sm">
-              {file.total_records > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Total Records:</span>
-                  <span className="font-medium text-gray-900 dark:text-white">{file.total_records.toLocaleString()}</span>
-                </div>
-              )}
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">Successfully Processed:</span>
-                <span className="font-medium text-green-600 dark:text-green-400">
-                  {(file.processed_records - file.failed_records).toLocaleString()}
-                </span>
-              </div>
-              {file.failed_records > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Failed Records:</span>
-                  <span className="font-medium text-orange-600 dark:text-orange-400">⚠️ {file.failed_records.toLocaleString()}</span>
-                </div>
-              )}
+        <div className="mb-4 bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+          <h3 className="font-semibold mb-2 text-sm text-gray-700 dark:text-gray-200">Processing Summary</h3>
+          <div className="space-y-1 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-600 dark:text-gray-400">Total Records:</span>
+              <span className="font-medium text-gray-900 dark:text-white">
+                {file ? file.total_records.toLocaleString() : '-'}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600 dark:text-gray-400">Successfully Processed:</span>
+              <span className="font-medium text-green-600 dark:text-green-400">
+                {file ? Math.max(file.processed_records - file.failed_records, 0).toLocaleString() : '-'}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600 dark:text-gray-400">Failed Records:</span>
+              <span className={`font-medium ${file && file.failed_records > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-gray-900 dark:text-white'}`}>
+                {file
+                  ? `${file.failed_records > 0 ? '⚠️ ' : ''}${file.failed_records.toLocaleString()}`
+                  : '-'}
+              </span>
             </div>
           </div>
-        )}
+        </div>
 
-        {file && (
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mb-4">
-            <h3 className="font-semibold mb-2 text-sm text-gray-700 dark:text-gray-200">Current File</h3>
-            <div className="space-y-1 text-sm text-gray-900 dark:text-gray-100">
-              <p className="truncate"><span className="font-medium text-gray-700 dark:text-gray-300">Name:</span> {file.file_name}</p>
-              <p><span className="font-medium text-gray-700 dark:text-gray-300">Status:</span> {file.processing_status}</p>
-              {file.total_records > 0 && (
-                <p><span className="font-medium text-gray-700 dark:text-gray-300">Total Records:</span> {file.total_records.toLocaleString()}</p>
-              )}
-              <p><span className="font-medium text-gray-700 dark:text-gray-300">Processed:</span> {file.processed_records.toLocaleString()} records</p>
-              {file.last_processed_lei && (
-                <p className="truncate"><span className="font-medium text-gray-700 dark:text-gray-300">Last LEI:</span> {file.last_processed_lei}</p>
-              )}
-              {file.failure_category && (
-                <p className="text-red-600 dark:text-red-400">
-                  <span className="font-medium">Error Category:</span> {file.failure_category}
-                </p>
-              )}
-              {file.processing_error && (
-                <p className="text-red-600 dark:text-red-400 text-xs mt-2">
-                  <span className="font-medium">Error:</span> {file.processing_error}
-                </p>
-              )}
-            </div>
+        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mb-4">
+          <h3 className="font-semibold mb-2 text-sm text-gray-700 dark:text-gray-200">Current File</h3>
+          <div className="space-y-1 text-sm text-gray-900 dark:text-gray-100">
+            <p className="truncate"><span className="font-medium text-gray-700 dark:text-gray-300">Name:</span> {file?.file_name || '-'}</p>
+            <p><span className="font-medium text-gray-700 dark:text-gray-300">Status:</span> {file?.processing_status || '-'}</p>
+            <p><span className="font-medium text-gray-700 dark:text-gray-300">Total Records:</span> {file ? file.total_records.toLocaleString() : '-'}</p>
+            <p><span className="font-medium text-gray-700 dark:text-gray-300">Processed:</span> {file ? `${file.processed_records.toLocaleString()} records` : '-'}</p>
+            <p className="truncate"><span className="font-medium text-gray-700 dark:text-gray-300">Last LEI:</span> {file?.last_processed_lei || '-'}</p>
+            {file?.failure_category && (
+              <p className="text-red-600 dark:text-red-400">
+                <span className="font-medium">Error Category:</span> {file.failure_category}
+              </p>
+            )}
+            {file?.processing_error && (
+              <p className="text-red-600 dark:text-red-400 text-xs mt-2">
+                <span className="font-medium">Error:</span> {file.processing_error}
+              </p>
+            )}
           </div>
-        )}
+        </div>
 
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
