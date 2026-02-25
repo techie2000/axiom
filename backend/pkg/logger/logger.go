@@ -4,26 +4,37 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 var logger zerolog.Logger
-var fileSink *os.File
+var fileSink io.Closer
 
 func Close() {
 	if fileSink != nil {
-		if err := fileSink.Sync(); err != nil {
-			fmt.Fprintf(os.Stderr, "logger: failed to sync log file: %v\n", err)
-		}
 		if err := fileSink.Close(); err != nil {
 			fmt.Fprintf(os.Stderr, "logger: failed to close log file: %v\n", err)
 		}
 		fileSink = nil
 	}
+}
+
+// envInt reads an integer environment variable, returning fallback when unset or invalid.
+func envInt(key string, fallback int) int {
+	v := strings.TrimSpace(os.Getenv(key))
+	if v == "" {
+		return fallback
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil || n <= 0 {
+		return fallback
+	}
+	return n
 }
 
 // Init initializes the logger
@@ -45,17 +56,15 @@ func Init(level string) {
 	output := io.Writer(os.Stdout)
 	logFilePath := strings.TrimSpace(os.Getenv("LOG_FILE_PATH"))
 	if logFilePath != "" {
-		if err := os.MkdirAll(filepath.Dir(logFilePath), 0755); err != nil {
-			fmt.Fprintf(os.Stderr, "logger: failed to create log directory for %s: %v\n", logFilePath, err)
-		} else {
-			file, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "logger: failed to open log file %s: %v\n", logFilePath, err)
-			} else {
-				fileSink = file
-				output = io.MultiWriter(os.Stdout, file)
-			}
+		lb := &lumberjack.Logger{
+			Filename:   logFilePath,
+			MaxSize:    envInt("LOG_MAX_SIZE_MB", 10),
+			MaxBackups: envInt("LOG_MAX_BACKUPS", 3),
+			MaxAge:     envInt("LOG_MAX_AGE_DAYS", 7),
+			Compress:   strings.EqualFold(strings.TrimSpace(os.Getenv("LOG_COMPRESS")), "true"),
 		}
+		fileSink = lb
+		output = io.MultiWriter(os.Stdout, lb)
 	}
 
 	logger = zerolog.New(output).
