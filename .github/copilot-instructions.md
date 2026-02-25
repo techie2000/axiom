@@ -487,7 +487,7 @@ When making significant technical decisions:
 3. **Document Options**: List all considered alternatives with pros/cons
 4. **Make Decision**: Choose option with clear rationale
 5. **Update Diagrams**: Create or update Mermaid diagrams showing the decision's impact
-5. **Link Documentation**: Reference ADR in [README](../README.md), related docs, and code comments
+6. **Link Documentation**: Reference ADR in [README](../README.md), related docs, and code comments
 
 ## Test Maintenance Workflow (MANDATORY)
 

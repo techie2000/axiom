@@ -8,8 +8,8 @@ This directory contains Dockerfiles for the Axiom application with environment-s
 
 ### Dockerfile.backend
 
-**Purpose:** Local development with corporate proxy/firewall workarounds  
-**Use in:** `docker-compose.dev.yml`  
+**Purpose:** Local development and main-branch intraday fixes with corporate proxy/firewall workarounds  
+**Use in:** `docker-compose.dev.yml`, `docker-compose.main.yml`  
 **Features:**
 
 - Disables SSL verification (`git config --global http.sslVerify false`)
@@ -51,6 +51,18 @@ When using `docker-compose.dev.yml`, the frontend runs with:
 Uses `npm start` to run pre-built static assets from multi-stage build.
 
 ## Usage
+
+### Main Branch (intraday development and fixes)
+
+```bash
+docker-compose --env-file .env.main -f docker-compose.main.yml up -d
+```
+
+Or via Make:
+
+```bash
+make docker-main-up
+```
 
 ### Local Development (with corporate proxy)
 

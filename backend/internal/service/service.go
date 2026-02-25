@@ -18,6 +18,7 @@ type Services struct {
 	Account     AccountService
 	SSI         SSIService
 	LEI         LEIService
+	LEILevel2   LEILevel2Service
 	MasterData  MasterDataService
 	CodeMapping CodeMappingService
 }
@@ -33,6 +34,7 @@ func NewServices(repos *repository.Repositories, db *gorm.DB, leiDataDir string,
 		Account:     NewAccountService(repos.Account),
 		SSI:         NewSSIService(repos.SSI),
 		LEI:         NewLEIService(repos.LEI, repos.Country, leiDataDir),
+		LEILevel2:   NewLEILevel2Service(repos.LEILevel2, repos.LEI, leiDataDir),
 		MasterData:  NewMasterDataService(db, masterDataDir),
 		CodeMapping: NewCodeMappingService(repos.CodeMapping),
 	}

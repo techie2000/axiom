@@ -15,6 +15,7 @@ type Repositories struct {
 	Account     AccountRepository
 	SSI         SSIRepository
 	LEI         LEIRepository
+	LEILevel2   LEILevel2Repository
 	CodeMapping CodeMappingRepository
 }
 
@@ -29,6 +30,7 @@ func NewRepositories(db *gorm.DB) *Repositories {
 		Account:     NewAccountRepository(db),
 		SSI:         NewSSIRepository(db),
 		LEI:         NewLEIRepository(db),
+		LEILevel2:   NewLEILevel2Repository(db),
 		CodeMapping: NewCodeMappingRepository(db),
 	}
 }
