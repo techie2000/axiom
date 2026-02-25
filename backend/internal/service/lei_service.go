@@ -1405,11 +1405,60 @@ func (s *leiService) GetProcessingStatus(jobType string) (*domain.FileProcessing
 		return nil, err
 	}
 
+	if status != nil && status.CurrentSourceFile == nil {
+		for _, fileType := range fallbackSourceFileTypesForJob(status.JobType) {
+			latest, findErr := s.repo.FindLatestSourceFile(fileType)
+			if findErr != nil || latest == nil {
+				continue
+			}
+
+			mappedJobType := domain.JobTypeFromFileType(latest.FileType)
+			if mappedJobType != "" && !sameProcessingJobType(mappedJobType, status.JobType) {
+				continue
+			}
+
+			status.CurrentSourceFile = latest
+			latestID := latest.ID
+			status.CurrentSourceFileID = &latestID
+			break
+		}
+	}
+
 	if status != nil && status.CurrentSourceFile != nil {
 		sanitizeSourceFileProgress(status.CurrentSourceFile)
 	}
 
 	return status, nil
+}
+
+func fallbackSourceFileTypesForJob(jobType string) []string {
+	switch normalizeProcessingJobType(jobType) {
+	case "LEVEL1_FULL":
+		return []string{"FULL"}
+	case "LEVEL1_DELTA":
+		return []string{"DELTA"}
+	case "LEVEL2_RR":
+		return []string{"RR_FULL", "RR"}
+	case "LEVEL2_REPEX":
+		return []string{"REPEX_FULL", "REPEX"}
+	default:
+		return nil
+	}
+}
+
+func normalizeProcessingJobType(jobType string) string {
+	switch jobType {
+	case "DAILY_FULL", "LEVEL1_FULL":
+		return "LEVEL1_FULL"
+	case "DAILY_DELTA", "LEVEL1_DELTA":
+		return "LEVEL1_DELTA"
+	default:
+		return jobType
+	}
+}
+
+func sameProcessingJobType(lhs string, rhs string) bool {
+	return normalizeProcessingJobType(lhs) == normalizeProcessingJobType(rhs)
 }
 
 // UpdateProcessingStatus updates processing status
