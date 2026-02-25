@@ -267,9 +267,12 @@ func (s *leiLevel2Service) downloadLevel2File(
 	}
 
 	now := time.Now()
+	jobType := domain.JobTypeFromFileType(fileType)
 	sourceFile := &domain.SourceFile{
 		FileName:         fileName,
 		FileType:         fileType,
+		JobType:          jobType,
+		JobLabel:         domain.JobTypeDisplayName(jobType),
 		FileURL:          url,
 		FileSize:         size,
 		FileHash:         fileHash,
@@ -691,8 +694,8 @@ func (s *leiLevel2Service) flushRRBatch(batch []*domain.LEIRelationshipRecord) (
 		return 0, 0, nil
 	}
 
-	if batchErr := s.repo.BatchUpsertRelationshipRecords(batch); batchErr == nil {
-		return len(batch), 0, nil
+	if created, updated, batchErr := s.repo.BatchUpsertRelationshipRecords(batch); batchErr == nil {
+		return created + updated, 0, nil
 	} else {
 		log.Warn().Err(batchErr).Int("batch_size", len(batch)).Msg("RR batch upsert failed, falling back to row-by-row")
 	}
@@ -1026,8 +1029,8 @@ func (s *leiLevel2Service) flushREPEXBatch(batch []*domain.LEIReportingException
 		return 0, 0, nil
 	}
 
-	if batchErr := s.repo.BatchUpsertReportingExceptions(batch); batchErr == nil {
-		return len(batch), 0, nil
+	if created, updated, batchErr := s.repo.BatchUpsertReportingExceptions(batch); batchErr == nil {
+		return created + updated, 0, nil
 	} else {
 		log.Warn().Err(batchErr).Int("batch_size", len(batch)).Msg("REPEX batch upsert failed, falling back to row-by-row")
 	}
