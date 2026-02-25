@@ -503,3 +503,211 @@ func TestProcessRecordsArray_FinalUpdatePersistsLastLEI(t *testing.T) {
 		t.Errorf("final call: LastProcessedLEI=%q, want %q (actual last record)", *final.LastProcessedLEI, expectedFinalLEI)
 	}
 }
+
+// --- Distinct lookup caching tests ---
+
+// distinctStubRepo extends stubLEIRepo to support configurable GetDistinctRegions and
+// GetDistinctLegalForms return values and call-counting for cache tests.
+type distinctStubRepo struct {
+stubLEIRepo
+regionsFn    func() ([]string, error)
+regionsCall  int
+legalFormsFn func() ([]string, error)
+legalFormsCall int
+}
+
+func (r *distinctStubRepo) GetDistinctRegions() ([]string, error) {
+r.regionsCall++
+if r.regionsFn != nil {
+return r.regionsFn()
+}
+return nil, nil
+}
+
+func (r *distinctStubRepo) GetDistinctLegalForms() ([]string, error) {
+r.legalFormsCall++
+if r.legalFormsFn != nil {
+return r.legalFormsFn()
+}
+return nil, nil
+}
+
+// TestGetDistinctRegions_CacheHit verifies that a second call within the TTL
+// returns the cached result without hitting the repo again.
+func TestGetDistinctRegions_CacheHit(t *testing.T) {
+stub := &distinctStubRepo{
+regionsFn: func() ([]string, error) { return []string{"US-CA", "US-NY"}, nil },
+}
+svc := &leiService{repo: stub}
+
+r1, err := svc.GetDistinctRegions()
+if err != nil {
+t.Fatalf("first call: unexpected error: %v", err)
+}
+r2, err := svc.GetDistinctRegions()
+if err != nil {
+t.Fatalf("second call: unexpected error: %v", err)
+}
+
+if stub.regionsCall != 1 {
+t.Errorf("repo called %d times, want 1 (cache hit expected on second call)", stub.regionsCall)
+}
+if len(r1) != 2 || len(r2) != 2 {
+t.Errorf("expected 2 regions on each call, got %d and %d", len(r1), len(r2))
+}
+}
+
+// TestGetDistinctRegions_EmptyResultIsCached verifies that an empty (but valid) result
+// is still cached so that subsequent calls within the TTL do not re-query.
+func TestGetDistinctRegions_EmptyResultIsCached(t *testing.T) {
+stub := &distinctStubRepo{
+regionsFn: func() ([]string, error) { return []string{}, nil },
+}
+svc := &leiService{repo: stub}
+
+for i := 0; i < 3; i++ {
+if _, err := svc.GetDistinctRegions(); err != nil {
+t.Fatalf("call %d: unexpected error: %v", i+1, err)
+}
+}
+
+if stub.regionsCall != 1 {
+t.Errorf("repo called %d times, want 1 (empty result should be cached)", stub.regionsCall)
+}
+}
+
+// TestGetDistinctRegions_SliceNotAliased verifies that mutating the returned slice
+// does not affect the in-service cache.
+func TestGetDistinctRegions_SliceNotAliased(t *testing.T) {
+stub := &distinctStubRepo{
+regionsFn: func() ([]string, error) { return []string{"US-CA"}, nil },
+}
+svc := &leiService{repo: stub}
+
+r1, _ := svc.GetDistinctRegions()
+r1[0] = "MUTATED"
+
+r2, _ := svc.GetDistinctRegions()
+if len(r2) == 0 || r2[0] == "MUTATED" {
+t.Error("mutating returned slice affected the cache")
+}
+}
+
+// TestGetDistinctLegalForms_CacheHit verifies that a second call within the TTL
+// returns the cached result without hitting the repo again.
+func TestGetDistinctLegalForms_CacheHit(t *testing.T) {
+stub := &distinctStubRepo{
+legalFormsFn: func() ([]string, error) { return []string{"LLC", "GmbH"}, nil },
+}
+svc := &leiService{repo: stub}
+
+f1, err := svc.GetDistinctLegalForms()
+if err != nil {
+t.Fatalf("first call: unexpected error: %v", err)
+}
+f2, err := svc.GetDistinctLegalForms()
+if err != nil {
+t.Fatalf("second call: unexpected error: %v", err)
+}
+
+if stub.legalFormsCall != 1 {
+t.Errorf("repo called %d times, want 1 (cache hit expected on second call)", stub.legalFormsCall)
+}
+if len(f1) != 2 || len(f2) != 2 {
+t.Errorf("expected 2 legal forms on each call, got %d and %d", len(f1), len(f2))
+}
+}
+
+// TestGetDistinctLegalForms_EmptyResultIsCached verifies that an empty (but valid) result
+// is still cached so that subsequent calls within the TTL do not re-query.
+func TestGetDistinctLegalForms_EmptyResultIsCached(t *testing.T) {
+stub := &distinctStubRepo{
+legalFormsFn: func() ([]string, error) { return []string{}, nil },
+}
+svc := &leiService{repo: stub}
+
+for i := 0; i < 3; i++ {
+if _, err := svc.GetDistinctLegalForms(); err != nil {
+t.Fatalf("call %d: unexpected error: %v", i+1, err)
+}
+}
+
+if stub.legalFormsCall != 1 {
+t.Errorf("repo called %d times, want 1 (empty result should be cached)", stub.legalFormsCall)
+}
+}
+
+// TestGetDistinctLegalForms_SliceNotAliased verifies that mutating the returned slice
+// does not affect the in-service cache.
+func TestGetDistinctLegalForms_SliceNotAliased(t *testing.T) {
+stub := &distinctStubRepo{
+legalFormsFn: func() ([]string, error) { return []string{"LLC"}, nil },
+}
+svc := &leiService{repo: stub}
+
+f1, _ := svc.GetDistinctLegalForms()
+f1[0] = "MUTATED"
+
+f2, _ := svc.GetDistinctLegalForms()
+if len(f2) == 0 || f2[0] == "MUTATED" {
+t.Error("mutating returned slice affected the cache")
+}
+}
+
+// TestGetDistinctRegions_TTLExpiry verifies that after the cache TTL expires,
+// the next call re-fetches from the repo.
+func TestGetDistinctRegions_TTLExpiry(t *testing.T) {
+call := 0
+stub := &distinctStubRepo{
+regionsFn: func() ([]string, error) {
+call++
+return []string{"US-CA"}, nil
+},
+}
+svc := &leiService{repo: stub}
+
+if _, err := svc.GetDistinctRegions(); err != nil {
+t.Fatalf("first call: unexpected error: %v", err)
+}
+// Expire the cache by back-dating the cached-at timestamp beyond the TTL.
+svc.lookupCacheMu.Lock()
+svc.distinctRegionsCachedAt = svc.distinctRegionsCachedAt.Add(-(distinctLookupCacheTTL + 1))
+svc.lookupCacheMu.Unlock()
+
+if _, err := svc.GetDistinctRegions(); err != nil {
+t.Fatalf("second call after expiry: unexpected error: %v", err)
+}
+
+if call != 2 {
+t.Errorf("repo called %d times after TTL expiry, want 2", call)
+}
+}
+
+// TestGetDistinctLegalForms_TTLExpiry verifies that after the cache TTL expires,
+// the next call re-fetches from the repo.
+func TestGetDistinctLegalForms_TTLExpiry(t *testing.T) {
+call := 0
+stub := &distinctStubRepo{
+legalFormsFn: func() ([]string, error) {
+call++
+return []string{"LLC"}, nil
+},
+}
+svc := &leiService{repo: stub}
+
+if _, err := svc.GetDistinctLegalForms(); err != nil {
+t.Fatalf("first call: unexpected error: %v", err)
+}
+// Expire the cache by back-dating the cached-at timestamp beyond the TTL.
+svc.lookupCacheMu.Lock()
+svc.distinctLegalFormsCachedAt = svc.distinctLegalFormsCachedAt.Add(-(distinctLookupCacheTTL + 1))
+svc.lookupCacheMu.Unlock()
+
+if _, err := svc.GetDistinctLegalForms(); err != nil {
+t.Fatalf("second call after expiry: unexpected error: %v", err)
+}
+
+if call != 2 {
+t.Errorf("repo called %d times after TTL expiry, want 2", call)
+}
+}

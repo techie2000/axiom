@@ -14,6 +14,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -49,6 +50,8 @@ const (
 )
 
 var leiCodePattern = regexp.MustCompile(`^[0-9A-Z]{18}[0-9]{2}$`)
+
+const distinctLookupCacheTTL = 5 * time.Minute
 
 // GLEIFPublishesResponse represents the response from the GLEIF latest publishes endpoint
 type GLEIFPublishesResponse struct {
@@ -126,6 +129,12 @@ type leiService struct {
 	repo        repository.LEIRepository
 	countryRepo repository.CountryRepository
 	dataDir     string // Directory to store downloaded files
+
+	lookupCacheMu            sync.RWMutex
+	distinctRegions          []string
+	distinctRegionsCachedAt  time.Time
+	distinctLegalForms       []string
+	distinctLegalFormsCachedAt time.Time
 }
 
 // NewLEIService creates a new LEI service
@@ -135,6 +144,15 @@ func NewLEIService(repo repository.LEIRepository, countryRepo repository.Country
 		countryRepo: countryRepo,
 		dataDir:     dataDir,
 	}
+}
+
+func cloneStringSlice(values []string) []string {
+	if len(values) == 0 {
+		return []string{}
+	}
+	cloned := make([]string, len(values))
+	copy(cloned, values)
+	return cloned
 }
 
 // progressWriter wraps an io.Writer to log extraction progress periodically
@@ -1321,12 +1339,52 @@ func (s *leiService) GetDistinctCountries() ([]domain.Country, error) {
 
 // GetDistinctRegions returns a sorted list of unique region values from LEI records
 func (s *leiService) GetDistinctRegions() ([]string, error) {
-	return s.repo.GetDistinctRegions()
+	now := time.Now()
+
+	s.lookupCacheMu.RLock()
+	if !s.distinctRegionsCachedAt.IsZero() && now.Sub(s.distinctRegionsCachedAt) < distinctLookupCacheTTL {
+		cached := cloneStringSlice(s.distinctRegions)
+		s.lookupCacheMu.RUnlock()
+		return cached, nil
+	}
+	s.lookupCacheMu.RUnlock()
+
+	regions, err := s.repo.GetDistinctRegions()
+	if err != nil {
+		return nil, err
+	}
+
+	s.lookupCacheMu.Lock()
+	s.distinctRegions = cloneStringSlice(regions)
+	s.distinctRegionsCachedAt = now
+	s.lookupCacheMu.Unlock()
+
+	return regions, nil
 }
 
 // GetDistinctLegalForms returns a sorted list of unique legal form values from LEI records
 func (s *leiService) GetDistinctLegalForms() ([]string, error) {
-	return s.repo.GetDistinctLegalForms()
+	now := time.Now()
+
+	s.lookupCacheMu.RLock()
+	if !s.distinctLegalFormsCachedAt.IsZero() && now.Sub(s.distinctLegalFormsCachedAt) < distinctLookupCacheTTL {
+		cached := cloneStringSlice(s.distinctLegalForms)
+		s.lookupCacheMu.RUnlock()
+		return cached, nil
+	}
+	s.lookupCacheMu.RUnlock()
+
+	legalForms, err := s.repo.GetDistinctLegalForms()
+	if err != nil {
+		return nil, err
+	}
+
+	s.lookupCacheMu.Lock()
+	s.distinctLegalForms = cloneStringSlice(legalForms)
+	s.distinctLegalFormsCachedAt = now
+	s.lookupCacheMu.Unlock()
+
+	return legalForms, nil
 }
 
 // UpdateLEIRecord updates an LEI record
