@@ -30,6 +30,13 @@ interface ProcessingStatus {
   error_message: string
 }
 
+interface MasterDataCounts {
+  countries: number
+  currencies: number
+  languages: number
+  total: number
+}
+
 export default function LEIStatusPage() {
   const [masterDataStatus, setMasterDataStatus] = useState<ProcessingStatus | null>(null)
   const [fullStatus, setFullStatus] = useState<ProcessingStatus | null>(null)
@@ -40,6 +47,8 @@ export default function LEIStatusPage() {
   const [error, setError] = useState<string | null>(null)
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [triggerMessage, setTriggerMessage] = useState<string | null>(null)
+  const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({})
+  const [masterDataCounts, setMasterDataCounts] = useState<MasterDataCounts | null>(null)
 
   const API_BASE_URL = typeof window !== 'undefined'
     ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080')
@@ -47,12 +56,24 @@ export default function LEIStatusPage() {
 
   const fetchStatus = async () => {
     try {
-      const [mdResponse, fullResponse, deltaResponse, rrResponse, repexResponse] = await Promise.all([
+      const [
+        mdResponse,
+        fullResponse,
+        deltaResponse,
+        rrResponse,
+        repexResponse,
+        countriesResponse,
+        currenciesResponse,
+        languagesResponse,
+      ] = await Promise.all([
         fetch(`${API_BASE_URL}/api/v1/lei/status/MASTER_DATA_SYNC`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
         fetch(`${API_BASE_URL}/api/v1/lei/status/DAILY_FULL`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
         fetch(`${API_BASE_URL}/api/v1/lei/status/DAILY_DELTA`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
         fetch(`${API_BASE_URL}/api/v1/lei/status/LEVEL2_RR`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
         fetch(`${API_BASE_URL}/api/v1/lei/status/LEVEL2_REPEX`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
+        fetch(`${API_BASE_URL}/api/v1/countries?limit=5000&offset=0`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
+        fetch(`${API_BASE_URL}/api/v1/currencies?limit=5000&offset=0`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
+        fetch(`${API_BASE_URL}/api/v1/languages?limit=5000&offset=0`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
       ])
 
       if (mdResponse?.ok) setMasterDataStatus(await mdResponse.json())
@@ -60,6 +81,25 @@ export default function LEIStatusPage() {
       if (deltaResponse?.ok) setDeltaStatus(await deltaResponse.json())
       if (rrResponse?.ok) setRrStatus(await rrResponse.json())
       if (repexResponse?.ok) setRepexStatus(await repexResponse.json())
+
+      if (countriesResponse?.ok && currenciesResponse?.ok && languagesResponse?.ok) {
+        const [countries, currencies, languages] = await Promise.all([
+          countriesResponse.json(),
+          currenciesResponse.json(),
+          languagesResponse.json(),
+        ])
+
+        const countriesCount = Array.isArray(countries) ? countries.length : 0
+        const currenciesCount = Array.isArray(currencies) ? currencies.length : 0
+        const languagesCount = Array.isArray(languages) ? languages.length : 0
+
+        setMasterDataCounts({
+          countries: countriesCount,
+          currencies: currenciesCount,
+          languages: languagesCount,
+          total: countriesCount + currenciesCount + languagesCount,
+        })
+      }
 
       setError(null)
     } catch (err) {
@@ -186,6 +226,25 @@ export default function LEIStatusPage() {
     }
   }
 
+  const getJobDisplayName = (jobType: string): string => {
+    switch (jobType) {
+      case 'MASTER_DATA_SYNC':
+        return 'Reference Data (MASTER_DATA_SYNC)'
+      case 'DAILY_FULL':
+        return 'Level 1 — LEI Records (DAILY_FULL)'
+      case 'DAILY_DELTA':
+        return 'Level 1 — LEI Records Delta (DAILY_DELTA)'
+      case 'LEVEL2_RR':
+        return 'Level 2 — Relationship Records (LEVEL2_RR)'
+      case 'LEVEL2_REPEX':
+        return 'Level 2 — Reporting Exceptions (LEVEL2_REPEX)'
+      default:
+        return jobType
+    }
+  }
+
+  const getCardId = (jobType: string): string => `card-${jobType.toLowerCase()}`
+
   const calculateProgress = (status: ProcessingStatus | null): number => {
     if (!status?.current_source_file) return 0
     const file = status.current_source_file
@@ -197,7 +256,7 @@ export default function LEIStatusPage() {
   const getFrequencyLabel = (status: ProcessingStatus | null): string => {
     if (!status) return ''
     if (status.job_type === 'MASTER_DATA_SYNC') return 'Daily (01:00)'
-    if (status.job_type === 'DAILY_FULL') return 'Daily'
+    if (status.job_type === 'DAILY_FULL') return 'Daily / chained'
     if (status.job_type === 'DAILY_DELTA') return 'Hourly'
     if (status.job_type === 'LEVEL2_RR' || status.job_type === 'LEVEL2_REPEX') return 'On-demand / chained'
     return ''
@@ -260,10 +319,37 @@ export default function LEIStatusPage() {
   const canTriggerRr = !isRrRunning && !isFullSyncRunning
   const canTriggerRepex = !isRepexRunning && !isRrRunning && !isFullSyncRunning
 
-  const renderStatusCard = (title: string, status: ProcessingStatus | null, isDisabled: boolean = false) => {
+  const getCardExpandState = (jobKey: string, status: ProcessingStatus | null): boolean => {
+    if (status?.status === 'RUNNING') {
+      return true
+    }
+    return expandedCards[jobKey] === true
+  }
+
+  const toggleCardExpand = (jobKey: string) => {
+    setExpandedCards(prev => ({
+      ...prev,
+      [jobKey]: !(prev[jobKey] === true),
+    }))
+  }
+
+  const getNextRunDisplay = (status: ProcessingStatus | null, dependency: string): string => {
+    const { nextRun, ultimateParent } = getChainedNextRun(status)
+    if (!nextRun) return dependency !== 'None' ? `After ${dependency}` : 'Never'
+    if (ultimateParent) return `≥ ${formatDate(nextRun)} (after ${ultimateParent})`
+    return formatDate(nextRun)
+  }
+
+  const renderStatusCard = (
+    title: string,
+    status: ProcessingStatus | null,
+    isDisabled: boolean = false,
+    cardId?: string,
+    jobKey: string = 'unknown',
+  ) => {
     if (!status) {
       return (
-        <div className={`rounded-lg shadow-md p-6 border-2 ${
+        <div id={cardId} className={`rounded-lg shadow-md p-6 border-2 ${
           isDisabled
             ? 'bg-gray-100 dark:bg-gray-800/30 border-gray-300 dark:border-gray-700 opacity-60'
             : 'bg-white/5 backdrop-blur-sm border-white/10'
@@ -276,22 +362,42 @@ export default function LEIStatusPage() {
 
     const progress = calculateProgress(status)
     const file = status.current_source_file
+    const isMasterDataJob = jobKey === 'MASTER_DATA_SYNC'
+    const fallbackTotalRecords = isMasterDataJob ? (masterDataCounts?.total ?? 0) : 0
+    const totalRecords = file ? file.total_records : fallbackTotalRecords
+    const successfulProcessed = file
+      ? Math.max(file.processed_records - file.failed_records, 0)
+      : fallbackTotalRecords
+    const failedRecords = file ? file.failed_records : 0
+    const currentFileLabel = file?.file_name || (isMasterDataJob ? 'Master datasets (countries, currencies, languages)' : '-')
     const frequency = getFrequencyLabel(status)
     const dependency = status.depends_on_job_type && status.depends_on_job_type !== 'NONE'
-      ? status.depends_on_job_type
+      ? getJobDisplayName(status.depends_on_job_type)
       : 'None'
+    const isExpanded = getCardExpandState(jobKey, status)
+    const canToggle = status.status !== 'RUNNING'
 
     return (
-      <div className={`rounded-lg shadow-md p-6 border-2 ${
+      <div id={cardId} className={`rounded-lg shadow-md p-6 border-2 ${
         isDisabled
           ? 'bg-gray-100 dark:bg-gray-800/30 border-gray-300 dark:border-gray-700 opacity-60'
           : 'bg-white/5 backdrop-blur-sm border-white/10'
       }`}>
         <div className="flex justify-between items-start mb-4">
           <h2 className="text-2xl font-bold">{title}</h2>
-          <span className={`px-3 py-1 rounded-full text-sm font-semibold border-2 ${getStatusColor(status.status)}`}>
-            {status.status}
-          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => toggleCardExpand(jobKey)}
+              disabled={!canToggle}
+              className="px-3 py-1 rounded-full text-xs font-semibold border border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700 disabled:opacity-60 disabled:cursor-not-allowed"
+              title={canToggle ? (isExpanded ? 'Collapse details' : 'Expand details') : 'Running jobs stay expanded'}
+            >
+              {isExpanded ? 'Collapse' : 'Expand'}
+            </button>
+            <span className={`px-3 py-1 rounded-full text-sm font-semibold border-2 ${getStatusColor(status.status)}`}>
+              {status.status}
+            </span>
+          </div>
         </div>
 
         <div className="mb-4 bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
@@ -307,88 +413,7 @@ export default function LEIStatusPage() {
           </div>
         </div>
 
-        {file && status.status === 'RUNNING' && (
-          <div className="mb-6">
-            {file.total_records > 0 ? (
-              <>
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="font-medium text-gray-900 dark:text-white">Processing Progress</span>
-                  <span className="text-gray-600 dark:text-gray-400">
-                    {file.processed_records.toLocaleString()} / {file.total_records.toLocaleString()} records ({progress.toFixed(1)}%)
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden">
-                  <div
-                    className="bg-blue-600 dark:bg-blue-500 h-4 rounded-full transition-all duration-500 ease-out"
-                    style={{ width: `${Math.min(progress, 100)}%` }}
-                  />
-                </div>
-              </>
-            ) : (
-              <div className="text-sm text-gray-600 dark:text-gray-400">
-                <p className="mb-2">⏳ Downloading file... ({file.processed_records.toLocaleString()} records processed)</p>
-                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden">
-                  <div className="bg-blue-600 dark:bg-blue-500 h-4 rounded-full animate-pulse" style={{ width: '30%' }} />
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {file && (status.status === 'COMPLETED' || status.status === 'IDLE' || file.failed_records > 0) && (
-          <div className="mb-4 bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-            <h3 className="font-semibold mb-2 text-sm text-gray-700 dark:text-gray-200">Processing Summary</h3>
-            <div className="space-y-1 text-sm">
-              {file.total_records > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Total Records:</span>
-                  <span className="font-medium text-gray-900 dark:text-white">{file.total_records.toLocaleString()}</span>
-                </div>
-              )}
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">Successfully Processed:</span>
-                <span className="font-medium text-green-600 dark:text-green-400">
-                  {(file.processed_records - file.failed_records).toLocaleString()}
-                </span>
-              </div>
-              {file.failed_records > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Failed Records:</span>
-                  <span className="font-medium text-orange-600 dark:text-orange-400">⚠️ {file.failed_records.toLocaleString()}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {file && (
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mb-4">
-            <h3 className="font-semibold mb-2 text-sm text-gray-700 dark:text-gray-200">Current File</h3>
-            <div className="space-y-1 text-sm text-gray-900 dark:text-gray-100">
-              <p className="truncate"><span className="font-medium text-gray-700 dark:text-gray-300">Name:</span> {file.file_name}</p>
-              <p><span className="font-medium text-gray-700 dark:text-gray-300">Status:</span> {file.processing_status}</p>
-              {file.total_records > 0 && (
-                <p><span className="font-medium text-gray-700 dark:text-gray-300">Total Records:</span> {file.total_records.toLocaleString()}</p>
-              )}
-              <p><span className="font-medium text-gray-700 dark:text-gray-300">Processed:</span> {file.processed_records.toLocaleString()} records</p>
-              {file.last_processed_lei && (
-                <p className="truncate"><span className="font-medium text-gray-700 dark:text-gray-300">Last LEI:</span> {file.last_processed_lei}</p>
-              )}
-              {file.failure_category && (
-                <p className="text-red-600 dark:text-red-400">
-                  <span className="font-medium">Error Category:</span> {file.failure_category}
-                </p>
-              )}
-              {file.processing_error && (
-                <p className="text-red-600 dark:text-red-400 text-xs mt-2">
-                  <span className="font-medium">Error:</span> {file.processing_error}
-                </p>
-              )}
-            </div>
-          </div>
-        )}
-
-        <div className="space-y-2 text-sm">
+        <div className="space-y-2 text-sm mb-4">
           <div className="flex justify-between">
             <span className="text-gray-600 dark:text-gray-400">Last Run:</span>
             <span className="font-medium text-gray-900 dark:text-white">{formatDate(status.last_run_at)}</span>
@@ -400,15 +425,101 @@ export default function LEIStatusPage() {
           <div className="flex justify-between">
             <span className="text-gray-600 dark:text-gray-400">Next Run:</span>
             <span className="font-medium text-gray-900 dark:text-white">
-              {(() => {
-                const { nextRun, ultimateParent } = getChainedNextRun(status)
-                if (!nextRun) return dependency !== 'None' ? `After ${dependency}` : 'Never'
-                if (ultimateParent) return `≥ ${formatDate(nextRun)} (after ${ultimateParent})`
-                return formatDate(nextRun)
-              })()}
+              {getNextRunDisplay(status, dependency)}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-600 dark:text-gray-400">Current File:</span>
+            <span className="font-medium text-gray-900 dark:text-white truncate max-w-[70%] text-right">
+              {currentFileLabel}
             </span>
           </div>
         </div>
+
+        {isExpanded && (
+          <>
+            {file && status.status === 'RUNNING' && (
+              <div className="mb-6">
+                {file.total_records > 0 ? (
+                  <>
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="font-medium text-gray-900 dark:text-white">Processing Progress</span>
+                      <span className="text-gray-600 dark:text-gray-400">
+                        {file.processed_records.toLocaleString()} / {file.total_records.toLocaleString()} records ({progress.toFixed(1)}%)
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden">
+                      <div
+                        className="bg-blue-600 dark:bg-blue-500 h-4 rounded-full transition-all duration-500 ease-out"
+                        style={{ width: `${Math.min(progress, 100)}%` }}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    <p className="mb-2">⏳ Downloading file... ({file.processed_records.toLocaleString()} records processed)</p>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden">
+                      <div className="bg-blue-600 dark:bg-blue-500 h-4 rounded-full animate-pulse" style={{ width: '30%' }} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="mb-4 bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+              <h3 className="font-semibold mb-2 text-sm text-gray-700 dark:text-gray-200">Processing Summary</h3>
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Total Records:</span>
+                  <span className="font-medium text-gray-900 dark:text-white">
+                    {totalRecords > 0 ? totalRecords.toLocaleString() : '-'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Successfully Processed:</span>
+                  <span className="font-medium text-green-600 dark:text-green-400">
+                    {totalRecords > 0 ? successfulProcessed.toLocaleString() : '-'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Failed Records:</span>
+                  <span className={`font-medium ${failedRecords > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-gray-900 dark:text-white'}`}>
+                    {totalRecords > 0
+                      ? `${failedRecords > 0 ? '⚠️ ' : ''}${failedRecords.toLocaleString()}`
+                      : '-'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mb-4">
+              <h3 className="font-semibold mb-2 text-sm text-gray-700 dark:text-gray-200">Current File</h3>
+              <div className="space-y-1 text-sm text-gray-900 dark:text-gray-100">
+                <p className="truncate"><span className="font-medium text-gray-700 dark:text-gray-300">Name:</span> {currentFileLabel}</p>
+                <p><span className="font-medium text-gray-700 dark:text-gray-300">Status:</span> {file?.processing_status || status.status}</p>
+                <p><span className="font-medium text-gray-700 dark:text-gray-300">Total Records:</span> {totalRecords > 0 ? totalRecords.toLocaleString() : '-'}</p>
+                <p><span className="font-medium text-gray-700 dark:text-gray-300">Processed:</span> {totalRecords > 0 ? `${successfulProcessed.toLocaleString()} records` : '-'}</p>
+                <p className="truncate"><span className="font-medium text-gray-700 dark:text-gray-300">Last LEI:</span> {file?.last_processed_lei || '-'}</p>
+                {isMasterDataJob && masterDataCounts && (
+                  <p>
+                    <span className="font-medium text-gray-700 dark:text-gray-300">Breakdown:</span>{' '}
+                    {`Countries ${masterDataCounts.countries.toLocaleString()}, Currencies ${masterDataCounts.currencies.toLocaleString()}, Languages ${masterDataCounts.languages.toLocaleString()}`}
+                  </p>
+                )}
+                {file?.failure_category && (
+                  <p className="text-red-600 dark:text-red-400">
+                    <span className="font-medium">Error Category:</span> {file.failure_category}
+                  </p>
+                )}
+                {file?.processing_error && (
+                  <p className="text-red-600 dark:text-red-400 text-xs mt-2">
+                    <span className="font-medium">Error:</span> {file.processing_error}
+                  </p>
+                )}
+              </div>
+            </div>
+          </>
+        )}
 
         {status.error_message && (
           <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
@@ -421,7 +532,8 @@ export default function LEIStatusPage() {
     )
   }
 
-  const renderLevel2SubJob = (label: string, status: ProcessingStatus | null, dependsOn: string) => {
+  const renderLevel2SubJob = (jobType: 'LEVEL2_RR' | 'LEVEL2_REPEX', status: ProcessingStatus | null, dependsOn: string) => {
+    const label = getJobDisplayName(jobType)
     const badge = status
       ? <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${getStatusColor(status.status)}`}>{status.status}</span>
       : <span className="px-2 py-0.5 rounded-full text-xs font-semibold border bg-gray-100 text-gray-500 border-gray-300 dark:bg-gray-700 dark:text-gray-400 dark:border-gray-600">UNKNOWN</span>
@@ -434,9 +546,9 @@ export default function LEIStatusPage() {
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-semibold text-sm text-gray-900 dark:text-white">{label}</span>
+            <a href={`#${getCardId(jobType)}`} className="font-semibold text-sm text-blue-700 hover:underline dark:text-blue-300">{label}</a>
             {badge}
-            <span className="text-xs text-gray-500 dark:text-gray-400">depends on: {dependsOn}</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">depends on: {getJobDisplayName(dependsOn)}</span>
           </div>
           {status && (
             <div className="mt-1 space-y-0.5 text-xs text-gray-600 dark:text-gray-400">
@@ -510,7 +622,7 @@ export default function LEIStatusPage() {
             <div className="flex items-center gap-3 py-3 border-b border-gray-200 dark:border-white/10">
               <div className={`w-3 h-3 rounded-full shrink-0 ${masterDataStatus ? getStatusDot(masterDataStatus.status) : 'bg-gray-400'}`} />
               <div className="flex-1 flex items-center gap-2 flex-wrap">
-                <span className="font-semibold text-sm text-gray-900 dark:text-white">Reference Data Sync (MASTER_DATA_SYNC)</span>
+                <a href={`#${getCardId('MASTER_DATA_SYNC')}`} className="font-semibold text-sm text-blue-700 hover:underline dark:text-blue-300">{getJobDisplayName('MASTER_DATA_SYNC')}</a>
                 {masterDataStatus && (
                   <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${getStatusColor(masterDataStatus.status)}`}>
                     {masterDataStatus.status}
@@ -528,7 +640,7 @@ export default function LEIStatusPage() {
               <div className="flex items-center gap-3 py-3 border-b border-gray-200 dark:border-white/10">
                 <div className={`w-3 h-3 rounded-full shrink-0 ${fullStatus ? getStatusDot(fullStatus.status) : 'bg-gray-400'}`} />
                 <div className="flex-1 flex items-center gap-2 flex-wrap">
-                  <span className="font-semibold text-sm text-gray-900 dark:text-white">Level 1 — Full Sync (DAILY_FULL)</span>
+                  <a href={`#${getCardId('DAILY_FULL')}`} className="font-semibold text-sm text-blue-700 hover:underline dark:text-blue-300">{getJobDisplayName('DAILY_FULL')}</a>
                   {fullStatus && (
                     <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${getStatusColor(fullStatus.status)}`}>
                       {fullStatus.status}
@@ -543,9 +655,9 @@ export default function LEIStatusPage() {
 
               {/* Level 2 dependent sub-jobs — indented under DAILY_FULL */}
               <div className="pl-6 border-l-2 border-dashed border-gray-300 dark:border-white/10 ml-1.5">
-                {renderLevel2SubJob('Level 2 — Relationship Records (LEVEL2_RR)', rrStatus, 'DAILY_FULL')}
+                {renderLevel2SubJob('LEVEL2_RR', rrStatus, 'DAILY_FULL')}
                 <div className="pl-6 border-l-2 border-dashed border-gray-300 dark:border-white/10 ml-1.5">
-                  {renderLevel2SubJob('Level 2 — Reporting Exceptions (LEVEL2_REPEX)', repexStatus, 'LEVEL2_RR')}
+                  {renderLevel2SubJob('LEVEL2_REPEX', repexStatus, 'LEVEL2_RR')}
                 </div>
               </div>
             </div>
@@ -554,7 +666,7 @@ export default function LEIStatusPage() {
             <div className="flex items-center gap-3 py-3 opacity-50">
               <div className={`w-3 h-3 rounded-full shrink-0 ${deltaStatus ? getStatusDot(deltaStatus.status) : 'bg-gray-400'}`} />
               <div className="flex-1 flex items-center gap-2 flex-wrap">
-                <span className="font-semibold text-sm text-gray-900 dark:text-white">Level 1 — Delta Sync (DAILY_DELTA)</span>
+                <a href={`#${getCardId('DAILY_DELTA')}`} className="font-semibold text-sm text-blue-700 hover:underline dark:text-blue-300">{getJobDisplayName('DAILY_DELTA')}</a>
                 <span className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded">DISABLED</span>
               </div>
             </div>
@@ -575,12 +687,12 @@ export default function LEIStatusPage() {
                 ▶ Run Reference Data
               </button>
               <button
-                onClick={() => triggerJob('/api/v1/lei/sync/full', 'Full sync triggered')}
+                onClick={() => triggerJob('/api/v1/lei/sync/full', 'Level 1 LEI Records sync triggered (DAILY_FULL)')}
                 className="px-3 py-2 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
                 disabled={!canTriggerFull}
-                title={!canTriggerFull ? 'Blocked while MASTER_DATA_SYNC or DAILY_FULL is running' : 'Trigger Level 1 full sync'}
+                title={!canTriggerFull ? 'Blocked while MASTER_DATA_SYNC or DAILY_FULL is running' : 'Trigger Level 1 LEI Records sync (DAILY_FULL)'}
               >
-                ▶ Run Full Sync
+                ▶ Run LEI Records
               </button>
               <button
                 onClick={() => triggerJob('/api/v1/lei/sync/delta', 'Delta sync triggered')}
@@ -599,18 +711,18 @@ export default function LEIStatusPage() {
                 ▶ Run Level 2
               </button>
               <button
-                onClick={() => triggerJob('/api/v1/lei/sync/level2/rr', 'LEVEL2_RR sync triggered')}
+                onClick={() => triggerJob('/api/v1/lei/sync/level2/rr', 'Level 2 Relationship Records sync triggered (LEVEL2_RR)')}
                 className="px-3 py-2 bg-violet-600 text-white text-xs rounded-lg hover:bg-violet-700 transition-colors disabled:opacity-50"
                 disabled={!canTriggerRr}
-                title={!canTriggerRr ? 'Blocked while DAILY_FULL or LEVEL2_RR is running' : 'Trigger LEVEL2_RR only'}
+                title={!canTriggerRr ? 'Blocked while DAILY_FULL or LEVEL2_RR is running' : 'Trigger Level 2 Relationship Records sync only (LEVEL2_RR)'}
               >
                 ▶ Run RR
               </button>
               <button
-                onClick={() => triggerJob('/api/v1/lei/sync/level2/repex', 'LEVEL2_REPEX sync triggered')}
+                onClick={() => triggerJob('/api/v1/lei/sync/level2/repex', 'Level 2 Reporting Exceptions sync triggered (LEVEL2_REPEX)')}
                 className="px-3 py-2 bg-fuchsia-600 text-white text-xs rounded-lg hover:bg-fuchsia-700 transition-colors disabled:opacity-50"
                 disabled={!canTriggerRepex}
-                title={!canTriggerRepex ? 'Blocked while DAILY_FULL, LEVEL2_RR, or LEVEL2_REPEX is running' : 'Trigger LEVEL2_REPEX only'}
+                title={!canTriggerRepex ? 'Blocked while DAILY_FULL, LEVEL2_RR, or LEVEL2_REPEX is running' : 'Trigger Level 2 Reporting Exceptions sync only (LEVEL2_REPEX)'}
               >
                 ▶ Run REPEX
               </button>
@@ -619,19 +731,13 @@ export default function LEIStatusPage() {
         </div>
 
         {/* Detailed Status Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          {renderStatusCard('Reference Data Sync', masterDataStatus, false)}
-          {renderStatusCard(`Full Sync (${getFrequencyLabel(fullStatus)})`, fullStatus, false)}
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          {renderStatusCard('Level 2 — Relationship Records', rrStatus, false)}
-          {renderStatusCard('Level 2 — Reporting Exceptions', repexStatus, false)}
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div className="space-y-6 mb-6">
+          {renderStatusCard(getJobDisplayName('MASTER_DATA_SYNC'), masterDataStatus, false, getCardId('MASTER_DATA_SYNC'), 'MASTER_DATA_SYNC')}
+          {renderStatusCard(getJobDisplayName('DAILY_FULL'), fullStatus, false, getCardId('DAILY_FULL'), 'DAILY_FULL')}
+          {renderStatusCard(getJobDisplayName('LEVEL2_RR'), rrStatus, false, getCardId('LEVEL2_RR'), 'LEVEL2_RR')}
+          {renderStatusCard(getJobDisplayName('LEVEL2_REPEX'), repexStatus, false, getCardId('LEVEL2_REPEX'), 'LEVEL2_REPEX')}
           <div className="relative">
-            {renderStatusCard(`Delta Sync (${getFrequencyLabel(deltaStatus)})`, deltaStatus, true)}
+            {renderStatusCard(getJobDisplayName('DAILY_DELTA'), deltaStatus, true, getCardId('DAILY_DELTA'), 'DAILY_DELTA')}
             <div className="absolute top-4 right-4 bg-gray-500 text-white text-xs px-2 py-1 rounded">
               DISABLED
             </div>

@@ -106,8 +106,11 @@ Overall status of scheduled jobs.
 
 Key fields:
 
-- `job_type`: DAILY_FULL or DAILY_DELTA
+- `job_type`: MASTER_DATA_SYNC, DAILY_FULL, DAILY_DELTA, LEVEL2_RR, or LEVEL2_REPEX
+- `job_label`: Human-readable label persisted with the job code
 - `status`: IDLE, RUNNING, or FAILED (COMPLETED is transient and immediately becomes IDLE)
+- `depends_on_job_type`: Upstream job code in chained flows
+- `depends_on_job_label`: Human-readable upstream job label
 - `last_run_at`, `next_run_at`, `last_success_at`: Job timing
 - `current_source_file_id`: Currently processing file
 - `error_message`: Last error if any
