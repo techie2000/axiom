@@ -256,7 +256,7 @@ export default function LEIStatusPage() {
   const getFrequencyLabel = (status: ProcessingStatus | null): string => {
     if (!status) return ''
     if (status.job_type === 'MASTER_DATA_SYNC') return 'Daily (01:00)'
-    if (status.job_type === 'DAILY_FULL') return 'Daily'
+    if (status.job_type === 'DAILY_FULL') return 'Daily / chained'
     if (status.job_type === 'DAILY_DELTA') return 'Hourly'
     if (status.job_type === 'LEVEL2_RR' || status.job_type === 'LEVEL2_REPEX') return 'On-demand / chained'
     return ''
