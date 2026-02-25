@@ -56,6 +56,7 @@ func Init(level string) {
 	output := io.Writer(os.Stdout)
 	logFilePath := strings.TrimSpace(os.Getenv("LOG_FILE_PATH"))
 	if logFilePath != "" {
+		// lumberjack.Logger automatically creates parent directories if they don't exist.
 		lb := &lumberjack.Logger{
 			Filename:   logFilePath,
 			MaxSize:    envInt("LOG_MAX_SIZE_MB", 10),
