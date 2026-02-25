@@ -53,8 +53,8 @@ $$;
 UPDATE lei_raw.source_files
 SET
 	job_type = CASE file_type
-		WHEN 'FULL' THEN 'DAILY_FULL'
-		WHEN 'DELTA' THEN 'DAILY_DELTA'
+		WHEN 'FULL' THEN 'LEVEL1_FULL'
+		WHEN 'DELTA' THEN 'LEVEL1_DELTA'
 		WHEN 'RR' THEN 'LEVEL2_RR'
 		WHEN 'RR_FULL' THEN 'LEVEL2_RR'
 		WHEN 'REPEX' THEN 'LEVEL2_REPEX'
@@ -62,12 +62,19 @@ SET
 		ELSE NULL
 	END,
 	job_label = CASE file_type
-		WHEN 'FULL' THEN 'Level 1 — LEI Records (DAILY_FULL)'
-		WHEN 'DELTA' THEN 'Level 1 — LEI Records Delta (DAILY_DELTA)'
+		WHEN 'FULL' THEN 'Level 1 — LEI Records (LEVEL1_FULL)'
+		WHEN 'DELTA' THEN 'Level 1 — LEI Records Delta (LEVEL1_DELTA)'
 		WHEN 'RR' THEN 'Level 2 — Relationship Records (LEVEL2_RR)'
 		WHEN 'RR_FULL' THEN 'Level 2 — Relationship Records (LEVEL2_RR)'
 		WHEN 'REPEX' THEN 'Level 2 — Reporting Exceptions (LEVEL2_REPEX)'
 		WHEN 'REPEX_FULL' THEN 'Level 2 — Reporting Exceptions (LEVEL2_REPEX)'
 		ELSE NULL
 	END
-WHERE job_type IS NULL OR job_label IS NULL;
+WHERE
+	job_type IS NULL
+	OR job_label IS NULL
+	OR job_type IN ('DAILY_FULL', 'DAILY_DELTA')
+	OR job_label IN (
+		'Level 1 — LEI Records (DAILY_FULL)',
+		'Level 1 — LEI Records Delta (DAILY_DELTA)'
+	);

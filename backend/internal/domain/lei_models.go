@@ -225,6 +225,10 @@ func JobTypeDisplayName(jobType string) string {
 	switch jobType {
 	case "MASTER_DATA_SYNC":
 		return "Reference Data (MASTER_DATA_SYNC)"
+	case "LEVEL1_FULL":
+		return "Level 1 — LEI Records (LEVEL1_FULL)"
+	case "LEVEL1_DELTA":
+		return "Level 1 — LEI Records Delta (LEVEL1_DELTA)"
 	case "DAILY_FULL":
 		return "Level 1 — LEI Records (DAILY_FULL)"
 	case "DAILY_DELTA":
@@ -242,12 +246,12 @@ func JobTypeDisplayName(jobType string) string {
 func JobTypeFromFileType(fileType string) string {
 	switch fileType {
 	case "FULL":
-		return "DAILY_FULL"
+		return "LEVEL1_FULL"
 	case "DELTA":
-		return "DAILY_DELTA"
-	case "RR":
+		return "LEVEL1_DELTA"
+	case "RR", "RR_FULL":
 		return "LEVEL2_RR"
-	case "REPEX":
+	case "REPEX", "REPEX_FULL":
 		return "LEVEL2_REPEX"
 	default:
 		return ""

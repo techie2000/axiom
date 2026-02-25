@@ -125,8 +125,8 @@ Response:
   "current_source_file": {
     "id": "...",
     "file_name": "lei-FULL-20260210-143000.json.zip",
-    "job_type": "DAILY_FULL",
-    "job_label": "Level 1 — LEI Records (DAILY_FULL)",
+    "job_type": "LEVEL1_FULL",
+    "job_label": "Level 1 — LEI Records (LEVEL1_FULL)",
     "processing_status": "IN_PROGRESS",
     "total_records": 2500000,
     "processed_records": 150000,
