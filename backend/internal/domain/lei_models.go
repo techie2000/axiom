@@ -281,3 +281,60 @@ type LEIReportingException struct {
 func (LEIReportingException) TableName() string {
 	return "lei_raw.lei_reporting_exceptions"
 }
+
+// LEIRelationshipRecordAudit represents the complete audit history of Level 2
+// relationship record changes, mirroring the pattern used by LEIRecordAudit for
+// Level 1 lei_records.
+type LEIRelationshipRecordAudit struct {
+	ID               uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	RRRecordID       uuid.UUID `gorm:"type:uuid;not null;index" json:"rr_record_id"`
+	StartNodeLEI     string    `gorm:"size:20;not null;index" json:"start_node_lei"`
+	EndNodeLEI       string    `gorm:"size:20;not null;index" json:"end_node_lei"`
+	RelationshipType string    `gorm:"size:100;not null" json:"relationship_type"`
+	Action           string    `gorm:"size:20;not null" json:"action"` // CREATE, UPDATE, DELETE
+
+	// Complete record snapshot
+	RecordSnapshot JSONBString `gorm:"type:jsonb;not null" json:"record_snapshot"`
+
+	// Change details
+	ChangedFields JSONBString `gorm:"type:jsonb" json:"changed_fields"` // {"field": {"old": "value", "new": "value"}}
+
+	// Source information
+	SourceFileID *uuid.UUID `gorm:"type:uuid" json:"source_file_id"`
+	ChangedBy    string     `gorm:"size:100;not null;default:'system'" json:"changed_by"`
+
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// TableName overrides the table name for LEIRelationshipRecordAudit.
+func (LEIRelationshipRecordAudit) TableName() string {
+	return "lei_raw.lei_relationship_records_audit"
+}
+
+// LEIReportingExceptionAudit represents the complete audit history of Level 2
+// reporting exception changes, mirroring the pattern used by LEIRecordAudit for
+// Level 1 lei_records.
+type LEIReportingExceptionAudit struct {
+	ID                uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	RepexRecordID     uuid.UUID `gorm:"type:uuid;not null;index" json:"repex_record_id"`
+	LEI               string    `gorm:"size:20;not null;index" json:"lei"`
+	ExceptionCategory string    `gorm:"size:100;not null" json:"exception_category"`
+	Action            string    `gorm:"size:20;not null" json:"action"` // CREATE, UPDATE, DELETE
+
+	// Complete record snapshot
+	RecordSnapshot JSONBString `gorm:"type:jsonb;not null" json:"record_snapshot"`
+
+	// Change details
+	ChangedFields JSONBString `gorm:"type:jsonb" json:"changed_fields"` // {"field": {"old": "value", "new": "value"}}
+
+	// Source information
+	SourceFileID *uuid.UUID `gorm:"type:uuid" json:"source_file_id"`
+	ChangedBy    string     `gorm:"size:100;not null;default:'system'" json:"changed_by"`
+
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// TableName overrides the table name for LEIReportingExceptionAudit.
+func (LEIReportingExceptionAudit) TableName() string {
+	return "lei_raw.lei_reporting_exceptions_audit"
+}
