@@ -754,6 +754,7 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 	}()
 
 	const batchSize = 1000
+	const sourceFileProgressCheckpointInterval = 5000
 	batch := make([]*domain.LEIRecord, 0, batchSize)
 
 	// flushBatch processes accumulated records using batch upsert
@@ -795,14 +796,16 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 			// Track records processed in this session (use batch size, not DB results)
 			processedRecords += len(batch)
 
-			// Update source file with cumulative progress
+			// Update source file with cumulative progress (checkpointed to reduce DB write pressure)
 			cumulativeProcessed = capProcessedRecords(progressTotalRecords, checkpointProcessed+processedRecords)
-			sourceFile.TotalRecords = progressTotalRecords
-			sourceFile.ProcessedRecords = cumulativeProcessed
-			sourceFile.FailedRecords = failedRecords
-			sourceFile.LastProcessedLEI = normalizeLEICodePointer(lastProcessedLEI)
-			if err := s.repo.UpdateSourceFile(sourceFile); err != nil {
-				log.Error().Err(err).Msg("Failed to update source file progress")
+			if processedRecords%sourceFileProgressCheckpointInterval == 0 {
+				sourceFile.TotalRecords = progressTotalRecords
+				sourceFile.ProcessedRecords = cumulativeProcessed
+				sourceFile.FailedRecords = failedRecords
+				sourceFile.LastProcessedLEI = normalizeLEICodePointer(lastProcessedLEI)
+				if err := s.repo.UpdateSourceFile(sourceFile); err != nil {
+					log.Error().Err(err).Msg("Failed to update source file progress checkpoint")
+				}
 			}
 
 			// Calculate progress percentage
