@@ -464,6 +464,10 @@ server:
 **Environment Variables:** All config values can be set via environment variables using uppercase with underscores
 (e.g., `DATABASE_LOGLEVEL`, `LEI_DELTA_SYNC_INTERVAL`).
 
+| Variable | Default | Description |
+| -------- | ------- | ----------- |
+| `LOG_FILE_PATH` | _(unset)_ | Optional log file path. Mirrors backend logs to stdout and file. Unset = stdout only. |
+
 See [LEI Configuration](docs/lei/LEI_ACQUISITION.md#environment-variables) for detailed scheduler options.
 
 ## Performance Optimization
