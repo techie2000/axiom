@@ -167,6 +167,20 @@ export default function LEIStatusPage() {
     return () => clearInterval(interval)
   }, [autoRefresh])
 
+  useEffect(() => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        if (fullExpanded) {
+          setFullExpanded(false)
+        } else if (rrExpanded) {
+          setRrExpanded(false)
+        }
+      }
+    }
+    document.addEventListener('keydown', handleEscapeKey)
+    return () => document.removeEventListener('keydown', handleEscapeKey)
+  }, [fullExpanded, rrExpanded])
+
   const formatDate = (dateString: string | null) => {
     if (!dateString || dateString.startsWith('0001-')) return 'Never'
     return new Date(dateString).toISOString().replace('T', ' ').substring(0, 19)
@@ -502,7 +516,7 @@ export default function LEIStatusPage() {
     )
   }
 
-  const renderControlSpacer = () => <div className="w-5 h-5 shrink-0" aria-hidden />
+  const renderControlSpacer = () => <div className="w-5 h-5 shrink-0" aria-hidden="true" />
 
   const renderDisclosureButton = (expanded: boolean, onToggle: () => void, label: string) => (
     <button
@@ -516,7 +530,7 @@ export default function LEIStatusPage() {
         viewBox="0 0 20 20"
         fill="none"
         className={`w-3 h-3 transition-transform ${expanded ? 'rotate-90' : ''}`}
-        aria-hidden
+        aria-hidden="true"
       >
         <path d="M7 5L12 10L7 15" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
@@ -532,7 +546,7 @@ export default function LEIStatusPage() {
       title={title}
       aria-label={title}
     >
-      <svg viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3" aria-hidden>
+      <svg viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3" aria-hidden="true">
         <path d="M6 4.5C6 3.72 6.85 3.24 7.52 3.64L16.52 9.14C17.16 9.53 17.16 10.47 16.52 10.86L7.52 16.36C6.85 16.76 6 16.28 6 15.5V4.5Z" />
       </svg>
     </button>
