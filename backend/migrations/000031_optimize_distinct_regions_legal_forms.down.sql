@@ -1,0 +1,7 @@
+-- Rollback distinct region/legal form index optimizations
+
+DROP INDEX IF EXISTS lei_raw.idx_lei_records_legal_region_trimmed_active;
+DROP INDEX IF EXISTS lei_raw.idx_lei_records_hq_region_trimmed_active;
+DROP INDEX IF EXISTS lei_raw.idx_lei_records_legal_form_trimmed_active;
+
+ANALYZE lei_raw.lei_records;
