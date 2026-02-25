@@ -358,9 +358,12 @@ func (s *leiService) downloadFile(url, fileType, publishedAt string, expectedRec
 	}
 
 	// Create SourceFile record
+	jobType := domain.JobTypeFromFileType(fileType)
 	sourceFile := &domain.SourceFile{
 		FileName:         fileName,
 		FileType:         fileType,
+		JobType:          jobType,
+		JobLabel:         domain.JobTypeDisplayName(jobType),
 		FileURL:          url,
 		FileSize:         fileSize,
 		FileHash:         fileHash,
@@ -1413,6 +1416,16 @@ func (s *leiService) GetProcessingStatus(jobType string) (*domain.FileProcessing
 
 // UpdateProcessingStatus updates processing status
 func (s *leiService) UpdateProcessingStatus(status *domain.FileProcessingStatus) error {
+	if status != nil {
+		if status.JobType != "" {
+			status.JobLabel = domain.JobTypeDisplayName(status.JobType)
+		}
+		if status.DependsOnJobType != "" {
+			status.DependsOnJobLabel = domain.JobTypeDisplayName(status.DependsOnJobType)
+		} else {
+			status.DependsOnJobLabel = ""
+		}
+	}
 	return s.repo.UpdateProcessingStatus(status)
 }
 
