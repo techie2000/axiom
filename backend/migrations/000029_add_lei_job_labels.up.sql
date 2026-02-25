@@ -56,14 +56,18 @@ SET
 		WHEN 'FULL' THEN 'DAILY_FULL'
 		WHEN 'DELTA' THEN 'DAILY_DELTA'
 		WHEN 'RR' THEN 'LEVEL2_RR'
+		WHEN 'RR_FULL' THEN 'LEVEL2_RR'
 		WHEN 'REPEX' THEN 'LEVEL2_REPEX'
+		WHEN 'REPEX_FULL' THEN 'LEVEL2_REPEX'
 		ELSE NULL
 	END,
 	job_label = CASE file_type
 		WHEN 'FULL' THEN 'Level 1 — LEI Records (DAILY_FULL)'
 		WHEN 'DELTA' THEN 'Level 1 — LEI Records Delta (DAILY_DELTA)'
 		WHEN 'RR' THEN 'Level 2 — Relationship Records (LEVEL2_RR)'
+		WHEN 'RR_FULL' THEN 'Level 2 — Relationship Records (LEVEL2_RR)'
 		WHEN 'REPEX' THEN 'Level 2 — Reporting Exceptions (LEVEL2_REPEX)'
+		WHEN 'REPEX_FULL' THEN 'Level 2 — Reporting Exceptions (LEVEL2_REPEX)'
 		ELSE NULL
 	END
 WHERE job_type IS NULL OR job_label IS NULL;
