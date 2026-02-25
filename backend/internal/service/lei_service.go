@@ -796,8 +796,9 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 			// Track records processed in this session (use batch size, not DB results)
 			processedRecords += len(batch)
 
-			// Always keep LastProcessedLEI in sync so the final update reflects the latest position,
-			// even for files with fewer records than sourceFileProgressCheckpointInterval.
+			// Always keep LastProcessedLEI in sync so the mandatory final UpdateSourceFile
+			// call reflects the actual last record, even for batches that do not hit a
+			// checkpoint boundary (e.g. files smaller than sourceFileProgressCheckpointInterval).
 			cumulativeProcessed = capProcessedRecords(progressTotalRecords, checkpointProcessed+processedRecords)
 			sourceFile.LastProcessedLEI = normalizeLEICodePointer(lastProcessedLEI)
 			if processedRecords%sourceFileProgressCheckpointInterval == 0 {
