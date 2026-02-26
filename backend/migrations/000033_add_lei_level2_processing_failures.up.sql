@@ -85,5 +85,5 @@ ON lei_raw.lei_level2_processing_failures (natural_key)
 WHERE natural_key IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_lei_l2_failures_open_natural_key
-ON lei_raw.lei_level2_processing_failures (job_type, natural_key)
-WHERE resolved = FALSE AND natural_key IS NOT NULL;
+ON lei_raw.lei_level2_processing_failures (job_type, resolved, natural_key)
+WHERE natural_key IS NOT NULL;
