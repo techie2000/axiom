@@ -37,7 +37,7 @@ func NewHandlers(services *service.Services, schedulerService service.SchedulerS
 		Instrument:      NewInstrumentHandler(services.Instrument),
 		Account:         NewAccountHandler(services.Account),
 		SSI:             NewSSIHandler(services.SSI),
-		LEI:             NewLEIHandler(services.LEI, schedulerService),
+		LEI:             NewLEIHandlerWithLevel2(services.LEI, services.LEILevel2, schedulerService),
 		DataAcquisition: NewDataAcquisitionHandler(),
 		CodeMapping:     NewCodeMappingHandler(services.CodeMapping),
 	}

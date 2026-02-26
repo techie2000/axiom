@@ -37,6 +37,22 @@ interface MasterDataCounts {
   total: number
 }
 
+interface Level2ProcessingFailure {
+  id: string
+  job_type: string
+  source_file_id: string | null
+  failure_stage: string
+  natural_key: string
+  error_message: string
+  resolved: boolean
+  resolved_at: string | null
+  resolved_source_file_id: string | null
+  resolved_note: string
+  created_at: string
+}
+
+type ImportJobType = 'DAILY_FULL' | 'DAILY_DELTA' | 'LEVEL2_RR' | 'LEVEL2_REPEX'
+
 export default function LEIStatusPage() {
   const [masterDataStatus, setMasterDataStatus] = useState<ProcessingStatus | null>(null)
   const [fullStatus, setFullStatus] = useState<ProcessingStatus | null>(null)
@@ -52,6 +68,17 @@ export default function LEIStatusPage() {
   const [rrExpanded, setRrExpanded] = useState(false)
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({})
   const [masterDataCounts, setMasterDataCounts] = useState<MasterDataCounts | null>(null)
+  const [level2FailuresByJob, setLevel2FailuresByJob] = useState<Record<string, Level2ProcessingFailure[]>>({})
+  const [level2FailuresTotalByJob, setLevel2FailuresTotalByJob] = useState<Record<string, number>>({})
+  const [level2FailuresExpandedByJob, setLevel2FailuresExpandedByJob] = useState<Record<string, boolean>>({})
+  const [level2FailuresLoadingByJob, setLevel2FailuresLoadingByJob] = useState<Record<string, boolean>>({})
+  const [level2FailuresErrorByJob, setLevel2FailuresErrorByJob] = useState<Record<string, string | null>>({})
+  const [level2FailuresOpenOnlyByJob, setLevel2FailuresOpenOnlyByJob] = useState<Record<string, boolean>>({
+    DAILY_FULL: true,
+    DAILY_DELTA: true,
+    LEVEL2_RR: true,
+    LEVEL2_REPEX: true,
+  })
 
   const API_BASE_URL = typeof window !== 'undefined'
     ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080')
@@ -153,6 +180,60 @@ export default function LEIStatusPage() {
     } catch (err) {
       showTriggerMessage(err instanceof Error ? err.message : 'Failed to trigger job', 'error')
     }
+  }
+
+  const fetchLevel2Failures = async (jobType: ImportJobType, openOnly: boolean) => {
+    setLevel2FailuresLoadingByJob(prev => ({ ...prev, [jobType]: true }))
+    setLevel2FailuresErrorByJob(prev => ({ ...prev, [jobType]: null }))
+    try {
+      const params = new URLSearchParams({
+        jobType,
+        openOnly: openOnly ? 'true' : 'false',
+        limit: '50',
+        offset: '0',
+      })
+      const response = await fetch(`${API_BASE_URL}/api/v1/lei/level2/failures?${params.toString()}`, {
+        headers: { Accept: 'application/json' },
+      })
+      if (!response.ok) {
+        throw new Error('Failed to fetch Level 2 processing failures')
+      }
+
+      const payload = await response.json()
+      const items = Array.isArray(payload?.items) ? payload.items as Level2ProcessingFailure[] : []
+      const total = typeof payload?.total === 'number' ? payload.total : items.length
+
+      setLevel2FailuresByJob(prev => ({ ...prev, [jobType]: items }))
+      setLevel2FailuresTotalByJob(prev => ({ ...prev, [jobType]: total }))
+      setLevel2FailuresOpenOnlyByJob(prev => ({ ...prev, [jobType]: openOnly }))
+    } catch (err) {
+      setLevel2FailuresErrorByJob(prev => ({
+        ...prev,
+        [jobType]: err instanceof Error ? err.message : 'Failed to fetch Level 2 processing failures',
+      }))
+    } finally {
+      setLevel2FailuresLoadingByJob(prev => ({ ...prev, [jobType]: false }))
+    }
+  }
+
+  const toggleLevel2Failures = async (jobType: ImportJobType) => {
+    const isOpen = level2FailuresExpandedByJob[jobType] === true
+    if (isOpen) {
+      setLevel2FailuresExpandedByJob(prev => ({ ...prev, [jobType]: false }))
+      return
+    }
+
+    const openOnly = level2FailuresOpenOnlyByJob[jobType] ?? true
+    const hasLoaded = level2FailuresByJob[jobType] !== undefined
+    if (!hasLoaded) {
+      await fetchLevel2Failures(jobType, openOnly)
+    }
+    setLevel2FailuresExpandedByJob(prev => ({ ...prev, [jobType]: true }))
+  }
+
+  const switchLevel2FailureMode = async (jobType: ImportJobType, openOnly: boolean) => {
+    await fetchLevel2Failures(jobType, openOnly)
+    setLevel2FailuresExpandedByJob(prev => ({ ...prev, [jobType]: true }))
   }
 
   useEffect(() => {
@@ -332,6 +413,7 @@ export default function LEIStatusPage() {
 
     const progress = calculateProgress(status)
     const file = status.current_source_file
+    const isImportJob = jobKey === 'DAILY_FULL' || jobKey === 'DAILY_DELTA' || jobKey === 'LEVEL2_RR' || jobKey === 'LEVEL2_REPEX'
     const isMasterDataJob = jobKey === 'MASTER_DATA_SYNC'
     const fallbackTotalRecords = isMasterDataJob ? (masterDataCounts?.total ?? 0) : 0
     const totalRecords = file ? file.total_records : fallbackTotalRecords
@@ -346,6 +428,13 @@ export default function LEIStatusPage() {
       : 'None'
     const isExpanded = getCardExpandState(jobKey, status)
     const canToggle = status.status !== 'RUNNING'
+    const level2JobKey = isImportJob ? (jobKey as ImportJobType) : null
+    const level2FailuresOpen = level2JobKey ? (level2FailuresExpandedByJob[level2JobKey] === true) : false
+    const level2Failures = level2JobKey ? (level2FailuresByJob[level2JobKey] ?? []) : []
+    const level2FailuresTotal = level2JobKey ? (level2FailuresTotalByJob[level2JobKey] ?? level2Failures.length) : 0
+    const level2FailuresLoading = level2JobKey ? (level2FailuresLoadingByJob[level2JobKey] === true) : false
+    const level2FailuresError = level2JobKey ? level2FailuresErrorByJob[level2JobKey] : null
+    const level2OpenOnly = level2JobKey ? (level2FailuresOpenOnlyByJob[level2JobKey] ?? true) : true
 
     return (
       <div id={cardId} className={`rounded-lg shadow-md p-6 border-2 ${
@@ -453,14 +542,98 @@ export default function LEIStatusPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600 dark:text-gray-400">Failed Records:</span>
-                  <span className={`font-medium ${failedRecords > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-gray-900 dark:text-white'}`}>
-                    {totalRecords > 0
-                      ? `${failedRecords > 0 ? '⚠️ ' : ''}${failedRecords.toLocaleString()}`
-                      : '-'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={`font-medium ${failedRecords > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-gray-900 dark:text-white'}`}>
+                      {totalRecords > 0
+                        ? `${failedRecords > 0 ? '⚠️ ' : ''}${failedRecords.toLocaleString()}`
+                        : '-'}
+                    </span>
+                    {isImportJob && failedRecords > 0 && level2JobKey && (
+                      <button
+                        type="button"
+                        onClick={() => void toggleLevel2Failures(level2JobKey)}
+                        className="text-xs px-2 py-1 rounded border border-orange-300 text-orange-700 hover:bg-orange-50 dark:border-orange-700 dark:text-orange-300 dark:hover:bg-orange-900/20"
+                      >
+                        {level2FailuresOpen ? 'Hide details' : 'View details'}
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
+
+            {isImportJob && level2JobKey && level2FailuresOpen && (
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-200">
+                    Failed Records {level2OpenOnly ? '(Open)' : '(Open + Resolved)'}
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void switchLevel2FailureMode(level2JobKey, true)}
+                      className={`text-xs px-2 py-1 rounded border ${level2OpenOnly
+                        ? 'border-blue-300 text-blue-700 bg-blue-50 dark:border-blue-700 dark:text-blue-300 dark:bg-blue-900/20'
+                        : 'border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      Open only
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void switchLevel2FailureMode(level2JobKey, false)}
+                      className={`text-xs px-2 py-1 rounded border ${!level2OpenOnly
+                        ? 'border-blue-300 text-blue-700 bg-blue-50 dark:border-blue-700 dark:text-blue-300 dark:bg-blue-900/20'
+                        : 'border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      Include resolved
+                    </button>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                  Showing {level2Failures.length.toLocaleString()} of {level2FailuresTotal.toLocaleString()} records
+                </p>
+
+                {level2FailuresLoading && (
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Loading failure details...</p>
+                )}
+
+                {!level2FailuresLoading && level2FailuresError && (
+                  <p className="text-sm text-red-600 dark:text-red-400">{level2FailuresError}</p>
+                )}
+
+                {!level2FailuresLoading && !level2FailuresError && level2Failures.length === 0 && (
+                  <p className="text-sm text-gray-600 dark:text-gray-400">No matching failed records.</p>
+                )}
+
+                {!level2FailuresLoading && !level2FailuresError && level2Failures.length > 0 && (
+                  <div className="space-y-2 max-h-72 overflow-y-auto">
+                    {level2Failures.map((failure) => (
+                      <div key={failure.id} className="rounded border border-gray-200 dark:border-gray-700 p-3 bg-white dark:bg-gray-900/30">
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">{failure.failure_stage}</span>
+                          <span className={`text-[11px] px-2 py-0.5 rounded-full border ${failure.resolved
+                            ? 'border-green-300 text-green-700 dark:border-green-700 dark:text-green-300'
+                            : 'border-orange-300 text-orange-700 dark:border-orange-700 dark:text-orange-300'
+                          }`}>
+                            {failure.resolved ? 'RESOLVED' : 'OPEN'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-600 dark:text-gray-300 break-all">
+                          <span className="font-medium">Key:</span> {failure.natural_key || '(none)'}
+                        </p>
+                        <p className="text-xs text-red-600 dark:text-red-400 mt-1 break-words">{failure.error_message}</p>
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+                          Raised: {formatDate(failure.created_at)}
+                          {failure.resolved_at ? ` • Resolved: ${formatDate(failure.resolved_at)}` : ''}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mb-4">
               <h3 className="font-semibold mb-2 text-sm text-gray-700 dark:text-gray-200">Current File</h3>

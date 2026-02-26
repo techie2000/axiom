@@ -14,6 +14,7 @@ import (
 // LEIHandler handles LEI-related HTTP requests
 type LEIHandler struct {
 	leiService       service.LEIService
+	level2Service    service.LEILevel2Service
 	schedulerService service.SchedulerService
 }
 
@@ -21,6 +22,20 @@ type LEIHandler struct {
 func NewLEIHandler(leiService service.LEIService, schedulerService service.SchedulerService) *LEIHandler {
 	return &LEIHandler{
 		leiService:       leiService,
+		level2Service:    nil,
+		schedulerService: schedulerService,
+	}
+}
+
+// NewLEIHandlerWithLevel2 creates a new LEI handler with Level 2 service capabilities.
+func NewLEIHandlerWithLevel2(
+	leiService service.LEIService,
+	level2Service service.LEILevel2Service,
+	schedulerService service.SchedulerService,
+) *LEIHandler {
+	return &LEIHandler{
+		leiService:       leiService,
+		level2Service:    level2Service,
 		schedulerService: schedulerService,
 	}
 }
@@ -349,6 +364,105 @@ func (h *LEIHandler) GetProcessingStatus(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, status)
+}
+
+// GetImportProcessingFailures lists LEI import record-level processing failures.
+// @Summary List LEI import processing failures
+// @Description Get persisted Level 1/Level 2 processing failures with open/resolved lifecycle filtering
+// @Tags LEI
+// @Accept json
+// @Produce json
+// @Param jobType query string false "Job type filter (DAILY_FULL, DAILY_DELTA, LEVEL2_RR, LEVEL2_REPEX)"
+// @Param openOnly query bool false "When true (default), returns only unresolved failures" default(true)
+// @Param limit query int false "Max rows" default(100)
+// @Param offset query int false "Offset" default(0)
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/lei/import-failures [get]
+func (h *LEIHandler) GetImportProcessingFailures(c *gin.Context) {
+	if h.level2Service == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Level 2 service not configured"})
+		return
+	}
+
+	jobType := normalizeFailuresJobType(c.Query("jobType"))
+	if jobType == "INVALID" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "jobType must be DAILY_FULL, DAILY_DELTA, LEVEL2_RR, or LEVEL2_REPEX"})
+		return
+	}
+
+	openOnly := true
+	if rawOpenOnly := c.Query("openOnly"); rawOpenOnly != "" {
+		openOnly = rawOpenOnly != "false" && rawOpenOnly != "0"
+	}
+
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "100"))
+	if limit <= 0 {
+		limit = 100
+	}
+	if limit > 500 {
+		limit = 500
+	}
+
+	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	if offset < 0 {
+		offset = 0
+	}
+
+	items, total, err := h.level2Service.GetProcessingFailures(jobType, openOnly, limit, offset)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve LEI import processing failures"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"items":     items,
+		"total":     total,
+		"limit":     limit,
+		"offset":    offset,
+		"open_only": openOnly,
+		"job_type":  jobType,
+	})
+}
+
+// GetLevel2ProcessingFailures is kept as a backwards-compatible alias.
+// Deprecated: use /api/v1/lei/import-failures.
+// @Summary List LEI import processing failures (Deprecated)
+// @Description Deprecated endpoint. Use /api/v1/lei/import-failures instead.
+// @Tags LEI
+// @Accept json
+// @Produce json
+// @Param jobType query string false "Job type filter (DAILY_FULL, DAILY_DELTA, LEVEL2_RR, LEVEL2_REPEX)"
+// @Param openOnly query bool false "When true (default), returns only unresolved failures" default(true)
+// @Param limit query int false "Max rows" default(100)
+// @Param offset query int false "Offset" default(0)
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/lei/level2/failures [get]
+func (h *LEIHandler) GetLevel2ProcessingFailures(c *gin.Context) {
+	c.Header("Deprecation", "true")
+	c.Header("Sunset", "Tue, 30 Jun 2026 23:59:59 GMT")
+	c.Header("Link", "</api/v1/lei/import-failures>; rel=\"successor-version\"")
+	c.Header("Warning", "299 - \"Deprecated API: use /api/v1/lei/import-failures\"")
+	h.GetImportProcessingFailures(c)
+}
+
+func normalizeFailuresJobType(jobType string) string {
+	switch jobType {
+	case "", "LEVEL1_FULL", "DAILY_FULL":
+		if jobType == "" {
+			return ""
+		}
+		return "LEVEL1_FULL"
+	case "LEVEL1_DELTA", "DAILY_DELTA":
+		return "LEVEL1_DELTA"
+	case "LEVEL2_RR", "LEVEL2_REPEX":
+		return jobType
+	default:
+		return "INVALID"
+	}
 }
 
 // ResumeProcessing resumes processing of a source file

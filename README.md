@@ -424,6 +424,13 @@ API documentation is available via Swagger UI at:
 
 TODO: Replace the production Swagger URL with the confirmed production base URL.
 
+### API Deprecation Notice
+
+- Preferred endpoint for import processing failures: `GET /api/v1/lei/import-failures`
+- Deprecated endpoint (still available temporarily): `GET /api/v1/lei/level2/failures`
+- Legacy endpoint now returns deprecation metadata headers (`Deprecation`, `Sunset`, `Link`, `Warning`)
+- Planned removal target: `v0.5` (tracked in GitHub issue `#87`)
+
 ## Configuration
 
 Configuration is managed through environment variables and config files:

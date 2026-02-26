@@ -130,10 +130,10 @@ type leiService struct {
 	countryRepo repository.CountryRepository
 	dataDir     string // Directory to store downloaded files
 
-	lookupCacheMu            sync.RWMutex
-	distinctRegions          []string
-	distinctRegionsCachedAt  time.Time
-	distinctLegalForms       []string
+	lookupCacheMu              sync.RWMutex
+	distinctRegions            []string
+	distinctRegionsCachedAt    time.Time
+	distinctLegalForms         []string
 	distinctLegalFormsCachedAt time.Time
 }
 
@@ -810,10 +810,19 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 				Str("first_lei", batch[0].LEI).
 				Str("last_lei", batch[len(batch)-1].LEI).
 				Msg("CRITICAL: Failed to batch upsert LEI records")
+			jobType := normalizeProcessingJobType(sourceFile.JobType)
+			for _, failedRecord := range batch {
+				s.recordProcessingFailure(jobType, &sourceFile.ID, "UPSERT", failedRecord.LEI, failedRecord, err)
+			}
 			failedRecords += len(batch)
 			// Return error to stop processing
 			return fmt.Errorf("batch upsert failed: %w", err)
 		} else {
+			jobType := normalizeProcessingJobType(sourceFile.JobType)
+			for _, upsertedRecord := range batch {
+				s.resolveOpenProcessingFailures(jobType, upsertedRecord.LEI, &sourceFile.ID)
+			}
+
 			// Track records processed in this session (use batch size, not DB results)
 			processedRecords += len(batch)
 
@@ -859,11 +868,13 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 		recordCount++
 		var jsonRecord LEIJSONRecord
 		if err := decoder.Decode(&jsonRecord); err != nil {
+			jobType := normalizeProcessingJobType(sourceFile.JobType)
 			if isTerminalJSONDecodeError(err) {
 				log.Error().
 					Err(err).
 					Int("record_number", recordCount).
 					Msg("Terminating LEI JSON processing due to malformed or truncated JSON payload")
+				s.recordProcessingFailure(jobType, &sourceFile.ID, "DECODE", "", nil, err)
 				return fmt.Errorf("terminal JSON decode error at record %d: %w", recordCount, err)
 			}
 
@@ -871,6 +882,7 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 				Err(err).
 				Int("record_number", recordCount).
 				Msg("Failed to decode LEI JSON record")
+			s.recordProcessingFailure(jobType, &sourceFile.ID, "DECODE", "", nil, err)
 			failedRecords++
 			continue
 		}
@@ -903,6 +915,7 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 				Str("invalid_lei", record.LEI).
 				Int("record_number", recordCount).
 				Msg("Skipping record with invalid LEI code")
+			s.recordProcessingFailure(normalizeProcessingJobType(sourceFile.JobType), &sourceFile.ID, "MAP", record.LEI, &jsonRecord, fmt.Errorf("invalid LEI code: %s", record.LEI))
 			failedRecords++
 			continue
 		}
@@ -972,6 +985,54 @@ func capProcessedRecords(totalRecords int, processedRecords int) int {
 	}
 
 	return processedRecords
+}
+
+func (s *leiService) recordProcessingFailure(
+	jobType string,
+	sourceFileID *uuid.UUID,
+	failureStage string,
+	naturalKey string,
+	rawRecord interface{},
+	cause error,
+) {
+	errMessage := "unknown processing failure"
+	if cause != nil {
+		errMessage = cause.Error()
+	}
+
+	var rawPayload domain.JSONBString
+	if rawRecord != nil {
+		if rawBytes, marshalErr := json.Marshal(rawRecord); marshalErr == nil {
+			rawPayload = domain.JSONBString(rawBytes)
+		}
+	}
+
+	failure := &domain.LEILevel2ProcessingFailure{
+		JobType:      normalizeProcessingJobType(jobType),
+		SourceFileID: sourceFileID,
+		FailureStage: failureStage,
+		NaturalKey:   normalizeLEICodeValue(naturalKey),
+		RawRecord:    rawPayload,
+		ErrorMessage: errMessage,
+		Resolved:     false,
+	}
+
+	if err := s.repo.CreateProcessingFailure(failure); err != nil {
+		log.Warn().Err(err).
+			Str("job_type", jobType).
+			Str("failure_stage", failureStage).
+			Str("natural_key", naturalKey).
+			Msg("Failed to persist Level 1 processing failure")
+	}
+}
+
+func (s *leiService) resolveOpenProcessingFailures(jobType, naturalKey string, sourceFileID *uuid.UUID) {
+	if err := s.repo.ResolveOpenProcessingFailures(normalizeProcessingJobType(jobType), normalizeLEICodeValue(naturalKey), sourceFileID, "Resolved by subsequent successful upsert"); err != nil {
+		log.Warn().Err(err).
+			Str("job_type", jobType).
+			Str("natural_key", naturalKey).
+			Msg("Failed to resolve Level 1 processing failure lifecycle rows")
+	}
 }
 
 func sanitizeSourceFileProgress(sourceFile *domain.SourceFile) {

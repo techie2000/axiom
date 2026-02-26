@@ -66,6 +66,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `.github/workflows/security-scan.yml` — branch filter corrected from `develop` to `dev`, `uat`,
   `prod`
 
+### Deprecated
+
+- `GET /api/v1/lei/level2/failures` is deprecated in favor of
+  `GET /api/v1/lei/import-failures`.
+- The deprecated endpoint remains temporarily available and now returns deprecation metadata headers
+  (`Deprecation`, `Sunset`, `Link`, `Warning`) to guide client migration.
+- Planned removal target: `v0.5` (tracking issue: `#87`).
+
 ## [0.2.0] - 2026-02-20
 
 ### Added

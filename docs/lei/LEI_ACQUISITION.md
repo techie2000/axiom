@@ -166,6 +166,29 @@ Query parameters:
 
 Response: Array of audit records showing complete change history
 
+#### `GET /api/v1/lei/import-failures` (Preferred)
+
+List persisted import processing failures (Level 1 + Level 2) with open/resolved filtering.
+
+Query parameters:
+
+- `jobType` (optional): `DAILY_FULL`, `DAILY_DELTA`, `LEVEL2_RR`, `LEVEL2_REPEX`
+- `openOnly` (optional, default: `true`): include only unresolved failures when true
+- `limit` (optional, default: `100`, max: `500`)
+- `offset` (optional, default: `0`)
+
+Response: Paged failure payload (`items`, `total`, `limit`, `offset`, `open_only`, `job_type`)
+
+#### `GET /api/v1/lei/level2/failures` (Deprecated)
+
+Deprecated compatibility alias for `GET /api/v1/lei/import-failures`.
+
+Deprecation behavior:
+
+- Returns deprecation metadata headers: `Deprecation`, `Sunset`, `Link`, `Warning`
+- Planned removal target: `v0.5`
+- Tracking issue: `#87`
+
 ### Sync Control Endpoints
 
 Manual sync endpoints return:

@@ -48,6 +48,10 @@ type LEIRepository interface {
 	// Audit operations
 	CreateAuditRecord(audit *domain.LEIRecordAudit) error
 	FindAuditHistoryByLEI(lei string, limit int) ([]*domain.LEIRecordAudit, error)
+
+	// Processing failures lifecycle
+	CreateProcessingFailure(failure *domain.LEILevel2ProcessingFailure) error
+	ResolveOpenProcessingFailures(jobType, naturalKey string, resolvedSourceFileID *uuid.UUID, resolvedNote string) error
 }
 
 type leiRepository struct {
@@ -915,23 +919,23 @@ func (r *leiRepository) UpdateSourceFile(file *domain.SourceFile) error {
 	}
 
 	updates := map[string]interface{}{
-		"processing_status":      file.ProcessingStatus,
-		"total_records":         file.TotalRecords,
-		"processed_records":     file.ProcessedRecords,
-		"failed_records":        file.FailedRecords,
+		"processing_status": file.ProcessingStatus,
+		"total_records":     file.TotalRecords,
+		"processed_records": file.ProcessedRecords,
+		"failed_records":    file.FailedRecords,
 		"last_processed_lei": func() interface{} {
 			if file.LastProcessedLEI == nil {
 				return nil
 			}
 			return nullableLEICode(*file.LastProcessedLEI)
 		}(),
-		"processing_started_at": file.ProcessingStartedAt,
+		"processing_started_at":   file.ProcessingStartedAt,
 		"processing_completed_at": file.ProcessingCompletedAt,
-		"processing_error":      file.ProcessingError,
-		"retry_count":           file.RetryCount,
-		"max_retries":           file.MaxRetries,
-		"failure_category":      file.FailureCategory,
-		"updated_at":            gorm.Expr("NOW()"),
+		"processing_error":        file.ProcessingError,
+		"retry_count":             file.RetryCount,
+		"max_retries":             file.MaxRetries,
+		"failure_category":        file.FailureCategory,
+		"updated_at":              gorm.Expr("NOW()"),
 	}
 
 	return r.db.Model(&domain.SourceFile{}).
@@ -1003,6 +1007,36 @@ func (r *leiRepository) FindAuditHistoryByLEI(lei string, limit int) ([]*domain.
 		return nil, err
 	}
 	return audits, nil
+}
+
+// CreateProcessingFailure persists a processing failure event row.
+func (r *leiRepository) CreateProcessingFailure(failure *domain.LEILevel2ProcessingFailure) error {
+	return r.db.Create(failure).Error
+}
+
+// ResolveOpenProcessingFailures marks unresolved failure rows for the same natural key as resolved.
+func (r *leiRepository) ResolveOpenProcessingFailures(jobType, naturalKey string, resolvedSourceFileID *uuid.UUID, resolvedNote string) error {
+	normalizedKey := strings.TrimSpace(naturalKey)
+	if normalizedKey == "" {
+		return nil
+	}
+
+	now := time.Now()
+	updates := map[string]interface{}{
+		"resolved":    true,
+		"resolved_at": now,
+		"updated_at":  now,
+	}
+	if resolvedSourceFileID != nil {
+		updates["resolved_source_file_id"] = *resolvedSourceFileID
+	}
+	if strings.TrimSpace(resolvedNote) != "" {
+		updates["resolved_note"] = resolvedNote
+	}
+
+	return r.db.Model(&domain.LEILevel2ProcessingFailure{}).
+		Where("job_type = ? AND natural_key = ? AND resolved = FALSE", jobType, normalizedKey).
+		Updates(updates).Error
 }
 
 // detectChanges compares two LEI records and returns a map of changed fields

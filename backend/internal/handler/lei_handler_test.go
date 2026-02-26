@@ -44,6 +44,20 @@ type schedulerServiceStub struct {
 	triggerErrs map[string]error
 }
 
+type leiLevel2ServiceStub struct {
+	service.LEILevel2Service
+	failures []*domain.LEILevel2ProcessingFailure
+	total    int64
+	err      error
+}
+
+func (s *leiLevel2ServiceStub) GetProcessingFailures(jobType string, openOnly bool, limit, offset int) ([]*domain.LEILevel2ProcessingFailure, int64, error) {
+	if s.err != nil {
+		return nil, 0, s.err
+	}
+	return s.failures, s.total, nil
+}
+
 func (s *schedulerServiceStub) notify(name string) {
 	if s.called != nil {
 		s.called <- name
@@ -113,6 +127,16 @@ func executePOST(path string, handler gin.HandlerFunc) *httptest.ResponseRecorde
 	r.POST(path, handler)
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, path, nil)
+	r.ServeHTTP(w, req)
+	return w
+}
+
+func executeGET(routePath string, requestPath string, handler gin.HandlerFunc) *httptest.ResponseRecorder {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.GET(routePath, handler)
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, requestPath, nil)
 	r.ServeHTTP(w, req)
 	return w
 }
@@ -245,6 +269,65 @@ func TestTriggerLevel2Sync_ConflictPaths(t *testing.T) {
 				t.Fatalf("expected response to contain %q, got %s", tc.expectedMatch, resp.Body.String())
 			}
 		})
+	}
+}
+
+func TestGetImportProcessingFailures(t *testing.T) {
+	t.Run("returns bad request for invalid job type", func(t *testing.T) {
+		h := NewLEIHandlerWithLevel2(&leiServiceStub{}, &leiLevel2ServiceStub{}, &schedulerServiceStub{})
+		resp := executeGET("/level2/failures", "/level2/failures?jobType=INVALID", h.GetImportProcessingFailures)
+		if resp.Code != http.StatusBadRequest {
+			t.Fatalf("expected status %d, got %d", http.StatusBadRequest, resp.Code)
+		}
+	})
+
+	t.Run("returns failures payload", func(t *testing.T) {
+		stub := &leiLevel2ServiceStub{
+			failures: []*domain.LEILevel2ProcessingFailure{
+				{
+					JobType:      "LEVEL2_RR",
+					FailureStage: "UPSERT",
+					NaturalKey:   "AAA|BBB|IS_DIRECTLY_CONSOLIDATED_BY",
+					ErrorMessage: "duplicate key",
+					Resolved:     false,
+					CreatedAt:    time.Now(),
+				},
+			},
+			total: 1,
+		}
+		h := NewLEIHandlerWithLevel2(&leiServiceStub{}, stub, &schedulerServiceStub{})
+		resp := executeGET("/level2/failures", "/level2/failures?jobType=LEVEL2_RR&openOnly=true&limit=10&offset=0", h.GetImportProcessingFailures)
+		if resp.Code != http.StatusOK {
+			t.Fatalf("expected status %d, got %d", http.StatusOK, resp.Code)
+		}
+		body := resp.Body.String()
+		if !strings.Contains(body, "LEVEL2_RR") || !strings.Contains(body, "\"total\":1") {
+			t.Fatalf("unexpected response body: %s", body)
+		}
+	})
+}
+
+func TestGetLevel2ProcessingFailures_DeprecationHeaders(t *testing.T) {
+	t.Parallel()
+
+	stub := &leiLevel2ServiceStub{err: errors.New("db unavailable")}
+	h := NewLEIHandlerWithLevel2(&leiServiceStub{}, stub, &schedulerServiceStub{})
+
+	resp := executeGET("/level2/failures", "/level2/failures", h.GetLevel2ProcessingFailures)
+	if resp.Code != http.StatusInternalServerError {
+		t.Fatalf("expected status %d, got %d", http.StatusInternalServerError, resp.Code)
+	}
+	if got := resp.Header().Get("Deprecation"); got != "true" {
+		t.Fatalf("expected Deprecation header true, got %q", got)
+	}
+	if got := resp.Header().Get("Sunset"); got != "Tue, 30 Jun 2026 23:59:59 GMT" {
+		t.Fatalf("unexpected Sunset header: %q", got)
+	}
+	if got := resp.Header().Get("Link"); !strings.Contains(got, "/api/v1/lei/import-failures") {
+		t.Fatalf("expected Link header to point to new endpoint, got %q", got)
+	}
+	if got := resp.Header().Get("Warning"); !strings.Contains(got, "Deprecated API") {
+		t.Fatalf("expected Warning header to mention deprecation, got %q", got)
 	}
 }
 

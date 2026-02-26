@@ -64,6 +64,14 @@ Located in [lei/](./lei/):
 - [**LEI Acquisition**](./lei/LEI_ACQUISITION.md) - GLEIF API integration details
 - [**LEI Countries Refactor**](./lei/LEI_COUNTRIES_REFACTOR.md) - Country data handling improvements
 
+#### API Migration Notice
+
+- Import processing failures endpoint migration:
+  - Preferred: `GET /api/v1/lei/import-failures`
+  - Deprecated (temporary): `GET /api/v1/lei/level2/failures`
+- The deprecated endpoint returns deprecation metadata headers (`Deprecation`, `Sunset`, `Link`, `Warning`) to support client migration.
+- Planned removal target: `v0.5` (tracked by GitHub issue `#87`).
+
 #### Issue Resolution
 
 - [**LEI Persistence and Race Condition Fix**](./lei/LEI_PERSISTENCE_AND_RACE_CONDITION_FIX.md) - Duplicate processing fix
@@ -162,4 +170,4 @@ When adding new documentation:
 
 ## Last Updated
 
-February 24, 2026
+February 25, 2026
