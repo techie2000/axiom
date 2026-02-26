@@ -35,8 +35,7 @@ import (
 // @termsOfService http://swagger.io/terms/
 
 // @contact.name API Support
-// @contact.email support@axiom.example.com
-// TODO: Replace placeholder contact email before production launch.
+// @contact.url https://github.com/techie2000/axiom/issues
 
 // @license.name MIT
 // @license.url https://opensource.org/licenses/MIT
