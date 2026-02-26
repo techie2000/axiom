@@ -49,6 +49,7 @@ interface Level2ProcessingFailure {
   resolved_source_file_id: string | null
   resolved_note: string
   created_at: string
+  raw_record: string | null
 }
 
 type ImportJobType = 'DAILY_FULL' | 'DAILY_DELTA' | 'LEVEL2_RR' | 'LEVEL2_REPEX'
