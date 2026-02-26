@@ -449,6 +449,7 @@ func (h *LEIHandler) GetLevel2ProcessingFailures(c *gin.Context) {
 	h.GetImportProcessingFailures(c)
 }
 
+func normalizeFailuresJobType(jobType string) string {
 	// For failures, an empty jobType means "no filter", so allow it through unchanged.
 	if jobType == "" {
 		return ""

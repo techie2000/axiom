@@ -820,9 +820,11 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 			return fmt.Errorf("batch upsert failed: %w", err)
 		} else {
 			jobType := normalizeProcessingJobType(sourceFile.JobType)
-			for _, upsertedRecord := range batch {
-				s.resolveOpenProcessingFailures(jobType, upsertedRecord.LEI, &sourceFile.ID)
+			naturalKeys := make([]string, 0, len(batch))
+			for _, r := range batch {
+				naturalKeys = append(naturalKeys, r.LEI)
 			}
+			s.batchResolveOpenProcessingFailures(jobType, naturalKeys, &sourceFile.ID)
 
 			// Track records processed in this session (use batch size, not DB results)
 			processedRecords += len(batch)
@@ -1033,6 +1035,29 @@ func (s *leiService) resolveOpenProcessingFailures(jobType, naturalKey string, s
 			Str("job_type", jobType).
 			Str("natural_key", naturalKey).
 			Msg("Failed to resolve Level 1 processing failure lifecycle rows")
+	}
+}
+
+// batchResolveOpenProcessingFailures resolves open processing failures for a set of natural keys
+// in a single UPDATE … WHERE natural_key IN (…) query, avoiding N round-trips per batch.
+func (s *leiService) batchResolveOpenProcessingFailures(jobType string, naturalKeys []string, sourceFileID *uuid.UUID) {
+	if len(naturalKeys) == 0 {
+		return
+	}
+	normalized := make([]string, 0, len(naturalKeys))
+	for _, k := range naturalKeys {
+		if v := normalizeLEICodeValue(k); v != "" {
+			normalized = append(normalized, v)
+		}
+	}
+	if len(normalized) == 0 {
+		return
+	}
+	if err := s.repo.BatchResolveOpenProcessingFailures(normalizeProcessingJobType(jobType), normalized, sourceFileID, "Resolved by subsequent successful upsert"); err != nil {
+		log.Warn().Err(err).
+			Str("job_type", jobType).
+			Int("key_count", len(normalized)).
+			Msg("Failed to batch-resolve Level 1 processing failure lifecycle rows")
 	}
 }
 
@@ -1516,6 +1541,21 @@ func normalizeProcessingJobType(jobType string) string {
 		return "LEVEL1_DELTA"
 	default:
 		return jobType
+	}
+}
+
+// NormalizeProcessingJobType maps user-facing or legacy job type aliases to their canonical storage
+// names. Returns an empty string for unknown or invalid job types so callers can detect them.
+func NormalizeProcessingJobType(jobType string) string {
+	switch jobType {
+	case "DAILY_FULL", "LEVEL1_FULL":
+		return "LEVEL1_FULL"
+	case "DAILY_DELTA", "LEVEL1_DELTA":
+		return "LEVEL1_DELTA"
+	case "LEVEL2_RR", "LEVEL2_REPEX":
+		return jobType
+	default:
+		return ""
 	}
 }
 
