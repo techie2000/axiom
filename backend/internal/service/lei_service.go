@@ -811,8 +811,9 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 				Str("last_lei", batch[len(batch)-1].LEI).
 				Msg("CRITICAL: Failed to batch upsert LEI records")
 			jobType := normalizeProcessingJobType(sourceFile.JobType)
-			for _, failedRecord := range batch {
-				s.recordProcessingFailure(jobType, &sourceFile.ID, "UPSERT", failedRecord.LEI, failedRecord, err)
+			if len(batch) > 0 {
+				batchErr := fmt.Errorf("batch upsert of %d LEI records failed: %w", len(batch), err)
+				s.recordProcessingFailure(jobType, &sourceFile.ID, "UPSERT", "", nil, batchErr)
 			}
 			failedRecords += len(batch)
 			// Return error to stop processing
