@@ -451,10 +451,9 @@ func (h *LEIHandler) GetLevel2ProcessingFailures(c *gin.Context) {
 
 func normalizeFailuresJobType(jobType string) string {
 	switch jobType {
-	case "", "LEVEL1_FULL", "DAILY_FULL":
-		if jobType == "" {
-			return ""
-		}
+	case "":
+		return ""
+	case "LEVEL1_FULL", "DAILY_FULL":
 		return "LEVEL1_FULL"
 	case "LEVEL1_DELTA", "DAILY_DELTA":
 		return "LEVEL1_DELTA"

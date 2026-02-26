@@ -192,7 +192,7 @@ export default function LEIStatusPage() {
         limit: '50',
         offset: '0',
       })
-      const response = await fetch(`${API_BASE_URL}/api/v1/lei/level2/failures?${params.toString()}`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/lei/import-failures?${params.toString()}`, {
         headers: { Accept: 'application/json' },
       })
       if (!response.ok) {
