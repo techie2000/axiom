@@ -51,6 +51,18 @@ const (
 
 var leiCodePattern = regexp.MustCompile(`^[0-9A-Z]{18}[0-9]{2}$`)
 
+// distinctLookupCacheTTL controls caching for distinct lookup/filter values derived from LEI data.
+//
+// A 24-hour TTL is used here because these lookup options (for example, countries, categories,
+// and other reference-like dimensions) change infrequently in production. Using a longer TTL
+// significantly reduces database load and response latency for UI filter population, while
+// still keeping data acceptably fresh for this use case.
+//
+// Note: processing jobs that load or refresh LEI data are responsible for explicitly invalidating
+// the relevant cache entries after successful processing. This ensures newly introduced categories
+// become visible to users without waiting for the TTL to expire. If lookup values start changing
+// more frequently, or stricter freshness guarantees are required, this TTL should be revisited
+// or made configurable.
 const distinctLookupCacheTTL = 24 * time.Hour
 
 // GLEIFPublishesResponse represents the response from the GLEIF latest publishes endpoint
@@ -168,6 +180,8 @@ func (s *leiService) prewarmDistinctLookupCaches() {
 		s.distinctCategories = cloneStringSlice(categories)
 		s.distinctCategoriesCachedAt = time.Now()
 		s.lookupCacheMu.Unlock()
+	} else {
+		log.Warn().Err(err).Msg("Failed to prewarm distinct categories cache")
 	}
 
 	if regions, err := s.repo.GetDistinctRegions(); err == nil {
@@ -175,6 +189,8 @@ func (s *leiService) prewarmDistinctLookupCaches() {
 		s.distinctRegions = cloneStringSlice(regions)
 		s.distinctRegionsCachedAt = time.Now()
 		s.lookupCacheMu.Unlock()
+	} else {
+		log.Warn().Err(err).Msg("Failed to prewarm distinct regions cache")
 	}
 
 	if legalForms, err := s.repo.GetDistinctLegalForms(); err == nil {
@@ -182,6 +198,8 @@ func (s *leiService) prewarmDistinctLookupCaches() {
 		s.distinctLegalForms = cloneStringSlice(legalForms)
 		s.distinctLegalFormsCachedAt = time.Now()
 		s.lookupCacheMu.Unlock()
+	} else {
+		log.Warn().Err(err).Msg("Failed to prewarm distinct legal forms cache")
 	}
 }
 

@@ -16,8 +16,10 @@ import (
 
 type leiServiceStub struct {
 	service.LEIService
-	statuses map[string]*domain.FileProcessingStatus
-	errs     map[string]error
+	statuses           map[string]*domain.FileProcessingStatus
+	errs               map[string]error
+	categories         []string
+	categoriesErr      error
 }
 
 func (s *leiServiceStub) GetProcessingStatus(jobType string) (*domain.FileProcessingStatus, error) {
@@ -33,6 +35,13 @@ func (s *leiServiceStub) GetProcessingStatus(jobType string) (*domain.FileProces
 		}
 	}
 	return nil, errors.New("status not found")
+}
+
+func (s *leiServiceStub) GetDistinctCategories() ([]string, error) {
+	if s.categoriesErr != nil {
+		return nil, s.categoriesErr
+	}
+	return s.categories, nil
 }
 
 // schedulerServiceStub satisfies the SchedulerService interface for handler tests.
@@ -529,4 +538,33 @@ func TestTriggerManualSync_ErrorPaths(t *testing.T) {
 			t.Fatalf("expected generic error message, got %s", resp.Body.String())
 		}
 	})
+}
+
+func TestGetDistinctCategories_Success(t *testing.T) {
+	stub := &leiServiceStub{categories: []string{"BRANCH", "FUND", "SOLE_PROPRIETOR"}}
+	h := NewLEIHandler(stub, &schedulerServiceStub{})
+
+	resp := executeGET("/api/v1/lei-categories", "/api/v1/lei-categories", h.GetDistinctCategories)
+	if resp.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, resp.Code)
+	}
+	body := resp.Body.String()
+	for _, cat := range []string{"BRANCH", "FUND", "SOLE_PROPRIETOR"} {
+		if !strings.Contains(body, cat) {
+			t.Fatalf("expected response to contain %q, got %s", cat, body)
+		}
+	}
+}
+
+func TestGetDistinctCategories_ServiceError_Returns500(t *testing.T) {
+	stub := &leiServiceStub{categoriesErr: errors.New("db unavailable")}
+	h := NewLEIHandler(stub, &schedulerServiceStub{})
+
+	resp := executeGET("/api/v1/lei-categories", "/api/v1/lei-categories", h.GetDistinctCategories)
+	if resp.Code != http.StatusInternalServerError {
+		t.Fatalf("expected status %d, got %d", http.StatusInternalServerError, resp.Code)
+	}
+	if !strings.Contains(resp.Body.String(), "categories") {
+		t.Fatalf("expected error message mentioning categories, got %s", resp.Body.String())
+	}
 }
