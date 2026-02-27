@@ -1533,15 +1533,14 @@ func fallbackSourceFileTypesForJob(jobType string) []string {
 	}
 }
 
+// normalizeProcessingJobType maps aliases and known types to their canonical storage names.
+// For unknown or pass-through types (e.g. LEVEL2_RR, LEVEL2_REPEX) it returns the value
+// unchanged, delegating to NormalizeProcessingJobType for known aliases.
 func normalizeProcessingJobType(jobType string) string {
-	switch jobType {
-	case "DAILY_FULL", "LEVEL1_FULL":
-		return "LEVEL1_FULL"
-	case "DAILY_DELTA", "LEVEL1_DELTA":
-		return "LEVEL1_DELTA"
-	default:
-		return jobType
+	if normalized := NormalizeProcessingJobType(jobType); normalized != "" {
+		return normalized
 	}
+	return jobType
 }
 
 // NormalizeProcessingJobType maps user-facing or legacy job type aliases to their canonical storage
