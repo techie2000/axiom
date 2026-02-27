@@ -51,7 +51,7 @@ const (
 
 var leiCodePattern = regexp.MustCompile(`^[0-9A-Z]{18}[0-9]{2}$`)
 
-const distinctLookupCacheTTL = 5 * time.Minute
+const distinctLookupCacheTTL = 24 * time.Hour
 
 // GLEIFPublishesResponse represents the response from the GLEIF latest publishes endpoint
 type GLEIFPublishesResponse struct {
@@ -142,11 +142,15 @@ type leiService struct {
 
 // NewLEIService creates a new LEI service
 func NewLEIService(repo repository.LEIRepository, countryRepo repository.CountryRepository, dataDir string) LEIService {
-	return &leiService{
+	service := &leiService{
 		repo:        repo,
 		countryRepo: countryRepo,
 		dataDir:     dataDir,
 	}
+
+	go service.prewarmDistinctLookupCaches()
+
+	return service
 }
 
 func cloneStringSlice(values []string) []string {
@@ -156,6 +160,41 @@ func cloneStringSlice(values []string) []string {
 	cloned := make([]string, len(values))
 	copy(cloned, values)
 	return cloned
+}
+
+func (s *leiService) prewarmDistinctLookupCaches() {
+	if categories, err := s.repo.GetDistinctCategories(); err == nil {
+		s.lookupCacheMu.Lock()
+		s.distinctCategories = cloneStringSlice(categories)
+		s.distinctCategoriesCachedAt = time.Now()
+		s.lookupCacheMu.Unlock()
+	}
+
+	if regions, err := s.repo.GetDistinctRegions(); err == nil {
+		s.lookupCacheMu.Lock()
+		s.distinctRegions = cloneStringSlice(regions)
+		s.distinctRegionsCachedAt = time.Now()
+		s.lookupCacheMu.Unlock()
+	}
+
+	if legalForms, err := s.repo.GetDistinctLegalForms(); err == nil {
+		s.lookupCacheMu.Lock()
+		s.distinctLegalForms = cloneStringSlice(legalForms)
+		s.distinctLegalFormsCachedAt = time.Now()
+		s.lookupCacheMu.Unlock()
+	}
+}
+
+func (s *leiService) invalidateDistinctLookupCaches() {
+	s.lookupCacheMu.Lock()
+	defer s.lookupCacheMu.Unlock()
+
+	s.distinctCategories = nil
+	s.distinctCategoriesCachedAt = time.Time{}
+	s.distinctRegions = nil
+	s.distinctRegionsCachedAt = time.Time{}
+	s.distinctLegalForms = nil
+	s.distinctLegalFormsCachedAt = time.Time{}
 }
 
 // progressWriter wraps an io.Writer to log extraction progress periodically
@@ -500,6 +539,8 @@ func (s *leiService) ProcessSourceFileWithResume(sourceFileID uuid.UUID, resumeF
 	if err := s.repo.UpdateSourceFile(sourceFile); err != nil {
 		return fmt.Errorf("failed to update source file status: %w", err)
 	}
+
+	s.invalidateDistinctLookupCaches()
 
 	log.Info().
 		Str("source_file_id", sourceFileID.String()).
