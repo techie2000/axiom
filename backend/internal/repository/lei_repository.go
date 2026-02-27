@@ -53,6 +53,7 @@ type LEIRepository interface {
 	// Processing failures lifecycle
 	CreateProcessingFailure(failure *domain.LEILevel2ProcessingFailure) error
 	ResolveOpenProcessingFailures(jobType, naturalKey string, resolvedSourceFileID *uuid.UUID, resolvedNote string) error
+	BatchResolveOpenProcessingFailures(jobType string, naturalKeys []string, resolvedSourceFileID *uuid.UUID, resolvedNote string) error
 }
 
 type leiRepository struct {
@@ -1054,6 +1055,51 @@ func (r *leiRepository) ResolveOpenProcessingFailures(jobType, naturalKey string
 	return r.db.Model(&domain.LEILevel2ProcessingFailure{}).
 		Where("job_type = ? AND natural_key = ? AND resolved = FALSE", jobType, normalizedKey).
 		Updates(updates).Error
+}
+
+// BatchResolveOpenProcessingFailures marks unresolved failure rows for the given set of natural
+// keys as resolved with a single UPDATE … WHERE natural_key IN (…) query, replacing the N
+// individual updates that would otherwise be issued per batch.
+func (r *leiRepository) BatchResolveOpenProcessingFailures(jobType string, naturalKeys []string, resolvedSourceFileID *uuid.UUID, resolvedNote string) error {
+	filtered := filterNonEmptyStrings(naturalKeys)
+	if len(filtered) == 0 {
+		return nil
+	}
+
+	now := time.Now()
+	updates := map[string]interface{}{
+		"resolved":    true,
+		"resolved_at": now,
+		"updated_at":  now,
+	}
+	if resolvedSourceFileID != nil {
+		updates["resolved_source_file_id"] = *resolvedSourceFileID
+	}
+	if strings.TrimSpace(resolvedNote) != "" {
+		updates["resolved_note"] = resolvedNote
+	}
+
+	return r.db.Model(&domain.LEILevel2ProcessingFailure{}).
+		Where("job_type = ? AND natural_key IN ? AND resolved = FALSE", jobType, filtered).
+		Updates(updates).Error
+}
+
+// filterNonEmptyStrings returns a deduplicated slice of non-blank strings from the input.
+func filterNonEmptyStrings(keys []string) []string {
+	seen := make(map[string]struct{}, len(keys))
+	result := make([]string, 0, len(keys))
+	for _, k := range keys {
+		trimmed := strings.TrimSpace(k)
+		if trimmed == "" {
+			continue
+		}
+		if _, exists := seen[trimmed]; exists {
+			continue
+		}
+		seen[trimmed] = struct{}{}
+		result = append(result, trimmed)
+	}
+	return result
 }
 
 // detectChanges compares two LEI records and returns a map of changed fields

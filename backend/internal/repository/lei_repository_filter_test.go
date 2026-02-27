@@ -36,8 +36,8 @@ func TestNotSetEntityStatusWhereClauseCoversNullAndEmptyRepresentations(t *testi
 
 	expectedFragments := []string{
 		"entity_status IS NULL",
-		"TRIM(entity_status) = ''",
-		"UPPER(TRIM(entity_status)) = 'NULL'",
+		"BTRIM(entity_status) = ''",
+		"UPPER(BTRIM(entity_status)) = 'NULL'",
 	}
 
 	for _, fragment := range expectedFragments {
