@@ -82,9 +82,12 @@ func newDryRunLEIRepo(t *testing.T) (*leiRepository, *sqlCaptureLogger) {
 func TestGetDistinctCategories_QueryFiltersBlanksAndNullLikes(t *testing.T) {
 	repo, capture := newDryRunLEIRepo(t)
 
-	// DryRun mode builds the query but never executes it, so an error is expected
-	// from the nop dialector. We only care about the SQL that was generated.
-	_, _ = repo.GetDistinctCategories()
+	// DryRun mode builds the query without executing it; we expect no error and
+	// inspect the generated SQL to ensure the correct filters are applied.
+	_, err := repo.GetDistinctCategories()
+	if err != nil {
+		t.Fatalf("GetDistinctCategories returned error in DryRun mode: %v", err)
+	}
 
 	sql := capture.last()
 	expectedFragments := []string{
