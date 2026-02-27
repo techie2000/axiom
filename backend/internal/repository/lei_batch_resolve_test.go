@@ -3,54 +3,27 @@ package repository
 import (
 	"context"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
-	"gorm.io/gorm/callbacks"
-	"gorm.io/gorm/clause"
-	gorm_logger "gorm.io/gorm/logger"
-	"gorm.io/gorm/schema"
 )
 
 // ---------------------------------------------------------------------------
 // Minimal DryRun GORM infrastructure for batch-resolve tests.
 //
-// These types use distinct names from those in lei_level2_repository_test.go
-// to avoid duplicate-declaration errors when both test files are compiled
-// together after this branch is merged into the base.
+// These types now alias the shared helpers defined in lei_level2_repository_test.go
+// (nopDialector and sqlCaptureLogger) to avoid code duplication and divergence.
 // ---------------------------------------------------------------------------
 
-type batchNopDialector struct{}
+// batchNopDialector is a local alias used by this test file that reuses the
+// shared DryRun dialector implementation.
+type batchNopDialector = nopDialector
 
-func (batchNopDialector) Name() string { return "nop" }
-func (batchNopDialector) Initialize(db *gorm.DB) error {
-	callbacks.RegisterDefaultCallbacks(db, &callbacks.Config{})
-	return nil
-}
-func (batchNopDialector) Migrator(_ *gorm.DB) gorm.Migrator { return nil }
-func (batchNopDialector) DataTypeOf(_ *schema.Field) string { return "" }
-func (batchNopDialector) DefaultValueOf(_ *schema.Field) clause.Expression {
-	return clause.Expr{SQL: "NULL"}
-}
-func (batchNopDialector) BindVarTo(w clause.Writer, _ *gorm.Statement, _ interface{}) {
-	_, _ = w.WriteString("?")
-}
-func (batchNopDialector) QuoteTo(w clause.Writer, str string)         { _, _ = w.WriteString(str) }
-func (batchNopDialector) Explain(sql string, _ ...interface{}) string { return sql }
-
-// batchSQLCapture records every SQL statement that GORM logs via Trace.
-// All access to the queries slice must be protected by mu.
-type batchSQLCapture struct {
-	mu      sync.Mutex
-	queries []string // guarded by mu
-}
-
-func (bsc *batchSQLCapture) LogMode(gorm_logger.LogLevel) gorm_logger.Interface  { return bsc }
-func (bsc *batchSQLCapture) Info(_ context.Context, _ string, _ ...interface{})  {}
-func (bsc *batchSQLCapture) Warn(_ context.Context, _ string, _ ...interface{})  {}
+// batchSQLCapture is a local alias used by this test file that reuses the
+// shared SQL capture logger implementation.
+type batchSQLCapture = sqlCaptureLogger
 func (bsc *batchSQLCapture) Error(_ context.Context, _ string, _ ...interface{}) {}
 func (bsc *batchSQLCapture) Trace(_ context.Context, _ time.Time, fc func() (string, int64), _ error) {
 	sql, _ := fc()
