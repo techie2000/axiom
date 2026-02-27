@@ -11,6 +11,26 @@ These rules are enforced by SQLFluff and should be followed when writing SQL cod
 - **Use 4 spaces** for nested indentation (within parentheses, subqueries, etc.)
 - **DO NOT use tabs** - always use spaces
 - **Continuation lines in top-level WHERE clauses must also start at column 1** when SQLFluff enforces LT02
+- **Inside parenthesized boolean groups**, indent each predicate by exactly **4 spaces**
+
+```sql
+-- ✅ GOOD: Top-level WHERE continuation at column 1
+CREATE INDEX idx_example_top_level
+ON lei_raw.lei_records (BTRIM(entity_legal_form))
+WHERE deleted_at IS NULL
+AND entity_legal_form IS NOT NULL
+AND BTRIM(entity_legal_form) <> '';
+
+-- ✅ GOOD: Nested boolean group uses 4-space indentation
+CREATE INDEX idx_example_nested
+ON lei_raw.lei_records (legal_name)
+WHERE deleted_at IS NULL
+AND (
+    entity_status IS NULL
+    OR BTRIM(entity_status) = ''
+    OR UPPER(BTRIM(entity_status)) = 'NULL'
+);
+```
 
 ```sql
 -- ❌ BAD: Indented root level

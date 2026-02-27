@@ -160,6 +160,25 @@ curl -X GET "http://localhost:8080/api/v1/lei/5493001KJTIIGC8Y1R12/audit?limit=5
   -H "Authorization: Bearer $TOKEN" | jq
 ```
 
+### View Import Processing Failures (Level 1 + Level 2)
+
+Preferred endpoint:
+
+```bash
+curl -X GET "http://localhost:8080/api/v1/lei/import-failures?jobType=LEVEL2_RR&openOnly=true&limit=50&offset=0" \
+  -H "Authorization: Bearer $TOKEN" | jq
+```
+
+Deprecated (temporary compatibility) endpoint:
+
+```bash
+curl -X GET "http://localhost:8080/api/v1/lei/level2/failures?jobType=LEVEL2_RR&openOnly=true&limit=50&offset=0" \
+  -H "Authorization: Bearer $TOKEN" | jq
+```
+
+The deprecated endpoint returns deprecation metadata headers (`Deprecation`, `Sunset`, `Link`, `Warning`) to support migration.
+Planned removal target: `v0.5` (tracking issue: `#87`).
+
 ## Scheduler Configuration
 
 ### Default Schedule

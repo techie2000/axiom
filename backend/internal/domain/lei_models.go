@@ -380,3 +380,28 @@ type LEIReportingExceptionAudit struct {
 func (LEIReportingExceptionAudit) TableName() string {
 	return "lei_raw.lei_reporting_exceptions_audit"
 }
+
+// LEILevel2ProcessingFailure captures per-record processing failures during Level 2 RR/REPEX
+// ingestion and keeps a durable open/resolved lifecycle for troubleshooting.
+type LEILevel2ProcessingFailure struct {
+	ID uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+
+	JobType              string      `gorm:"size:50;not null;index" json:"job_type"`
+	SourceFileID         *uuid.UUID  `gorm:"type:uuid;index" json:"source_file_id"`
+	FailureStage         string      `gorm:"size:50;not null" json:"failure_stage"`
+	NaturalKey           string      `gorm:"type:text;index" json:"natural_key"`
+	RawRecord            JSONBString `gorm:"type:jsonb" json:"raw_record"`
+	ErrorMessage         string      `gorm:"type:text;not null" json:"error_message"`
+	Resolved             bool        `gorm:"not null;default:false;index" json:"resolved"`
+	ResolvedAt           *time.Time  `json:"resolved_at"`
+	ResolvedSourceFileID *uuid.UUID  `gorm:"type:uuid" json:"resolved_source_file_id"`
+	ResolvedNote         string      `gorm:"type:text" json:"resolved_note"`
+
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// TableName overrides the table name for LEILevel2ProcessingFailure.
+func (LEILevel2ProcessingFailure) TableName() string {
+	return "lei_raw.lei_level2_processing_failures"
+}

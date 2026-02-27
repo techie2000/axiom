@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS lei_raw.idx_lei_records_category_normalized_last_update;
