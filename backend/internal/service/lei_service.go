@@ -996,35 +996,15 @@ func (s *leiService) recordProcessingFailure(
 	rawRecord interface{},
 	cause error,
 ) {
-	errMessage := "unknown processing failure"
-	if cause != nil {
-		errMessage = cause.Error()
-	}
-
-	var rawPayload domain.JSONBString
-	if rawRecord != nil {
-		if rawBytes, marshalErr := json.Marshal(rawRecord); marshalErr == nil {
-			rawPayload = domain.JSONBString(rawBytes)
-		}
-	}
-
-	failure := &domain.LEILevel2ProcessingFailure{
-		JobType:      normalizeProcessingJobType(jobType),
-		SourceFileID: sourceFileID,
-		FailureStage: failureStage,
-		NaturalKey:   normalizeLEICodeValue(naturalKey),
-		RawRecord:    rawPayload,
-		ErrorMessage: errMessage,
-		Resolved:     false,
-	}
-
-	if err := s.repo.CreateProcessingFailure(failure); err != nil {
-		log.Warn().Err(err).
-			Str("job_type", jobType).
-			Str("failure_stage", failureStage).
-			Str("natural_key", naturalKey).
-			Msg("Failed to persist Level 1 processing failure")
-	}
+	persistProcessingFailure(
+		s.repo,
+		normalizeProcessingJobType(jobType),
+		sourceFileID,
+		failureStage,
+		normalizeLEICodeValue(naturalKey),
+		rawRecord,
+		cause,
+	)
 }
 
 func (s *leiService) resolveOpenProcessingFailures(jobType, naturalKey string, sourceFileID *uuid.UUID) {
