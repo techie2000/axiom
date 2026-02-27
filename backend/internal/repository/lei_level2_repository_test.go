@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -11,7 +12,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/callbacks"
 	"gorm.io/gorm/clause"
-	"gorm.io/gorm/logger"
+	gorm_logger "gorm.io/gorm/logger"
 	"gorm.io/gorm/schema"
 )
 
@@ -21,53 +22,88 @@ import (
 var level2Repo = &leiLevel2Repository{}
 
 // ---------------------------------------------------------------------------
-// DryRun test infrastructure
+// DryRun infrastructure
+//
+// nopDialector is a minimal no-op GORM dialector that implements
+// gorm.Dialector without establishing a real database connection.
+// It is used together with gorm.Config{DryRun: true} to build and inspect
+// SQL statements inside unit tests without requiring a running database.
 // ---------------------------------------------------------------------------
 
-// nopDialector is a minimal GORM dialector that registers default callbacks but
-// never opens a real database connection. Use it together with gorm.Config{DryRun:
-// true} so that GORM builds SQL statements without executing them.
 type nopDialector struct{}
 
-func (nopDialector) Name() string { return "nop" }
+func (nopDialector) Name() string                                        { return "nop" }
 func (nopDialector) Initialize(db *gorm.DB) error {
+	// Register default GORM callbacks so that Find, Count, Create, and Update
+	// build SQL statements even in DryRun mode.
 	callbacks.RegisterDefaultCallbacks(db, &callbacks.Config{})
 	return nil
 }
-func (nopDialector) Migrator(*gorm.DB) gorm.Migrator { return nil }
-func (nopDialector) DataTypeOf(*schema.Field) string  { return "nop" }
-func (nopDialector) DefaultValueOf(*schema.Field) clause.Expression {
-	return clause.Expr{SQL: "DEFAULT"}
-}
+func (nopDialector) Migrator(_ *gorm.DB) gorm.Migrator                 { return nil }
+func (nopDialector) DataTypeOf(_ *schema.Field) string                  { return "" }
+func (nopDialector) DefaultValueOf(_ *schema.Field) clause.Expression   { return clause.Expr{SQL: "NULL"} }
 func (nopDialector) BindVarTo(w clause.Writer, _ *gorm.Statement, _ interface{}) {
-	_ = w.WriteByte('?')
+	_, _ = w.WriteString("?")
 }
-func (nopDialector) QuoteTo(w clause.Writer, str string) { w.WriteString(str) }
-func (nopDialector) Explain(sql string, vars ...interface{}) string {
-	return logger.ExplainSQL(sql, nil, `'`, vars...)
-}
+func (nopDialector) QuoteTo(w clause.Writer, str string) { _, _ = w.WriteString(str) }
+func (nopDialector) Explain(sql string, _ ...interface{}) string { return sql }
 
-// sqlCaptureLogger implements gorm.Logger and records the last SQL statement
-// built by GORM's callbacks so tests can assert on its structure.
+// sqlCaptureLogger records every SQL statement that GORM logs via its
+// Trace callback so that tests can assert on generated query fragments.
 type sqlCaptureLogger struct {
-	LastSQL string
+	mu      sync.Mutex
+	queries []string
 }
 
-func (l *sqlCaptureLogger) LogMode(logger.LogLevel) logger.Interface { return l }
+func (l *sqlCaptureLogger) LogMode(gorm_logger.LogLevel) gorm_logger.Interface { return l }
 func (l *sqlCaptureLogger) Info(_ context.Context, _ string, _ ...interface{})  {}
 func (l *sqlCaptureLogger) Warn(_ context.Context, _ string, _ ...interface{})  {}
 func (l *sqlCaptureLogger) Error(_ context.Context, _ string, _ ...interface{}) {}
 func (l *sqlCaptureLogger) Trace(_ context.Context, _ time.Time, fc func() (string, int64), _ error) {
-	l.LastSQL, _ = fc()
+	sql, _ := fc()
+	l.mu.Lock()
+	l.queries = append(l.queries, sql)
+	l.mu.Unlock()
 }
 
-func newDryRunDB(t *testing.T, capture *sqlCaptureLogger) *gorm.DB {
-	t.Helper()
-	db, err := gorm.Open(nopDialector{}, &gorm.Config{DryRun: true, Logger: capture})
-	if err != nil {
-		t.Fatalf("gorm.Open(nopDialector): %v", err)
+func (l *sqlCaptureLogger) last() string {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if len(l.queries) == 0 {
+		return ""
 	}
-	return db
+	return l.queries[len(l.queries)-1]
+}
+
+// newDryRunRepo returns a leiLevel2Repository backed by a GORM DryRun session
+// and a sqlCaptureLogger that records every SQL statement GORM builds.
+// No real database connection is established.
+func newDryRunRepo(t *testing.T) (*leiLevel2Repository, *sqlCaptureLogger) {
+	t.Helper()
+	capture := &sqlCaptureLogger{}
+	db, err := gorm.Open(nopDialector{}, &gorm.Config{
+		DryRun: true,
+		Logger: capture,
+	})
+	if err != nil {
+		t.Fatalf("newDryRunRepo: gorm.Open failed: %v", err)
+	}
+	return &leiLevel2Repository{db: db}, capture
+}
+
+// newDryRunLeiRepo returns a leiRepository backed by a GORM DryRun session.
+// Used by Level 1 BatchResolve tests.
+func newDryRunLeiRepo(t *testing.T) (*leiRepository, *sqlCaptureLogger) {
+	t.Helper()
+	capture := &sqlCaptureLogger{}
+	db, err := gorm.Open(nopDialector{}, &gorm.Config{
+		DryRun: true,
+		Logger: capture,
+	})
+	if err != nil {
+		t.Fatalf("newDryRunLeiRepo: gorm.Open failed: %v", err)
+	}
+	return &leiRepository{db: db}, capture
 }
 
 // ---------------------------------------------------------------------------
@@ -468,19 +504,17 @@ func TestBatchResolveLevel1_AllBlankKeysReturnsNil(t *testing.T) {
 }
 
 func TestBatchResolveLevel1_SQLShape(t *testing.T) {
-	capture := &sqlCaptureLogger{}
-	db := newDryRunDB(t, capture)
-	r := &leiRepository{db: db}
+	r, capture := newDryRunLeiRepo(t)
 
 	sourceID := uuid.New()
 	_ = r.BatchResolveOpenProcessingFailures(
 		"LEVEL1_FULL",
-		[]string{"KEY1", "  KEY2  ", "KEY1"}, // duplicate + whitespace → deduplicated
+		[]string{"KEY1", "  KEY2  ", "KEY1"}, // duplicate + whitespace → deduplicated to 2 keys
 		&sourceID,
 		"test resolution note",
 	)
 
-	sql := capture.LastSQL
+	sql := capture.last()
 	if sql == "" {
 		t.Fatal("expected GORM to build a SQL statement, but captured SQL is empty")
 	}
@@ -493,29 +527,31 @@ func TestBatchResolveLevel1_SQLShape(t *testing.T) {
 	if !strings.Contains(sql, "IN") {
 		t.Errorf("expected SQL to use IN clause, SQL: %s", sql)
 	}
-	// Verify deduplication: KEY1 should appear exactly once despite being supplied
-	// twice. Avoid quoting assumptions by matching the raw key string.
-	if strings.Count(sql, "KEY1") != 1 {
-		t.Errorf("expected duplicate key KEY1 to appear only once, SQL: %s", sql)
+	// Verify deduplication: 3 inputs (KEY1, KEY2, KEY1) reduce to 2 unique keys.
+	// GORM DryRun produces '?' placeholders; count them in the IN clause.
+	// "IN (?,?)" indicates exactly 2 unique keys (not 3).
+	if strings.Contains(sql, "IN (?,?,?)") {
+		t.Errorf("expected deduplication to produce 2 IN args (not 3), SQL: %s", sql)
+	}
+	if !strings.Contains(sql, "IN (?,?)") {
+		t.Errorf("expected exactly 2 IN args after dedup, SQL: %s", sql)
 	}
 	// resolved_source_file_id should be included when non-nil.
 	if !strings.Contains(sql, "resolved_source_file_id") {
 		t.Errorf("expected SQL to include resolved_source_file_id, SQL: %s", sql)
 	}
-	// resolved_note should be included when non-empty.
-	if !strings.Contains(sql, "test resolution note") {
-		t.Errorf("expected SQL to include the resolved note, SQL: %s", sql)
+	// resolved_note column should appear in the SET clause when note is non-empty.
+	if !strings.Contains(sql, "resolved_note") {
+		t.Errorf("expected SQL SET clause to include resolved_note, SQL: %s", sql)
 	}
 }
 
 func TestBatchResolveLevel1_NilSourceFileIDExcludedFromSQL(t *testing.T) {
-	capture := &sqlCaptureLogger{}
-	db := newDryRunDB(t, capture)
-	r := &leiRepository{db: db}
+	r, capture := newDryRunLeiRepo(t)
 
 	_ = r.BatchResolveOpenProcessingFailures("LEVEL1_FULL", []string{"KEY1"}, nil, "")
 
-	sql := capture.LastSQL
+	sql := capture.last()
 	if strings.Contains(sql, "resolved_source_file_id") {
 		t.Errorf("expected resolved_source_file_id to be absent when nil, SQL: %s", sql)
 	}
@@ -543,19 +579,17 @@ func TestBatchResolveLevel2_AllBlankKeysReturnsNil(t *testing.T) {
 }
 
 func TestBatchResolveLevel2_SQLShape(t *testing.T) {
-	capture := &sqlCaptureLogger{}
-	db := newDryRunDB(t, capture)
-	r := &leiLevel2Repository{db: db}
+	repo, capture := newDryRunRepo(t)
 
 	sourceID := uuid.New()
-	_ = r.BatchResolveOpenProcessingFailures(
+	_ = repo.BatchResolveOpenProcessingFailures(
 		"LEVEL2_RR",
 		[]string{"START1|END1|TYPE", "  START2|END2|TYPE  ", "START1|END1|TYPE"}, // duplicate
 		&sourceID,
 		"rr resolution note",
 	)
 
-	sql := capture.LastSQL
+	sql := capture.last()
 	if sql == "" {
 		t.Fatal("expected GORM to build a SQL statement, but captured SQL is empty")
 	}
@@ -568,22 +602,21 @@ func TestBatchResolveLevel2_SQLShape(t *testing.T) {
 	if !strings.Contains(sql, "IN") {
 		t.Errorf("expected SQL to use IN clause, SQL: %s", sql)
 	}
-	// Verify deduplication: the duplicated key should appear exactly once.
-	// Match on a stable substring that uniquely identifies the key without
-	// relying on quote style.
-	if strings.Count(sql, "START1|END1|TYPE") != 1 {
-		t.Errorf("expected duplicate key to appear only once, SQL: %s", sql)
+	// Verify deduplication: 3 inputs (2 unique after dedup) → IN (?,?) not IN (?,?,?).
+	if strings.Contains(sql, "IN (?,?,?)") {
+		t.Errorf("expected deduplication to produce 2 IN args (not 3), SQL: %s", sql)
+	}
+	if !strings.Contains(sql, "IN (?,?)") {
+		t.Errorf("expected exactly 2 IN args after dedup, SQL: %s", sql)
 	}
 }
 
 func TestBatchResolveLevel2_NilSourceFileIDExcludedFromSQL(t *testing.T) {
-	capture := &sqlCaptureLogger{}
-	db := newDryRunDB(t, capture)
-	r := &leiLevel2Repository{db: db}
+	repo, capture := newDryRunRepo(t)
 
-	_ = r.BatchResolveOpenProcessingFailures("LEVEL2_REPEX", []string{"LEI|CAT"}, nil, "")
+	_ = repo.BatchResolveOpenProcessingFailures("LEVEL2_REPEX", []string{"LEI|CAT"}, nil, "")
 
-	sql := capture.LastSQL
+	sql := capture.last()
 	if strings.Contains(sql, "resolved_source_file_id") {
 		t.Errorf("expected resolved_source_file_id to be absent when nil, SQL: %s", sql)
 	}

@@ -184,20 +184,19 @@ func TestRawREPEXRecord_UnmarshalArrayWrappedReference(t *testing.T) {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// Shared stub for LEILevel2Repository tests
-// ---------------------------------------------------------------------------
+// --- stub for LEILevel2Repository ---
 
 // level2RepoStub embeds the interface so only the methods under test need to be implemented.
-// Fixture fields configure what the stub returns; captured fields record call arguments.
+// Fixture fields (failures, listErr, total, countErr) configure what the stub returns;
+// captured fields (gotJobType, gotOpenOnly, gotLimit, gotOffset) record call arguments.
 type level2RepoStub struct {
 	repository.LEILevel2Repository
-	// fixture data for GetProcessingFailures
+	// fixture data returned by stub methods
 	failures []*domain.LEILevel2ProcessingFailure
 	listErr  error
 	total    int64
 	countErr error
-	// captured call arguments for GetProcessingFailures
+	// captured call arguments for assertion
 	gotJobType  string
 	gotOpenOnly bool
 	gotLimit    int
