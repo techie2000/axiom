@@ -1322,6 +1322,11 @@ func (s *schedulerService) doRRWork(rrStatus *domain.FileProcessingStatus, now t
 		return nil
 	}
 
+	rrStatus.CurrentSourceFileID = &rrFile.ID
+	if updateErr := s.leiService.UpdateProcessingStatus(rrStatus); updateErr != nil {
+		log.Warn().Err(updateErr).Msg("Failed to attach current source file to LEVEL2_RR status")
+	}
+
 	if processErr := s.leiLevel2Service.ProcessRRFile(rrFile.ID); processErr != nil {
 		log.Error().Err(processErr).Msg("Failed to process RR file")
 		rrStatus.Status = "FAILED"
@@ -1366,6 +1371,11 @@ func (s *schedulerService) doREPEXWork(repexStatus *domain.FileProcessingStatus,
 			log.Warn().Err(updateErr).Msg("Failed to update LEVEL2_REPEX status after download failure")
 		}
 		return downloadErr
+	}
+
+	repexStatus.CurrentSourceFileID = &repexFile.ID
+	if updateErr := s.leiService.UpdateProcessingStatus(repexStatus); updateErr != nil {
+		log.Warn().Err(updateErr).Msg("Failed to attach current source file to LEVEL2_REPEX status")
 	}
 
 	if processErr := s.leiLevel2Service.ProcessREPEXFile(repexFile.ID); processErr != nil {

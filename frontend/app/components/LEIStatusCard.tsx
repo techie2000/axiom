@@ -127,13 +127,13 @@ export default function LEIStatusCard() {
                   <div className={`w-3 h-3 rounded-full ${masterDataHealth.color}`}></div>
                   <span className="text-xs text-gray-500 dark:text-gray-400">RefData</span>
                 </div>
-                <div className="flex items-center gap-1" title={`Full Sync: ${fullHealth.label}`}>
+                <div className="flex items-center gap-1" title={`Level 1 Full Sync: ${fullHealth.label}`}>
                   <div className={`w-3 h-3 rounded-full ${fullHealth.color}`}></div>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">Full</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">L1-Full</span>
                 </div>
-                <div className="flex items-center gap-1" title={`Delta Sync: ${deltaHealth.label}`}>
+                <div className="flex items-center gap-1" title={`Level 1 Delta Sync: ${deltaHealth.label}`}>
                   <div className={`w-3 h-3 rounded-full ${deltaHealth.color}`}></div>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">Delta</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">L1-Delta</span>
                 </div>
                 <div className="flex items-center gap-1" title={`Level 2 RR: ${rrHealth.label}`}>
                   <div className={`w-3 h-3 rounded-full ${rrHealth.color}`}></div>
@@ -165,7 +165,7 @@ export default function LEIStatusCard() {
               {fullStatus?.status === 'RUNNING' && fullStatus.total_records && (
                 <div className="space-y-1">
                   <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400">
-                    <span>Processing Full Sync</span>
+                    <span>Processing L1 Full Sync</span>
                     <span>{getProgress(fullStatus).toFixed(1)}%</span>
                   </div>
                   <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">

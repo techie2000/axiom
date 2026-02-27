@@ -543,3 +543,13 @@ When working with this repository:
 5. **Follow project standards** for ADRs, Mermaid diagrams, and test-driven maintenance
 
 This repository configuration is designed to make AI coding agents immediately productive by providing comprehensive, project-specific guidance rather than relying on generic training data.
+
+## PR Finalization Default (Team Preference)
+
+When an AI agent creates a pull request, it should complete standard PR hygiene automatically **without asking for confirmation**:
+
+1. Add appropriate labels (at minimum `automated` plus a best-fit category label such as `enhancement`/`bug`).
+2. Request a reviewer (prefer `copilot-pull-request-reviewer` when available).
+3. Post a concise verification checklist comment relevant to the changed files.
+
+Only ask follow-up questions if required metadata cannot be applied (for example, reviewer handle is unavailable).
