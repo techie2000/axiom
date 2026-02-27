@@ -59,6 +59,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     redundant Level 1 or RR re-run; if RR failed the scheduler re-runs RR then REPEX
   - A stuck `RUNNING` job (process crashed mid-run) is now correctly reset to `FAILED` rather than
     `IDLE` so the recovery logic can distinguish an interrupted run from a clean stop
+
 ### Fixed
 
 - `.github/workflows/lint.yml` — branch filter corrected from non-existent `develop` to `dev`,

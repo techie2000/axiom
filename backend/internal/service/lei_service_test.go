@@ -423,55 +423,55 @@ func TestGetDistinctCategories_CacheIsolation_ReturnsCopy(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestNormalizeProcessingJobType(t *testing.T) {
-tests := []struct {
-input string
-want  string
-}{
-// Level-1 aliases
-{input: "DAILY_FULL", want: "LEVEL1_FULL"},
-{input: "LEVEL1_FULL", want: "LEVEL1_FULL"},
-{input: "DAILY_DELTA", want: "LEVEL1_DELTA"},
-{input: "LEVEL1_DELTA", want: "LEVEL1_DELTA"},
-// Level-2 pass-throughs
-{input: "LEVEL2_RR", want: "LEVEL2_RR"},
-{input: "LEVEL2_REPEX", want: "LEVEL2_REPEX"},
-// Unknown types → empty string
-{input: "UNKNOWN", want: ""},
-{input: "", want: ""},
-}
+	tests := []struct {
+		input string
+		want  string
+	}{
+		// Level-1 aliases
+		{input: "DAILY_FULL", want: "LEVEL1_FULL"},
+		{input: "LEVEL1_FULL", want: "LEVEL1_FULL"},
+		{input: "DAILY_DELTA", want: "LEVEL1_DELTA"},
+		{input: "LEVEL1_DELTA", want: "LEVEL1_DELTA"},
+		// Level-2 pass-throughs
+		{input: "LEVEL2_RR", want: "LEVEL2_RR"},
+		{input: "LEVEL2_REPEX", want: "LEVEL2_REPEX"},
+		// Unknown types → empty string
+		{input: "UNKNOWN", want: ""},
+		{input: "", want: ""},
+	}
 
-for _, tt := range tests {
-t.Run(tt.input, func(t *testing.T) {
-got := NormalizeProcessingJobType(tt.input)
-if got != tt.want {
-t.Fatalf("NormalizeProcessingJobType(%q) = %q, want %q", tt.input, got, tt.want)
-}
-})
-}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := NormalizeProcessingJobType(tt.input)
+			if got != tt.want {
+				t.Fatalf("NormalizeProcessingJobType(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
 }
 
 func TestNormalizeProcessingJobTypePrivateDelegates(t *testing.T) {
-// The private function must map the same known aliases as the exported one
-// and pass unknown / Level-2 types through unchanged.
-cases := []struct {
-input string
-want  string
-}{
-{"DAILY_FULL", "LEVEL1_FULL"},
-{"LEVEL1_FULL", "LEVEL1_FULL"},
-{"DAILY_DELTA", "LEVEL1_DELTA"},
-{"LEVEL1_DELTA", "LEVEL1_DELTA"},
-{"LEVEL2_RR", "LEVEL2_RR"},
-{"LEVEL2_REPEX", "LEVEL2_REPEX"},
-{"UNKNOWN_TYPE", "UNKNOWN_TYPE"}, // pass-through
-{"", ""},                         // empty → empty
-}
-for _, c := range cases {
-got := normalizeProcessingJobType(c.input)
-if got != c.want {
-t.Errorf("normalizeProcessingJobType(%q) = %q, want %q", c.input, got, c.want)
-}
-}
+	// The private function must map the same known aliases as the exported one
+	// and pass unknown / Level-2 types through unchanged.
+	cases := []struct {
+		input string
+		want  string
+	}{
+		{"DAILY_FULL", "LEVEL1_FULL"},
+		{"LEVEL1_FULL", "LEVEL1_FULL"},
+		{"DAILY_DELTA", "LEVEL1_DELTA"},
+		{"LEVEL1_DELTA", "LEVEL1_DELTA"},
+		{"LEVEL2_RR", "LEVEL2_RR"},
+		{"LEVEL2_REPEX", "LEVEL2_REPEX"},
+		{"UNKNOWN_TYPE", "UNKNOWN_TYPE"}, // pass-through
+		{"", ""},                         // empty → empty
+	}
+	for _, c := range cases {
+		got := normalizeProcessingJobType(c.input)
+		if got != c.want {
+			t.Errorf("normalizeProcessingJobType(%q) = %q, want %q", c.input, got, c.want)
+		}
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -481,110 +481,110 @@ t.Errorf("normalizeProcessingJobType(%q) = %q, want %q", c.input, got, c.want)
 // leiRepoStub embeds the full LEIRepository interface so that only the
 // BatchResolveOpenProcessingFailures method needs to be overridden.
 type leiRepoStub struct {
-repository.LEIRepository
-calledJobType  string
-calledKeys     []string
-calledSourceID *uuid.UUID
-calledNote     string
-returnErr      error
-callCount      int
+	repository.LEIRepository
+	calledJobType  string
+	calledKeys     []string
+	calledSourceID *uuid.UUID
+	calledNote     string
+	returnErr      error
+	callCount      int
 }
 
 func (s *leiRepoStub) BatchResolveOpenProcessingFailures(
-jobType string,
-naturalKeys []string,
-resolvedSourceFileID *uuid.UUID,
-resolvedNote string,
+	jobType string,
+	naturalKeys []string,
+	resolvedSourceFileID *uuid.UUID,
+	resolvedNote string,
 ) error {
-s.callCount++
-s.calledJobType = jobType
-s.calledKeys = naturalKeys
-s.calledSourceID = resolvedSourceFileID
-s.calledNote = resolvedNote
-return s.returnErr
+	s.callCount++
+	s.calledJobType = jobType
+	s.calledKeys = naturalKeys
+	s.calledSourceID = resolvedSourceFileID
+	s.calledNote = resolvedNote
+	return s.returnErr
 }
 
 func newLeiServiceWithBatchRepoStub(stub *leiRepoStub) *leiService {
-return &leiService{repo: stub}
+	return &leiService{repo: stub}
 }
 
 func TestBatchResolveOpenProcessingFailures_Service_EmptyKeys(t *testing.T) {
-stub := &leiRepoStub{}
-svc := newLeiServiceWithBatchRepoStub(stub)
-sourceID := uuid.New()
+	stub := &leiRepoStub{}
+	svc := newLeiServiceWithBatchRepoStub(stub)
+	sourceID := uuid.New()
 
-svc.batchResolveOpenProcessingFailures("LEVEL1_FULL", []string{}, &sourceID)
+	svc.batchResolveOpenProcessingFailures("LEVEL1_FULL", []string{}, &sourceID)
 
-if stub.callCount != 0 {
-t.Fatalf("expected repo not to be called for empty key slice, got %d calls", stub.callCount)
-}
+	if stub.callCount != 0 {
+		t.Fatalf("expected repo not to be called for empty key slice, got %d calls", stub.callCount)
+	}
 }
 
 func TestBatchResolveOpenProcessingFailures_Service_AllInvalidKeys(t *testing.T) {
-stub := &leiRepoStub{}
-svc := newLeiServiceWithBatchRepoStub(stub)
-sourceID := uuid.New()
+	stub := &leiRepoStub{}
+	svc := newLeiServiceWithBatchRepoStub(stub)
+	sourceID := uuid.New()
 
-// normalizeLEICodeValue converts "null" / whitespace to empty string.
-svc.batchResolveOpenProcessingFailures("LEVEL1_FULL", []string{"null", "  ", "NULL"}, &sourceID)
+	// normalizeLEICodeValue converts "null" / whitespace to empty string.
+	svc.batchResolveOpenProcessingFailures("LEVEL1_FULL", []string{"null", "  ", "NULL"}, &sourceID)
 
-if stub.callCount != 0 {
-t.Fatalf("expected repo not to be called when all keys are invalid, got %d calls", stub.callCount)
-}
+	if stub.callCount != 0 {
+		t.Fatalf("expected repo not to be called when all keys are invalid, got %d calls", stub.callCount)
+	}
 }
 
 func TestBatchResolveOpenProcessingFailures_Service_ValidKeys(t *testing.T) {
-stub := &leiRepoStub{}
-svc := newLeiServiceWithBatchRepoStub(stub)
-sourceID := uuid.New()
+	stub := &leiRepoStub{}
+	svc := newLeiServiceWithBatchRepoStub(stub)
+	sourceID := uuid.New()
 
-keys := []string{"5493001kjtiigc8y1r12", " AAAAAAAAAAAAAAAAAA01 "}
-svc.batchResolveOpenProcessingFailures("DAILY_FULL", keys, &sourceID)
+	keys := []string{"5493001kjtiigc8y1r12", " AAAAAAAAAAAAAAAAAA01 "}
+	svc.batchResolveOpenProcessingFailures("DAILY_FULL", keys, &sourceID)
 
-if stub.callCount != 1 {
-t.Fatalf("expected exactly 1 repo call, got %d", stub.callCount)
-}
-// Job type must be normalised (DAILY_FULL → LEVEL1_FULL).
-if stub.calledJobType != "LEVEL1_FULL" {
-t.Errorf("expected calledJobType LEVEL1_FULL, got %q", stub.calledJobType)
-}
-// LEI codes must be upper-cased and trimmed.
-if len(stub.calledKeys) != 2 {
-t.Fatalf("expected 2 normalised keys, got %d: %v", len(stub.calledKeys), stub.calledKeys)
-}
-if stub.calledKeys[0] != "5493001KJTIIGC8Y1R12" {
-t.Errorf("expected first key normalised to uppercase, got %q", stub.calledKeys[0])
-}
-if stub.calledSourceID != &sourceID {
-t.Errorf("sourceFileID not forwarded correctly")
-}
+	if stub.callCount != 1 {
+		t.Fatalf("expected exactly 1 repo call, got %d", stub.callCount)
+	}
+	// Job type must be normalised (DAILY_FULL → LEVEL1_FULL).
+	if stub.calledJobType != "LEVEL1_FULL" {
+		t.Errorf("expected calledJobType LEVEL1_FULL, got %q", stub.calledJobType)
+	}
+	// LEI codes must be upper-cased and trimmed.
+	if len(stub.calledKeys) != 2 {
+		t.Fatalf("expected 2 normalised keys, got %d: %v", len(stub.calledKeys), stub.calledKeys)
+	}
+	if stub.calledKeys[0] != "5493001KJTIIGC8Y1R12" {
+		t.Errorf("expected first key normalised to uppercase, got %q", stub.calledKeys[0])
+	}
+	if stub.calledSourceID != &sourceID {
+		t.Errorf("sourceFileID not forwarded correctly")
+	}
 }
 
 func TestBatchResolveOpenProcessingFailures_Service_MixedKeys(t *testing.T) {
-stub := &leiRepoStub{}
-svc := newLeiServiceWithBatchRepoStub(stub)
+	stub := &leiRepoStub{}
+	svc := newLeiServiceWithBatchRepoStub(stub)
 
-// Mix of valid and invalid keys.
-svc.batchResolveOpenProcessingFailures("LEVEL1_FULL", []string{"5493001KJTIIGC8Y1R12", "null", ""}, nil)
+	// Mix of valid and invalid keys.
+	svc.batchResolveOpenProcessingFailures("LEVEL1_FULL", []string{"5493001KJTIIGC8Y1R12", "null", ""}, nil)
 
-if stub.callCount != 1 {
-t.Fatalf("expected 1 repo call for mixed keys, got %d", stub.callCount)
-}
-if len(stub.calledKeys) != 1 {
-t.Fatalf("expected 1 valid key forwarded to repo, got %d", len(stub.calledKeys))
-}
+	if stub.callCount != 1 {
+		t.Fatalf("expected 1 repo call for mixed keys, got %d", stub.callCount)
+	}
+	if len(stub.calledKeys) != 1 {
+		t.Fatalf("expected 1 valid key forwarded to repo, got %d", len(stub.calledKeys))
+	}
 }
 
 func TestBatchResolveOpenProcessingFailures_Service_RepoErrorIsLogged(t *testing.T) {
-// When the repo returns an error the service must not panic or propagate it;
-// errors are logged as warnings.
-stub := &leiRepoStub{returnErr: errors.New("db failure")}
-svc := newLeiServiceWithBatchRepoStub(stub)
+	// When the repo returns an error the service must not panic or propagate it;
+	// errors are logged as warnings.
+	stub := &leiRepoStub{returnErr: errors.New("db failure")}
+	svc := newLeiServiceWithBatchRepoStub(stub)
 
-// Should not panic.
-svc.batchResolveOpenProcessingFailures("LEVEL1_FULL", []string{"5493001KJTIIGC8Y1R12"}, nil)
+	// Should not panic.
+	svc.batchResolveOpenProcessingFailures("LEVEL1_FULL", []string{"5493001KJTIIGC8Y1R12"}, nil)
 
-if stub.callCount != 1 {
-t.Fatalf("expected 1 repo call even when it fails, got %d", stub.callCount)
-}
+	if stub.callCount != 1 {
+		t.Fatalf("expected 1 repo call even when it fails, got %d", stub.callCount)
+	}
 }

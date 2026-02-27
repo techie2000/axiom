@@ -69,7 +69,8 @@ Located in [lei/](./lei/):
 - Import processing failures endpoint migration:
   - Preferred: `GET /api/v1/lei/import-failures`
   - Deprecated (temporary): `GET /api/v1/lei/level2/failures`
-- The deprecated endpoint returns deprecation metadata headers (`Deprecation`, `Sunset`, `Link`, `Warning`) to support client migration.
+- The deprecated endpoint returns deprecation metadata headers
+  (`Deprecation`, `Sunset`, `Link`, `Warning`) to support client migration.
 - Planned removal target: `v0.5` (tracked by GitHub issue `#87`).
 
 #### Issue Resolution
