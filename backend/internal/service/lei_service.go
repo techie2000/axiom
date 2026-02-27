@@ -110,6 +110,7 @@ type LEIService interface {
 	GetAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string) ([]*domain.LEIRecord, error)
 	CountLEIRecords() (int64, error)
 	GetDistinctCountries() ([]domain.Country, error)
+	GetDistinctCategories() ([]string, error)
 	GetDistinctRegions() ([]string, error)
 	GetDistinctLegalForms() ([]string, error)
 	UpdateLEIRecord(record *domain.LEIRecord) error
@@ -131,6 +132,8 @@ type leiService struct {
 	dataDir     string // Directory to store downloaded files
 
 	lookupCacheMu              sync.RWMutex
+	distinctCategories         []string
+	distinctCategoriesCachedAt time.Time
 	distinctRegions            []string
 	distinctRegionsCachedAt    time.Time
 	distinctLegalForms         []string
@@ -1378,6 +1381,31 @@ func (s *leiService) GetDistinctCountries() ([]domain.Country, error) {
 	}
 
 	return activeCountries, nil
+}
+
+// GetDistinctCategories returns a sorted list of unique category values from LEI records
+func (s *leiService) GetDistinctCategories() ([]string, error) {
+	now := time.Now()
+
+	s.lookupCacheMu.RLock()
+	if len(s.distinctCategories) > 0 && now.Sub(s.distinctCategoriesCachedAt) < distinctLookupCacheTTL {
+		cached := cloneStringSlice(s.distinctCategories)
+		s.lookupCacheMu.RUnlock()
+		return cached, nil
+	}
+	s.lookupCacheMu.RUnlock()
+
+	categories, err := s.repo.GetDistinctCategories()
+	if err != nil {
+		return nil, err
+	}
+
+	s.lookupCacheMu.Lock()
+	s.distinctCategories = cloneStringSlice(categories)
+	s.distinctCategoriesCachedAt = now
+	s.lookupCacheMu.Unlock()
+
+	return categories, nil
 }
 
 // GetDistinctRegions returns a sorted list of unique region values from LEI records
