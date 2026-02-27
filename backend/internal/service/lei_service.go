@@ -51,7 +51,7 @@ const (
 
 var leiCodePattern = regexp.MustCompile(`^[0-9A-Z]{18}[0-9]{2}$`)
 
-const distinctLookupCacheTTL = 5 * time.Minute
+const distinctLookupCacheTTL = 24 * time.Hour
 
 // GLEIFPublishesResponse represents the response from the GLEIF latest publishes endpoint
 type GLEIFPublishesResponse struct {
@@ -110,6 +110,7 @@ type LEIService interface {
 	GetAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string) ([]*domain.LEIRecord, error)
 	CountLEIRecords() (int64, error)
 	GetDistinctCountries() ([]domain.Country, error)
+	GetDistinctCategories() ([]string, error)
 	GetDistinctRegions() ([]string, error)
 	GetDistinctLegalForms() ([]string, error)
 	UpdateLEIRecord(record *domain.LEIRecord) error
@@ -131,6 +132,8 @@ type leiService struct {
 	dataDir     string // Directory to store downloaded files
 
 	lookupCacheMu              sync.RWMutex
+	distinctCategories         []string
+	distinctCategoriesCachedAt time.Time
 	distinctRegions            []string
 	distinctRegionsCachedAt    time.Time
 	distinctLegalForms         []string
@@ -139,11 +142,15 @@ type leiService struct {
 
 // NewLEIService creates a new LEI service
 func NewLEIService(repo repository.LEIRepository, countryRepo repository.CountryRepository, dataDir string) LEIService {
-	return &leiService{
+	service := &leiService{
 		repo:        repo,
 		countryRepo: countryRepo,
 		dataDir:     dataDir,
 	}
+
+	go service.prewarmDistinctLookupCaches()
+
+	return service
 }
 
 func cloneStringSlice(values []string) []string {
@@ -153,6 +160,41 @@ func cloneStringSlice(values []string) []string {
 	cloned := make([]string, len(values))
 	copy(cloned, values)
 	return cloned
+}
+
+func (s *leiService) prewarmDistinctLookupCaches() {
+	if categories, err := s.repo.GetDistinctCategories(); err == nil {
+		s.lookupCacheMu.Lock()
+		s.distinctCategories = cloneStringSlice(categories)
+		s.distinctCategoriesCachedAt = time.Now()
+		s.lookupCacheMu.Unlock()
+	}
+
+	if regions, err := s.repo.GetDistinctRegions(); err == nil {
+		s.lookupCacheMu.Lock()
+		s.distinctRegions = cloneStringSlice(regions)
+		s.distinctRegionsCachedAt = time.Now()
+		s.lookupCacheMu.Unlock()
+	}
+
+	if legalForms, err := s.repo.GetDistinctLegalForms(); err == nil {
+		s.lookupCacheMu.Lock()
+		s.distinctLegalForms = cloneStringSlice(legalForms)
+		s.distinctLegalFormsCachedAt = time.Now()
+		s.lookupCacheMu.Unlock()
+	}
+}
+
+func (s *leiService) invalidateDistinctLookupCaches() {
+	s.lookupCacheMu.Lock()
+	defer s.lookupCacheMu.Unlock()
+
+	s.distinctCategories = nil
+	s.distinctCategoriesCachedAt = time.Time{}
+	s.distinctRegions = nil
+	s.distinctRegionsCachedAt = time.Time{}
+	s.distinctLegalForms = nil
+	s.distinctLegalFormsCachedAt = time.Time{}
 }
 
 // progressWriter wraps an io.Writer to log extraction progress periodically
@@ -498,6 +540,8 @@ func (s *leiService) ProcessSourceFileWithResume(sourceFileID uuid.UUID, resumeF
 		return fmt.Errorf("failed to update source file status: %w", err)
 	}
 
+	s.invalidateDistinctLookupCaches()
+
 	log.Info().
 		Str("source_file_id", sourceFileID.String()).
 		Int("total", sourceFile.TotalRecords).
@@ -820,9 +864,11 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 			return fmt.Errorf("batch upsert failed: %w", err)
 		} else {
 			jobType := normalizeProcessingJobType(sourceFile.JobType)
-			for _, upsertedRecord := range batch {
-				s.resolveOpenProcessingFailures(jobType, upsertedRecord.LEI, &sourceFile.ID)
+			naturalKeys := make([]string, 0, len(batch))
+			for _, r := range batch {
+				naturalKeys = append(naturalKeys, r.LEI)
 			}
+			s.batchResolveOpenProcessingFailures(jobType, naturalKeys, &sourceFile.ID)
 
 			// Track records processed in this session (use batch size, not DB results)
 			processedRecords += len(batch)
@@ -1013,6 +1059,29 @@ func (s *leiService) resolveOpenProcessingFailures(jobType, naturalKey string, s
 			Str("job_type", jobType).
 			Str("natural_key", naturalKey).
 			Msg("Failed to resolve Level 1 processing failure lifecycle rows")
+	}
+}
+
+// batchResolveOpenProcessingFailures resolves open processing failures for a set of natural keys
+// in a single UPDATE … WHERE natural_key IN (…) query, avoiding N round-trips per batch.
+func (s *leiService) batchResolveOpenProcessingFailures(jobType string, naturalKeys []string, sourceFileID *uuid.UUID) {
+	if len(naturalKeys) == 0 {
+		return
+	}
+	normalized := make([]string, 0, len(naturalKeys))
+	for _, k := range naturalKeys {
+		if v := normalizeLEICodeValue(k); v != "" {
+			normalized = append(normalized, v)
+		}
+	}
+	if len(normalized) == 0 {
+		return
+	}
+	if err := s.repo.BatchResolveOpenProcessingFailures(normalizeProcessingJobType(jobType), normalized, sourceFileID, "Resolved by subsequent successful upsert"); err != nil {
+		log.Warn().Err(err).
+			Str("job_type", jobType).
+			Int("key_count", len(normalized)).
+			Msg("Failed to batch-resolve Level 1 processing failure lifecycle rows")
 	}
 }
 
@@ -1380,6 +1449,31 @@ func (s *leiService) GetDistinctCountries() ([]domain.Country, error) {
 	return activeCountries, nil
 }
 
+// GetDistinctCategories returns a sorted list of unique category values from LEI records
+func (s *leiService) GetDistinctCategories() ([]string, error) {
+	now := time.Now()
+
+	s.lookupCacheMu.RLock()
+	if len(s.distinctCategories) > 0 && now.Sub(s.distinctCategoriesCachedAt) < distinctLookupCacheTTL {
+		cached := cloneStringSlice(s.distinctCategories)
+		s.lookupCacheMu.RUnlock()
+		return cached, nil
+	}
+	s.lookupCacheMu.RUnlock()
+
+	categories, err := s.repo.GetDistinctCategories()
+	if err != nil {
+		return nil, err
+	}
+
+	s.lookupCacheMu.Lock()
+	s.distinctCategories = cloneStringSlice(categories)
+	s.distinctCategoriesCachedAt = now
+	s.lookupCacheMu.Unlock()
+
+	return categories, nil
+}
+
 // GetDistinctRegions returns a sorted list of unique region values from LEI records
 func (s *leiService) GetDistinctRegions() ([]string, error) {
 	now := time.Now()
@@ -1488,14 +1582,28 @@ func fallbackSourceFileTypesForJob(jobType string) []string {
 	}
 }
 
+// normalizeProcessingJobType maps aliases and known types to their canonical storage names.
+// For unknown or pass-through types (e.g. LEVEL2_RR, LEVEL2_REPEX) it returns the value
+// unchanged, delegating to NormalizeProcessingJobType for known aliases.
 func normalizeProcessingJobType(jobType string) string {
+	if normalized := NormalizeProcessingJobType(jobType); normalized != "" {
+		return normalized
+	}
+	return jobType
+}
+
+// NormalizeProcessingJobType maps user-facing or legacy job type aliases to their canonical storage
+// names. Returns an empty string for unknown or invalid job types so callers can detect them.
+func NormalizeProcessingJobType(jobType string) string {
 	switch jobType {
 	case "DAILY_FULL", "LEVEL1_FULL":
 		return "LEVEL1_FULL"
 	case "DAILY_DELTA", "LEVEL1_DELTA":
 		return "LEVEL1_DELTA"
-	default:
+	case "LEVEL2_RR", "LEVEL2_REPEX":
 		return jobType
+	default:
+		return ""
 	}
 }
 

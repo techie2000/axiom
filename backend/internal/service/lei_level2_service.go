@@ -755,15 +755,38 @@ func (s *leiLevel2Service) resolveOpenProcessingFailures(jobType, naturalKey str
 	}
 }
 
+// batchResolveOpenProcessingFailures resolves open processing failures for a set of natural keys
+// in a single UPDATE … WHERE natural_key IN (…) query, avoiding N round-trips per batch.
+// Level 2 natural keys are pre-normalized by rrNaturalKey / repexNaturalKey; empty keys are
+// filtered out by the repository layer.
+func (s *leiLevel2Service) batchResolveOpenProcessingFailures(jobType string, naturalKeys []string, sourceFileID *uuid.UUID) {
+	if len(naturalKeys) == 0 {
+		return
+	}
+	if err := s.repo.BatchResolveOpenProcessingFailures(jobType, naturalKeys, sourceFileID, "Resolved by subsequent successful upsert"); err != nil {
+		log.Warn().Err(err).
+			Str("job_type", jobType).
+			Int("key_count", len(naturalKeys)).
+			Msg("Failed to batch-resolve Level 2 processing failure lifecycle rows")
+	}
+}
+
 func (s *leiLevel2Service) flushRRBatch(batch []*domain.LEIRelationshipRecord) (processed int, failed int, err error) {
 	if len(batch) == 0 {
 		return 0, 0, nil
 	}
 
 	if created, updated, batchErr := s.repo.BatchUpsertRelationshipRecords(batch); batchErr == nil {
+		naturalKeys := make([]string, 0, len(batch))
+		// All records in a batch are sourced from the same file; use the first non-nil ID.
+		var sourceFileID *uuid.UUID
 		for _, record := range batch {
-			s.resolveOpenProcessingFailures("LEVEL2_RR", rrNaturalKey(record.StartNodeLEI, record.EndNodeLEI, record.RelationshipType), record.SourceFileID)
+			naturalKeys = append(naturalKeys, rrNaturalKey(record.StartNodeLEI, record.EndNodeLEI, record.RelationshipType))
+			if sourceFileID == nil {
+				sourceFileID = record.SourceFileID
+			}
 		}
+		s.batchResolveOpenProcessingFailures("LEVEL2_RR", naturalKeys, sourceFileID)
 		return created + updated, 0, nil
 	} else {
 		log.Warn().Err(batchErr).Int("batch_size", len(batch)).Msg("RR batch upsert failed, falling back to row-by-row")
@@ -1103,9 +1126,16 @@ func (s *leiLevel2Service) flushREPEXBatch(batch []*domain.LEIReportingException
 	}
 
 	if created, updated, batchErr := s.repo.BatchUpsertReportingExceptions(batch); batchErr == nil {
+		naturalKeys := make([]string, 0, len(batch))
+		// All exceptions in a batch are sourced from the same file; use the first non-nil ID.
+		var sourceFileID *uuid.UUID
 		for _, exc := range batch {
-			s.resolveOpenProcessingFailures("LEVEL2_REPEX", repexNaturalKey(exc.LEI, exc.ExceptionCategory), exc.SourceFileID)
+			naturalKeys = append(naturalKeys, repexNaturalKey(exc.LEI, exc.ExceptionCategory))
+			if sourceFileID == nil {
+				sourceFileID = exc.SourceFileID
+			}
 		}
+		s.batchResolveOpenProcessingFailures("LEVEL2_REPEX", naturalKeys, sourceFileID)
 		return created + updated, 0, nil
 	} else {
 		log.Warn().Err(batchErr).Int("batch_size", len(batch)).Msg("REPEX batch upsert failed, falling back to row-by-row")

@@ -41,6 +41,7 @@ type LEILevel2Repository interface {
 	// Processing failures lifecycle
 	CreateProcessingFailure(failure *domain.LEILevel2ProcessingFailure) error
 	ResolveOpenProcessingFailures(jobType, naturalKey string, resolvedSourceFileID *uuid.UUID, resolvedNote string) error
+	BatchResolveOpenProcessingFailures(jobType string, naturalKeys []string, resolvedSourceFileID *uuid.UUID, resolvedNote string) error
 	ListProcessingFailures(jobType string, openOnly bool, limit, offset int) ([]*domain.LEILevel2ProcessingFailure, error)
 	CountProcessingFailures(jobType string, openOnly bool) (int64, error)
 }
@@ -684,6 +685,33 @@ func (r *leiLevel2Repository) ResolveOpenProcessingFailures(jobType, naturalKey 
 
 	return r.db.Model(&domain.LEILevel2ProcessingFailure{}).
 		Where("job_type = ? AND natural_key = ? AND resolved = FALSE", jobType, normalizedKey).
+		Updates(updates).Error
+}
+
+// BatchResolveOpenProcessingFailures marks all unresolved failure rows for the given set of
+// natural keys as resolved with a single UPDATE … WHERE natural_key IN (…) query, avoiding
+// the N individual UPDATE round-trips that would otherwise be issued per successful batch.
+func (r *leiLevel2Repository) BatchResolveOpenProcessingFailures(jobType string, naturalKeys []string, resolvedSourceFileID *uuid.UUID, resolvedNote string) error {
+	filtered := filterNonEmptyStrings(naturalKeys)
+	if len(filtered) == 0 {
+		return nil
+	}
+
+	now := time.Now()
+	updates := map[string]interface{}{
+		"resolved":    true,
+		"resolved_at": now,
+		"updated_at":  now,
+	}
+	if resolvedSourceFileID != nil {
+		updates["resolved_source_file_id"] = *resolvedSourceFileID
+	}
+	if strings.TrimSpace(resolvedNote) != "" {
+		updates["resolved_note"] = resolvedNote
+	}
+
+	return r.db.Model(&domain.LEILevel2ProcessingFailure{}).
+		Where("job_type = ? AND natural_key IN ? AND resolved = FALSE", jobType, filtered).
 		Updates(updates).Error
 }
 
