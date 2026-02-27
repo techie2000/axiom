@@ -1,10 +1,8 @@
 package repository
 
 import (
-	"context"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -13,33 +11,17 @@ import (
 // ---------------------------------------------------------------------------
 // Minimal DryRun GORM infrastructure for batch-resolve tests.
 //
-// These types now alias the shared helpers defined in lei_level2_repository_test.go
+// These types alias the shared helpers defined in lei_level2_repository_test.go
 // (nopDialector and sqlCaptureLogger) to avoid code duplication and divergence.
+// Because they are type aliases (not new types), all methods defined on the
+// originals are available here without re-declaration.
 // ---------------------------------------------------------------------------
 
-// batchNopDialector is a local alias used by this test file that reuses the
-// shared DryRun dialector implementation.
+// batchNopDialector aliases the shared DryRun dialector implementation.
 type batchNopDialector = nopDialector
 
-// batchSQLCapture is a local alias used by this test file that reuses the
-// shared SQL capture logger implementation.
+// batchSQLCapture aliases the shared SQL capture logger implementation.
 type batchSQLCapture = sqlCaptureLogger
-func (bsc *batchSQLCapture) Error(_ context.Context, _ string, _ ...interface{}) {}
-func (bsc *batchSQLCapture) Trace(_ context.Context, _ time.Time, fc func() (string, int64), _ error) {
-	sql, _ := fc()
-	bsc.mu.Lock()
-	bsc.queries = append(bsc.queries, sql)
-	bsc.mu.Unlock()
-}
-
-func (bsc *batchSQLCapture) last() string {
-	bsc.mu.Lock()
-	defer bsc.mu.Unlock()
-	if len(bsc.queries) == 0 {
-		return ""
-	}
-	return bsc.queries[len(bsc.queries)-1]
-}
 
 func newBatchLeiRepo(t *testing.T) (*leiRepository, *batchSQLCapture) {
 	t.Helper()
@@ -59,6 +41,32 @@ func newBatchLevel2Repo(t *testing.T) (*leiLevel2Repository, *batchSQLCapture) {
 		t.Fatalf("newBatchLevel2Repo: gorm.Open failed: %v", err)
 	}
 	return &leiLevel2Repository{db: db}, cap
+}
+
+// countINClauseArgs counts the number of '?' placeholders that appear inside
+// the first IN(...) clause of sql.  Whitespace inside the clause is ignored so
+// the helper is robust to GORM formatting differences such as "IN (?,?)" vs
+// "IN(?, ?)".
+func countINClauseArgs(sql string) int {
+	// Find the IN keyword (case-insensitive search is not needed; GORM always uppercases SQL keywords).
+	idx := strings.Index(sql, " IN ")
+	if idx < 0 {
+		idx = strings.Index(sql, " IN(")
+	}
+	if idx < 0 {
+		return 0
+	}
+	rest := sql[idx:]
+	open := strings.Index(rest, "(")
+	if open < 0 {
+		return 0
+	}
+	close := strings.Index(rest[open:], ")")
+	if close < 0 {
+		return 0
+	}
+	inClause := rest[open : open+close+1]
+	return strings.Count(inClause, "?")
 }
 
 // ---------------------------------------------------------------------------
@@ -137,12 +145,13 @@ func TestBatchResolveLevel1_SQLShape(t *testing.T) {
 	if !strings.Contains(sql, "IN") {
 		t.Errorf("expected SQL to use IN clause, SQL: %s", sql)
 	}
-	// Deduplication: 3 inputs → 2 unique keys → IN (?,?) not IN (?,?,?)
-	if strings.Contains(sql, "IN (?,?,?)") {
-		t.Errorf("expected deduplication to produce 2 IN args (not 3), SQL: %s", sql)
-	}
-	if !strings.Contains(sql, "IN (?,?)") {
-		t.Errorf("expected exactly 2 IN args after dedup, SQL: %s", sql)
+	// Deduplication check: 3 inputs contain 1 duplicate → 2 unique keys must be forwarded
+	// to the IN clause, not 3.  We count '?' inside the IN(...) clause rather than
+	// matching the exact rendered string ("IN (?,?)" vs "IN(?, ?)") to stay robust
+	// across GORM formatting differences.
+	inArgs := countINClauseArgs(sql)
+	if inArgs != 2 {
+		t.Errorf("expected 2 IN placeholder args after dedup (got %d); SQL: %s", inArgs, sql)
 	}
 	if !strings.Contains(sql, "resolved_source_file_id") {
 		t.Errorf("expected SQL to include resolved_source_file_id, SQL: %s", sql)
@@ -206,12 +215,13 @@ func TestBatchResolveLevel2_SQLShape(t *testing.T) {
 	if !strings.Contains(sql, "IN") {
 		t.Errorf("expected SQL to use IN clause, SQL: %s", sql)
 	}
-	// Deduplication: 3 inputs → 2 unique keys → IN (?,?) not IN (?,?,?)
-	if strings.Contains(sql, "IN (?,?,?)") {
-		t.Errorf("expected deduplication to produce 2 IN args (not 3), SQL: %s", sql)
-	}
-	if !strings.Contains(sql, "IN (?,?)") {
-		t.Errorf("expected exactly 2 IN args after dedup, SQL: %s", sql)
+	// Deduplication check: 3 inputs contain 1 duplicate → 2 unique keys must be forwarded
+	// to the IN clause, not 3.  We count '?' inside the IN(...) clause rather than
+	// matching the exact rendered string ("IN (?,?)" vs "IN(?, ?)") to stay robust
+	// across GORM formatting differences.
+	inArgs := countINClauseArgs(sql)
+	if inArgs != 2 {
+		t.Errorf("expected 2 IN placeholder args after dedup (got %d); SQL: %s", inArgs, sql)
 	}
 }
 
