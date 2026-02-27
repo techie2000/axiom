@@ -51,7 +51,7 @@ const (
 
 var leiCodePattern = regexp.MustCompile(`^[0-9A-Z]{18}[0-9]{2}$`)
 
-const distinctLookupCacheTTL = 5 * time.Minute
+const distinctLookupCacheTTL = 24 * time.Hour
 
 // GLEIFPublishesResponse represents the response from the GLEIF latest publishes endpoint
 type GLEIFPublishesResponse struct {
@@ -110,6 +110,7 @@ type LEIService interface {
 	GetAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string) ([]*domain.LEIRecord, error)
 	CountLEIRecords() (int64, error)
 	GetDistinctCountries() ([]domain.Country, error)
+	GetDistinctCategories() ([]string, error)
 	GetDistinctRegions() ([]string, error)
 	GetDistinctLegalForms() ([]string, error)
 	UpdateLEIRecord(record *domain.LEIRecord) error
@@ -131,6 +132,8 @@ type leiService struct {
 	dataDir     string // Directory to store downloaded files
 
 	lookupCacheMu              sync.RWMutex
+	distinctCategories         []string
+	distinctCategoriesCachedAt time.Time
 	distinctRegions            []string
 	distinctRegionsCachedAt    time.Time
 	distinctLegalForms         []string
@@ -139,11 +142,15 @@ type leiService struct {
 
 // NewLEIService creates a new LEI service
 func NewLEIService(repo repository.LEIRepository, countryRepo repository.CountryRepository, dataDir string) LEIService {
-	return &leiService{
+	service := &leiService{
 		repo:        repo,
 		countryRepo: countryRepo,
 		dataDir:     dataDir,
 	}
+
+	go service.prewarmDistinctLookupCaches()
+
+	return service
 }
 
 func cloneStringSlice(values []string) []string {
@@ -153,6 +160,41 @@ func cloneStringSlice(values []string) []string {
 	cloned := make([]string, len(values))
 	copy(cloned, values)
 	return cloned
+}
+
+func (s *leiService) prewarmDistinctLookupCaches() {
+	if categories, err := s.repo.GetDistinctCategories(); err == nil {
+		s.lookupCacheMu.Lock()
+		s.distinctCategories = cloneStringSlice(categories)
+		s.distinctCategoriesCachedAt = time.Now()
+		s.lookupCacheMu.Unlock()
+	}
+
+	if regions, err := s.repo.GetDistinctRegions(); err == nil {
+		s.lookupCacheMu.Lock()
+		s.distinctRegions = cloneStringSlice(regions)
+		s.distinctRegionsCachedAt = time.Now()
+		s.lookupCacheMu.Unlock()
+	}
+
+	if legalForms, err := s.repo.GetDistinctLegalForms(); err == nil {
+		s.lookupCacheMu.Lock()
+		s.distinctLegalForms = cloneStringSlice(legalForms)
+		s.distinctLegalFormsCachedAt = time.Now()
+		s.lookupCacheMu.Unlock()
+	}
+}
+
+func (s *leiService) invalidateDistinctLookupCaches() {
+	s.lookupCacheMu.Lock()
+	defer s.lookupCacheMu.Unlock()
+
+	s.distinctCategories = nil
+	s.distinctCategoriesCachedAt = time.Time{}
+	s.distinctRegions = nil
+	s.distinctRegionsCachedAt = time.Time{}
+	s.distinctLegalForms = nil
+	s.distinctLegalFormsCachedAt = time.Time{}
 }
 
 // progressWriter wraps an io.Writer to log extraction progress periodically
@@ -497,6 +539,8 @@ func (s *leiService) ProcessSourceFileWithResume(sourceFileID uuid.UUID, resumeF
 	if err := s.repo.UpdateSourceFile(sourceFile); err != nil {
 		return fmt.Errorf("failed to update source file status: %w", err)
 	}
+
+	s.invalidateDistinctLookupCaches()
 
 	log.Info().
 		Str("source_file_id", sourceFileID.String()).
@@ -998,35 +1042,15 @@ func (s *leiService) recordProcessingFailure(
 	rawRecord interface{},
 	cause error,
 ) {
-	errMessage := "unknown processing failure"
-	if cause != nil {
-		errMessage = cause.Error()
-	}
-
-	var rawPayload domain.JSONBString
-	if rawRecord != nil {
-		if rawBytes, marshalErr := json.Marshal(rawRecord); marshalErr == nil {
-			rawPayload = domain.JSONBString(rawBytes)
-		}
-	}
-
-	failure := &domain.LEILevel2ProcessingFailure{
-		JobType:      normalizeProcessingJobType(jobType),
-		SourceFileID: sourceFileID,
-		FailureStage: failureStage,
-		NaturalKey:   normalizeLEICodeValue(naturalKey),
-		RawRecord:    rawPayload,
-		ErrorMessage: errMessage,
-		Resolved:     false,
-	}
-
-	if err := s.repo.CreateProcessingFailure(failure); err != nil {
-		log.Warn().Err(err).
-			Str("job_type", jobType).
-			Str("failure_stage", failureStage).
-			Str("natural_key", naturalKey).
-			Msg("Failed to persist Level 1 processing failure")
-	}
+	persistProcessingFailure(
+		s.repo,
+		normalizeProcessingJobType(jobType),
+		sourceFileID,
+		failureStage,
+		normalizeLEICodeValue(naturalKey),
+		rawRecord,
+		cause,
+	)
 }
 
 func (s *leiService) resolveOpenProcessingFailures(jobType, naturalKey string, sourceFileID *uuid.UUID) {
@@ -1423,6 +1447,31 @@ func (s *leiService) GetDistinctCountries() ([]domain.Country, error) {
 	}
 
 	return activeCountries, nil
+}
+
+// GetDistinctCategories returns a sorted list of unique category values from LEI records
+func (s *leiService) GetDistinctCategories() ([]string, error) {
+	now := time.Now()
+
+	s.lookupCacheMu.RLock()
+	if len(s.distinctCategories) > 0 && now.Sub(s.distinctCategoriesCachedAt) < distinctLookupCacheTTL {
+		cached := cloneStringSlice(s.distinctCategories)
+		s.lookupCacheMu.RUnlock()
+		return cached, nil
+	}
+	s.lookupCacheMu.RUnlock()
+
+	categories, err := s.repo.GetDistinctCategories()
+	if err != nil {
+		return nil, err
+	}
+
+	s.lookupCacheMu.Lock()
+	s.distinctCategories = cloneStringSlice(categories)
+	s.distinctCategoriesCachedAt = now
+	s.lookupCacheMu.Unlock()
+
+	return categories, nil
 }
 
 // GetDistinctRegions returns a sorted list of unique region values from LEI records

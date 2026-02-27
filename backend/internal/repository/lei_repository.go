@@ -24,6 +24,7 @@ type LEIRepository interface {
 	FindAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string) ([]*domain.LEIRecord, error)
 	CountLEIRecords() (int64, error)
 	GetDistinctCountries() ([]string, error)
+	GetDistinctCategories() ([]string, error)
 	GetDistinctRegions() ([]string, error)
 	GetDistinctLegalForms() ([]string, error)
 	UpdateLEIRecord(record *domain.LEIRecord) error
@@ -60,9 +61,11 @@ type leiRepository struct {
 }
 
 const notSetEntityStatusWhereClause = "entity_status IS NULL OR TRIM(entity_status) = '' OR UPPER(TRIM(entity_status)) = 'NULL'"
+const normalizedEntityCategoryMatchWhereClause = "UPPER(BTRIM(entity_category)) = UPPER(BTRIM(?))"
 
 func isNotSetStatusFilter(status string) bool {
-	return strings.EqualFold(strings.TrimSpace(status), "NULL")
+	normalized := strings.ToUpper(strings.ReplaceAll(strings.TrimSpace(status), " ", "_"))
+	return normalized == "NULL" || normalized == "NOT_SET"
 }
 
 func nullableLEICode(value string) interface{} {
@@ -253,7 +256,7 @@ func (r *leiRepository) FindAllLEIWithFilters(limit, offset int, search, status,
 
 		// Apply category filter
 		if category != "" {
-			query = query.Where("entity_category = ?", category)
+			query = query.Where(normalizedEntityCategoryMatchWhereClause, category)
 		}
 
 		// Apply country filter
@@ -349,6 +352,20 @@ func (r *leiRepository) GetDistinctCountries() ([]string, error) {
 		return nil, err
 	}
 	return countries, nil
+}
+
+// GetDistinctCategories returns a sorted list of unique category values from LEI records
+func (r *leiRepository) GetDistinctCategories() ([]string, error) {
+	var categories []string
+	err := r.db.Model(&domain.LEIRecord{}).
+		Distinct("BTRIM(entity_category)").
+		Where("entity_category IS NOT NULL AND BTRIM(entity_category) <> '' AND UPPER(BTRIM(entity_category)) <> 'NULL'").
+		Order("BTRIM(entity_category) ASC").
+		Pluck("BTRIM(entity_category)", &categories).Error
+	if err != nil {
+		return nil, err
+	}
+	return categories, nil
 }
 
 // GetDistinctRegions returns sorted unique region values from legal and HQ addresses

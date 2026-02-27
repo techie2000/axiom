@@ -57,6 +57,23 @@ func (h *LEIHandler) GetDistinctCountries(c *gin.Context) {
 	c.JSON(http.StatusOK, countries)
 }
 
+// GetDistinctCategories returns a list of all unique category values in the LEI database
+// @Summary Get distinct categories
+// @Description Get sorted list of unique category values from LEI records
+// @Tags LEI
+// @Produce json
+// @Success 200 {array} string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/lei-categories [get]
+func (h *LEIHandler) GetDistinctCategories(c *gin.Context) {
+	categories, err := h.leiService.GetDistinctCategories()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve categories"})
+		return
+	}
+	c.JSON(http.StatusOK, categories)
+}
+
 // GetDistinctRegions returns a list of all unique region values in the LEI database
 // @Summary Get distinct regions
 // @Description Get sorted list of unique regions from LEI records
