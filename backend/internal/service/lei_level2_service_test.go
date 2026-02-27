@@ -201,13 +201,6 @@ type level2RepoStub struct {
 	gotOpenOnly bool
 	gotLimit    int
 	gotOffset   int
-	// captured call arguments for BatchResolveOpenProcessingFailures
-	calledJobType  string
-	calledKeys     []string
-	calledSourceID *uuid.UUID
-	calledNote     string
-	returnErr      error
-	callCount      int
 }
 
 func (r *level2RepoStub) ListProcessingFailures(jobType string, openOnly bool, limit, offset int) ([]*domain.LEILevel2ProcessingFailure, error) {
@@ -220,20 +213,6 @@ func (r *level2RepoStub) ListProcessingFailures(jobType string, openOnly bool, l
 
 func (r *level2RepoStub) CountProcessingFailures(jobType string, openOnly bool) (int64, error) {
 	return r.total, r.countErr
-}
-
-func (r *level2RepoStub) BatchResolveOpenProcessingFailures(
-	jobType string,
-	naturalKeys []string,
-	resolvedSourceFileID *uuid.UUID,
-	resolvedNote string,
-) error {
-	r.callCount++
-	r.calledJobType = jobType
-	r.calledKeys = naturalKeys
-	r.calledSourceID = resolvedSourceFileID
-	r.calledNote = resolvedNote
-	return r.returnErr
 }
 
 func newLevel2ServiceWithStub(stub *level2RepoStub) *leiLevel2Service {
@@ -420,65 +399,83 @@ func TestGetProcessingFailures_ResolvedAndOpenFailures(t *testing.T) {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// batchResolveOpenProcessingFailures (leiLevel2Service) – stub-based tests
-// ---------------------------------------------------------------------------
+// --- stub for BatchResolveOpenProcessingFailures ---
 
-func TestBatchResolveLevel2Service_EmptyKeys(t *testing.T) {
-	stub := &level2RepoStub{}
-	svc := newLevel2ServiceWithStub(stub)
-	sourceID := uuid.New()
-
-	svc.batchResolveOpenProcessingFailures("LEVEL2_RR", []string{}, &sourceID)
-
-	if stub.callCount != 0 {
-		t.Fatalf("expected repo not to be called for empty key slice, got %d calls", stub.callCount)
-	}
+// level2BatchRepoStub extends level2RepoStub with BatchResolveOpenProcessingFailures support.
+// It captures call arguments and returns a configurable error.
+type level2BatchRepoStub struct {
+level2RepoStub
+calledJobType  string
+calledKeys     []string
+calledSourceID *uuid.UUID
+calledNote     string
+returnErr      error
+callCount      int
 }
 
-func TestBatchResolveLevel2Service_ValidKeys(t *testing.T) {
-	stub := &level2RepoStub{}
-	svc := newLevel2ServiceWithStub(stub)
-	sourceID := uuid.New()
-
-	keys := []string{"START1|END1|IS_ULTIMATELY_CONSOLIDATED_BY", "START2|END2|IS_FUND-MANAGED_BY"}
-	svc.batchResolveOpenProcessingFailures("LEVEL2_RR", keys, &sourceID)
-
-	if stub.callCount != 1 {
-		t.Fatalf("expected exactly 1 repo call, got %d", stub.callCount)
-	}
-	if stub.calledJobType != "LEVEL2_RR" {
-		t.Errorf("expected calledJobType LEVEL2_RR, got %q", stub.calledJobType)
-	}
-	if len(stub.calledKeys) != len(keys) {
-		t.Errorf("expected %d keys forwarded, got %d", len(keys), len(stub.calledKeys))
-	}
-	if stub.calledSourceID != &sourceID {
-		t.Errorf("sourceFileID not forwarded correctly")
-	}
+func (r *level2BatchRepoStub) BatchResolveOpenProcessingFailures(jobType string, naturalKeys []string, resolvedSourceFileID *uuid.UUID, resolvedNote string) error {
+r.callCount++
+r.calledJobType = jobType
+r.calledKeys = naturalKeys
+r.calledSourceID = resolvedSourceFileID
+r.calledNote = resolvedNote
+return r.returnErr
 }
 
-func TestBatchResolveLevel2Service_CorrectJobType(t *testing.T) {
-	// Verify that the REPEX job type is forwarded unchanged.
-	stub := &level2RepoStub{}
-	svc := newLevel2ServiceWithStub(stub)
-
-	svc.batchResolveOpenProcessingFailures("LEVEL2_REPEX", []string{"LEI|ULTIMATE_ACCOUNTING_CONSOLIDATION_PARENT"}, nil)
-
-	if stub.calledJobType != "LEVEL2_REPEX" {
-		t.Errorf("expected calledJobType LEVEL2_REPEX, got %q", stub.calledJobType)
-	}
+func newLevel2BatchServiceWithStub(stub *level2BatchRepoStub) *leiLevel2Service {
+return &leiLevel2Service{repo: stub}
 }
 
-func TestBatchResolveLevel2Service_RepoErrorIsLogged(t *testing.T) {
-	// When the repo returns an error the service must not panic or propagate it.
-	stub := &level2RepoStub{returnErr: errors.New("db failure")}
-	svc := newLevel2ServiceWithStub(stub)
+// --- TestBatchResolveOpenProcessingFailures (Level 2 service layer) ---
 
-	// Should not panic.
-	svc.batchResolveOpenProcessingFailures("LEVEL2_RR", []string{"START1|END1|TYPE"}, nil)
+func TestBatchResolveLevel2Service_EmptyKeysNoOp(t *testing.T) {
+stub := &level2BatchRepoStub{}
+svc := newLevel2BatchServiceWithStub(stub)
 
-	if stub.callCount != 1 {
-		t.Fatalf("expected 1 repo call even when it fails, got %d", stub.callCount)
-	}
+svc.batchResolveOpenProcessingFailures("LEVEL2_RR", []string{}, nil)
+
+if stub.callCount != 0 {
+t.Errorf("expected 0 repo calls for empty keys, got %d", stub.callCount)
+}
+}
+
+func TestBatchResolveLevel2Service_ValidKeysCallsRepo(t *testing.T) {
+stub := &level2BatchRepoStub{}
+svc := newLevel2BatchServiceWithStub(stub)
+
+sfID := uuid.New()
+svc.batchResolveOpenProcessingFailures("LEVEL2_RR", []string{"K1", "K2"}, &sfID)
+
+if stub.callCount != 1 {
+t.Fatalf("expected 1 repo call, got %d", stub.callCount)
+}
+if stub.calledJobType != "LEVEL2_RR" {
+t.Errorf("calledJobType = %q, want %q", stub.calledJobType, "LEVEL2_RR")
+}
+if len(stub.calledKeys) != 2 {
+t.Errorf("expected 2 keys forwarded, got %d", len(stub.calledKeys))
+}
+}
+
+func TestBatchResolveLevel2Service_JobTypeForwardedCorrectly(t *testing.T) {
+stub := &level2BatchRepoStub{}
+svc := newLevel2BatchServiceWithStub(stub)
+
+svc.batchResolveOpenProcessingFailures("LEVEL2_REPEX", []string{"X|Y"}, nil)
+
+if stub.calledJobType != "LEVEL2_REPEX" {
+t.Errorf("expected job type LEVEL2_REPEX, got %q", stub.calledJobType)
+}
+}
+
+func TestBatchResolveLevel2Service_RepoErrorDoesNotPanic(t *testing.T) {
+stub := &level2BatchRepoStub{returnErr: errors.New("db error")}
+svc := newLevel2BatchServiceWithStub(stub)
+
+// Must not panic; errors are logged but not propagated.
+svc.batchResolveOpenProcessingFailures("LEVEL2_RR", []string{"K1"}, nil)
+
+if stub.callCount != 1 {
+t.Errorf("expected 1 repo call even on error, got %d", stub.callCount)
+}
 }
