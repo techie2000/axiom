@@ -449,18 +449,19 @@ func (h *LEIHandler) GetLevel2ProcessingFailures(c *gin.Context) {
 	h.GetImportProcessingFailures(c)
 }
 
-	// For failures, an empty jobType means "no filter", so allow it through unchanged.
-	if jobType == "" {
+func normalizeFailuresJobType(jobType string) string {
+	switch jobType {
+	case "":
 		return ""
-	}
-
-	normalized := service.NormalizeProcessingJobType(jobType)
-	if normalized == "" {
-		// Preserve existing behavior for unknown job types.
+	case "LEVEL1_FULL", "DAILY_FULL":
+		return "LEVEL1_FULL"
+	case "LEVEL1_DELTA", "DAILY_DELTA":
+		return "LEVEL1_DELTA"
+	case "LEVEL2_RR", "LEVEL2_REPEX":
+		return jobType
+	default:
 		return "INVALID"
 	}
-
-	return normalized
 }
 
 // ResumeProcessing resumes processing of a source file
