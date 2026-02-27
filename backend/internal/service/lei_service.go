@@ -1086,9 +1086,11 @@ func (s *leiService) batchResolveOpenProcessingFailures(jobType string, naturalK
 	if len(normalized) == 0 {
 		return
 	}
-	if err := s.repo.BatchResolveOpenProcessingFailures(normalizeProcessingJobType(jobType), normalized, sourceFileID, "Resolved by subsequent successful upsert"); err != nil {
+	normalizedJobType := normalizeProcessingJobType(jobType)
+	if err := s.repo.BatchResolveOpenProcessingFailures(normalizedJobType, normalized, sourceFileID, "Resolved by subsequent successful upsert"); err != nil {
 		log.Warn().Err(err).
-			Str("job_type", jobType).
+			Str("job_type", normalizedJobType).
+			Str("job_type_input", jobType).
 			Int("key_count", len(normalized)).
 			Msg("Failed to batch-resolve Level 1 processing failure lifecycle rows")
 	}
