@@ -4,17 +4,17 @@
 -- change history is available for compliance and debugging purposes.
 
 CREATE TABLE IF NOT EXISTS lei_raw.lei_relationship_records_audit (
-    id                  UUID        NOT NULL DEFAULT GEN_RANDOM_UUID(),
-    rr_record_id        UUID        NOT NULL,
-    start_node_lei      VARCHAR(20) NOT NULL,
-    end_node_lei        VARCHAR(20) NOT NULL,
-    relationship_type   VARCHAR(100) NOT NULL,
-    action              VARCHAR(20) NOT NULL,
-    record_snapshot     JSONB       NOT NULL,
-    changed_fields      JSONB,
-    source_file_id      UUID,
-    changed_by          VARCHAR(100) NOT NULL DEFAULT 'system',
-    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    id UUID NOT NULL DEFAULT GEN_RANDOM_UUID(),
+    rr_record_id UUID NOT NULL,
+    start_node_lei VARCHAR(20) NOT NULL,
+    end_node_lei VARCHAR(20) NOT NULL,
+    relationship_type VARCHAR(100) NOT NULL,
+    action VARCHAR(20) NOT NULL,
+    record_snapshot JSONB NOT NULL,
+    changed_fields JSONB,
+    source_file_id UUID,
+    changed_by VARCHAR(100) NOT NULL DEFAULT 'system',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT pk_lei_rr_audit PRIMARY KEY (id)
 );
 
@@ -79,16 +79,16 @@ ON lei_raw.lei_relationship_records_audit (source_file_id);
 -- ---------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS lei_raw.lei_reporting_exceptions_audit (
-    id                  UUID        NOT NULL DEFAULT GEN_RANDOM_UUID(),
-    repex_record_id     UUID        NOT NULL,
-    lei                 VARCHAR(20) NOT NULL,
-    exception_category  VARCHAR(100) NOT NULL,
-    action              VARCHAR(20) NOT NULL,
-    record_snapshot     JSONB       NOT NULL,
-    changed_fields      JSONB,
-    source_file_id      UUID,
-    changed_by          VARCHAR(100) NOT NULL DEFAULT 'system',
-    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    id UUID NOT NULL DEFAULT GEN_RANDOM_UUID(),
+    repex_record_id UUID NOT NULL,
+    lei VARCHAR(20) NOT NULL,
+    exception_category VARCHAR(100) NOT NULL,
+    action VARCHAR(20) NOT NULL,
+    record_snapshot JSONB NOT NULL,
+    changed_fields JSONB,
+    source_file_id UUID,
+    changed_by VARCHAR(100) NOT NULL DEFAULT 'system',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT pk_lei_repex_audit PRIMARY KEY (id)
 );
 
