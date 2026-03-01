@@ -1433,7 +1433,7 @@ func (s *leiService) GetDistinctCategories() ([]string, error) {
 	now := time.Now()
 
 	s.lookupCacheMu.RLock()
-	if len(s.distinctCategories) > 0 && now.Sub(s.distinctCategoriesCachedAt) < distinctLookupCacheTTL {
+	if !s.distinctCategoriesCachedAt.IsZero() && now.Sub(s.distinctCategoriesCachedAt) < distinctLookupCacheTTL {
 		cached := cloneStringSlice(s.distinctCategories)
 		s.lookupCacheMu.RUnlock()
 		return cached, nil
