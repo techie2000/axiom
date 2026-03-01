@@ -35,6 +35,7 @@
     "git add": true,
     "git check-ignore": true,
     "git commit": true,
+    "git fetch": true,
     "git hash-object": true,
     "git ls-tree": true,
     "git push": true,
