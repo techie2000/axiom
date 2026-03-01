@@ -3,7 +3,9 @@ package service
 import (
 	"errors"
 	"io"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/techie2000/axiom/internal/domain"
@@ -297,6 +299,122 @@ func TestSanitizeSourceFileProgress(t *testing.T) {
 
 	if sourceFile.FailedRecords != 60 {
 		t.Fatalf("expected failed records to be capped at processed, got %d", sourceFile.FailedRecords)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// GetDistinctCategories – service caching behaviour
+// ---------------------------------------------------------------------------
+
+// distinctCategoriesRepoStub implements the repository.LEIRepository interface
+// by embedding it and overriding only GetDistinctCategories so tests can
+// control what the repository returns without requiring a real database.
+type distinctCategoriesRepoStub struct {
+	repository.LEIRepository
+	categories []string
+	err        error
+	calls      int
+	mu         sync.Mutex
+}
+
+func (s *distinctCategoriesRepoStub) GetDistinctCategories() ([]string, error) {
+	s.mu.Lock()
+	s.calls++
+	s.mu.Unlock()
+	if s.err != nil {
+		return nil, s.err
+	}
+	out := make([]string, len(s.categories))
+	copy(out, s.categories)
+	return out, nil
+}
+
+func TestGetDistinctCategories_CacheMiss_CallsRepo(t *testing.T) {
+	stub := &distinctCategoriesRepoStub{categories: []string{"BRANCH", "FUND", "SOLE_PROPRIETOR"}}
+	svc := &leiService{repo: stub}
+
+	got, err := svc.GetDistinctCategories()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got) != 3 {
+		t.Fatalf("expected 3 categories, got %d", len(got))
+	}
+	stub.mu.Lock()
+	calls := stub.calls
+	stub.mu.Unlock()
+	if calls != 1 {
+		t.Fatalf("expected exactly 1 repo call on cache miss, got %d", calls)
+	}
+}
+
+func TestGetDistinctCategories_CacheHit_DoesNotCallRepo(t *testing.T) {
+	stub := &distinctCategoriesRepoStub{categories: []string{"BRANCH"}}
+	svc := &leiService{
+		repo:                       stub,
+		distinctCategories:         []string{"FUND", "SOLE_PROPRIETOR"},
+		distinctCategoriesCachedAt: time.Now(), // fresh cache
+	}
+
+	got, err := svc.GetDistinctCategories()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("expected 2 cached categories, got %d: %v", len(got), got)
+	}
+	stub.mu.Lock()
+	calls := stub.calls
+	stub.mu.Unlock()
+	if calls != 0 {
+		t.Fatalf("expected no repo call on cache hit, got %d calls", calls)
+	}
+}
+
+func TestGetDistinctCategories_ExpiredCache_CallsRepo(t *testing.T) {
+	stub := &distinctCategoriesRepoStub{categories: []string{"BRANCH"}}
+	svc := &leiService{
+		repo:                       stub,
+		distinctCategories:         []string{"FUND"},
+		distinctCategoriesCachedAt: time.Now().Add(-25 * time.Hour), // expired
+	}
+
+	got, err := svc.GetDistinctCategories()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got) != 1 || got[0] != "BRANCH" {
+		t.Fatalf("expected refreshed categories from repo, got %v", got)
+	}
+	stub.mu.Lock()
+	calls := stub.calls
+	stub.mu.Unlock()
+	if calls != 1 {
+		t.Fatalf("expected 1 repo call on expired cache, got %d", calls)
+	}
+}
+
+func TestGetDistinctCategories_RepoError_ReturnsError(t *testing.T) {
+	stub := &distinctCategoriesRepoStub{err: errors.New("db unavailable")}
+	svc := &leiService{repo: stub}
+
+	_, err := svc.GetDistinctCategories()
+	if err == nil {
+		t.Fatal("expected error but got nil")
+	}
+}
+
+func TestGetDistinctCategories_CacheIsolation_ReturnsCopy(t *testing.T) {
+	stub := &distinctCategoriesRepoStub{categories: []string{"BRANCH"}}
+	svc := &leiService{repo: stub}
+
+	got, _ := svc.GetDistinctCategories()
+	// Mutate the returned slice; the internal cache must not change.
+	got[0] = "MUTATED"
+
+	got2, _ := svc.GetDistinctCategories()
+	if got2[0] == "MUTATED" {
+		t.Fatal("GetDistinctCategories returned a reference to the internal cache slice instead of a copy")
 	}
 }
 

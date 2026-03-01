@@ -60,7 +60,7 @@ type leiRepository struct {
 	db *gorm.DB
 }
 
-const notSetEntityStatusWhereClause = "entity_status IS NULL OR TRIM(entity_status) = '' OR UPPER(TRIM(entity_status)) = 'NULL'"
+const notSetEntityStatusWhereClause = "entity_status IS NULL OR BTRIM(entity_status) = '' OR UPPER(BTRIM(entity_status)) = 'NULL'"
 const normalizedEntityCategoryMatchWhereClause = "UPPER(BTRIM(entity_category)) = UPPER(BTRIM(?))"
 
 func isNotSetStatusFilter(status string) bool {
