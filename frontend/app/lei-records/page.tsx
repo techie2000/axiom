@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import Link from 'next/link'
 import Alert from '../components/Alert'
 import CountryFlag from '../components/CountryFlag'
@@ -8,7 +8,7 @@ import PageHeader from '../components/PageHeader'
 import SearchInputWithOverflowTooltip from '../components/SearchInputWithOverflowTooltip'
 import StatCard from '../components/StatCard'
 import SyncedWideTable from '../components/SyncedWideTable'
-import { formatLEICellValue, getStatusBadgePresentation, normalizeRecordNullLikeValues } from './null-utils'
+import { formatEnumDisplayValue, formatLEICellValue, getStatusBadgePresentation, normalizeRecordNullLikeValues } from './null-utils'
 
 interface LEIRecord {
   id: string
@@ -143,6 +143,7 @@ export default function LEIRecordsPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [totalRecords, setTotalRecords] = useState(0)
   const [countryOptions, setCountryOptions] = useState<Country[]>([])
+  const [categoryOptionsFromAPI, setCategoryOptionsFromAPI] = useState<string[]>([])
   const [regionNameByCode, setRegionNameByCode] = useState<Map<string, string>>(new Map())
   const [legalFormNameByCode, setLegalFormNameByCode] = useState<Map<string, string>>(new Map())
   const [itemsPerPage, setItemsPerPage] = useState(50)
@@ -171,25 +172,73 @@ export default function LEIRecordsPage() {
     : 'http://backend:8080'
 
   const statusOptions = ['ACTIVE', 'INACTIVE', 'LAPSED', 'MERGED', 'RETIRED', 'NULL']
-  const categoryOptions = ['GENERAL', 'FUND', 'BRANCH', 'SOLE_PROPRIETOR', 'INTERNATIONAL_BRANCH']
 
-  // Fetch countries list on mount
+  const isNotSetStatusFilterValue = (value: string): boolean => {
+    const normalized = value.trim().replaceAll(' ', '_').toUpperCase()
+    return normalized === 'NULL' || normalized === 'NOT_SET'
+  }
+
+  const formatStatusFilterLabel = (value: string): string => {
+    return isNotSetStatusFilterValue(value) ? 'Not Set' : value
+  }
+
+  const normalizeStatusFilterForAPI = (value: string): string => {
+    return isNotSetStatusFilterValue(value) ? 'NULL' : value
+  }
+
+  const categoryOptions = useMemo(() => {
+    const values = new Set<string>()
+
+    categoryOptionsFromAPI.forEach((category) => {
+      const trimmed = (category || '').trim()
+      if (trimmed && trimmed.toUpperCase() !== 'NULL') {
+        values.add(trimmed)
+      }
+    })
+
+    records.forEach((record) => {
+      const category = (record.entity_category || '').trim()
+      if (category && category.toUpperCase() !== 'NULL') {
+        values.add(category)
+      }
+    })
+
+    if (categoryFilter && categoryFilter.trim() !== '') {
+      values.add(categoryFilter.trim())
+    }
+
+    return Array.from(values).sort((lhs, rhs) => lhs.localeCompare(rhs))
+  }, [categoryOptionsFromAPI, categoryFilter, records])
+
+  // Fetch countries and categories list on mount
   useEffect(() => {
-    const fetchCountries = async () => {
+    const fetchFilterOptions = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/v1/lei-countries`)
-        if (response.ok) {
-          const data: Country[] = await response.json()
+        const [countriesResponse, categoriesResponse] = await Promise.all([
+          fetch(`${API_BASE_URL}/api/v1/lei-countries`),
+          fetch(`${API_BASE_URL}/api/v1/lei-categories`),
+        ])
+
+        if (countriesResponse.ok) {
+          const data: Country[] = await countriesResponse.json()
           // Sort by country name
           const sortedCountries = (data || []).sort((a, b) => a.name.localeCompare(b.name))
           setCountryOptions(sortedCountries)
         }
+
+        if (categoriesResponse.ok) {
+          const data: string[] = await categoriesResponse.json()
+          const sanitized = (data || [])
+            .map((category) => (category || '').trim())
+            .filter((category) => category !== '' && category.toUpperCase() !== 'NULL')
+          setCategoryOptionsFromAPI(sanitized)
+        }
       } catch (err) {
-        console.error('Failed to fetch countries:', err)
+        console.error('Failed to fetch LEI filter options:', err)
       }
     }
-    fetchCountries()
-  }, [])
+    fetchFilterOptions()
+  }, [API_BASE_URL])
 
   // Fetch total records count from API
   useEffect(() => {
@@ -321,7 +370,7 @@ export default function LEIRecordsPage() {
       })
       
       if (debouncedSearch) params.append('search', debouncedSearch)
-      if (statusFilter) params.append('status', statusFilter)
+      if (statusFilter) params.append('status', normalizeStatusFilterForAPI(statusFilter))
       if (categoryFilter) params.append('category', categoryFilter)
       if (countryFilter) params.append('country', countryFilter)
       if (sortField && !isVirtualColumnKey(sortField)) params.append('sortBy', sortField)
@@ -988,7 +1037,7 @@ export default function LEIRecordsPage() {
                 <option value="" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">All Statuses</option>
                 {statusOptions.map(status => (
                   <option key={status} value={status} className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">
-                    {status === 'NULL' ? 'Not Set' : status}
+                    {formatStatusFilterLabel(status)}
                   </option>
                 ))}
               </select>
@@ -1003,7 +1052,7 @@ export default function LEIRecordsPage() {
               >
                 <option value="" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">All Categories</option>
                 {categoryOptions.map(category => (
-                  <option key={category} value={category} className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">{category}</option>
+                  <option key={category} value={category} className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">{formatEnumDisplayValue(category)}</option>
                 ))}
               </select>
             </div>
@@ -1132,7 +1181,7 @@ export default function LEIRecordsPage() {
                     onClick={() => setStatusFilter('')}
                     className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors flex items-center gap-1"
                   >
-                    Status: {statusFilter === 'NULL' ? 'Not Set' : statusFilter} <span className="ml-1">✕</span>
+                    Status: {formatStatusFilterLabel(statusFilter)} <span className="ml-1">✕</span>
                   </button>
                 )}
                 {categoryFilter && (
@@ -1140,7 +1189,7 @@ export default function LEIRecordsPage() {
                     onClick={() => setCategoryFilter('')}
                     className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors flex items-center gap-1"
                   >
-                    Category: {categoryFilter} <span className="ml-1">✕</span>
+                    Category: {formatEnumDisplayValue(categoryFilter)} <span className="ml-1">✕</span>
                   </button>
                 )}
                 {countryFilter && (

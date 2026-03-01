@@ -59,12 +59,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     redundant Level 1 or RR re-run; if RR failed the scheduler re-runs RR then REPEX
   - A stuck `RUNNING` job (process crashed mid-run) is now correctly reset to `FAILED` rather than
     `IDLE` so the recovery logic can distinguish an interrupted run from a clean stop
+
 ### Fixed
 
 - `.github/workflows/lint.yml` — branch filter corrected from non-existent `develop` to `dev`,
   and extended to also run on `uat` and `prod` pushes and pull requests
 - `.github/workflows/security-scan.yml` — branch filter corrected from `develop` to `dev`, `uat`,
   `prod`
+
+### Deprecated
+
+- `GET /api/v1/lei/level2/failures` is deprecated in favor of
+  `GET /api/v1/lei/import-failures`.
+- The deprecated endpoint remains temporarily available and now returns deprecation metadata headers
+  (`Deprecation`, `Sunset`, `Link`, `Warning`) to guide client migration.
+- Planned removal target: `v0.5` (tracking issue: `#87`).
 
 ## [0.2.0] - 2026-02-20
 

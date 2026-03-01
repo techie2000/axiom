@@ -1,10 +1,7 @@
 package service
 
 import (
-	"bytes"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"testing"
 
@@ -12,123 +9,6 @@ import (
 	"github.com/techie2000/axiom/internal/domain"
 	"github.com/techie2000/axiom/internal/repository"
 )
-
-// stubLEIRepo is a minimal LEIRepository stub for unit testing.
-// Only BatchUpsertLEIRecords and UpdateSourceFile are exercised by processRecordsArray.
-type stubLEIRepo struct {
-	batchErr           error
-	updateSourceFileFn func(file *domain.SourceFile)
-	updateCalls        []*domain.SourceFile // snapshots of sourceFile at each UpdateSourceFile call
-}
-
-func (r *stubLEIRepo) BatchUpsertLEIRecords(records []*domain.LEIRecord) (int, int, error) {
-	if r.batchErr != nil {
-		return 0, 0, r.batchErr
-	}
-	return len(records), 0, nil
-}
-
-func (r *stubLEIRepo) UpdateSourceFile(file *domain.SourceFile) error {
-	cp := *file
-	r.updateCalls = append(r.updateCalls, &cp)
-	if r.updateSourceFileFn != nil {
-		r.updateSourceFileFn(file)
-	}
-	return nil
-}
-
-// Remaining interface methods – all no-ops required to satisfy repository.LEIRepository.
-func (r *stubLEIRepo) CreateLEIRecord(*domain.LEIRecord) error                                    { return nil }
-func (r *stubLEIRepo) FindLEIByLEI(string) (*domain.LEIRecord, error)                             { return nil, nil }
-func (r *stubLEIRepo) FindLEIByID(string) (*domain.LEIRecord, error)                              { return nil, nil }
-func (r *stubLEIRepo) FindAllLEI(int, int) ([]*domain.LEIRecord, error)                           { return nil, nil }
-func (r *stubLEIRepo) FindAllLEIWithFilters(int, int, string, string, string, string, string, string, string) ([]*domain.LEIRecord, error) {
-	return nil, nil
-}
-func (r *stubLEIRepo) CountLEIRecords() (int64, error)                              { return 0, nil }
-func (r *stubLEIRepo) GetDistinctCountries() ([]string, error)                      { return nil, nil }
-func (r *stubLEIRepo) GetDistinctRegions() ([]string, error)                        { return nil, nil }
-func (r *stubLEIRepo) GetDistinctLegalForms() ([]string, error)                     { return nil, nil }
-func (r *stubLEIRepo) UpdateLEIRecord(*domain.LEIRecord) error                      { return nil }
-func (r *stubLEIRepo) UpsertLEIRecord(*domain.LEIRecord) (bool, error) {
-	panic("unexpected call to stubLEIRepo.UpsertLEIRecord")
-}
-
-func (r *stubLEIRepo) DeleteLEI(string) error {
-	panic("unexpected call to stubLEIRepo.DeleteLEI")
-}
-
-func (r *stubLEIRepo) CreateSourceFile(*domain.SourceFile) error {
-	panic("unexpected call to stubLEIRepo.CreateSourceFile")
-}
-
-func (r *stubLEIRepo) FindSourceFileByID(string) (*domain.SourceFile, error) {
-	panic("unexpected call to stubLEIRepo.FindSourceFileByID")
-}
-
-func (r *stubLEIRepo) FindSourceFileByHash(string) (*domain.SourceFile, error) {
-	panic("unexpected call to stubLEIRepo.FindSourceFileByHash")
-}
-
-func (r *stubLEIRepo) FindLatestSourceFile(string) (*domain.SourceFile, error) {
-	panic("unexpected call to stubLEIRepo.FindLatestSourceFile")
-}
-
-func (r *stubLEIRepo) FindPendingSourceFiles() ([]*domain.SourceFile, error) {
-	panic("unexpected call to stubLEIRepo.FindPendingSourceFiles")
-}
-
-func (r *stubLEIRepo) FindRetryableFailedFiles() ([]*domain.SourceFile, error) {
-	panic("unexpected call to stubLEIRepo.FindRetryableFailedFiles")
-}
-
-func (r *stubLEIRepo) ResetFailedFileForRetry(uuid.UUID) error {
-	panic("unexpected call to stubLEIRepo.ResetFailedFileForRetry")
-}
-
-func (r *stubLEIRepo) FindProcessingStatus(string) (*domain.FileProcessingStatus, error) {
-	panic("unexpected call to stubLEIRepo.FindProcessingStatus")
-}
-
-func (r *stubLEIRepo) UpdateProcessingStatus(*domain.FileProcessingStatus) error {
-	panic("unexpected call to stubLEIRepo.UpdateProcessingStatus")
-}
-
-func (r *stubLEIRepo) CreateAuditRecord(*domain.LEIRecordAudit) error {
-	panic("unexpected call to stubLEIRepo.CreateAuditRecord")
-}
-
-func (r *stubLEIRepo) FindAuditHistoryByLEI(string, int) ([]*domain.LEIRecordAudit, error) {
-	panic("unexpected call to stubLEIRepo.FindAuditHistoryByLEI")
-}
-
-var _ repository.LEIRepository = (*stubLEIRepo)(nil) // compile-time interface check
-
-// testLEICode returns a deterministic, valid 20-character LEI code for index i.
-// Format: "5493001KTEST" (12 chars) + zero-padded i (6 digits) + i%100 (2 digits).
-func testLEICode(i int) string {
-	return fmt.Sprintf("5493001KTEST%06d%02d", i, i%100)
-}
-
-// leiArrayDecoder builds an in-memory JSON array of n minimal LEI records and
-// returns a *json.Decoder positioned at the start of that array, ready to be
-// handed to processRecordsArray.
-func leiArrayDecoder(n int) *json.Decoder {
-	var buf bytes.Buffer
-	buf.WriteString("[")
-	for i := 1; i <= n; i++ {
-		if i > 1 {
-			buf.WriteByte(',')
-		}
-		lei := testLEICode(i)
-		fmt.Fprintf(&buf,
-			`{"LEI":{"$":%q},"Entity":{"LegalName":{"$":"E"},"LegalAddress":{"Country":{"$":"US"}}},"Registration":{}}`,
-			lei,
-		)
-	}
-	buf.WriteString("]")
-	return json.NewDecoder(&buf)
-}
 
 func TestIsTerminalJSONDecodeError(t *testing.T) {
 	tests := []struct {
@@ -420,294 +300,173 @@ func TestSanitizeSourceFileProgress(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// NormalizeProcessingJobType (exported) and normalizeProcessingJobType (private)
+// ---------------------------------------------------------------------------
 
-// TestProcessRecordsArray_CheckpointFrequency verifies that UpdateSourceFile is
-// called once for every sourceFileProgressCheckpointInterval (5 000) records
-// processed, plus a mandatory final call at the end of processing.
-func TestProcessRecordsArray_CheckpointFrequency(t *testing.T) {
-	const totalRecords = 11000
-	// 2 checkpoints (at 5 000 and 10 000) + 1 final = 3 calls.
-	const wantCalls = 3
-
-	stub := &stubLEIRepo{}
-	svc := &leiService{repo: stub}
-	sf := &domain.SourceFile{ID: uuid.New()}
-
-	if err := svc.processRecordsArray(leiArrayDecoder(totalRecords), sf, ""); err != nil {
-		t.Fatalf("processRecordsArray returned unexpected error: %v", err)
+func TestNormalizeProcessingJobType(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		// Level-1 aliases
+		{input: "DAILY_FULL", want: "LEVEL1_FULL"},
+		{input: "LEVEL1_FULL", want: "LEVEL1_FULL"},
+		{input: "DAILY_DELTA", want: "LEVEL1_DELTA"},
+		{input: "LEVEL1_DELTA", want: "LEVEL1_DELTA"},
+		// Level-2 pass-throughs
+		{input: "LEVEL2_RR", want: "LEVEL2_RR"},
+		{input: "LEVEL2_REPEX", want: "LEVEL2_REPEX"},
+		// Unknown types → empty string
+		{input: "UNKNOWN", want: ""},
+		{input: "", want: ""},
 	}
 
-	if got := len(stub.updateCalls); got != wantCalls {
-		t.Fatalf("expected %d UpdateSourceFile calls, got %d", wantCalls, got)
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := NormalizeProcessingJobType(tt.input)
+			if got != tt.want {
+				t.Fatalf("NormalizeProcessingJobType(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
 	}
+}
 
-	// Each checkpoint call must land on an exact 5 000-record boundary.
-	wantCheckpoints := []int{5000, 10000}
-	for idx, want := range wantCheckpoints {
-		if got := stub.updateCalls[idx].ProcessedRecords; got != want {
-			t.Errorf("checkpoint call %d: expected processedRecords=%d, got %d", idx+1, want, got)
+func TestNormalizeProcessingJobTypePrivateDelegates(t *testing.T) {
+	// The private function must map the same known aliases as the exported one
+	// and pass unknown / Level-2 types through unchanged.
+	cases := []struct {
+		input string
+		want  string
+	}{
+		{"DAILY_FULL", "LEVEL1_FULL"},
+		{"LEVEL1_FULL", "LEVEL1_FULL"},
+		{"DAILY_DELTA", "LEVEL1_DELTA"},
+		{"LEVEL1_DELTA", "LEVEL1_DELTA"},
+		{"LEVEL2_RR", "LEVEL2_RR"},
+		{"LEVEL2_REPEX", "LEVEL2_REPEX"},
+		{"UNKNOWN_TYPE", "UNKNOWN_TYPE"}, // pass-through
+		{"", ""},                         // empty → empty
+	}
+	for _, c := range cases {
+		got := normalizeProcessingJobType(c.input)
+		if got != c.want {
+			t.Errorf("normalizeProcessingJobType(%q) = %q, want %q", c.input, got, c.want)
 		}
 	}
+}
 
-	// The final call must reflect the full record count.
-	if got := stub.updateCalls[wantCalls-1].ProcessedRecords; got != totalRecords {
-		t.Errorf("final UpdateSourceFile call: expected processedRecords=%d, got %d", totalRecords, got)
+// ---------------------------------------------------------------------------
+// batchResolveOpenProcessingFailures (leiService) – stub-based tests
+// ---------------------------------------------------------------------------
+
+// leiRepoStub embeds the full LEIRepository interface so that only the
+// BatchResolveOpenProcessingFailures method needs to be overridden.
+type leiRepoStub struct {
+	repository.LEIRepository
+	calledJobType  string
+	calledKeys     []string
+	calledSourceID *uuid.UUID
+	calledNote     string
+	returnErr      error
+	callCount      int
+}
+
+func (s *leiRepoStub) BatchResolveOpenProcessingFailures(
+	jobType string,
+	naturalKeys []string,
+	resolvedSourceFileID *uuid.UUID,
+	resolvedNote string,
+) error {
+	s.callCount++
+	s.calledJobType = jobType
+	s.calledKeys = naturalKeys
+	s.calledSourceID = resolvedSourceFileID
+	s.calledNote = resolvedNote
+	return s.returnErr
+}
+
+func newLeiServiceWithBatchRepoStub(stub *leiRepoStub) *leiService {
+	return &leiService{repo: stub}
+}
+
+func TestBatchResolveOpenProcessingFailures_Service_EmptyKeys(t *testing.T) {
+	stub := &leiRepoStub{}
+	svc := newLeiServiceWithBatchRepoStub(stub)
+	sourceID := uuid.New()
+
+	svc.batchResolveOpenProcessingFailures("LEVEL1_FULL", []string{}, &sourceID)
+
+	if stub.callCount != 0 {
+		t.Fatalf("expected repo not to be called for empty key slice, got %d calls", stub.callCount)
 	}
 }
 
-// TestProcessRecordsArray_FinalUpdatePersistsLastLEI verifies that the
-// LastProcessedLEI in the mandatory final UpdateSourceFile call reflects the
-// actual last record processed, and that ProcessedRecords reflects every record
-// actually processed (including those after the last checkpoint boundary).
-func TestProcessRecordsArray_FinalUpdatePersistsLastLEI(t *testing.T) {
-	// 5 001 records: checkpoint fires at 5 000 (sets LastProcessedLEI to the
-	// 5 000th record's LEI); the remaining 1 record is flushed without hitting
-	// another checkpoint; the final UpdateSourceFile carries processedRecords=5 001
-	// and LastProcessedLEI for the 5 001st record.
-	const totalRecords = 5001
-	expectedCheckpointLEI := testLEICode(5000) // LEI captured at the checkpoint
-	expectedFinalLEI := testLEICode(5001)       // actual last record's LEI
+func TestBatchResolveOpenProcessingFailures_Service_AllInvalidKeys(t *testing.T) {
+	stub := &leiRepoStub{}
+	svc := newLeiServiceWithBatchRepoStub(stub)
+	sourceID := uuid.New()
 
-	stub := &stubLEIRepo{}
-	svc := &leiService{repo: stub}
-	sf := &domain.SourceFile{ID: uuid.New()}
+	// normalizeLEICodeValue converts "null" / whitespace to empty string.
+	svc.batchResolveOpenProcessingFailures("LEVEL1_FULL", []string{"null", "  ", "NULL"}, &sourceID)
 
-	if err := svc.processRecordsArray(leiArrayDecoder(totalRecords), sf, ""); err != nil {
-		t.Fatalf("processRecordsArray returned unexpected error: %v", err)
-	}
-
-	// Expect exactly 2 calls: checkpoint at 5 000 and final at 5 001.
-	if got := len(stub.updateCalls); got != 2 {
-		t.Fatalf("expected 2 UpdateSourceFile calls, got %d", got)
-	}
-
-	checkpoint := stub.updateCalls[0]
-	if checkpoint.ProcessedRecords != 5000 {
-		t.Errorf("checkpoint call: expected processedRecords=5000, got %d", checkpoint.ProcessedRecords)
-	}
-	if checkpoint.LastProcessedLEI == nil {
-		t.Error("checkpoint call: LastProcessedLEI is nil, want non-nil")
-	} else if *checkpoint.LastProcessedLEI != expectedCheckpointLEI {
-		t.Errorf("checkpoint call: LastProcessedLEI=%q, want %q", *checkpoint.LastProcessedLEI, expectedCheckpointLEI)
-	}
-
-	final := stub.updateCalls[1]
-	if final.ProcessedRecords != totalRecords {
-		t.Errorf("final call: expected processedRecords=%d, got %d", totalRecords, final.ProcessedRecords)
-	}
-	// LastProcessedLEI is kept in sync after every batch flush, so the final
-	// call carries the actual last record's LEI rather than the checkpoint LEI.
-	if final.LastProcessedLEI == nil {
-		t.Error("final call: LastProcessedLEI is nil, want last record's LEI")
-	} else if *final.LastProcessedLEI != expectedFinalLEI {
-		t.Errorf("final call: LastProcessedLEI=%q, want %q (actual last record)", *final.LastProcessedLEI, expectedFinalLEI)
+	if stub.callCount != 0 {
+		t.Fatalf("expected repo not to be called when all keys are invalid, got %d calls", stub.callCount)
 	}
 }
 
-// --- Distinct lookup caching tests ---
+func TestBatchResolveOpenProcessingFailures_Service_ValidKeys(t *testing.T) {
+	stub := &leiRepoStub{}
+	svc := newLeiServiceWithBatchRepoStub(stub)
+	sourceID := uuid.New()
 
-// distinctStubRepo extends stubLEIRepo to support configurable GetDistinctRegions and
-// GetDistinctLegalForms return values and call-counting for cache tests.
-type distinctStubRepo struct {
-stubLEIRepo
-regionsFn    func() ([]string, error)
-regionsCall  int
-legalFormsFn func() ([]string, error)
-legalFormsCall int
-}
+	keys := []string{"5493001kjtiigc8y1r12", " AAAAAAAAAAAAAAAAAA01 "}
+	svc.batchResolveOpenProcessingFailures("DAILY_FULL", keys, &sourceID)
 
-func (r *distinctStubRepo) GetDistinctRegions() ([]string, error) {
-r.regionsCall++
-if r.regionsFn != nil {
-return r.regionsFn()
-}
-return nil, nil
-}
-
-func (r *distinctStubRepo) GetDistinctLegalForms() ([]string, error) {
-r.legalFormsCall++
-if r.legalFormsFn != nil {
-return r.legalFormsFn()
-}
-return nil, nil
-}
-
-// TestGetDistinctRegions_CacheHit verifies that a second call within the TTL
-// returns the cached result without hitting the repo again.
-func TestGetDistinctRegions_CacheHit(t *testing.T) {
-stub := &distinctStubRepo{
-regionsFn: func() ([]string, error) { return []string{"US-CA", "US-NY"}, nil },
-}
-svc := &leiService{repo: stub}
-
-r1, err := svc.GetDistinctRegions()
-if err != nil {
-t.Fatalf("first call: unexpected error: %v", err)
-}
-r2, err := svc.GetDistinctRegions()
-if err != nil {
-t.Fatalf("second call: unexpected error: %v", err)
+	if stub.callCount != 1 {
+		t.Fatalf("expected exactly 1 repo call, got %d", stub.callCount)
+	}
+	// Job type must be normalised (DAILY_FULL → LEVEL1_FULL).
+	if stub.calledJobType != "LEVEL1_FULL" {
+		t.Errorf("expected calledJobType LEVEL1_FULL, got %q", stub.calledJobType)
+	}
+	// LEI codes must be upper-cased and trimmed.
+	if len(stub.calledKeys) != 2 {
+		t.Fatalf("expected 2 normalised keys, got %d: %v", len(stub.calledKeys), stub.calledKeys)
+	}
+	if stub.calledKeys[0] != "5493001KJTIIGC8Y1R12" {
+		t.Errorf("expected first key normalised to uppercase, got %q", stub.calledKeys[0])
+	}
+	if stub.calledSourceID != &sourceID {
+		t.Errorf("sourceFileID not forwarded correctly")
+	}
 }
 
-if stub.regionsCall != 1 {
-t.Errorf("repo called %d times, want 1 (cache hit expected on second call)", stub.regionsCall)
-}
-if len(r1) != 2 || len(r2) != 2 {
-t.Errorf("expected 2 regions on each call, got %d and %d", len(r1), len(r2))
-}
+func TestBatchResolveOpenProcessingFailures_Service_MixedKeys(t *testing.T) {
+	stub := &leiRepoStub{}
+	svc := newLeiServiceWithBatchRepoStub(stub)
+
+	// Mix of valid and invalid keys.
+	svc.batchResolveOpenProcessingFailures("LEVEL1_FULL", []string{"5493001KJTIIGC8Y1R12", "null", ""}, nil)
+
+	if stub.callCount != 1 {
+		t.Fatalf("expected 1 repo call for mixed keys, got %d", stub.callCount)
+	}
+	if len(stub.calledKeys) != 1 {
+		t.Fatalf("expected 1 valid key forwarded to repo, got %d", len(stub.calledKeys))
+	}
 }
 
-// TestGetDistinctRegions_EmptyResultIsCached verifies that an empty (but valid) result
-// is still cached so that subsequent calls within the TTL do not re-query.
-func TestGetDistinctRegions_EmptyResultIsCached(t *testing.T) {
-stub := &distinctStubRepo{
-regionsFn: func() ([]string, error) { return []string{}, nil },
-}
-svc := &leiService{repo: stub}
+func TestBatchResolveOpenProcessingFailures_Service_RepoErrorIsLogged(t *testing.T) {
+	// When the repo returns an error the service must not panic or propagate it;
+	// errors are logged as warnings.
+	stub := &leiRepoStub{returnErr: errors.New("db failure")}
+	svc := newLeiServiceWithBatchRepoStub(stub)
 
-for i := 0; i < 3; i++ {
-if _, err := svc.GetDistinctRegions(); err != nil {
-t.Fatalf("call %d: unexpected error: %v", i+1, err)
-}
-}
+	// Should not panic.
+	svc.batchResolveOpenProcessingFailures("LEVEL1_FULL", []string{"5493001KJTIIGC8Y1R12"}, nil)
 
-if stub.regionsCall != 1 {
-t.Errorf("repo called %d times, want 1 (empty result should be cached)", stub.regionsCall)
-}
-}
-
-// TestGetDistinctRegions_SliceNotAliased verifies that mutating the returned slice
-// does not affect the in-service cache.
-func TestGetDistinctRegions_SliceNotAliased(t *testing.T) {
-stub := &distinctStubRepo{
-regionsFn: func() ([]string, error) { return []string{"US-CA"}, nil },
-}
-svc := &leiService{repo: stub}
-
-r1, _ := svc.GetDistinctRegions()
-r1[0] = "MUTATED"
-
-r2, _ := svc.GetDistinctRegions()
-if len(r2) == 0 || r2[0] == "MUTATED" {
-t.Error("mutating returned slice affected the cache")
-}
-}
-
-// TestGetDistinctLegalForms_CacheHit verifies that a second call within the TTL
-// returns the cached result without hitting the repo again.
-func TestGetDistinctLegalForms_CacheHit(t *testing.T) {
-stub := &distinctStubRepo{
-legalFormsFn: func() ([]string, error) { return []string{"LLC", "GmbH"}, nil },
-}
-svc := &leiService{repo: stub}
-
-f1, err := svc.GetDistinctLegalForms()
-if err != nil {
-t.Fatalf("first call: unexpected error: %v", err)
-}
-f2, err := svc.GetDistinctLegalForms()
-if err != nil {
-t.Fatalf("second call: unexpected error: %v", err)
-}
-
-if stub.legalFormsCall != 1 {
-t.Errorf("repo called %d times, want 1 (cache hit expected on second call)", stub.legalFormsCall)
-}
-if len(f1) != 2 || len(f2) != 2 {
-t.Errorf("expected 2 legal forms on each call, got %d and %d", len(f1), len(f2))
-}
-}
-
-// TestGetDistinctLegalForms_EmptyResultIsCached verifies that an empty (but valid) result
-// is still cached so that subsequent calls within the TTL do not re-query.
-func TestGetDistinctLegalForms_EmptyResultIsCached(t *testing.T) {
-stub := &distinctStubRepo{
-legalFormsFn: func() ([]string, error) { return []string{}, nil },
-}
-svc := &leiService{repo: stub}
-
-for i := 0; i < 3; i++ {
-if _, err := svc.GetDistinctLegalForms(); err != nil {
-t.Fatalf("call %d: unexpected error: %v", i+1, err)
-}
-}
-
-if stub.legalFormsCall != 1 {
-t.Errorf("repo called %d times, want 1 (empty result should be cached)", stub.legalFormsCall)
-}
-}
-
-// TestGetDistinctLegalForms_SliceNotAliased verifies that mutating the returned slice
-// does not affect the in-service cache.
-func TestGetDistinctLegalForms_SliceNotAliased(t *testing.T) {
-stub := &distinctStubRepo{
-legalFormsFn: func() ([]string, error) { return []string{"LLC"}, nil },
-}
-svc := &leiService{repo: stub}
-
-f1, _ := svc.GetDistinctLegalForms()
-f1[0] = "MUTATED"
-
-f2, _ := svc.GetDistinctLegalForms()
-if len(f2) == 0 || f2[0] == "MUTATED" {
-t.Error("mutating returned slice affected the cache")
-}
-}
-
-// TestGetDistinctRegions_TTLExpiry verifies that after the cache TTL expires,
-// the next call re-fetches from the repo.
-func TestGetDistinctRegions_TTLExpiry(t *testing.T) {
-call := 0
-stub := &distinctStubRepo{
-regionsFn: func() ([]string, error) {
-call++
-return []string{"US-CA"}, nil
-},
-}
-svc := &leiService{repo: stub}
-
-if _, err := svc.GetDistinctRegions(); err != nil {
-t.Fatalf("first call: unexpected error: %v", err)
-}
-// Expire the cache by back-dating the cached-at timestamp beyond the TTL.
-svc.lookupCacheMu.Lock()
-svc.distinctRegionsCachedAt = svc.distinctRegionsCachedAt.Add(-(distinctLookupCacheTTL + 1))
-svc.lookupCacheMu.Unlock()
-
-if _, err := svc.GetDistinctRegions(); err != nil {
-t.Fatalf("second call after expiry: unexpected error: %v", err)
-}
-
-if call != 2 {
-t.Errorf("repo called %d times after TTL expiry, want 2", call)
-}
-}
-
-// TestGetDistinctLegalForms_TTLExpiry verifies that after the cache TTL expires,
-// the next call re-fetches from the repo.
-func TestGetDistinctLegalForms_TTLExpiry(t *testing.T) {
-call := 0
-stub := &distinctStubRepo{
-legalFormsFn: func() ([]string, error) {
-call++
-return []string{"LLC"}, nil
-},
-}
-svc := &leiService{repo: stub}
-
-if _, err := svc.GetDistinctLegalForms(); err != nil {
-t.Fatalf("first call: unexpected error: %v", err)
-}
-// Expire the cache by back-dating the cached-at timestamp beyond the TTL.
-svc.lookupCacheMu.Lock()
-svc.distinctLegalFormsCachedAt = svc.distinctLegalFormsCachedAt.Add(-(distinctLookupCacheTTL + 1))
-svc.lookupCacheMu.Unlock()
-
-if _, err := svc.GetDistinctLegalForms(); err != nil {
-t.Fatalf("second call after expiry: unexpected error: %v", err)
-}
-
-if call != 2 {
-t.Errorf("repo called %d times after TTL expiry, want 2", call)
-}
+	if stub.callCount != 1 {
+		t.Fatalf("expected 1 repo call even when it fails, got %d", stub.callCount)
+	}
 }

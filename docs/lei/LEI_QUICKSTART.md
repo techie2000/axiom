@@ -117,11 +117,16 @@ Response:
 {
   "id": "...",
   "job_type": "DAILY_FULL",
+  "job_label": "Level 1 — LEI Records (DAILY_FULL)",
   "status": "RUNNING",
+  "depends_on_job_type": "MASTER_DATA_SYNC",
+  "depends_on_job_label": "Reference Data (MASTER_DATA_SYNC)",
   "last_run_at": "2026-02-10T14:30:00Z",
   "current_source_file": {
     "id": "...",
     "file_name": "lei-FULL-20260210-143000.json.zip",
+    "job_type": "LEVEL1_FULL",
+    "job_label": "Level 1 — LEI Records (LEVEL1_FULL)",
     "processing_status": "IN_PROGRESS",
     "total_records": 2500000,
     "processed_records": 150000,
@@ -154,6 +159,25 @@ curl -X GET http://localhost:8080/api/v1/lei/5493001KJTIIGC8Y1R12 \
 curl -X GET "http://localhost:8080/api/v1/lei/5493001KJTIIGC8Y1R12/audit?limit=5" \
   -H "Authorization: Bearer $TOKEN" | jq
 ```
+
+### View Import Processing Failures (Level 1 + Level 2)
+
+Preferred endpoint:
+
+```bash
+curl -X GET "http://localhost:8080/api/v1/lei/import-failures?jobType=LEVEL2_RR&openOnly=true&limit=50&offset=0" \
+  -H "Authorization: Bearer $TOKEN" | jq
+```
+
+Deprecated (temporary compatibility) endpoint:
+
+```bash
+curl -X GET "http://localhost:8080/api/v1/lei/level2/failures?jobType=LEVEL2_RR&openOnly=true&limit=50&offset=0" \
+  -H "Authorization: Bearer $TOKEN" | jq
+```
+
+The deprecated endpoint returns deprecation metadata headers (`Deprecation`, `Sunset`, `Link`, `Warning`) to support migration.
+Planned removal target: `v0.5` (tracking issue: `#87`).
 
 ## Scheduler Configuration
 

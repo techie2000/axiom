@@ -106,8 +106,11 @@ Overall status of scheduled jobs.
 
 Key fields:
 
-- `job_type`: DAILY_FULL or DAILY_DELTA
+- `job_type`: MASTER_DATA_SYNC, DAILY_FULL, DAILY_DELTA, LEVEL2_RR, or LEVEL2_REPEX
+- `job_label`: Human-readable label persisted with the job code
 - `status`: IDLE, RUNNING, or FAILED (COMPLETED is transient and immediately becomes IDLE)
+- `depends_on_job_type`: Upstream job code in chained flows
+- `depends_on_job_label`: Human-readable upstream job label
 - `last_run_at`, `next_run_at`, `last_success_at`: Job timing
 - `current_source_file_id`: Currently processing file
 - `error_message`: Last error if any
@@ -162,6 +165,29 @@ Query parameters:
 - `limit` (default: 20): Number of audit records to return
 
 Response: Array of audit records showing complete change history
+
+#### `GET /api/v1/lei/import-failures` (Preferred)
+
+List persisted import processing failures (Level 1 + Level 2) with open/resolved filtering.
+
+Query parameters:
+
+- `jobType` (optional): `DAILY_FULL`, `DAILY_DELTA`, `LEVEL2_RR`, `LEVEL2_REPEX`
+- `openOnly` (optional, default: `true`): include only unresolved failures when true
+- `limit` (optional, default: `100`, max: `500`)
+- `offset` (optional, default: `0`)
+
+Response: Paged failure payload (`items`, `total`, `limit`, `offset`, `open_only`, `job_type`)
+
+#### `GET /api/v1/lei/level2/failures` (Deprecated)
+
+Deprecated compatibility alias for `GET /api/v1/lei/import-failures`.
+
+Deprecation behavior:
+
+- Returns deprecation metadata headers: `Deprecation`, `Sunset`, `Link`, `Warning`
+- Planned removal target: `v0.5`
+- Tracking issue: `#87`
 
 ### Sync Control Endpoints
 

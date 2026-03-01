@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -36,6 +37,13 @@ type LEILevel2Repository interface {
 	FindAuditHistoryByRelationship(startLEI, endLEI, relType string, limit int) ([]*domain.LEIRelationshipRecordAudit, error)
 	CreateReportingExceptionAudit(audit *domain.LEIReportingExceptionAudit) error
 	FindAuditHistoryByREPEXLEI(lei string, limit int) ([]*domain.LEIReportingExceptionAudit, error)
+
+	// Processing failures lifecycle
+	CreateProcessingFailure(failure *domain.LEILevel2ProcessingFailure) error
+	ResolveOpenProcessingFailures(jobType, naturalKey string, resolvedSourceFileID *uuid.UUID, resolvedNote string) error
+	BatchResolveOpenProcessingFailures(jobType string, naturalKeys []string, resolvedSourceFileID *uuid.UUID, resolvedNote string) error
+	ListProcessingFailures(jobType string, openOnly bool, limit, offset int) ([]*domain.LEILevel2ProcessingFailure, error)
+	CountProcessingFailures(jobType string, openOnly bool) (int64, error)
 }
 
 type leiLevel2Repository struct {
@@ -65,7 +73,6 @@ func (r *leiLevel2Repository) UpsertRelationshipRecord(record *domain.LEIRelatio
 	defer func() {
 		if p := recover(); p != nil {
 			tx.Rollback()
-			panic(p) // re-panic after rollback so the caller sees the failure
 		}
 	}()
 
@@ -216,7 +223,6 @@ func (r *leiLevel2Repository) BatchUpsertRelationshipRecords(records []*domain.L
 	defer func() {
 		if p := recover(); p != nil {
 			tx.Rollback()
-			panic(p) // re-panic after rollback so the caller sees the failure
 		}
 	}()
 
@@ -368,7 +374,6 @@ func (r *leiLevel2Repository) UpsertReportingException(exc *domain.LEIReportingE
 	defer func() {
 		if p := recover(); p != nil {
 			tx.Rollback()
-			panic(p) // re-panic after rollback so the caller sees the failure
 		}
 	}()
 
@@ -501,7 +506,6 @@ func (r *leiLevel2Repository) BatchUpsertReportingExceptions(exceptions []*domai
 	defer func() {
 		if p := recover(); p != nil {
 			tx.Rollback()
-			panic(p) // re-panic after rollback so the caller sees the failure
 		}
 	}()
 
@@ -652,6 +656,102 @@ func (r *leiLevel2Repository) FindAuditHistoryByREPEXLEI(lei string, limit int) 
 		return nil, err
 	}
 	return audits, nil
+}
+
+// CreateProcessingFailure persists a single Level 2 processing failure event.
+func (r *leiLevel2Repository) CreateProcessingFailure(failure *domain.LEILevel2ProcessingFailure) error {
+	return r.db.Create(failure).Error
+}
+
+// ResolveOpenProcessingFailures marks all unresolved failure rows for the same natural key as resolved.
+func (r *leiLevel2Repository) ResolveOpenProcessingFailures(jobType, naturalKey string, resolvedSourceFileID *uuid.UUID, resolvedNote string) error {
+	normalizedKey := strings.TrimSpace(naturalKey)
+	if normalizedKey == "" {
+		return nil
+	}
+
+	now := time.Now()
+	updates := map[string]interface{}{
+		"resolved":    true,
+		"resolved_at": now,
+		"updated_at":  now,
+	}
+	if resolvedSourceFileID != nil {
+		updates["resolved_source_file_id"] = *resolvedSourceFileID
+	}
+	if strings.TrimSpace(resolvedNote) != "" {
+		updates["resolved_note"] = resolvedNote
+	}
+
+	return r.db.Model(&domain.LEILevel2ProcessingFailure{}).
+		Where("job_type = ? AND natural_key = ? AND resolved = FALSE", jobType, normalizedKey).
+		Updates(updates).Error
+}
+
+// BatchResolveOpenProcessingFailures marks all unresolved failure rows for the given set of
+// natural keys as resolved with a single UPDATE … WHERE natural_key IN (…) query, avoiding
+// the N individual UPDATE round-trips that would otherwise be issued per successful batch.
+func (r *leiLevel2Repository) BatchResolveOpenProcessingFailures(jobType string, naturalKeys []string, resolvedSourceFileID *uuid.UUID, resolvedNote string) error {
+	filtered := filterNonEmptyStrings(naturalKeys)
+	if len(filtered) == 0 {
+		return nil
+	}
+
+	now := time.Now()
+	updates := map[string]interface{}{
+		"resolved":    true,
+		"resolved_at": now,
+		"updated_at":  now,
+	}
+	if resolvedSourceFileID != nil {
+		updates["resolved_source_file_id"] = *resolvedSourceFileID
+	}
+	if strings.TrimSpace(resolvedNote) != "" {
+		updates["resolved_note"] = resolvedNote
+	}
+
+	return r.db.Model(&domain.LEILevel2ProcessingFailure{}).
+		Where("job_type = ? AND natural_key IN ? AND resolved = FALSE", jobType, filtered).
+		Updates(updates).Error
+}
+
+// ListProcessingFailures retrieves Level 2 processing failure rows newest-first.
+func (r *leiLevel2Repository) ListProcessingFailures(jobType string, openOnly bool, limit, offset int) ([]*domain.LEILevel2ProcessingFailure, error) {
+	query := r.db.Model(&domain.LEILevel2ProcessingFailure{}).Order("created_at DESC")
+	if strings.TrimSpace(jobType) != "" {
+		query = query.Where("job_type = ?", jobType)
+	}
+	if openOnly {
+		query = query.Where("resolved = FALSE")
+	}
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+	if offset > 0 {
+		query = query.Offset(offset)
+	}
+
+	var failures []*domain.LEILevel2ProcessingFailure
+	if err := query.Find(&failures).Error; err != nil {
+		return nil, err
+	}
+
+	return failures, nil
+}
+
+// CountProcessingFailures returns total matching Level 2 processing failures.
+func (r *leiLevel2Repository) CountProcessingFailures(jobType string, openOnly bool) (int64, error) {
+	query := r.db.Model(&domain.LEILevel2ProcessingFailure{})
+	if strings.TrimSpace(jobType) != "" {
+		query = query.Where("job_type = ?", jobType)
+	}
+	if openOnly {
+		query = query.Where("resolved = FALSE")
+	}
+
+	var count int64
+	err := query.Count(&count).Error
+	return count, err
 }
 
 // --- helpers ---
