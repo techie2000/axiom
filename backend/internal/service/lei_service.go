@@ -993,15 +993,6 @@ func capProcessedRecords(totalRecords int, processedRecords int) int {
 	return processedRecords
 }
 
-func (s *leiService) resolveOpenProcessingFailures(jobType, naturalKey string, sourceFileID *uuid.UUID) {
-	if err := s.repo.ResolveOpenProcessingFailures(normalizeProcessingJobType(jobType), normalizeLEICodeValue(naturalKey), sourceFileID, "Resolved by subsequent successful upsert"); err != nil {
-		log.Warn().Err(err).
-			Str("job_type", jobType).
-			Str("natural_key", naturalKey).
-			Msg("Failed to resolve Level 1 processing failure lifecycle rows")
-	}
-}
-
 func sanitizeSourceFileProgress(sourceFile *domain.SourceFile) {
 	if sourceFile == nil {
 		return
