@@ -993,6 +993,54 @@ func capProcessedRecords(totalRecords int, processedRecords int) int {
 	return processedRecords
 }
 
+func (s *leiService) recordProcessingFailure(
+	jobType string,
+	sourceFileID *uuid.UUID,
+	failureStage string,
+	naturalKey string,
+	rawRecord interface{},
+	cause error,
+) {
+	errMessage := "unknown processing failure"
+	if cause != nil {
+		errMessage = cause.Error()
+	}
+
+	var rawPayload domain.JSONBString
+	if rawRecord != nil {
+		if rawBytes, marshalErr := json.Marshal(rawRecord); marshalErr == nil {
+			rawPayload = domain.JSONBString(rawBytes)
+		}
+	}
+
+	failure := &domain.LEILevel2ProcessingFailure{
+		JobType:      normalizeProcessingJobType(jobType),
+		SourceFileID: sourceFileID,
+		FailureStage: failureStage,
+		NaturalKey:   normalizeLEICodeValue(naturalKey),
+		RawRecord:    rawPayload,
+		ErrorMessage: errMessage,
+		Resolved:     false,
+	}
+
+	if err := s.repo.CreateProcessingFailure(failure); err != nil {
+		log.Warn().Err(err).
+			Str("job_type", jobType).
+			Str("failure_stage", failureStage).
+			Str("natural_key", naturalKey).
+			Msg("Failed to persist Level 1 processing failure")
+	}
+}
+
+func (s *leiService) resolveOpenProcessingFailures(jobType, naturalKey string, sourceFileID *uuid.UUID) {
+	if err := s.repo.ResolveOpenProcessingFailures(normalizeProcessingJobType(jobType), normalizeLEICodeValue(naturalKey), sourceFileID, "Resolved by subsequent successful upsert"); err != nil {
+		log.Warn().Err(err).
+			Str("job_type", jobType).
+			Str("natural_key", naturalKey).
+			Msg("Failed to resolve Level 1 processing failure lifecycle rows")
+	}
+}
+
 func sanitizeSourceFileProgress(sourceFile *domain.SourceFile) {
 	if sourceFile == nil {
 		return

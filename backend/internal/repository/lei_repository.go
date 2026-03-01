@@ -975,23 +975,23 @@ func (r *leiRepository) UpdateSourceFile(file *domain.SourceFile) error {
 	}
 
 	updates := map[string]interface{}{
-		"processing_status":      file.ProcessingStatus,
-		"total_records":         file.TotalRecords,
-		"processed_records":     file.ProcessedRecords,
-		"failed_records":        file.FailedRecords,
+		"processing_status": file.ProcessingStatus,
+		"total_records":     file.TotalRecords,
+		"processed_records": file.ProcessedRecords,
+		"failed_records":    file.FailedRecords,
 		"last_processed_lei": func() interface{} {
 			if file.LastProcessedLEI == nil {
 				return nil
 			}
 			return nullableLEICode(*file.LastProcessedLEI)
 		}(),
-		"processing_started_at": file.ProcessingStartedAt,
+		"processing_started_at":   file.ProcessingStartedAt,
 		"processing_completed_at": file.ProcessingCompletedAt,
-		"processing_error":      file.ProcessingError,
-		"retry_count":           file.RetryCount,
-		"max_retries":           file.MaxRetries,
-		"failure_category":      file.FailureCategory,
-		"updated_at":            gorm.Expr("NOW()"),
+		"processing_error":        file.ProcessingError,
+		"retry_count":             file.RetryCount,
+		"max_retries":             file.MaxRetries,
+		"failure_category":        file.FailureCategory,
+		"updated_at":              gorm.Expr("NOW()"),
 	}
 
 	return r.db.Model(&domain.SourceFile{}).
@@ -1121,25 +1121,6 @@ func (r *leiRepository) BatchResolveOpenProcessingFailures(jobType string, natur
 		Where("job_type = ? AND natural_key IN ? AND resolved = FALSE", jobType, filtered).
 		Updates(updates).Error
 }
-
-// filterNonEmptyStrings returns a deduplicated slice of non-blank strings from the input.
-func filterNonEmptyStrings(keys []string) []string {
-	seen := make(map[string]struct{}, len(keys))
-	result := make([]string, 0, len(keys))
-	for _, k := range keys {
-		trimmed := strings.TrimSpace(k)
-		if trimmed == "" {
-			continue
-		}
-		if _, exists := seen[trimmed]; exists {
-			continue
-		}
-		seen[trimmed] = struct{}{}
-		result = append(result, trimmed)
-	}
-	return result
-}
-
 // detectChanges compares two LEI records and returns a map of changed fields
 func (r *leiRepository) detectChanges(old, new *domain.LEIRecord) map[string]domain.LEIChangeDetection {
 	changes := make(map[string]domain.LEIChangeDetection)
