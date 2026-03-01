@@ -63,6 +63,7 @@ Located in [lei/](./lei/):
 - [**LEI Data Flow**](./lei/LEI_DATA_FLOW.md) - End-to-end data acquisition and processing flow
 - [**LEI Acquisition**](./lei/LEI_ACQUISITION.md) - GLEIF API integration details
 - [**LEI Countries Refactor**](./lei/LEI_COUNTRIES_REFACTOR.md) - Country data handling improvements
+- [**LEI Categories Endpoint**](./lei/LEI_CATEGORIES_ENDPOINT.md) - Category filter metadata endpoint, cache behavior, and optimization notes
 
 #### API Migration Notice
 
