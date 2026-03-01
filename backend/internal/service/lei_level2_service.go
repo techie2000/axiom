@@ -44,6 +44,9 @@ type LEILevel2Service interface {
 	CountRelationshipRecords() (int64, error)
 	// CountReportingExceptions returns the total number of reporting exceptions stored.
 	CountReportingExceptions() (int64, error)
+
+	// GetProcessingFailures returns persisted Level 2 processing failures.
+	GetProcessingFailures(jobType string, openOnly bool, limit, offset int) ([]*domain.LEILevel2ProcessingFailure, int64, error)
 }
 
 // gleifLevel2PublishesResponse is the minimal slice of the GLEIF API we need.
@@ -509,6 +512,7 @@ func (s *leiLevel2Service) parseAndUpsertRR(r io.Reader, sourceFileID uuid.UUID)
 				break
 			}
 			log.Warn().Err(decErr).Msg("Failed to decode RR JSON record, skipping")
+			s.recordProcessingFailure("LEVEL2_RR", &sourceFileID, "DECODE", "", nil, decErr)
 			failed++
 			continue
 		}
@@ -516,6 +520,7 @@ func (s *leiLevel2Service) parseAndUpsertRR(r io.Reader, sourceFileID uuid.UUID)
 		record, mapErr := mapRawRRToRelationshipRecord(&raw, sourceFileID)
 		if mapErr != nil {
 			log.Warn().Err(mapErr).Msg("Failed to map RR record, skipping")
+			s.recordProcessingFailure("LEVEL2_RR", &sourceFileID, "MAP", rrNaturalKeyFromRaw(&raw), &raw, mapErr)
 			failed++
 			continue
 		}
@@ -592,6 +597,7 @@ func (s *leiLevel2Service) parseAndUpsertRRWrapped(decoder *json.Decoder, source
 			var raw rawRRRecord
 			if decErr := decoder.Decode(&raw); decErr != nil {
 				log.Warn().Err(decErr).Msg("Failed to decode RR JSON record in relations array, skipping")
+				s.recordProcessingFailure("LEVEL2_RR", &sourceFileID, "DECODE", "", nil, decErr)
 				failed++
 				continue
 			}
@@ -599,6 +605,7 @@ func (s *leiLevel2Service) parseAndUpsertRRWrapped(decoder *json.Decoder, source
 			record, mapErr := mapRawRRToRelationshipRecord(&raw, sourceFileID)
 			if mapErr != nil {
 				log.Warn().Err(mapErr).Msg("Failed to map RR record, skipping")
+				s.recordProcessingFailure("LEVEL2_RR", &sourceFileID, "MAP", rrNaturalKeyFromRaw(&raw), &raw, mapErr)
 				failed++
 				continue
 			}
@@ -689,12 +696,97 @@ func mapRawRRToRelationshipRecord(raw *rawRRRecord, sourceFileID uuid.UUID) (*do
 	return record, nil
 }
 
+func rrNaturalKey(startLEI, endLEI, relationshipType string) string {
+	start := strings.TrimSpace(startLEI)
+	end := strings.TrimSpace(endLEI)
+	relType := strings.TrimSpace(relationshipType)
+	if start == "" || end == "" || relType == "" {
+		return ""
+	}
+	return start + "|" + end + "|" + relType
+}
+
+func rrNaturalKeyFromRaw(raw *rawRRRecord) string {
+	if raw == nil {
+		return ""
+	}
+	payload := raw.payload()
+	return rrNaturalKey(
+		payload.Relationship.StartNode.NodeID.String(),
+		payload.Relationship.EndNode.NodeID.String(),
+		payload.Relationship.RelationshipType.String(),
+	)
+}
+
+func repexNaturalKey(lei, exceptionCategory string) string {
+	leicode := strings.TrimSpace(lei)
+	category := strings.TrimSpace(exceptionCategory)
+	if leicode == "" || category == "" {
+		return ""
+	}
+	return leicode + "|" + category
+}
+
+func (s *leiLevel2Service) recordProcessingFailure(
+	jobType string,
+	sourceFileID *uuid.UUID,
+	failureStage string,
+	naturalKey string,
+	rawRecord interface{},
+	cause error,
+) {
+	persistProcessingFailure(
+		s.repo,
+		jobType,
+		sourceFileID,
+		failureStage,
+		strings.TrimSpace(naturalKey),
+		rawRecord,
+		cause,
+	)
+}
+
+func (s *leiLevel2Service) resolveOpenProcessingFailures(jobType, naturalKey string, sourceFileID *uuid.UUID) {
+	if err := s.repo.ResolveOpenProcessingFailures(jobType, naturalKey, sourceFileID, "Resolved by subsequent successful upsert"); err != nil {
+		log.Warn().Err(err).
+			Str("job_type", jobType).
+			Str("natural_key", naturalKey).
+			Msg("Failed to resolve Level 2 processing failure lifecycle rows")
+	}
+}
+
+// batchResolveOpenProcessingFailures resolves open processing failures for a set of natural keys
+// in a single UPDATE … WHERE natural_key IN (…) query, avoiding N round-trips per batch.
+// Level 2 natural keys are pre-normalized by rrNaturalKey / repexNaturalKey; empty keys are
+// filtered out by the repository layer.
+func (s *leiLevel2Service) batchResolveOpenProcessingFailures(jobType string, naturalKeys []string, sourceFileID *uuid.UUID) {
+	if len(naturalKeys) == 0 {
+		return
+	}
+	if err := s.repo.BatchResolveOpenProcessingFailures(jobType, naturalKeys, sourceFileID, "Resolved by subsequent successful upsert"); err != nil {
+		log.Warn().Err(err).
+			Str("job_type", jobType).
+			Int("key_count", len(naturalKeys)).
+			Msg("Failed to batch-resolve Level 2 processing failure lifecycle rows")
+	}
+}
+
 func (s *leiLevel2Service) flushRRBatch(batch []*domain.LEIRelationshipRecord) (processed int, failed int, err error) {
 	if len(batch) == 0 {
 		return 0, 0, nil
 	}
 
 	if created, updated, batchErr := s.repo.BatchUpsertRelationshipRecords(batch); batchErr == nil {
+		naturalKeys := make([]string, 0, len(batch))
+		// All records in a batch are sourced from the same file; use the first non-nil ID.
+		var sourceFileID *uuid.UUID
+		for _, record := range batch {
+			naturalKeys = append(naturalKeys, rrNaturalKey(record.StartNodeLEI, record.EndNodeLEI, record.RelationshipType))
+			if sourceFileID == nil {
+				sourceFileID = record.SourceFileID
+			}
+		}
+		s.batchResolveOpenProcessingFailures("LEVEL2_RR", naturalKeys, sourceFileID)
 		return created + updated, 0, nil
 	} else {
 		log.Warn().Err(batchErr).Int("batch_size", len(batch)).Msg("RR batch upsert failed, falling back to row-by-row")
@@ -707,9 +799,11 @@ func (s *leiLevel2Service) flushRRBatch(batch []*domain.LEIRelationshipRecord) (
 				Str("start_lei", record.StartNodeLEI).
 				Str("end_lei", record.EndNodeLEI).
 				Msg("Failed to upsert relationship record, skipping")
+			s.recordProcessingFailure("LEVEL2_RR", record.SourceFileID, "UPSERT", rrNaturalKey(record.StartNodeLEI, record.EndNodeLEI, record.RelationshipType), record, upsertErr)
 			failed++
 			continue
 		}
+		s.resolveOpenProcessingFailures("LEVEL2_RR", rrNaturalKey(record.StartNodeLEI, record.EndNodeLEI, record.RelationshipType), record.SourceFileID)
 		processed++
 	}
 
@@ -878,6 +972,7 @@ func (s *leiLevel2Service) parseAndUpsertREPEX(r io.Reader, sourceFileID uuid.UU
 				break
 			}
 			log.Warn().Err(decErr).Msg("Failed to decode REPEX JSON record, skipping")
+			s.recordProcessingFailure("LEVEL2_REPEX", &sourceFileID, "DECODE", "", nil, decErr)
 			failed++
 			continue
 		}
@@ -962,6 +1057,7 @@ func (s *leiLevel2Service) parseAndUpsertREPEXWrapped(decoder *json.Decoder, sou
 			var raw rawREPEXRecord
 			if decErr := decoder.Decode(&raw); decErr != nil {
 				log.Warn().Err(decErr).Msg("Failed to decode REPEX JSON record in exceptions array, skipping")
+				s.recordProcessingFailure("LEVEL2_REPEX", &sourceFileID, "DECODE", "", nil, decErr)
 				failed++
 				continue
 			}
@@ -1030,6 +1126,16 @@ func (s *leiLevel2Service) flushREPEXBatch(batch []*domain.LEIReportingException
 	}
 
 	if created, updated, batchErr := s.repo.BatchUpsertReportingExceptions(batch); batchErr == nil {
+		naturalKeys := make([]string, 0, len(batch))
+		// All exceptions in a batch are sourced from the same file; use the first non-nil ID.
+		var sourceFileID *uuid.UUID
+		for _, exc := range batch {
+			naturalKeys = append(naturalKeys, repexNaturalKey(exc.LEI, exc.ExceptionCategory))
+			if sourceFileID == nil {
+				sourceFileID = exc.SourceFileID
+			}
+		}
+		s.batchResolveOpenProcessingFailures("LEVEL2_REPEX", naturalKeys, sourceFileID)
 		return created + updated, 0, nil
 	} else {
 		log.Warn().Err(batchErr).Int("batch_size", len(batch)).Msg("REPEX batch upsert failed, falling back to row-by-row")
@@ -1041,9 +1147,11 @@ func (s *leiLevel2Service) flushREPEXBatch(batch []*domain.LEIReportingException
 				Err(upsertErr).
 				Str("lei", exc.LEI).
 				Msg("Failed to upsert reporting exception, skipping")
+			s.recordProcessingFailure("LEVEL2_REPEX", exc.SourceFileID, "UPSERT", repexNaturalKey(exc.LEI, exc.ExceptionCategory), exc, upsertErr)
 			failed++
 			continue
 		}
+		s.resolveOpenProcessingFailures("LEVEL2_REPEX", repexNaturalKey(exc.LEI, exc.ExceptionCategory), exc.SourceFileID)
 		processed++
 	}
 
@@ -1058,6 +1166,18 @@ func (s *leiLevel2Service) CountRelationshipRecords() (int64, error) {
 
 func (s *leiLevel2Service) CountReportingExceptions() (int64, error) {
 	return s.repo.CountReportingExceptions()
+}
+
+func (s *leiLevel2Service) GetProcessingFailures(jobType string, openOnly bool, limit, offset int) ([]*domain.LEILevel2ProcessingFailure, int64, error) {
+	failures, err := s.repo.ListProcessingFailures(jobType, openOnly, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	total, err := s.repo.CountProcessingFailures(jobType, openOnly)
+	if err != nil {
+		return nil, 0, err
+	}
+	return failures, total, nil
 }
 
 // parseGLEIFTime parses common GLEIF timestamp formats.

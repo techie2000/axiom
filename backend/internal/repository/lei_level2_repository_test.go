@@ -1,11 +1,19 @@
 package repository
 
 import (
+	"context"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/techie2000/axiom/internal/domain"
+	"gorm.io/gorm"
+	"gorm.io/gorm/callbacks"
+	"gorm.io/gorm/clause"
+	gorm_logger "gorm.io/gorm/logger"
+	"gorm.io/gorm/schema"
 )
 
 // repo is a zero-value leiLevel2Repository. The db field is nil, but all of the
@@ -318,5 +326,317 @@ func TestRepexToJSONProducesValidJSON(t *testing.T) {
 	}
 	if len(snapshot) == 0 {
 		t.Fatalf("repexToJSON returned empty snapshot")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// DryRun infrastructure
+//
+// nopDialector is a minimal no-op GORM dialector that implements
+// gorm.Dialector without establishing a real database connection.
+// It is used together with gorm.Config{DryRun: true} to build and inspect
+// SQL statements inside unit tests without requiring a running database.
+// ---------------------------------------------------------------------------
+
+type nopDialector struct{}
+
+func (nopDialector) Name() string                                         { return "nop" }
+func (nopDialector) Initialize(db *gorm.DB) error {
+	// Register default GORM callbacks so that Find, Count, Create, and Update
+	// build SQL statements even in DryRun mode.
+	callbacks.RegisterDefaultCallbacks(db, &callbacks.Config{})
+	return nil
+}
+func (nopDialector) Migrator(_ *gorm.DB) gorm.Migrator                  { return nil }
+func (nopDialector) DataTypeOf(_ *schema.Field) string                   { return "" }
+func (nopDialector) DefaultValueOf(_ *schema.Field) clause.Expression    { return clause.Expr{SQL: "NULL"} }
+func (nopDialector) BindVarTo(w clause.Writer, _ *gorm.Statement, _ interface{}) {
+	_, _ = w.WriteString("?")
+}
+func (nopDialector) QuoteTo(w clause.Writer, str string) { _, _ = w.WriteString(str) }
+func (nopDialector) Explain(sql string, _ ...interface{}) string { return sql }
+
+// sqlCaptureLogger records every SQL statement that GORM logs via its
+// Trace callback so that tests can assert on generated query fragments.
+type sqlCaptureLogger struct {
+	mu      sync.Mutex
+	queries []string
+}
+
+func (l *sqlCaptureLogger) LogMode(gorm_logger.LogLevel) gorm_logger.Interface { return l }
+func (l *sqlCaptureLogger) Info(_ context.Context, _ string, _ ...interface{})  {}
+func (l *sqlCaptureLogger) Warn(_ context.Context, _ string, _ ...interface{})  {}
+func (l *sqlCaptureLogger) Error(_ context.Context, _ string, _ ...interface{}) {}
+func (l *sqlCaptureLogger) Trace(_ context.Context, _ time.Time, fc func() (string, int64), _ error) {
+	sql, _ := fc()
+	l.mu.Lock()
+	l.queries = append(l.queries, sql)
+	l.mu.Unlock()
+}
+
+func (l *sqlCaptureLogger) last() string {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if len(l.queries) == 0 {
+		return ""
+	}
+	return l.queries[len(l.queries)-1]
+}
+
+// newDryRunRepo returns a leiLevel2Repository backed by a GORM DryRun session
+// and a sqlCaptureLogger that records every SQL statement GORM builds.
+// No real database connection is established.
+func newDryRunRepo(t *testing.T) (*leiLevel2Repository, *sqlCaptureLogger) {
+	t.Helper()
+	capture := &sqlCaptureLogger{}
+	db, err := gorm.Open(nopDialector{}, &gorm.Config{
+		DryRun: true,
+		Logger: capture,
+	})
+	if err != nil {
+		t.Fatalf("newDryRunRepo: gorm.Open failed: %v", err)
+	}
+	return &leiLevel2Repository{db: db}, capture
+}
+
+// ---------------------------------------------------------------------------
+// ResolveOpenProcessingFailures – guard logic (no DB required)
+// ---------------------------------------------------------------------------
+
+func TestResolveOpenProcessingFailures_EmptyKey_ReturnsNilImmediately(t *testing.T) {
+	// db is nil because the guard should return before any DB call.
+	repo := &leiLevel2Repository{}
+	if err := repo.ResolveOpenProcessingFailures("LEVEL2_RR", "", nil, "note"); err != nil {
+		t.Fatalf("expected nil for empty naturalKey, got: %v", err)
+	}
+}
+
+func TestResolveOpenProcessingFailures_WhitespaceKey_ReturnsNilImmediately(t *testing.T) {
+	repo := &leiLevel2Repository{}
+	if err := repo.ResolveOpenProcessingFailures("LEVEL2_RR", "   ", nil, "note"); err != nil {
+		t.Fatalf("expected nil for whitespace-only naturalKey, got: %v", err)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// CreateProcessingFailure – DryRun smoke test
+// ---------------------------------------------------------------------------
+
+func TestCreateProcessingFailure_DryRun_NoError(t *testing.T) {
+	repo, _ := newDryRunRepo(t)
+	failure := &domain.LEILevel2ProcessingFailure{
+		ID:           uuid.New(),
+		JobType:      "LEVEL2_RR",
+		FailureStage: "UPSERT",
+		NaturalKey:   "START|END|TYPE",
+		ErrorMessage: "duplicate key value",
+	}
+
+	if err := repo.CreateProcessingFailure(failure); err != nil {
+		t.Fatalf("unexpected error from CreateProcessingFailure in DryRun mode: %v", err)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// ResolveOpenProcessingFailures – DryRun smoke test for non-empty key
+// ---------------------------------------------------------------------------
+
+func TestResolveOpenProcessingFailures_DryRun_NonEmptyKey_NoError(t *testing.T) {
+	repo, capture := newDryRunRepo(t)
+	id := uuid.New()
+	if err := repo.ResolveOpenProcessingFailures("LEVEL2_RR", "START|END|TYPE", &id, "auto-resolved"); err != nil {
+		t.Fatalf("unexpected error from ResolveOpenProcessingFailures in DryRun mode: %v", err)
+	}
+
+	sql := capture.last()
+	if !strings.Contains(sql, "natural_key") {
+		t.Errorf("expected UPDATE WHERE to filter by natural_key, got SQL: %s", sql)
+	}
+	if !strings.Contains(sql, "job_type") {
+		t.Errorf("expected UPDATE WHERE to filter by job_type, got SQL: %s", sql)
+	}
+	if !strings.Contains(sql, "resolved") {
+		t.Errorf("expected UPDATE WHERE to filter by resolved, got SQL: %s", sql)
+	}
+}
+
+func TestResolveOpenProcessingFailures_DryRun_NilSourceFileID_NoError(t *testing.T) {
+	repo, _ := newDryRunRepo(t)
+	if err := repo.ResolveOpenProcessingFailures("LEVEL2_REPEX", "LEI|CATEGORY", nil, ""); err != nil {
+		t.Fatalf("unexpected error when resolvedSourceFileID is nil: %v", err)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// ListProcessingFailures – SQL query construction via DryRun
+// ---------------------------------------------------------------------------
+
+func TestListProcessingFailures_DryRun_NoFilters_ReturnsNoError(t *testing.T) {
+	repo, capture := newDryRunRepo(t)
+	_, err := repo.ListProcessingFailures("", false, 0, 0)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	sql := capture.last()
+	if !strings.Contains(sql, "lei_level2_processing_failures") {
+		t.Errorf("expected SQL to reference failures table, got: %s", sql)
+	}
+	// No job_type or resolved filter expected when no filters are specified.
+	if strings.Contains(sql, "job_type") {
+		t.Errorf("expected SQL NOT to contain job_type filter when jobType is empty, got: %s", sql)
+	}
+}
+
+func TestListProcessingFailures_DryRun_WithJobTypeFilter_IncludesWhereClause(t *testing.T) {
+	repo, capture := newDryRunRepo(t)
+	_, err := repo.ListProcessingFailures("LEVEL2_RR", false, 0, 0)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	sql := capture.last()
+	if !strings.Contains(sql, "job_type") {
+		t.Errorf("expected SQL to filter by job_type, got: %s", sql)
+	}
+	if strings.Contains(sql, "resolved") {
+		t.Errorf("expected SQL NOT to filter by resolved when openOnly=false, got: %s", sql)
+	}
+}
+
+func TestListProcessingFailures_DryRun_WithOpenOnlyFilter_IncludesResolvedClause(t *testing.T) {
+	repo, capture := newDryRunRepo(t)
+	_, err := repo.ListProcessingFailures("", true, 0, 0)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	sql := capture.last()
+	if !strings.Contains(sql, "resolved") {
+		t.Errorf("expected SQL to include resolved filter when openOnly=true, got: %s", sql)
+	}
+}
+
+func TestListProcessingFailures_DryRun_WithWhitespaceJobType_NoJobTypeFilter(t *testing.T) {
+	repo, capture := newDryRunRepo(t)
+	_, err := repo.ListProcessingFailures("   ", false, 0, 0)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	sql := capture.last()
+	if strings.Contains(sql, "job_type") {
+		t.Errorf("expected SQL NOT to contain job_type filter for whitespace jobType, got: %s", sql)
+	}
+}
+
+func TestListProcessingFailures_DryRun_WithBothFilters_IncludesBothWhereClauses(t *testing.T) {
+	repo, capture := newDryRunRepo(t)
+	_, err := repo.ListProcessingFailures("LEVEL2_REPEX", true, 0, 0)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	sql := capture.last()
+	if !strings.Contains(sql, "job_type") {
+		t.Errorf("expected SQL to filter by job_type, got: %s", sql)
+	}
+	if !strings.Contains(sql, "resolved") {
+		t.Errorf("expected SQL to filter by resolved, got: %s", sql)
+	}
+}
+
+func TestListProcessingFailures_DryRun_WithPagination_IncludesLimitAndOffset(t *testing.T) {
+	repo, capture := newDryRunRepo(t)
+	_, err := repo.ListProcessingFailures("", false, 25, 50)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	sql := capture.last()
+	if !strings.Contains(sql, "LIMIT") && !strings.Contains(sql, "limit") {
+		t.Errorf("expected SQL to include LIMIT clause, got: %s", sql)
+	}
+	if !strings.Contains(sql, "OFFSET") && !strings.Contains(sql, "offset") {
+		t.Errorf("expected SQL to include OFFSET clause, got: %s", sql)
+	}
+}
+
+func TestListProcessingFailures_DryRun_ZeroLimit_NoLimitClause(t *testing.T) {
+	repo, capture := newDryRunRepo(t)
+	_, err := repo.ListProcessingFailures("", false, 0, 0)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	sql := capture.last()
+	if strings.Contains(sql, "LIMIT 0") || strings.Contains(sql, "limit 0") {
+		t.Errorf("expected SQL NOT to include LIMIT 0 (limit ≤0 should be ignored), got: %s", sql)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// CountProcessingFailures – SQL query construction via DryRun
+// ---------------------------------------------------------------------------
+
+func TestCountProcessingFailures_DryRun_NoFilters_ReturnsNoError(t *testing.T) {
+	repo, capture := newDryRunRepo(t)
+	count, err := repo.CountProcessingFailures("", false)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// DryRun returns 0 – verify no error and the SQL references the table.
+	if count != 0 {
+		t.Errorf("expected 0 from DryRun Count, got %d", count)
+	}
+
+	sql := capture.last()
+	if !strings.Contains(sql, "lei_level2_processing_failures") {
+		t.Errorf("expected SQL to reference failures table, got: %s", sql)
+	}
+	if strings.Contains(sql, "job_type") {
+		t.Errorf("expected SQL NOT to contain job_type filter when jobType is empty, got: %s", sql)
+	}
+}
+
+func TestCountProcessingFailures_DryRun_WithJobTypeFilter_IncludesWhereClause(t *testing.T) {
+	repo, capture := newDryRunRepo(t)
+	_, err := repo.CountProcessingFailures("LEVEL2_RR", false)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	sql := capture.last()
+	if !strings.Contains(sql, "job_type") {
+		t.Errorf("expected SQL to filter by job_type, got: %s", sql)
+	}
+}
+
+func TestCountProcessingFailures_DryRun_WithOpenOnlyFilter_IncludesResolvedClause(t *testing.T) {
+	repo, capture := newDryRunRepo(t)
+	_, err := repo.CountProcessingFailures("", true)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	sql := capture.last()
+	if !strings.Contains(sql, "resolved") {
+		t.Errorf("expected SQL to filter by resolved when openOnly=true, got: %s", sql)
+	}
+}
+
+func TestCountProcessingFailures_DryRun_WithBothFilters_IncludesBothWhereClauses(t *testing.T) {
+	repo, capture := newDryRunRepo(t)
+	_, err := repo.CountProcessingFailures("LEVEL2_REPEX", true)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	sql := capture.last()
+	if !strings.Contains(sql, "job_type") {
+		t.Errorf("expected SQL to filter by job_type, got: %s", sql)
+	}
+	if !strings.Contains(sql, "resolved") {
+		t.Errorf("expected SQL to filter by resolved, got: %s", sql)
 	}
 }
