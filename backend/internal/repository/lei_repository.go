@@ -24,6 +24,7 @@ type LEIRepository interface {
 	FindAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string) ([]*domain.LEIRecord, error)
 	CountLEIRecords() (int64, error)
 	GetDistinctCountries() ([]string, error)
+	GetDistinctCategories() ([]string, error)
 	GetDistinctRegions() ([]string, error)
 	GetDistinctLegalForms() ([]string, error)
 	UpdateLEIRecord(record *domain.LEIRecord) error
@@ -48,6 +49,11 @@ type LEIRepository interface {
 	// Audit operations
 	CreateAuditRecord(audit *domain.LEIRecordAudit) error
 	FindAuditHistoryByLEI(lei string, limit int) ([]*domain.LEIRecordAudit, error)
+
+	// Processing failures lifecycle
+	CreateProcessingFailure(failure *domain.LEILevel2ProcessingFailure) error
+	ResolveOpenProcessingFailures(jobType, naturalKey string, resolvedSourceFileID *uuid.UUID, resolvedNote string) error
+	BatchResolveOpenProcessingFailures(jobType string, naturalKeys []string, resolvedSourceFileID *uuid.UUID, resolvedNote string) error
 }
 
 type leiRepository struct {
@@ -55,9 +61,11 @@ type leiRepository struct {
 }
 
 const notSetEntityStatusWhereClause = "entity_status IS NULL OR TRIM(entity_status) = '' OR UPPER(TRIM(entity_status)) = 'NULL'"
+const normalizedEntityCategoryMatchWhereClause = "UPPER(BTRIM(entity_category)) = UPPER(BTRIM(?))"
 
 func isNotSetStatusFilter(status string) bool {
-	return strings.EqualFold(strings.TrimSpace(status), "NULL")
+	normalized := strings.ToUpper(strings.ReplaceAll(strings.TrimSpace(status), " ", "_"))
+	return normalized == "NULL" || normalized == "NOT_SET"
 }
 
 func nullableLEICode(value string) interface{} {
@@ -248,7 +256,7 @@ func (r *leiRepository) FindAllLEIWithFilters(limit, offset int, search, status,
 
 		// Apply category filter
 		if category != "" {
-			query = query.Where("entity_category = ?", category)
+			query = query.Where(normalizedEntityCategoryMatchWhereClause, category)
 		}
 
 		// Apply country filter
@@ -344,6 +352,20 @@ func (r *leiRepository) GetDistinctCountries() ([]string, error) {
 		return nil, err
 	}
 	return countries, nil
+}
+
+// GetDistinctCategories returns a sorted list of unique category values from LEI records
+func (r *leiRepository) GetDistinctCategories() ([]string, error) {
+	var categories []string
+	err := r.db.Model(&domain.LEIRecord{}).
+		Distinct("BTRIM(entity_category)").
+		Where("entity_category IS NOT NULL AND BTRIM(entity_category) <> '' AND UPPER(BTRIM(entity_category)) <> 'NULL'").
+		Order("BTRIM(entity_category) ASC").
+		Pluck("BTRIM(entity_category)", &categories).Error
+	if err != nil {
+		return nil, err
+	}
+	return categories, nil
 }
 
 // GetDistinctRegions returns sorted unique region values from legal and HQ addresses
@@ -1041,6 +1063,81 @@ func (r *leiRepository) FindAuditHistoryByLEI(lei string, limit int) ([]*domain.
 		return nil, err
 	}
 	return audits, nil
+}
+
+// CreateProcessingFailure persists a processing failure event row.
+func (r *leiRepository) CreateProcessingFailure(failure *domain.LEILevel2ProcessingFailure) error {
+	return r.db.Create(failure).Error
+}
+
+// ResolveOpenProcessingFailures marks unresolved failure rows for the same natural key as resolved.
+func (r *leiRepository) ResolveOpenProcessingFailures(jobType, naturalKey string, resolvedSourceFileID *uuid.UUID, resolvedNote string) error {
+	normalizedKey := strings.TrimSpace(naturalKey)
+	if normalizedKey == "" {
+		return nil
+	}
+
+	now := time.Now()
+	updates := map[string]interface{}{
+		"resolved":    true,
+		"resolved_at": now,
+		"updated_at":  now,
+	}
+	if resolvedSourceFileID != nil {
+		updates["resolved_source_file_id"] = *resolvedSourceFileID
+	}
+	if strings.TrimSpace(resolvedNote) != "" {
+		updates["resolved_note"] = resolvedNote
+	}
+
+	return r.db.Model(&domain.LEILevel2ProcessingFailure{}).
+		Where("job_type = ? AND natural_key = ? AND resolved = FALSE", jobType, normalizedKey).
+		Updates(updates).Error
+}
+
+// BatchResolveOpenProcessingFailures marks unresolved failure rows for the given set of natural
+// keys as resolved with a single UPDATE … WHERE natural_key IN (…) query, replacing the N
+// individual updates that would otherwise be issued per batch.
+func (r *leiRepository) BatchResolveOpenProcessingFailures(jobType string, naturalKeys []string, resolvedSourceFileID *uuid.UUID, resolvedNote string) error {
+	filtered := filterNonEmptyStrings(naturalKeys)
+	if len(filtered) == 0 {
+		return nil
+	}
+
+	now := time.Now()
+	updates := map[string]interface{}{
+		"resolved":    true,
+		"resolved_at": now,
+		"updated_at":  now,
+	}
+	if resolvedSourceFileID != nil {
+		updates["resolved_source_file_id"] = *resolvedSourceFileID
+	}
+	if strings.TrimSpace(resolvedNote) != "" {
+		updates["resolved_note"] = resolvedNote
+	}
+
+	return r.db.Model(&domain.LEILevel2ProcessingFailure{}).
+		Where("job_type = ? AND natural_key IN ? AND resolved = FALSE", jobType, filtered).
+		Updates(updates).Error
+}
+
+// filterNonEmptyStrings returns a deduplicated slice of non-blank strings from the input.
+func filterNonEmptyStrings(keys []string) []string {
+	seen := make(map[string]struct{}, len(keys))
+	result := make([]string, 0, len(keys))
+	for _, k := range keys {
+		trimmed := strings.TrimSpace(k)
+		if trimmed == "" {
+			continue
+		}
+		if _, exists := seen[trimmed]; exists {
+			continue
+		}
+		seen[trimmed] = struct{}{}
+		result = append(result, trimmed)
+	}
+	return result
 }
 
 // detectChanges compares two LEI records and returns a map of changed fields

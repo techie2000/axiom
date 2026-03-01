@@ -110,6 +110,7 @@ type LEIService interface {
 	GetAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string) ([]*domain.LEIRecord, error)
 	CountLEIRecords() (int64, error)
 	GetDistinctCountries() ([]domain.Country, error)
+	GetDistinctCategories() ([]string, error)
 	GetDistinctRegions() ([]string, error)
 	GetDistinctLegalForms() ([]string, error)
 	UpdateLEIRecord(record *domain.LEIRecord) error
@@ -130,10 +131,12 @@ type leiService struct {
 	countryRepo repository.CountryRepository
 	dataDir     string // Directory to store downloaded files
 
-	lookupCacheMu            sync.RWMutex
-	distinctRegions          []string
-	distinctRegionsCachedAt  time.Time
-	distinctLegalForms       []string
+	lookupCacheMu              sync.RWMutex
+	distinctCategories         []string
+	distinctCategoriesCachedAt time.Time
+	distinctRegions            []string
+	distinctRegionsCachedAt    time.Time
+	distinctLegalForms         []string
 	distinctLegalFormsCachedAt time.Time
 }
 
@@ -810,10 +813,20 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 				Str("first_lei", batch[0].LEI).
 				Str("last_lei", batch[len(batch)-1].LEI).
 				Msg("CRITICAL: Failed to batch upsert LEI records")
+			jobType := normalizeProcessingJobType(sourceFile.JobType)
+			batchErr := fmt.Errorf("batch upsert of %d LEI records failed: %w", len(batch), err)
+			s.recordProcessingFailure(jobType, &sourceFile.ID, "UPSERT", "", nil, batchErr)
 			failedRecords += len(batch)
 			// Return error to stop processing
 			return fmt.Errorf("batch upsert failed: %w", err)
 		} else {
+			jobType := normalizeProcessingJobType(sourceFile.JobType)
+			naturalKeys := make([]string, 0, len(batch))
+			for _, r := range batch {
+				naturalKeys = append(naturalKeys, r.LEI)
+			}
+			s.batchResolveOpenProcessingFailures(jobType, naturalKeys, &sourceFile.ID)
+
 			// Track records processed in this session (use batch size, not DB results)
 			processedRecords += len(batch)
 
@@ -861,11 +874,13 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 		recordCount++
 		var jsonRecord LEIJSONRecord
 		if err := decoder.Decode(&jsonRecord); err != nil {
+			jobType := normalizeProcessingJobType(sourceFile.JobType)
 			if isTerminalJSONDecodeError(err) {
 				log.Error().
 					Err(err).
 					Int("record_number", recordCount).
 					Msg("Terminating LEI JSON processing due to malformed or truncated JSON payload")
+				s.recordProcessingFailure(jobType, &sourceFile.ID, "DECODE", "", nil, err)
 				return fmt.Errorf("terminal JSON decode error at record %d: %w", recordCount, err)
 			}
 
@@ -873,6 +888,7 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 				Err(err).
 				Int("record_number", recordCount).
 				Msg("Failed to decode LEI JSON record")
+			s.recordProcessingFailure(jobType, &sourceFile.ID, "DECODE", "", nil, err)
 			failedRecords++
 			continue
 		}
@@ -905,6 +921,7 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 				Str("invalid_lei", record.LEI).
 				Int("record_number", recordCount).
 				Msg("Skipping record with invalid LEI code")
+			s.recordProcessingFailure(normalizeProcessingJobType(sourceFile.JobType), &sourceFile.ID, "MAP", record.LEI, &jsonRecord, fmt.Errorf("invalid LEI code: %s", record.LEI))
 			failedRecords++
 			continue
 		}
@@ -990,6 +1007,77 @@ func sanitizeSourceFileProgress(sourceFile *domain.SourceFile) {
 	if sourceFile.FailedRecords > sourceFile.ProcessedRecords {
 		sourceFile.FailedRecords = sourceFile.ProcessedRecords
 	}
+}
+
+func (s *leiService) recordProcessingFailure(
+	jobType string,
+	sourceFileID *uuid.UUID,
+	failureStage string,
+	naturalKey string,
+	rawRecord interface{},
+	cause error,
+) {
+	persistProcessingFailure(
+		s.repo,
+		normalizeProcessingJobType(jobType),
+		sourceFileID,
+		failureStage,
+		normalizeLEICodeValue(naturalKey),
+		rawRecord,
+		cause,
+	)
+}
+
+// batchResolveOpenProcessingFailures resolves open processing failures for a set of natural keys
+// in a single UPDATE … WHERE natural_key IN (…) query, avoiding N round-trips per batch.
+func (s *leiService) batchResolveOpenProcessingFailures(jobType string, naturalKeys []string, sourceFileID *uuid.UUID) {
+	if len(naturalKeys) == 0 {
+		return
+	}
+	normalized := make([]string, 0, len(naturalKeys))
+	for _, k := range naturalKeys {
+		if v := normalizeLEICodeValue(k); v != "" {
+			normalized = append(normalized, v)
+		}
+	}
+	if len(normalized) == 0 {
+		return
+	}
+	if err := s.repo.BatchResolveOpenProcessingFailures(normalizeProcessingJobType(jobType), normalized, sourceFileID, "Resolved by subsequent successful upsert"); err != nil {
+		log.Warn().Err(err).
+			Str("job_type", jobType).
+			Int("key_count", len(normalized)).
+			Msg("Failed to batch-resolve Level 1 processing failure lifecycle rows")
+	}
+}
+
+// normalizeProcessingJobType maps aliases and known types to their canonical storage names.
+// For unknown or pass-through types (e.g. LEVEL2_RR, LEVEL2_REPEX) it returns the value
+// unchanged, delegating to NormalizeProcessingJobType for known aliases.
+func normalizeProcessingJobType(jobType string) string {
+	if normalized := NormalizeProcessingJobType(jobType); normalized != "" {
+		return normalized
+	}
+	return jobType
+}
+
+// NormalizeProcessingJobType maps user-facing or legacy job type aliases to their canonical storage
+// names. Returns an empty string for unknown or invalid job types so callers can detect them.
+func NormalizeProcessingJobType(jobType string) string {
+	switch jobType {
+	case "DAILY_FULL", "LEVEL1_FULL":
+		return "LEVEL1_FULL"
+	case "DAILY_DELTA", "LEVEL1_DELTA":
+		return "LEVEL1_DELTA"
+	case "LEVEL2_RR", "LEVEL2_REPEX":
+		return jobType
+	default:
+		return ""
+	}
+}
+
+func sameProcessingJobType(lhs string, rhs string) bool {
+	return normalizeProcessingJobType(lhs) == normalizeProcessingJobType(rhs)
 }
 
 func normalizeLEICodeValue(value string) string {
@@ -1340,6 +1428,31 @@ func (s *leiService) GetDistinctCountries() ([]domain.Country, error) {
 	return activeCountries, nil
 }
 
+// GetDistinctCategories returns a sorted list of unique category values from LEI records
+func (s *leiService) GetDistinctCategories() ([]string, error) {
+	now := time.Now()
+
+	s.lookupCacheMu.RLock()
+	if !s.distinctCategoriesCachedAt.IsZero() && now.Sub(s.distinctCategoriesCachedAt) < distinctLookupCacheTTL {
+		cached := cloneStringSlice(s.distinctCategories)
+		s.lookupCacheMu.RUnlock()
+		return cached, nil
+	}
+	s.lookupCacheMu.RUnlock()
+
+	categories, err := s.repo.GetDistinctCategories()
+	if err != nil {
+		return nil, err
+	}
+
+	s.lookupCacheMu.Lock()
+	s.distinctCategories = cloneStringSlice(categories)
+	s.distinctCategoriesCachedAt = now
+	s.lookupCacheMu.Unlock()
+
+	return categories, nil
+}
+
 // GetDistinctRegions returns a sorted list of unique region values from LEI records
 func (s *leiService) GetDistinctRegions() ([]string, error) {
 	now := time.Now()
@@ -1364,7 +1477,6 @@ func (s *leiService) GetDistinctRegions() ([]string, error) {
 
 	return regions, nil
 }
-
 // GetDistinctLegalForms returns a sorted list of unique legal form values from LEI records
 func (s *leiService) GetDistinctLegalForms() ([]string, error) {
 	now := time.Now()
