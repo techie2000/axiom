@@ -993,45 +993,6 @@ func capProcessedRecords(totalRecords int, processedRecords int) int {
 	return processedRecords
 }
 
-func (s *leiService) recordProcessingFailure(
-	jobType string,
-	sourceFileID *uuid.UUID,
-	failureStage string,
-	naturalKey string,
-	rawRecord interface{},
-	cause error,
-) {
-	errMessage := "unknown processing failure"
-	if cause != nil {
-		errMessage = cause.Error()
-	}
-
-	var rawPayload domain.JSONBString
-	if rawRecord != nil {
-		if rawBytes, marshalErr := json.Marshal(rawRecord); marshalErr == nil {
-			rawPayload = domain.JSONBString(rawBytes)
-		}
-	}
-
-	failure := &domain.LEILevel2ProcessingFailure{
-		JobType:      normalizeProcessingJobType(jobType),
-		SourceFileID: sourceFileID,
-		FailureStage: failureStage,
-		NaturalKey:   normalizeLEICodeValue(naturalKey),
-		RawRecord:    rawPayload,
-		ErrorMessage: errMessage,
-		Resolved:     false,
-	}
-
-	if err := s.repo.CreateProcessingFailure(failure); err != nil {
-		log.Warn().Err(err).
-			Str("job_type", jobType).
-			Str("failure_stage", failureStage).
-			Str("natural_key", naturalKey).
-			Msg("Failed to persist Level 1 processing failure")
-	}
-}
-
 func (s *leiService) resolveOpenProcessingFailures(jobType, naturalKey string, sourceFileID *uuid.UUID) {
 	if err := s.repo.ResolveOpenProcessingFailures(normalizeProcessingJobType(jobType), normalizeLEICodeValue(naturalKey), sourceFileID, "Resolved by subsequent successful upsert"); err != nil {
 		log.Warn().Err(err).
@@ -1074,58 +1035,6 @@ func (s *leiService) recordProcessingFailure(
 		rawRecord,
 		cause,
 	)
-}
-
-// batchResolveOpenProcessingFailures resolves open processing failures for a set of natural keys
-// in a single UPDATE … WHERE natural_key IN (…) query, avoiding N round-trips per batch.
-func (s *leiService) batchResolveOpenProcessingFailures(jobType string, naturalKeys []string, sourceFileID *uuid.UUID) {
-	if len(naturalKeys) == 0 {
-		return
-	}
-	normalized := make([]string, 0, len(naturalKeys))
-	for _, k := range naturalKeys {
-		if v := normalizeLEICodeValue(k); v != "" {
-			normalized = append(normalized, v)
-		}
-	}
-	if len(normalized) == 0 {
-		return
-	}
-	if err := s.repo.BatchResolveOpenProcessingFailures(normalizeProcessingJobType(jobType), normalized, sourceFileID, "Resolved by subsequent successful upsert"); err != nil {
-		log.Warn().Err(err).
-			Str("job_type", jobType).
-			Int("key_count", len(normalized)).
-			Msg("Failed to batch-resolve Level 1 processing failure lifecycle rows")
-	}
-}
-
-// normalizeProcessingJobType maps aliases and known types to their canonical storage names.
-// For unknown or pass-through types (e.g. LEVEL2_RR, LEVEL2_REPEX) it returns the value
-// unchanged, delegating to NormalizeProcessingJobType for known aliases.
-func normalizeProcessingJobType(jobType string) string {
-	if normalized := NormalizeProcessingJobType(jobType); normalized != "" {
-		return normalized
-	}
-	return jobType
-}
-
-// NormalizeProcessingJobType maps user-facing or legacy job type aliases to their canonical storage
-// names. Returns an empty string for unknown or invalid job types so callers can detect them.
-func NormalizeProcessingJobType(jobType string) string {
-	switch jobType {
-	case "DAILY_FULL", "LEVEL1_FULL":
-		return "LEVEL1_FULL"
-	case "DAILY_DELTA", "LEVEL1_DELTA":
-		return "LEVEL1_DELTA"
-	case "LEVEL2_RR", "LEVEL2_REPEX":
-		return jobType
-	default:
-		return ""
-	}
-}
-
-func sameProcessingJobType(lhs string, rhs string) bool {
-	return normalizeProcessingJobType(lhs) == normalizeProcessingJobType(rhs)
 }
 
 func normalizeLEICodeValue(value string) string {
@@ -1525,6 +1434,7 @@ func (s *leiService) GetDistinctRegions() ([]string, error) {
 
 	return regions, nil
 }
+
 // GetDistinctLegalForms returns a sorted list of unique legal form values from LEI records
 func (s *leiService) GetDistinctLegalForms() ([]string, error) {
 	now := time.Now()
