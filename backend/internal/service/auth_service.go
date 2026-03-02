@@ -74,7 +74,7 @@ func (s *authService) Register(req RegisterRequest) error {
 		return errors.New("username already taken")
 	}
 
-	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), 12)
 	if err != nil {
 		return fmt.Errorf("failed to hash password: %w", err)
 	}
@@ -148,7 +148,8 @@ func (s *authService) RejectUser(adminID, userID string) error {
 	if err != nil {
 		return fmt.Errorf("user not found: %w", err)
 	}
-	_ = adminID // recorded via audit trail in future; kept for interface consistency
+	// TODO: record adminID in audit trail when audit logging is implemented
+	_ = adminID
 	user.Status = domain.UserStatusInactive
 	return s.repo.Update(user)
 }

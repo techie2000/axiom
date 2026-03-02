@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -182,6 +181,15 @@ func (h *AuthHandler) ListUsers(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
+// extractUserID retrieves the user_id string from the gin context set by JWTAuth middleware.
+func extractUserID(c *gin.Context) string {
+	v, _ := c.Get("user_id")
+	if s, ok := v.(string); ok {
+		return s
+	}
+	return ""
+}
+
 // ApproveUser godoc
 // @Summary Approve a pending user (admin only)
 // @Description Activate a user account so the user can log in
@@ -192,10 +200,10 @@ func (h *AuthHandler) ListUsers(c *gin.Context) {
 // @Security BearerAuth
 // @Router /auth/users/{id}/approve [post]
 func (h *AuthHandler) ApproveUser(c *gin.Context) {
-	adminID, _ := c.Get("user_id")
+	adminID := extractUserID(c)
 	userID := c.Param("id")
 
-	if err := h.auth.ApproveUser(fmt.Sprint(adminID), userID); err != nil {
+	if err := h.auth.ApproveUser(adminID, userID); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -213,10 +221,10 @@ func (h *AuthHandler) ApproveUser(c *gin.Context) {
 // @Security BearerAuth
 // @Router /auth/users/{id}/reject [post]
 func (h *AuthHandler) RejectUser(c *gin.Context) {
-	adminID, _ := c.Get("user_id")
+	adminID := extractUserID(c)
 	userID := c.Param("id")
 
-	if err := h.auth.RejectUser(fmt.Sprint(adminID), userID); err != nil {
+	if err := h.auth.RejectUser(adminID, userID); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
