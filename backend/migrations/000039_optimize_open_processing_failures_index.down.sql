@@ -1,4 +1,4 @@
--- Revert open-failures index to previous non-partial-key form.
+-- Revert open-failures index to its previous definition with a natural_key IS NOT NULL predicate.
 
 DROP INDEX IF EXISTS lei_raw.idx_lei_l2_failures_open_natural_key;
 
