@@ -314,6 +314,43 @@ func (CodeMapping) TableName() string {
 	return "code_mappings"
 }
 
+// UserRole represents the role of a system user
+type UserRole string
+
+const (
+	UserRoleAdmin UserRole = "admin"
+	UserRoleUser  UserRole = "user"
+)
+
+// UserStatus represents the provisioning status of a system user
+type UserStatus string
+
+const (
+	UserStatusPending  UserStatus = "pending"
+	UserStatusActive   UserStatus = "active"
+	UserStatusInactive UserStatus = "inactive"
+)
+
+// User represents a system user with authentication and authorisation details
+type User struct {
+	BaseModel
+	Email        string     `gorm:"uniqueIndex;not null;size:255" json:"email"`
+	Username     string     `gorm:"uniqueIndex;not null;size:100" json:"username"`
+	PasswordHash string     `gorm:"column:password_hash;not null" json:"-"`
+	FullName     string     `gorm:"size:255" json:"full_name"`
+	Role         UserRole   `gorm:"type:varchar(50);not null;default:'user'" json:"role"`
+	Status       UserStatus `gorm:"type:varchar(50);not null;default:'pending'" json:"status"`
+	ApprovedBy   *uuid.UUID `gorm:"type:uuid;column:approved_by" json:"approved_by,omitempty"`
+	ApprovedAt   *time.Time `gorm:"column:approved_at" json:"approved_at,omitempty"`
+	// IsBootstrap marks the default seed admin that must be replaced on first login
+	IsBootstrap bool `gorm:"column:is_bootstrap;default:false" json:"-"`
+}
+
+// TableName overrides the table name
+func (User) TableName() string {
+	return "users"
+}
+
 // CodeMappingAudit represents the complete audit history of code mapping changes
 type CodeMappingAudit struct {
 	ID             uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`

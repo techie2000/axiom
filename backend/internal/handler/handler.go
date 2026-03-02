@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -29,7 +30,7 @@ type Handlers struct {
 // NewHandlers creates a new handlers instance
 func NewHandlers(services *service.Services, schedulerService service.SchedulerService) *Handlers {
 	return &Handlers{
-		Auth:            NewAuthHandler(),
+		Auth:            NewAuthHandler(services.Auth),
 		Country:         NewCountryHandler(services.Country),
 		Currency:        NewCurrencyHandler(services.Currency),
 		Language:        NewLanguageHandler(services.Language),
@@ -44,10 +45,18 @@ func NewHandlers(services *service.Services, schedulerService service.SchedulerS
 }
 
 // AuthHandler handles authentication endpoints
-type AuthHandler struct{}
+type AuthHandler struct {
+	auth service.AuthService
+}
 
-func NewAuthHandler() *AuthHandler {
-	return &AuthHandler{}
+func NewAuthHandler(auth service.AuthService) *AuthHandler {
+	return &AuthHandler{auth: auth}
+}
+
+// loginRequest is the expected request body for POST /auth/login.
+type loginRequest struct {
+	Email    string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required"`
 }
 
 // Login godoc
@@ -56,26 +65,163 @@ func NewAuthHandler() *AuthHandler {
 // @Tags auth
 // @Accept json
 // @Produce json
-// @Param credentials body object true "Login credentials"
-// @Success 200 {object} object
+// @Param credentials body loginRequest true "Login credentials"
+// @Success 200 {object} service.LoginResponse
+// @Failure 400 {object} object{error=string}
+// @Failure 401 {object} object{error=string}
 // @Router /auth/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
-	// TODO: Implement actual authentication
-	c.JSON(http.StatusOK, gin.H{"message": "Login endpoint - to be implemented"})
+	var req loginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "email and password are required"})
+		return
+	}
+
+	resp, err := h.auth.Login(req.Email, req.Password)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, resp)
 }
 
 // Register godoc
-// @Summary User registration
-// @Description Register a new user
+// @Summary Request a new user account
+// @Description Submit a registration request that an admin must approve
 // @Tags auth
 // @Accept json
 // @Produce json
-// @Param user body object true "User details"
-// @Success 201 {object} object
+// @Param user body service.RegisterRequest true "Registration details"
+// @Success 201 {object} object{message=string}
+// @Failure 400 {object} object{error=string}
 // @Router /auth/register [post]
 func (h *AuthHandler) Register(c *gin.Context) {
-	// TODO: Implement user registration
-	c.JSON(http.StatusCreated, gin.H{"message": "Register endpoint - to be implemented"})
+	var req service.RegisterRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.auth.Register(req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"message": "Registration request submitted. An admin will review your account."})
+}
+
+// userResponse is a safe subset of domain.User for API responses.
+type userResponse struct {
+	ID          string  `json:"id"`
+	Email       string  `json:"email"`
+	Username    string  `json:"username"`
+	FullName    string  `json:"full_name"`
+	Role        string  `json:"role"`
+	Status      string  `json:"status"`
+	ApprovedBy  *string `json:"approved_by,omitempty"`
+	ApprovedAt  *string `json:"approved_at,omitempty"`
+	CreatedAt   string  `json:"created_at"`
+}
+
+func toUserResponse(u *domain.User) userResponse {
+	r := userResponse{
+		ID:        u.ID.String(),
+		Email:     u.Email,
+		Username:  u.Username,
+		FullName:  u.FullName,
+		Role:      string(u.Role),
+		Status:    string(u.Status),
+		CreatedAt: u.CreatedAt.Format("2006-01-02T15:04:05Z"),
+	}
+	if u.ApprovedBy != nil {
+		s := u.ApprovedBy.String()
+		r.ApprovedBy = &s
+	}
+	if u.ApprovedAt != nil {
+		s := u.ApprovedAt.Format("2006-01-02T15:04:05Z")
+		r.ApprovedAt = &s
+	}
+	return r
+}
+
+// ListUsers godoc
+// @Summary List users (admin only)
+// @Description Return users optionally filtered by status
+// @Tags auth
+// @Produce json
+// @Param status query string false "Filter by status: pending, active, inactive"
+// @Param limit query int false "Limit (default 50)"
+// @Param offset query int false "Offset"
+// @Success 200 {array} userResponse
+// @Security BearerAuth
+// @Router /auth/users [get]
+func (h *AuthHandler) ListUsers(c *gin.Context) {
+	status := c.Query("status")
+	limit, err := strconv.Atoi(c.DefaultQuery("limit", "50"))
+	if err != nil || limit < 1 || limit > 200 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid limit"})
+		return
+	}
+	offset, err := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	if err != nil || offset < 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid offset"})
+		return
+	}
+
+	users, err := h.auth.ListUsers(status, limit, offset)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list users"})
+		return
+	}
+
+	resp := make([]userResponse, 0, len(users))
+	for _, u := range users {
+		resp = append(resp, toUserResponse(u))
+	}
+	c.JSON(http.StatusOK, resp)
+}
+
+// ApproveUser godoc
+// @Summary Approve a pending user (admin only)
+// @Description Activate a user account so the user can log in
+// @Tags auth
+// @Produce json
+// @Param id path string true "User ID"
+// @Success 200 {object} object{message=string}
+// @Security BearerAuth
+// @Router /auth/users/{id}/approve [post]
+func (h *AuthHandler) ApproveUser(c *gin.Context) {
+	adminID, _ := c.Get("user_id")
+	userID := c.Param("id")
+
+	if err := h.auth.ApproveUser(fmt.Sprint(adminID), userID); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "User approved successfully"})
+}
+
+// RejectUser godoc
+// @Summary Reject/deactivate a user (admin only)
+// @Description Deactivate a user account
+// @Tags auth
+// @Produce json
+// @Param id path string true "User ID"
+// @Success 200 {object} object{message=string}
+// @Security BearerAuth
+// @Router /auth/users/{id}/reject [post]
+func (h *AuthHandler) RejectUser(c *gin.Context) {
+	adminID, _ := c.Get("user_id")
+	userID := c.Param("id")
+
+	if err := h.auth.RejectUser(fmt.Sprint(adminID), userID); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "User deactivated successfully"})
 }
 
 // CountryHandler handles country endpoints
