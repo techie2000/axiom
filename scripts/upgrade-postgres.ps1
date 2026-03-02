@@ -9,7 +9,7 @@
 #   .\scripts\upgrade-postgres.ps1 -Environment <env> [-Yes]
 #
 # Parameters:
-#   -Environment   One of: dev | uat | prod  (required)
+#   -Environment   One of: dev | uat | prod | main  (required)
 #   -Yes           Skip the confirmation prompt
 #
 # Examples:
@@ -18,7 +18,7 @@
 
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet("dev", "uat", "prod")]
+    [ValidateSet("dev", "uat", "prod", "main")]
     [string]$Environment,
 
     [switch]$Yes

@@ -1,0 +1,118 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: ${COMPOSE_PROJECT_NAME}-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - postgres_data_main:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - axiom-main
+
+  rabbitmq:
+    image: rabbitmq:4.2-management-alpine
+    container_name: ${COMPOSE_PROJECT_NAME}-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+    ports:
+      - "${RABBITMQ_PORT}:5672"
+      - "${RABBITMQ_MGMT_PORT}:15672"
+    volumes:
+      - rabbitmq_data_main:/var/lib/rabbitmq
+      - rabbitmq_log_main:/var/log/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - axiom-main
+
+  backend:
+    build:
+      context: ./backend
+      # Main image uses the dev Dockerfile variant with migration startup script and
+      # corporate TLS workarounds, matching the intraday development use-case.
+      dockerfile: ../docker/Dockerfile.backend
+    container_name: ${COMPOSE_PROJECT_NAME}-backend
+    environment:
+      DATABASE_HOST: ${DATABASE_HOST}
+      DATABASE_PORT: ${DATABASE_PORT}
+      DATABASE_USER: ${DATABASE_USER}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      DATABASE_NAME: ${DATABASE_NAME}
+      RABBITMQ_URL: ${RABBITMQ_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      SERVER_PORT: ${SERVER_PORT}
+      SERVER_MODE: ${SERVER_MODE}
+      LOG_FILE_PATH: ${LOG_FILE_PATH}
+      LOG_MAX_SIZE_MB: ${LOG_MAX_SIZE_MB}
+      LOG_MAX_BACKUPS: ${LOG_MAX_BACKUPS}
+      LOG_MAX_AGE_DAYS: ${LOG_MAX_AGE_DAYS}
+      LOG_COMPRESS: ${LOG_COMPRESS}
+      LEI_DATADIR: ${LEI_DATADIR}
+      LEI_KEEPFULLFILES: ${LEI_KEEPFULLFILES}
+      LEI_KEEPDELTAFILES: ${LEI_KEEPDELTAFILES}
+      CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:13000,http://localhost:23000,http://localhost:33000,http://localhost:43000"
+      CORS_ALLOWED_METHODS: "GET,POST,PUT,DELETE,OPTIONS"
+      CORS_ALLOWED_HEADERS: "Origin,Content-Type,Authorization,Accept"
+    ports:
+      - "${BACKEND_PORT}:8080"
+    volumes:
+      - ./data/main/lei:/root/data/lei  # Bind mount for developer access (main environment)
+      - ./log/main:/root/log            # Persist logs for debugging (main environment)
+      - ./backend/config.yaml:/root/config/config.yaml:ro  # Mount config file with CORS settings
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - axiom-main
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../docker/Dockerfile.frontend
+    container_name: ${COMPOSE_PROJECT_NAME}-frontend
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+      NEXT_PUBLIC_ENVIRONMENT: ${NEXT_PUBLIC_ENVIRONMENT}
+      NODE_ENV: development
+    ports:
+      - "${FRONTEND_PORT}:3000"
+    volumes:
+      # Mount source code for hot reload
+      - ./frontend:/app
+      # Prevent node_modules and .next from being overwritten
+      - frontend_node_modules_main:/app/node_modules
+      - frontend_next_main:/app/.next
+    command: npm run dev
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - axiom-main
+
+volumes:
+  postgres_data_main:
+  rabbitmq_data_main:
+  rabbitmq_log_main:
+  frontend_node_modules_main:
+  frontend_next_main:
+  # lei_data_main removed - using bind mount at ./data/main/lei for developer access
+
+networks:
+  axiom-main:
+    name: ${COMPOSE_PROJECT_NAME}-network

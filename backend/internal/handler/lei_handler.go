@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -13,6 +14,7 @@ import (
 // LEIHandler handles LEI-related HTTP requests
 type LEIHandler struct {
 	leiService       service.LEIService
+	level2Service    service.LEILevel2Service
 	schedulerService service.SchedulerService
 }
 
@@ -20,6 +22,20 @@ type LEIHandler struct {
 func NewLEIHandler(leiService service.LEIService, schedulerService service.SchedulerService) *LEIHandler {
 	return &LEIHandler{
 		leiService:       leiService,
+		level2Service:    nil,
+		schedulerService: schedulerService,
+	}
+}
+
+// NewLEIHandlerWithLevel2 creates a new LEI handler with Level 2 service capabilities.
+func NewLEIHandlerWithLevel2(
+	leiService service.LEIService,
+	level2Service service.LEILevel2Service,
+	schedulerService service.SchedulerService,
+) *LEIHandler {
+	return &LEIHandler{
+		leiService:       leiService,
+		level2Service:    level2Service,
 		schedulerService: schedulerService,
 	}
 }
@@ -39,6 +55,23 @@ func (h *LEIHandler) GetDistinctCountries(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, countries)
+}
+
+// GetDistinctCategories returns a list of all unique category values in the LEI database
+// @Summary Get distinct categories
+// @Description Get sorted list of unique category values from LEI records
+// @Tags LEI
+// @Produce json
+// @Success 200 {array} string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/lei-categories [get]
+func (h *LEIHandler) GetDistinctCategories(c *gin.Context) {
+	categories, err := h.leiService.GetDistinctCategories()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve categories"})
+		return
+	}
+	c.JSON(http.StatusOK, categories)
 }
 
 // GetDistinctRegions returns a list of all unique region values in the LEI database
@@ -197,16 +230,45 @@ func (h *LEIHandler) GetAuditHistory(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Success 202 {object} map[string]string
+// @Failure 409 {object} map[string]string
 // @Failure 500 {object} map[string]string
 // @Router /api/v1/lei/sync/full [post]
 func (h *LEIHandler) TriggerFullSync(c *gin.Context) {
-	go func() {
-		if err := h.schedulerService.RunDailyFullSync(); err != nil {
-			log.Error().Err(err).Msg("Failed to run daily full sync")
+	if err := h.schedulerService.TriggerFullSync(); err != nil {
+		if errors.Is(err, service.ErrJobRunning) {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to trigger Level 1 LEI Records sync (DAILY_FULL)"})
 		}
-	}()
+		return
+	}
+	c.JSON(http.StatusAccepted, gin.H{"message": "Level 1 LEI Records sync triggered (DAILY_FULL)"})
+}
 
-	c.JSON(http.StatusAccepted, gin.H{"message": "Full sync triggered"})
+// TriggerMasterDataSync manually triggers a reference/master data sync
+// @Summary Trigger master data sync
+// @Description Manually trigger countries/currencies/languages synchronization
+// @Tags LEI
+// @Accept json
+// @Produce json
+// @Success 202 {object} map[string]string
+// @Failure 409 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/lei/sync/masterdata [post]
+func (h *LEIHandler) TriggerMasterDataSync(c *gin.Context) {
+	if st, err := h.leiService.GetProcessingStatus("MASTER_DATA_SYNC"); err == nil && st.Status == "RUNNING" {
+		c.JSON(http.StatusConflict, gin.H{"error": "MASTER_DATA_SYNC is already running"})
+		return
+	}
+	if err := h.schedulerService.TriggerMasterDataSync(); err != nil {
+		if errors.Is(err, service.ErrJobRunning) {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to trigger master data sync"})
+		}
+		return
+	}
+	c.JSON(http.StatusAccepted, gin.H{"message": "Master data sync triggered"})
 }
 
 // TriggerDeltaSync manually triggers a delta sync
@@ -216,16 +278,86 @@ func (h *LEIHandler) TriggerFullSync(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Success 202 {object} map[string]string
+// @Failure 409 {object} map[string]string
 // @Failure 500 {object} map[string]string
 // @Router /api/v1/lei/sync/delta [post]
 func (h *LEIHandler) TriggerDeltaSync(c *gin.Context) {
-	go func() {
-		if err := h.schedulerService.RunDailyDeltaSync(); err != nil {
-			log.Error().Err(err).Msg("Failed to run daily delta sync")
+	if err := h.schedulerService.TriggerDeltaSync(); err != nil {
+		if errors.Is(err, service.ErrJobRunning) {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to trigger delta sync"})
 		}
-	}()
-
+		return
+	}
 	c.JSON(http.StatusAccepted, gin.H{"message": "Delta sync triggered"})
+}
+
+// TriggerLevel2Sync manually triggers a Level 2 (Relationship Records + Reporting Exceptions) sync
+// @Summary Trigger Level 2 LEI sync
+// @Description Manually trigger a GLEIF Level 2 data synchronization (RR + REPEX). Runs independently of the
+// scheduled Level 1 full sync so an operator can re-run just the Level 2 pipeline intra-day.
+// @Tags LEI
+// @Accept json
+// @Produce json
+// @Success 202 {object} map[string]string
+// @Failure 409 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/lei/sync/level2 [post]
+func (h *LEIHandler) TriggerLevel2Sync(c *gin.Context) {
+	if err := h.schedulerService.TriggerLevel2Sync(); err != nil {
+		if errors.Is(err, service.ErrJobRunning) {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to trigger Level 2 sync"})
+		}
+		return
+	}
+	c.JSON(http.StatusAccepted, gin.H{"message": "Level 2 sync triggered (LEVEL2_RR → LEVEL2_REPEX)"})
+}
+
+// TriggerLevel2RRSync manually triggers Level 2 RR step
+// @Summary Trigger Level 2 RR sync
+// @Description Manually trigger the LEVEL2_RR job
+// @Tags LEI
+// @Accept json
+// @Produce json
+// @Success 202 {object} map[string]string
+// @Failure 409 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/lei/sync/level2/rr [post]
+func (h *LEIHandler) TriggerLevel2RRSync(c *gin.Context) {
+	if err := h.schedulerService.TriggerLevel2RRSync(); err != nil {
+		if errors.Is(err, service.ErrJobRunning) {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to trigger Level 2 Relationship Records sync (LEVEL2_RR)"})
+		}
+		return
+	}
+	c.JSON(http.StatusAccepted, gin.H{"message": "Level 2 Relationship Records sync triggered (LEVEL2_RR)"})
+}
+
+// TriggerLevel2REPEXSync manually triggers Level 2 REPEX step
+// @Summary Trigger Level 2 REPEX sync
+// @Description Manually trigger the LEVEL2_REPEX job
+// @Tags LEI
+// @Accept json
+// @Produce json
+// @Success 202 {object} map[string]string
+// @Failure 409 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/lei/sync/level2/repex [post]
+func (h *LEIHandler) TriggerLevel2REPEXSync(c *gin.Context) {
+	if err := h.schedulerService.TriggerLevel2REPEXSync(); err != nil {
+		if errors.Is(err, service.ErrJobRunning) {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to trigger Level 2 Reporting Exceptions sync (LEVEL2_REPEX)"})
+		}
+		return
+	}
+	c.JSON(http.StatusAccepted, gin.H{"message": "Level 2 Reporting Exceptions sync triggered (LEVEL2_REPEX)"})
 }
 
 // GetProcessingStatus retrieves processing status for a job type
@@ -234,7 +366,7 @@ func (h *LEIHandler) TriggerDeltaSync(c *gin.Context) {
 // @Tags LEI
 // @Accept json
 // @Produce json
-// @Param jobType path string true "Job type (DAILY_FULL or DAILY_DELTA)"
+// @Param jobType path string true "Job type (DAILY_FULL, DAILY_DELTA, LEVEL2_RR, or LEVEL2_REPEX)"
 // @Success 200 {object} domain.FileProcessingStatus
 // @Failure 404 {object} map[string]string
 // @Failure 500 {object} map[string]string
@@ -249,6 +381,104 @@ func (h *LEIHandler) GetProcessingStatus(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, status)
+}
+
+// GetImportProcessingFailures lists LEI import record-level processing failures.
+// @Summary List LEI import processing failures
+// @Description Get persisted Level 1/Level 2 processing failures with open/resolved lifecycle filtering
+// @Tags LEI
+// @Accept json
+// @Produce json
+// @Param jobType query string false "Job type filter (DAILY_FULL, DAILY_DELTA, LEVEL2_RR, LEVEL2_REPEX)"
+// @Param openOnly query bool false "When true (default), returns only unresolved failures" default(true)
+// @Param limit query int false "Max rows" default(100)
+// @Param offset query int false "Offset" default(0)
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/lei/import-failures [get]
+func (h *LEIHandler) GetImportProcessingFailures(c *gin.Context) {
+	if h.level2Service == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Level 2 service not configured"})
+		return
+	}
+
+	jobType := normalizeFailuresJobType(c.Query("jobType"))
+	if jobType == "INVALID" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "jobType must be DAILY_FULL, DAILY_DELTA, LEVEL2_RR, or LEVEL2_REPEX"})
+		return
+	}
+
+	openOnly := true
+	if rawOpenOnly := c.Query("openOnly"); rawOpenOnly != "" {
+		openOnly = rawOpenOnly != "false" && rawOpenOnly != "0"
+	}
+
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "100"))
+	if limit <= 0 {
+		limit = 100
+	}
+	if limit > 500 {
+		limit = 500
+	}
+
+	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	if offset < 0 {
+		offset = 0
+	}
+
+	items, total, err := h.level2Service.GetProcessingFailures(jobType, openOnly, limit, offset)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve LEI import processing failures"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"items":     items,
+		"total":     total,
+		"limit":     limit,
+		"offset":    offset,
+		"open_only": openOnly,
+		"job_type":  jobType,
+	})
+}
+
+// GetLevel2ProcessingFailures is kept as a backwards-compatible alias.
+// Deprecated: use /api/v1/lei/import-failures.
+// @Summary List LEI import processing failures (Deprecated)
+// @Description Deprecated endpoint. Use /api/v1/lei/import-failures instead.
+// @Tags LEI
+// @Accept json
+// @Produce json
+// @Param jobType query string false "Job type filter (DAILY_FULL, DAILY_DELTA, LEVEL2_RR, LEVEL2_REPEX)"
+// @Param openOnly query bool false "When true (default), returns only unresolved failures" default(true)
+// @Param limit query int false "Max rows" default(100)
+// @Param offset query int false "Offset" default(0)
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/lei/level2/failures [get]
+func (h *LEIHandler) GetLevel2ProcessingFailures(c *gin.Context) {
+	c.Header("Deprecation", "true")
+	c.Header("Sunset", "Tue, 30 Jun 2026 23:59:59 GMT")
+	c.Header("Link", "</api/v1/lei/import-failures>; rel=\"successor-version\"")
+	c.Header("Warning", "299 - \"Deprecated API: use /api/v1/lei/import-failures\"")
+	h.GetImportProcessingFailures(c)
+}
+
+func normalizeFailuresJobType(jobType string) string {
+	switch jobType {
+	case "":
+		return ""
+	case "LEVEL1_FULL", "DAILY_FULL":
+		return "LEVEL1_FULL"
+	case "LEVEL1_DELTA", "DAILY_DELTA":
+		return "LEVEL1_DELTA"
+	case "LEVEL2_RR", "LEVEL2_REPEX":
+		return jobType
+	default:
+		return "INVALID"
+	}
 }
 
 // ResumeProcessing resumes processing of a source file

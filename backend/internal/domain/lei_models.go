@@ -156,6 +156,8 @@ type SourceFile struct {
 	ID              uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
 	FileName        string    `gorm:"size:500;not null" json:"file_name"`
 	FileType        string    `gorm:"size:20;not null" json:"file_type"` // FULL, DELTA
+	JobType         string    `gorm:"size:50" json:"job_type"`
+	JobLabel        string    `gorm:"size:120" json:"job_label"`
 	FileURL         string    `gorm:"size:1000;not null" json:"file_url"`
 	FileSize        int64     `json:"file_size"`
 	FileHash        string    `gorm:"size:64" json:"file_hash"` // SHA-256 hash
@@ -190,15 +192,22 @@ func (SourceFile) TableName() string {
 
 // FileProcessingStatus represents the overall status of file processing jobs
 type FileProcessingStatus struct {
-	ID            uuid.UUID  `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
-	JobType       string     `gorm:"size:50;not null" json:"job_type"` // DAILY_FULL, DAILY_DELTA, MANUAL
-	Status        string     `gorm:"size:20;not null" json:"status"`   // IDLE, RUNNING, COMPLETED, FAILED
-	LastRunAt     *time.Time `json:"last_run_at"`
-	NextRunAt     *time.Time `json:"next_run_at"`
-	LastSuccessAt *time.Time `json:"last_success_at"`
+	ID                uuid.UUID  `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	JobType           string     `gorm:"size:50;not null" json:"job_type"` // DAILY_FULL, DAILY_DELTA, LEVEL2_RR, LEVEL2_REPEX
+	JobLabel          string     `gorm:"size:120" json:"job_label"`
+	Status            string     `gorm:"size:20;not null" json:"status"` // IDLE, RUNNING, COMPLETED, FAILED
+	LastRunAt         *time.Time `json:"last_run_at"`
+	NextRunAt         *time.Time `json:"next_run_at"`
+	LastSuccessAt     *time.Time `json:"last_success_at"`
+	DependsOnJobLabel string     `gorm:"size:120" json:"depends_on_job_label"`
 
 	CurrentSourceFileID *uuid.UUID  `gorm:"type:uuid" json:"current_source_file_id"`
 	CurrentSourceFile   *SourceFile `gorm:"foreignKey:CurrentSourceFileID" json:"current_source_file,omitempty"`
+
+	// DependsOnJobType is the JobType of the upstream job that must complete successfully
+	// before this job can run.  Empty string means this is a root job with no dependency.
+	// Known chain: DAILY_FULL → LEVEL2_RR → LEVEL2_REPEX.
+	DependsOnJobType string `gorm:"size:50" json:"depends_on_job_type"`
 
 	ErrorMessage string `gorm:"type:text" json:"error_message"`
 
@@ -211,9 +220,188 @@ func (FileProcessingStatus) TableName() string {
 	return "lei_raw.file_processing_status"
 }
 
+// JobTypeDisplayName returns the human-readable job label used in API/UI and persisted metadata.
+func JobTypeDisplayName(jobType string) string {
+	switch jobType {
+	case "MASTER_DATA_SYNC":
+		return "Reference Data (MASTER_DATA_SYNC)"
+	case "LEVEL1_FULL":
+		return "Level 1 — LEI Records (LEVEL1_FULL)"
+	case "LEVEL1_DELTA":
+		return "Level 1 — LEI Records Delta (LEVEL1_DELTA)"
+	case "DAILY_FULL":
+		return "Level 1 — LEI Records (DAILY_FULL)"
+	case "DAILY_DELTA":
+		return "Level 1 — LEI Records Delta (DAILY_DELTA)"
+	case "LEVEL2_RR":
+		return "Level 2 — Relationship Records (LEVEL2_RR)"
+	case "LEVEL2_REPEX":
+		return "Level 2 — Reporting Exceptions (LEVEL2_REPEX)"
+	default:
+		return jobType
+	}
+}
+
+// JobTypeFromFileType maps source file type values to canonical LEI job types.
+func JobTypeFromFileType(fileType string) string {
+	switch fileType {
+	case "FULL":
+		return "LEVEL1_FULL"
+	case "DELTA":
+		return "LEVEL1_DELTA"
+	case "RR", "RR_FULL":
+		return "LEVEL2_RR"
+	case "REPEX", "REPEX_FULL":
+		return "LEVEL2_REPEX"
+	default:
+		return ""
+	}
+}
+
 // LEIChangeDetection represents changes detected between old and new LEI records
 type LEIChangeDetection struct {
 	FieldName string      `json:"field_name"`
 	OldValue  interface{} `json:"old_value"`
 	NewValue  interface{} `json:"new_value"`
+}
+
+// LEIRelationshipRecord represents a GLEIF Level 2 Relationship Record (RR golden-copy).
+// Each record encodes a directional ownership or consolidation relationship between two legal
+// entities identified by their LEI codes. These records are populated after the Level 1
+// (lei_records) sync completes because they reference LEIs that must already exist.
+type LEIRelationshipRecord struct {
+	ID uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	// StartNodeLEI is the LEI of the child / controlled entity.
+	StartNodeLEI string `gorm:"size:20;not null;index" json:"start_node_lei"`
+	// EndNodeLEI is the LEI of the parent / controlling entity.
+	EndNodeLEI string `gorm:"size:20;not null;index" json:"end_node_lei"`
+
+	RelationshipType   string `gorm:"size:100;not null" json:"relationship_type"`
+	RelationshipStatus string `gorm:"size:50;not null" json:"relationship_status"`
+
+	RelationshipPeriods     JSONBString `gorm:"type:jsonb" json:"relationship_periods"`
+	RelationshipQualifiers  JSONBString `gorm:"type:jsonb" json:"relationship_qualifiers"`
+	RelationshipQuantifiers JSONBString `gorm:"type:jsonb" json:"relationship_quantifiers"`
+
+	RegistrationStatus      string     `gorm:"size:50" json:"registration_status"`
+	InitialRegistrationDate *time.Time `json:"initial_registration_date"`
+	LastUpdateDate          *time.Time `json:"last_update_date"`
+	NextRenewalDate         *time.Time `json:"next_renewal_date"`
+	ManagingLOU             string     `gorm:"size:20" json:"managing_lou"`
+	ValidationSources       string     `gorm:"size:100" json:"validation_sources"`
+	ValidationDocuments     string     `gorm:"size:100" json:"validation_documents"`
+	ValidationReference     string     `gorm:"size:500" json:"validation_reference"`
+
+	SourceFileID *uuid.UUID `gorm:"type:uuid" json:"source_file_id"`
+
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// TableName overrides the table name for LEIRelationshipRecord.
+func (LEIRelationshipRecord) TableName() string {
+	return "lei_raw.lei_relationship_records"
+}
+
+// LEIReportingException represents a GLEIF Level 2 Reporting Exception (REPEX golden-copy).
+// Each record indicates that a legal entity cannot or will not disclose its parent ownership
+// relationship, along with the category and reason for that exception.
+type LEIReportingException struct {
+	ID                 uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	LEI                string    `gorm:"size:20;not null;index" json:"lei"`
+	ExceptionCategory  string    `gorm:"size:100;not null" json:"exception_category"`
+	ExceptionReason    string    `gorm:"size:200;not null" json:"exception_reason"`
+	ExceptionReference string    `gorm:"size:500" json:"exception_reference"`
+
+	SourceFileID *uuid.UUID `gorm:"type:uuid" json:"source_file_id"`
+
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// TableName overrides the table name for LEIReportingException.
+func (LEIReportingException) TableName() string {
+	return "lei_raw.lei_reporting_exceptions"
+}
+
+// LEIRelationshipRecordAudit represents the complete audit history of Level 2
+// relationship record changes, mirroring the pattern used by LEIRecordAudit for
+// Level 1 lei_records.
+type LEIRelationshipRecordAudit struct {
+	ID               uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	RRRecordID       uuid.UUID `gorm:"type:uuid;not null;index" json:"rr_record_id"`
+	StartNodeLEI     string    `gorm:"size:20;not null;index" json:"start_node_lei"`
+	EndNodeLEI       string    `gorm:"size:20;not null;index" json:"end_node_lei"`
+	RelationshipType string    `gorm:"size:100;not null" json:"relationship_type"`
+	Action           string    `gorm:"size:20;not null" json:"action"` // CREATE, UPDATE, DELETE
+
+	// Complete record snapshot
+	RecordSnapshot JSONBString `gorm:"type:jsonb;not null" json:"record_snapshot"`
+
+	// Change details
+	ChangedFields JSONBString `gorm:"type:jsonb" json:"changed_fields"` // {"field": {"old": "value", "new": "value"}}
+
+	// Source information
+	SourceFileID *uuid.UUID `gorm:"type:uuid" json:"source_file_id"`
+	ChangedBy    string     `gorm:"size:100;not null;default:'system'" json:"changed_by"`
+
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// TableName overrides the table name for LEIRelationshipRecordAudit.
+func (LEIRelationshipRecordAudit) TableName() string {
+	return "lei_raw.lei_relationship_records_audit"
+}
+
+// LEIReportingExceptionAudit represents the complete audit history of Level 2
+// reporting exception changes, mirroring the pattern used by LEIRecordAudit for
+// Level 1 lei_records.
+type LEIReportingExceptionAudit struct {
+	ID                uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	RepexRecordID     uuid.UUID `gorm:"type:uuid;not null;index" json:"repex_record_id"`
+	LEI               string    `gorm:"size:20;not null;index" json:"lei"`
+	ExceptionCategory string    `gorm:"size:100;not null" json:"exception_category"`
+	Action            string    `gorm:"size:20;not null" json:"action"` // CREATE, UPDATE, DELETE
+
+	// Complete record snapshot
+	RecordSnapshot JSONBString `gorm:"type:jsonb;not null" json:"record_snapshot"`
+
+	// Change details
+	ChangedFields JSONBString `gorm:"type:jsonb" json:"changed_fields"` // {"field": {"old": "value", "new": "value"}}
+
+	// Source information
+	SourceFileID *uuid.UUID `gorm:"type:uuid" json:"source_file_id"`
+	ChangedBy    string     `gorm:"size:100;not null;default:'system'" json:"changed_by"`
+
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// TableName overrides the table name for LEIReportingExceptionAudit.
+func (LEIReportingExceptionAudit) TableName() string {
+	return "lei_raw.lei_reporting_exceptions_audit"
+}
+
+// LEILevel2ProcessingFailure captures per-record processing failures during Level 2 RR/REPEX
+// ingestion and keeps a durable open/resolved lifecycle for troubleshooting.
+type LEILevel2ProcessingFailure struct {
+	ID uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+
+	JobType              string      `gorm:"size:50;not null;index" json:"job_type"`
+	SourceFileID         *uuid.UUID  `gorm:"type:uuid;index" json:"source_file_id"`
+	FailureStage         string      `gorm:"size:50;not null" json:"failure_stage"`
+	NaturalKey           string      `gorm:"type:text;index" json:"natural_key"`
+	RawRecord            JSONBString `gorm:"type:jsonb" json:"raw_record"`
+	ErrorMessage         string      `gorm:"type:text;not null" json:"error_message"`
+	Resolved             bool        `gorm:"not null;default:false;index" json:"resolved"`
+	ResolvedAt           *time.Time  `json:"resolved_at"`
+	ResolvedSourceFileID *uuid.UUID  `gorm:"type:uuid" json:"resolved_source_file_id"`
+	ResolvedNote         string      `gorm:"type:text" json:"resolved_note"`
+
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// TableName overrides the table name for LEILevel2ProcessingFailure.
+func (LEILevel2ProcessingFailure) TableName() string {
+	return "lei_raw.lei_level2_processing_failures"
 }

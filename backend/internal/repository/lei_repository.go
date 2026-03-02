@@ -24,6 +24,7 @@ type LEIRepository interface {
 	FindAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string) ([]*domain.LEIRecord, error)
 	CountLEIRecords() (int64, error)
 	GetDistinctCountries() ([]string, error)
+	GetDistinctCategories() ([]string, error)
 	GetDistinctRegions() ([]string, error)
 	GetDistinctLegalForms() ([]string, error)
 	UpdateLEIRecord(record *domain.LEIRecord) error
@@ -48,6 +49,11 @@ type LEIRepository interface {
 	// Audit operations
 	CreateAuditRecord(audit *domain.LEIRecordAudit) error
 	FindAuditHistoryByLEI(lei string, limit int) ([]*domain.LEIRecordAudit, error)
+
+	// Processing failures lifecycle
+	CreateProcessingFailure(failure *domain.LEILevel2ProcessingFailure) error
+	ResolveOpenProcessingFailures(jobType, naturalKey string, resolvedSourceFileID *uuid.UUID, resolvedNote string) error
+	BatchResolveOpenProcessingFailures(jobType string, naturalKeys []string, resolvedSourceFileID *uuid.UUID, resolvedNote string) error
 }
 
 type leiRepository struct {
@@ -55,9 +61,11 @@ type leiRepository struct {
 }
 
 const notSetEntityStatusWhereClause = "entity_status IS NULL OR TRIM(entity_status) = '' OR UPPER(TRIM(entity_status)) = 'NULL'"
+const normalizedEntityCategoryMatchWhereClause = "UPPER(BTRIM(entity_category)) = UPPER(BTRIM(?))"
 
 func isNotSetStatusFilter(status string) bool {
-	return strings.EqualFold(strings.TrimSpace(status), "NULL")
+	normalized := strings.ToUpper(strings.ReplaceAll(strings.TrimSpace(status), " ", "_"))
+	return normalized == "NULL" || normalized == "NOT_SET"
 }
 
 func nullableLEICode(value string) interface{} {
@@ -248,7 +256,7 @@ func (r *leiRepository) FindAllLEIWithFilters(limit, offset int, search, status,
 
 		// Apply category filter
 		if category != "" {
-			query = query.Where("entity_category = ?", category)
+			query = query.Where(normalizedEntityCategoryMatchWhereClause, category)
 		}
 
 		// Apply country filter
@@ -346,15 +354,30 @@ func (r *leiRepository) GetDistinctCountries() ([]string, error) {
 	return countries, nil
 }
 
+// GetDistinctCategories returns a sorted list of unique category values from LEI records
+func (r *leiRepository) GetDistinctCategories() ([]string, error) {
+	var categories []string
+	err := r.db.Model(&domain.LEIRecord{}).
+		Distinct("BTRIM(entity_category)").
+		Where("entity_category IS NOT NULL AND BTRIM(entity_category) <> '' AND UPPER(BTRIM(entity_category)) <> 'NULL'").
+		Order("BTRIM(entity_category) ASC").
+		Pluck("BTRIM(entity_category)", &categories).Error
+	if err != nil {
+		return nil, err
+	}
+	return categories, nil
+}
+
 // GetDistinctRegions returns sorted unique region values from legal and HQ addresses
 func (r *leiRepository) GetDistinctRegions() ([]string, error) {
 	regionsMap := make(map[string]struct{})
 
 	var legalRegions []string
 	if err := r.db.Model(&domain.LEIRecord{}).
-		Distinct("legal_address_region").
-		Where("legal_address_region IS NOT NULL AND TRIM(legal_address_region) != ''").
-		Pluck("legal_address_region", &legalRegions).Error; err != nil {
+		Distinct("BTRIM(legal_address_region)").
+		Where("legal_address_region IS NOT NULL AND BTRIM(legal_address_region) <> ''").
+		Order("BTRIM(legal_address_region) ASC").
+		Pluck("BTRIM(legal_address_region)", &legalRegions).Error; err != nil {
 		return nil, err
 	}
 
@@ -367,9 +390,10 @@ func (r *leiRepository) GetDistinctRegions() ([]string, error) {
 
 	var hqRegions []string
 	if err := r.db.Model(&domain.LEIRecord{}).
-		Distinct("hq_address_region").
-		Where("hq_address_region IS NOT NULL AND TRIM(hq_address_region) != ''").
-		Pluck("hq_address_region", &hqRegions).Error; err != nil {
+		Distinct("BTRIM(hq_address_region)").
+		Where("hq_address_region IS NOT NULL AND BTRIM(hq_address_region) <> ''").
+		Order("BTRIM(hq_address_region) ASC").
+		Pluck("BTRIM(hq_address_region)", &hqRegions).Error; err != nil {
 		return nil, err
 	}
 
@@ -396,10 +420,10 @@ func (r *leiRepository) GetDistinctRegions() ([]string, error) {
 func (r *leiRepository) GetDistinctLegalForms() ([]string, error) {
 	var legalForms []string
 	err := r.db.Model(&domain.LEIRecord{}).
-		Distinct("entity_legal_form").
-		Where("entity_legal_form IS NOT NULL AND TRIM(entity_legal_form) != ''").
-		Order("entity_legal_form ASC").
-		Pluck("entity_legal_form", &legalForms).Error
+		Distinct("BTRIM(entity_legal_form)").
+		Where("entity_legal_form IS NOT NULL AND BTRIM(entity_legal_form) <> ''").
+		Order("BTRIM(entity_legal_form) ASC").
+		Pluck("BTRIM(entity_legal_form)", &legalForms).Error
 	if err != nil {
 		return nil, err
 	}
@@ -411,20 +435,39 @@ func (r *leiRepository) UpdateLEIRecord(record *domain.LEIRecord) error {
 	return r.db.Save(record).Error
 }
 
-// UpsertLEIRecord creates or updates an LEI record with change detection
-// Returns true if updated, false if created
+// UpsertLEIRecord creates or updates an LEI record with change detection.
+// Returns true if updated, false if created.
+// The select, upsert, and audit insert are wrapped in a single transaction for atomicity,
+// consistent with BatchUpsertLEIRecords and the Level 2 single-upsert pattern.
 func (r *leiRepository) UpsertLEIRecord(record *domain.LEIRecord) (bool, error) {
-	existing, err := r.FindLEIByLEI(record.LEI)
+	tx := r.db.Begin()
+	if tx.Error != nil {
+		return false, tx.Error
+	}
+	defer func() {
+		if p := recover(); p != nil {
+			tx.Rollback()
+		}
+	}()
 
-	// If not found, create new record
+	// Check for an existing row inside the transaction.
+	var existing domain.LEIRecord
+	err := tx.Where("lei = ?", record.LEI).Preload("SourceFile").First(&existing).Error
+
+	if err != nil && err != gorm.ErrRecordNotFound {
+		tx.Rollback()
+		return false, err
+	}
+
 	if err == gorm.ErrRecordNotFound {
+		// New record – insert it.
 		record.CreatedBy = "system"
 		record.UpdatedBy = "system"
-		if err := r.CreateLEIRecord(record); err != nil {
-			return false, err
+		if createErr := tx.Create(record).Error; createErr != nil {
+			tx.Rollback()
+			return false, createErr
 		}
 
-		// Create audit record for creation
 		auditRecord := &domain.LEIRecordAudit{
 			LEIRecordID:    record.ID,
 			LEI:            record.LEI,
@@ -434,43 +477,40 @@ func (r *leiRepository) UpsertLEIRecord(record *domain.LEIRecord) (bool, error) 
 			SourceFileID:   record.SourceFileID,
 			ChangedBy:      "system",
 		}
-		if err := r.CreateAuditRecord(auditRecord); err != nil {
-			return false, fmt.Errorf("failed to create audit record: %w", err)
+		if auditErr := tx.Create(auditRecord).Error; auditErr != nil {
+			tx.Rollback()
+			return false, fmt.Errorf("failed to create audit record: %w", auditErr)
 		}
 
-		return false, nil
+		return false, tx.Commit().Error
 	}
 
-	if err != nil {
-		return false, err
-	}
-
-	// Detect changes
-	changes := r.detectChanges(existing, record)
-
-	// If no changes detected, don't update
+	// Detect changes between the existing and new record.
+	changes := r.detectChanges(&existing, record)
 	if len(changes) == 0 {
+		// No meaningful change – rollback the no-op and return.
+		tx.Rollback()
 		return false, nil
 	}
 
-	// Convert changes to JSON
 	changesJSON, err := json.Marshal(changes)
 	if err != nil {
+		tx.Rollback()
 		return false, fmt.Errorf("failed to marshal changes: %w", err)
 	}
 
-	// Update the record
+	// Preserve immutable fields from the existing record before saving.
 	record.ID = existing.ID
 	record.CreatedAt = existing.CreatedAt
 	record.CreatedBy = existing.CreatedBy
 	record.UpdatedBy = "system"
 	record.ChangedFields = domain.JSONBString(changesJSON)
 
-	if err := r.UpdateLEIRecord(record); err != nil {
-		return false, err
+	if saveErr := tx.Save(record).Error; saveErr != nil {
+		tx.Rollback()
+		return false, saveErr
 	}
 
-	// Create audit record for update
 	auditRecord := &domain.LEIRecordAudit{
 		LEIRecordID:    record.ID,
 		LEI:            record.LEI,
@@ -480,11 +520,12 @@ func (r *leiRepository) UpsertLEIRecord(record *domain.LEIRecord) (bool, error) 
 		SourceFileID:   record.SourceFileID,
 		ChangedBy:      "system",
 	}
-	if err := r.CreateAuditRecord(auditRecord); err != nil {
-		return false, fmt.Errorf("failed to create audit record: %w", err)
+	if auditErr := tx.Create(auditRecord).Error; auditErr != nil {
+		tx.Rollback()
+		return false, fmt.Errorf("failed to create audit record: %w", auditErr)
 	}
 
-	return true, nil
+	return true, tx.Commit().Error
 }
 
 // BatchUpsertLEIRecords performs batch upsert of LEI records with full audit trail
@@ -891,7 +932,33 @@ func (r *leiRepository) FindLatestSourceFile(fileType string) (*domain.SourceFil
 
 // UpdateSourceFile updates a source file record
 func (r *leiRepository) UpdateSourceFile(file *domain.SourceFile) error {
-	return r.db.Save(file).Error
+	if file == nil {
+		return fmt.Errorf("source file is nil")
+	}
+
+	updates := map[string]interface{}{
+		"processing_status": file.ProcessingStatus,
+		"total_records":     file.TotalRecords,
+		"processed_records": file.ProcessedRecords,
+		"failed_records":    file.FailedRecords,
+		"last_processed_lei": func() interface{} {
+			if file.LastProcessedLEI == nil {
+				return nil
+			}
+			return nullableLEICode(*file.LastProcessedLEI)
+		}(),
+		"processing_started_at":   file.ProcessingStartedAt,
+		"processing_completed_at": file.ProcessingCompletedAt,
+		"processing_error":        file.ProcessingError,
+		"retry_count":             file.RetryCount,
+		"max_retries":             file.MaxRetries,
+		"failure_category":        file.FailureCategory,
+		"updated_at":              gorm.Expr("NOW()"),
+	}
+
+	return r.db.Model(&domain.SourceFile{}).
+		Where("id = ?", file.ID).
+		Updates(updates).Error
 }
 
 // FindPendingSourceFiles finds all source files pending processing
@@ -958,6 +1025,81 @@ func (r *leiRepository) FindAuditHistoryByLEI(lei string, limit int) ([]*domain.
 		return nil, err
 	}
 	return audits, nil
+}
+
+// CreateProcessingFailure persists a processing failure event row.
+func (r *leiRepository) CreateProcessingFailure(failure *domain.LEILevel2ProcessingFailure) error {
+	return r.db.Create(failure).Error
+}
+
+// ResolveOpenProcessingFailures marks unresolved failure rows for the same natural key as resolved.
+func (r *leiRepository) ResolveOpenProcessingFailures(jobType, naturalKey string, resolvedSourceFileID *uuid.UUID, resolvedNote string) error {
+	normalizedKey := strings.TrimSpace(naturalKey)
+	if normalizedKey == "" {
+		return nil
+	}
+
+	now := time.Now()
+	updates := map[string]interface{}{
+		"resolved":    true,
+		"resolved_at": now,
+		"updated_at":  now,
+	}
+	if resolvedSourceFileID != nil {
+		updates["resolved_source_file_id"] = *resolvedSourceFileID
+	}
+	if strings.TrimSpace(resolvedNote) != "" {
+		updates["resolved_note"] = resolvedNote
+	}
+
+	return r.db.Model(&domain.LEILevel2ProcessingFailure{}).
+		Where("job_type = ? AND natural_key = ? AND resolved = FALSE", jobType, normalizedKey).
+		Updates(updates).Error
+}
+
+// BatchResolveOpenProcessingFailures marks unresolved failure rows for the given set of natural
+// keys as resolved with a single UPDATE … WHERE natural_key IN (…) query, replacing the N
+// individual updates that would otherwise be issued per batch.
+func (r *leiRepository) BatchResolveOpenProcessingFailures(jobType string, naturalKeys []string, resolvedSourceFileID *uuid.UUID, resolvedNote string) error {
+	filtered := filterNonEmptyStrings(naturalKeys)
+	if len(filtered) == 0 {
+		return nil
+	}
+
+	now := time.Now()
+	updates := map[string]interface{}{
+		"resolved":    true,
+		"resolved_at": now,
+		"updated_at":  now,
+	}
+	if resolvedSourceFileID != nil {
+		updates["resolved_source_file_id"] = *resolvedSourceFileID
+	}
+	if strings.TrimSpace(resolvedNote) != "" {
+		updates["resolved_note"] = resolvedNote
+	}
+
+	return r.db.Model(&domain.LEILevel2ProcessingFailure{}).
+		Where("job_type = ? AND natural_key IN ? AND resolved = FALSE", jobType, filtered).
+		Updates(updates).Error
+}
+
+// filterNonEmptyStrings returns a deduplicated slice of non-blank strings from the input.
+func filterNonEmptyStrings(keys []string) []string {
+	seen := make(map[string]struct{}, len(keys))
+	result := make([]string, 0, len(keys))
+	for _, k := range keys {
+		trimmed := strings.TrimSpace(k)
+		if trimmed == "" {
+			continue
+		}
+		if _, exists := seen[trimmed]; exists {
+			continue
+		}
+		seen[trimmed] = struct{}{}
+		result = append(result, trimmed)
+	}
+	return result
 }
 
 // detectChanges compares two LEI records and returns a map of changed fields

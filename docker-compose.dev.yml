@@ -54,15 +54,22 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       SERVER_PORT: ${SERVER_PORT}
       SERVER_MODE: ${SERVER_MODE}
+      LOG_FILE_PATH: ${LOG_FILE_PATH}
+      LOG_MAX_SIZE_MB: ${LOG_MAX_SIZE_MB}
+      LOG_MAX_BACKUPS: ${LOG_MAX_BACKUPS}
+      LOG_MAX_AGE_DAYS: ${LOG_MAX_AGE_DAYS}
+      LOG_COMPRESS: ${LOG_COMPRESS}
       LEI_DATADIR: ${LEI_DATADIR}
-      CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:13000,http://localhost:23000,http://localhost:33000"
+      LEI_KEEPFULLFILES: ${LEI_KEEPFULLFILES}
+      LEI_KEEPDELTAFILES: ${LEI_KEEPDELTAFILES}
+      CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:13000,http://localhost:23000,http://localhost:33000,http://localhost:43000"
       CORS_ALLOWED_METHODS: "GET,POST,PUT,DELETE,OPTIONS"
       CORS_ALLOWED_HEADERS: "Origin,Content-Type,Authorization,Accept"
     ports:
       - "${BACKEND_PORT}:8080"
     volumes:
-      - ./data/lei:/root/data/lei      # Bind Mount for easy dev access
-      - ./log:/root/log                 # Persist logs for debugging
+      - ./data/dev/lei:/root/data/lei  # Bind mount for developer access (dev environment)
+      - ./log/dev:/root/log             # Persist logs for debugging (dev environment)
       - ./backend/config.yaml:/root/config/config.yaml:ro  # Mount config file with CORS settings
     depends_on:
       postgres:
@@ -103,7 +110,7 @@ volumes:
   rabbitmq_log_dev:
   frontend_node_modules_dev:
   frontend_next_dev:
-  # lei_data_dev removed - using bind mount in dev for easy filesystem access
+  # lei_data_dev removed - using bind mount at ./data/dev/lei for developer access
 
 networks:
   axiom-dev:

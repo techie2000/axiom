@@ -487,7 +487,7 @@ When making significant technical decisions:
 3. **Document Options**: List all considered alternatives with pros/cons
 4. **Make Decision**: Choose option with clear rationale
 5. **Update Diagrams**: Create or update Mermaid diagrams showing the decision's impact
-5. **Link Documentation**: Reference ADR in [README](../README.md), related docs, and code comments
+6. **Link Documentation**: Reference ADR in [README](../README.md), related docs, and code comments
 
 ## Test Maintenance Workflow (MANDATORY)
 
@@ -543,3 +543,13 @@ When working with this repository:
 5. **Follow project standards** for ADRs, Mermaid diagrams, and test-driven maintenance
 
 This repository configuration is designed to make AI coding agents immediately productive by providing comprehensive, project-specific guidance rather than relying on generic training data.
+
+## PR Finalization Default (Team Preference)
+
+When an AI agent creates a pull request, it should complete standard PR hygiene automatically **without asking for confirmation**:
+
+1. Add appropriate labels (at minimum `automated` plus a best-fit category label such as `enhancement`/`bug`).
+2. Request a reviewer (prefer `copilot-pull-request-reviewer` when available).
+3. Post a concise verification checklist comment relevant to the changed files.
+
+Only ask follow-up questions if required metadata cannot be applied (for example, reviewer handle is unavailable).

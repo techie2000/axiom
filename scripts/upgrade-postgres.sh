@@ -38,7 +38,7 @@ error()   { echo -e "${RED}✗${NC}  $*"; exit 1; }
 usage() {
     echo "Usage: $0 <environment> [--yes]"
     echo ""
-    echo "  environment   One of: dev | uat | prod"
+    echo "  environment   One of: dev | uat | prod | main"
     echo "  --yes / -y    Skip confirmation prompt"
     echo ""
     echo "Examples:"
@@ -52,7 +52,7 @@ ENVIRONMENT=""
 AUTO_YES=false
 for arg in "$@"; do
     case "$arg" in
-        dev|uat|prod) ENVIRONMENT="$arg" ;;
+        dev|uat|prod|main) ENVIRONMENT="$arg" ;;
         --yes|-y)     AUTO_YES=true ;;
         *)            usage ;;
     esac
