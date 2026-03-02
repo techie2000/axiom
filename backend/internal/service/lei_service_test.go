@@ -508,7 +508,7 @@ func (s *processRecordsRepoStub) CreateProcessingFailure(failure *domain.LEILeve
 }
 
 func testLEICodeForIndex(index int) string {
-	return fmt.Sprintf("AAAAAAAAAAAAAAAA%04d", index)
+	return fmt.Sprintf("%020d", index)
 }
 
 func buildRecordsArrayJSON(recordCount int) string {
