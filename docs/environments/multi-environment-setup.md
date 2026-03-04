@@ -1,11 +1,11 @@
 # Multi-Environment Docker Setup
 
-This document describes the multi-environment Docker setup for Axiom, which allows running development, UAT, and
-production environments simultaneously on the same machine.
+This document describes the multi-environment Docker setup for Axiom, which allows running main branch,
+development, UAT, and production environments simultaneously on the same machine.
 
 ## Overview
 
-The Axiom project supports three independent environments, each with its own:
+The Axiom project supports four independent environments, each with its own:
 
 - Database instance (PostgreSQL)
 - Message queue (RabbitMQ)
@@ -20,7 +20,17 @@ This enables side-by-side comparison and testing across environments without con
 
 ```mermaid
 graph TB
-    subgraph "Development Environment (Port Prefix: 1)"
+   subgraph "Main Branch Environment (Port Prefix: 4)"
+      MainFE[Frontend<br/>:43000]
+      MainBE[Backend<br/>:48080]
+      MainPG[(PostgreSQL<br/>:45432)]
+      MainRMQ[RabbitMQ<br/>:45672/:45673]
+      MainFE --> MainBE
+      MainBE --> MainPG
+      MainBE --> MainRMQ
+   end
+
+   subgraph "Development Environment (Port Prefix: 1)"
         DevFE[Frontend<br/>:13000]
         DevBE[Backend<br/>:18080]
         DevPG[(PostgreSQL<br/>:15432)]
@@ -51,10 +61,15 @@ graph TB
     end
 
     User[User/Developer]
+    User -.-> MainFE
     User -.-> DevFE
     User -.-> UATFE
     User -.-> ProdFE
 
+    style MainFE fill:#ede7f6
+    style MainBE fill:#ede7f6
+    style MainPG fill:#ede7f6
+    style MainRMQ fill:#ede7f6
     style DevFE fill:#e3f2fd
     style DevBE fill:#e3f2fd
     style DevPG fill:#e3f2fd
@@ -72,6 +87,16 @@ graph TB
 ## Port Assignment Strategy
 
 Each environment uses a unique port prefix to avoid conflicts:
+
+### Main Branch Environment (Prefix: 4)
+
+| Service             | Internal Port | External Port |
+|---------------------|---------------|---------------|
+| Frontend            | 3000          | 43000         |
+| Backend API         | 8080          | 48080         |
+| PostgreSQL          | 5432          | 45432         |
+| RabbitMQ AMQP       | 5672          | 45672         |
+| RabbitMQ Management | 15672         | 45673         |
 
 ### Development Environment (Prefix: 1)
 
@@ -107,6 +132,7 @@ Each environment uses a unique port prefix to avoid conflicts:
 
 Each environment has its own configuration file:
 
+- `.env.main` - Main branch environment variables
 - `.env.dev` - Development environment variables
 - `.env.uat` - UAT environment variables
 - `.env.prod` - Production environment variables
@@ -141,6 +167,7 @@ SERVER_MODE=debug|release
 
 Each environment has a dedicated Docker Compose file:
 
+- `docker-compose.main.yml` - Main branch environment
 - `docker-compose.dev.yml` - Development environment
 - `docker-compose.uat.yml` - UAT environment
 - `docker-compose.prod.yml` - Production environment
@@ -158,6 +185,7 @@ These files:
 
 ```bash
 # Start individual environment
+make docker-main-up    # Main branch
 make docker-dev-up     # Development
 make docker-uat-up     # UAT
 make docker-prod-up    # Production
@@ -170,6 +198,7 @@ make docker-all-up
 
 ```bash
 # Stop individual environment
+make docker-main-down  # Main branch
 make docker-dev-down   # Development
 make docker-uat-down   # UAT
 make docker-prod-down  # Production
@@ -182,6 +211,7 @@ make docker-all-down
 
 ```bash
 # View logs for specific environment
+make docker-main-logs  # Main branch
 make docker-dev-logs   # Development
 make docker-uat-logs   # UAT
 make docker-prod-logs  # Production
@@ -198,6 +228,7 @@ make docker-all-status
 
 ```bash
 # Restart specific environment
+make docker-main-restart
 make docker-dev-restart
 make docker-uat-restart
 make docker-prod-restart
@@ -209,11 +240,13 @@ Each environment has its own database, requiring separate migration management:
 
 ```bash
 # Run migrations
+make migrate-main-up   # Main branch database
 make migrate-dev-up    # Development database
 make migrate-uat-up    # UAT database
 make migrate-prod-up   # Production database
 
 # Rollback migrations
+make migrate-main-down # Main branch database
 make migrate-dev-down  # Development database
 make migrate-uat-down  # UAT database
 make migrate-prod-down # Production database
@@ -223,18 +256,21 @@ make migrate-prod-down # Production database
 
 ### Frontend Applications
 
+- Main branch: http://localhost:43000
 - Development: http://localhost:13000
 - UAT: http://localhost:23000
 - Production: http://localhost:33000
 
 ### Backend APIs
 
+- Main branch: http://localhost:48080
 - Development: http://localhost:18080
 - UAT: http://localhost:28080
 - Production: http://localhost:38080
 
 ### Swagger Documentation
 
+- Main branch: http://localhost:48080/swagger/index.html
 - Development: http://localhost:18080/swagger/index.html
 - UAT: http://localhost:28080/swagger/index.html
 - Production: http://localhost:38080/swagger/index.html
@@ -242,6 +278,9 @@ make migrate-prod-down # Production database
 ### Database Connections
 
 ```bash
+# Main branch
+psql -h localhost -p 45432 -U axiom -d axiom_main
+
 # Development
 psql -h localhost -p 15432 -U axiom -d axiom_dev
 
@@ -254,6 +293,7 @@ psql -h localhost -p 35432 -U axiom -d axiom_prod
 
 ### RabbitMQ Management UI
 
+- Main branch: http://localhost:45673 (guest/guest)
 - Development: http://localhost:15673 (guest/guest)
 - UAT: http://localhost:25673 (guest/guest)
 - Production: http://localhost:35673 (guest/guest)
@@ -264,6 +304,7 @@ Containers follow this naming pattern: `axiom-{env}-{service}`
 
 Examples:
 
+- `axiom-main-backend`
 - `axiom-dev-backend`
 - `axiom-uat-postgres`
 - `axiom-prod-frontend`
@@ -272,6 +313,7 @@ Examples:
 
 Each environment runs in its own Docker network:
 
+- `axiom-main-network`
 - `axiom-dev-network`
 - `axiom-uat-network`
 - `axiom-prod-network`
@@ -282,6 +324,7 @@ This ensures complete isolation between environments.
 
 Data volumes are environment-specific:
 
+- `postgres_data_main`
 - `postgres_data_dev`
 - `postgres_data_uat`
 - `postgres_data_prod`

@@ -3,6 +3,8 @@
 This directory contains documentation for Axiom's multi-environment Docker setup, which allows running development,
 UAT, and production environments simultaneously on the same machine.
 
+The setup includes four environments: main, dev, uat, and prod.
+
 ## Documentation Files
 
 ### [Multi-Environment Setup Guide](multi-environment-setup.md)
@@ -38,6 +40,7 @@ Quick reference card containing:
 
 ```bash
 # Start individual environment
+make docker-main-up
 make docker-dev-up
 make docker-uat-up
 make docker-prod-up
@@ -48,7 +51,7 @@ make docker-all-up
 # Check status
 make docker-all-status
 
-# Run API smoke checks (all environments)
+# Run API smoke checks (smoke-enabled environments only: dev, uat, prod)
 make smoke-api
 
 # If make is unavailable, use the PowerShell or CMD script variants shown below
@@ -71,6 +74,7 @@ scripts\smoke-api.cmd all
 
 ## Port Prefixes
 
+- **4xxxx** - Main branch environment
 - **1xxxx** - Development environment
 - **2xxxx** - UAT environment
 - **3xxxx** - Production environment

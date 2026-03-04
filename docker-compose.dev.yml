@@ -71,6 +71,12 @@ services:
       - ./data/dev/lei:/root/data/lei  # Bind mount for developer access (dev environment)
       - ./log/dev:/root/log             # Persist logs for debugging (dev environment)
       - ./backend/config.yaml:/root/config/config.yaml:ro  # Mount config file with CORS settings
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
     depends_on:
       postgres:
         condition: service_healthy
@@ -98,8 +104,15 @@ services:
       - frontend_node_modules_dev:/app/node_modules
       - frontend_next_dev:/app/.next
     command: npm run dev
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:3000 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - axiom-dev

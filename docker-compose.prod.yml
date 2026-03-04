@@ -65,6 +65,12 @@ services:
     volumes:
       - lei_data_prod:/root/data/lei
       - log_data_prod:/root/log
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
     depends_on:
       postgres:
         condition: service_healthy
@@ -84,8 +90,15 @@ services:
       NEXT_PUBLIC_ENVIRONMENT: ${NEXT_PUBLIC_ENVIRONMENT}
     ports:
       - "${FRONTEND_PORT}:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:3000 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - axiom-prod

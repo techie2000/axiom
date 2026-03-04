@@ -18,6 +18,7 @@ in the workspace root to avoid hardcoding environment values.
 
 .PARAMETER Environment
 Environment to test: dev, uat, prod, or all. Defaults to all.
+The main branch environment is intentionally excluded from smoke scope.
 
 .PARAMETER TimeoutSec
 HTTP timeout in seconds for each request. Defaults to 20.

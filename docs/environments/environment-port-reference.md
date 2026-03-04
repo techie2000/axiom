@@ -4,15 +4,26 @@ Quick reference card for Axiom multi-environment port mappings.
 
 ## Port Mapping Table
 
-| Service                  | Development | UAT   | Production |
-|--------------------------|-------------|-------|------------|
-| **Frontend**             | 13000       | 23000 | 33000      |
-| **Backend API**          | 18080       | 28080 | 38080      |
-| **PostgreSQL**           | 15432       | 25432 | 35432      |
-| **RabbitMQ AMQP**        | 15672       | 25672 | 35672      |
-| **RabbitMQ Management**  | 15673       | 25673 | 35673      |
+| Service                 | Main Branch | Development | UAT   | Production |
+|-------------------------|-------------|-------------|-------|------------|
+| **Frontend**            | 43000       | 13000       | 23000 | 33000      |
+| **Backend API**         | 48080       | 18080       | 28080 | 38080      |
+| **PostgreSQL**          | 45432       | 15432       | 25432 | 35432      |
+| **RabbitMQ AMQP**       | 45672       | 15672       | 25672 | 35672      |
+| **RabbitMQ Management** | 45673       | 15673       | 25673 | 35673      |
 
 ## Quick Access URLs
+
+### Main Branch Environment
+
+```bash
+Frontend:           http://localhost:43000
+Backend API:        http://localhost:48080
+API Health:         http://localhost:48080/health
+Swagger:            http://localhost:48080/swagger/index.html
+RabbitMQ Mgmt:      http://localhost:45673
+Database:           psql -h localhost -p 45432 -U axiom -d axiom_main
+```
 
 ### Development Environment
 
@@ -52,12 +63,20 @@ Database:           psql -h localhost -p 35432 -U axiom -d axiom_prod
 - **1xxxx**: Development environment
 - **2xxxx**: UAT environment
 - **3xxxx**: Production environment
+- **4xxxx**: Main branch environment
 
 This allows easy identification of which environment a port belongs to.
 
 ## Container Names
 
 Containers follow the pattern: `axiom-{env}-{service}`
+
+**Main Branch:**
+
+- axiom-main-frontend
+- axiom-main-backend
+- axiom-main-postgres
+- axiom-main-rabbitmq
 
 **Development:**
 
@@ -82,12 +101,14 @@ Containers follow the pattern: `axiom-{env}-{service}`
 
 ## Network Names
 
+- axiom-main-network
 - axiom-dev-network
 - axiom-uat-network
 - axiom-prod-network
 
 ## Volume Names
 
+- postgres_data_main
 - postgres_data_dev
 - postgres_data_uat
 - postgres_data_prod
@@ -96,12 +117,14 @@ Containers follow the pattern: `axiom-{env}-{service}`
 
 ```bash
 # Start environments
+make docker-main-up
 make docker-dev-up
 make docker-uat-up
 make docker-prod-up
 make docker-all-up
 
 # Stop environments
+make docker-main-down
 make docker-dev-down
 make docker-uat-down
 make docker-prod-down
@@ -111,6 +134,7 @@ make docker-all-down
 make docker-all-status
 
 # Migrations
+make migrate-main-up
 make migrate-dev-up
 make migrate-uat-up
 make migrate-prod-up
@@ -125,6 +149,7 @@ make migrate-prod-up
 
 **PostgreSQL:**
 
+- Main: axiom / axiom_main_pass
 - Dev: axiom / axiom_dev_pass
 - UAT: axiom / axiom_uat_pass
 - Prod: axiom / axiom_prod_pass

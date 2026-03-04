@@ -14,6 +14,7 @@ REM
 REM Arguments:
 REM   %1  Environment: dev | uat | prod | all (default: all)
 REM   %2  Optional flag: --check-login
+REM   Note: main branch environment is intentionally excluded from smoke scope.
 REM =============================================================================
 
 setlocal
@@ -26,7 +27,7 @@ if "%ENVIRONMENT%"=="" set "ENVIRONMENT=all"
 REM Validate environment argument.
 if /I not "%ENVIRONMENT%"=="dev" if /I not "%ENVIRONMENT%"=="uat" if /I not "%ENVIRONMENT%"=="prod" if /I not "%ENVIRONMENT%"=="all" (
   echo [ERROR] Invalid environment: %ENVIRONMENT%
-  echo         Valid values: dev ^| uat ^| prod ^| all
+  echo         Valid values: dev ^| uat ^| prod ^| all  (main is intentionally excluded)
   exit /b 1
 )
 

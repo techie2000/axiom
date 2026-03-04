@@ -2,6 +2,7 @@
 
 [CmdletBinding()]
 param(
+    # Smoke scope intentionally excludes main branch environment.
     [ValidateSet('dev', 'uat', 'prod')]
     [string]$Environment = 'dev',
 

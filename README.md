@@ -126,18 +126,23 @@ axiom/
 Axiom supports running multiple environments simultaneously on the same machine. Each environment uses a unique port
 prefix to avoid conflicts:
 
+- **Main Branch (main)**: Port prefix 4 (e.g., 48080, 43000, 45432)
 - **Development (dev)**: Port prefix 1 (e.g., 18080, 13000, 15432)
 - **UAT**: Port prefix 2 (e.g., 28080, 23000, 25432)
 - **Production (prod)**: Port prefix 3 (e.g., 38080, 33000, 35432)
 
 #### Starting a Specific Environment
 
-`make docker-dev-up`, `make docker-uat-up`, and `make docker-prod-up` now run an automatic PostgreSQL
+`make docker-main-up`, `make docker-dev-up`, `make docker-uat-up`, and `make docker-prod-up` now run an automatic PostgreSQL
 major-version precheck/upgrade step before `docker-compose up -d`. If no upgrade is needed, startup proceeds
 immediately.
-`make docker-dev-restart`, `make docker-uat-restart`, and `make docker-prod-restart` run the same precheck.
+`make docker-main-restart`, `make docker-dev-restart`, `make docker-uat-restart`, and `make docker-prod-restart`
+run the same precheck.
 
 ```bash
+# Start main branch environment
+make docker-main-up
+
 # Start development environment
 make docker-dev-up
 
@@ -154,6 +159,9 @@ make docker-all-up
 #### Stopping Environments
 
 ```bash
+# Stop main branch environment
+make docker-main-down
+
 # Stop development environment
 make docker-dev-down
 
@@ -174,6 +182,7 @@ make docker-all-down
 make docker-all-status
 
 # View logs for specific environment
+make docker-main-logs   # Main
 make docker-dev-logs    # Development
 make docker-uat-logs    # UAT
 make docker-prod-logs   # Production
@@ -181,12 +190,15 @@ make docker-prod-logs   # Production
 
 #### API Smoke Testing
 
-Use the PowerShell smoke test script to quickly validate API health and auth behavior across environments.
+Use the PowerShell smoke test script to quickly validate API health and auth behavior across smoke-enabled
+environments.
+
+Smoke coverage intentionally includes `dev`, `uat`, and `prod` only. The `main` environment is excluded by design.
 
 If `make` is not installed (common on Windows PowerShell), use `./scripts/smoke-api.ps1` or `scripts\smoke-api.cmd`.
 
 ```bash
-# Run smoke tests for all environments (dev, uat, prod)
+# Run smoke tests for all smoke-enabled environments (dev, uat, prod)
 ./scripts/smoke-api.ps1
 
 # Same via Makefile shortcut
@@ -229,6 +241,8 @@ The script waits for `/health` before running checks (default max wait: 90 secon
 
 Use the SSI smoke script to verify the `/api/v1/ssis` response contract used by the SSI page.
 
+Smoke coverage intentionally includes `dev`, `uat`, and `prod` only. The `main` environment is excluded by design.
+
 ```bash
 # Contract check only (no data mutation)
 ./scripts/smoke-ssi.ps1 -Environment dev
@@ -260,6 +274,14 @@ The script validates:
 
 Once started, each environment is accessible at:
 
+**Main Branch Environment:**
+
+- Frontend: http://localhost:43000
+- Backend API: http://localhost:48080
+- Swagger UI: http://localhost:48080/swagger/index.html
+- PostgreSQL: localhost:45432
+- RabbitMQ Management: http://localhost:45673
+
 **Development Environment:**
 
 - Frontend: http://localhost:13000
@@ -286,7 +308,8 @@ Once started, each environment is accessible at:
 
 ### Hot Reload for Frontend Development
 
-The development environment (`docker-compose.dev.yml`) includes hot reload for the frontend:
+The main and development environments (`docker-compose.main.yml` and `docker-compose.dev.yml`) include hot reload for
+the frontend:
 
 **Features:**
 

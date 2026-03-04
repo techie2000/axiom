@@ -10,6 +10,9 @@ This guide provides quick commands for working with Axiom's multi-environment se
 # Start development environment
 make docker-dev-up
 
+# Start main branch environment
+make docker-main-up
+
 # Start UAT environment
 make docker-uat-up
 
@@ -20,6 +23,7 @@ make docker-prod-up
 make docker-all-up
 
 # Stop specific environment
+make docker-main-down
 make docker-dev-down
 make docker-uat-down
 make docker-prod-down
@@ -33,6 +37,9 @@ make docker-all-down
 ```bash
 # Development logs
 make docker-dev-logs
+
+# Main branch logs
+make docker-main-logs
 
 # UAT logs
 make docker-uat-logs
@@ -51,7 +58,7 @@ make docker-all-status
 ### API Smoke Checks
 
 ```bash
-# Run smoke checks for all environments
+# Run smoke checks for smoke-enabled environments (dev, uat, prod)
 make smoke-api
 
 # If make is unavailable, use the Windows CMD wrapper commands below
@@ -74,6 +81,9 @@ scripts\smoke-api.cmd prod --check-login
 ### Database Migrations
 
 ```bash
+# Main branch
+make migrate-main-up
+
 # Development
 make migrate-dev-up
 
@@ -85,6 +95,14 @@ make migrate-prod-up
 ```
 
 ## Access URLs
+
+### Main Branch Environment
+
+- **Frontend**: http://localhost:43000
+- **Backend API**: http://localhost:48080/api/v1
+- **Swagger UI**: http://localhost:48080/swagger/index.html
+- **RabbitMQ Management**: http://localhost:45673 (guest/guest)
+- **PostgreSQL**: `psql -h localhost -p 45432 -U axiom -d axiom_main`
 
 ### Development Environment
 
@@ -114,6 +132,7 @@ make migrate-prod-up
 
 | Environment | Frontend | Backend | PostgreSQL | RabbitMQ | RabbitMQ Mgmt |
 |-------------|----------|---------|------------|----------|---------------|
+| Main Branch | 43000    | 48080   | 45432      | 45672    | 45673         |
 | Development | 13000    | 18080   | 15432      | 15672    | 15673         |
 | UAT         | 23000    | 28080   | 25432      | 25672    | 25673         |
 | Production  | 33000    | 38080   | 35432      | 35672    | 35673         |
@@ -130,11 +149,13 @@ make docker-all-up
 sleep 30
 
 # Run migrations on all databases
+make migrate-main-up
 make migrate-dev-up
 make migrate-uat-up
 make migrate-prod-up
 
 # Access each environment
+open http://localhost:43000  # Main
 open http://localhost:13000  # Dev
 open http://localhost:23000  # UAT
 open http://localhost:33000  # Prod
@@ -143,13 +164,13 @@ open http://localhost:33000  # Prod
 ### 2. Side-by-Side Comparison
 
 ```bash
-# Start dev and UAT
+# Start main and dev
+make docker-main-up
 make docker-dev-up
-make docker-uat-up
 
 # Access both
+# Main: http://localhost:43000
 # Dev:  http://localhost:13000
-# UAT:  http://localhost:23000
 ```
 
 ### 3. Clean Start (Reset Everything)
@@ -159,10 +180,11 @@ make docker-uat-up
 make docker-all-down
 
 # Remove volumes (WARNING: This deletes all data!)
-docker volume rm postgres_data_dev postgres_data_uat postgres_data_prod
+docker volume rm postgres_data_main postgres_data_dev postgres_data_uat postgres_data_prod
 
 # Start fresh
 make docker-all-up
+make migrate-main-up
 make migrate-dev-up
 make migrate-uat-up
 make migrate-prod-up
@@ -224,10 +246,10 @@ docker stats
 
 ## Best Practices
 
-1. **Start only what you need**: Don't run all three environments if you only need dev
+1. **Start only what you need**: Don't run all four environments if you only need a subset
 2. **Stop when done**: Always stop environments when finished to free resources
 3. **Use environment-specific commands**: Always use `make docker-dev-up` instead of raw docker-compose commands
-4. **Monitor resources**: Running all three environments requires ~8GB RAM
+4. **Monitor resources**: Running all four environments requires additional memory and CPU
 5. **Regular cleanup**: Periodically clean up unused Docker resources with `docker system prune`
 
 ## Getting Help
@@ -250,6 +272,7 @@ docker logs axiom-prod-frontend
 Each environment has its own `.env` file:
 
 - `.env.dev` - Development configuration
+- `.env.main` - Main branch configuration
 - `.env.uat` - UAT configuration
 - `.env.prod` - Production configuration
 
