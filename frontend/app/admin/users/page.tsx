@@ -17,6 +17,7 @@ interface User {
   full_name: string
   role: string
   status: string
+  is_bootstrap: boolean
   approved_by?: string
   approved_at?: string
   created_at: string
@@ -274,7 +275,8 @@ function AdminUsersContent() {
                             {actionLoading === user.id + '-reject' ? '…' : 'Deactivate'}
                           </button>
                         )}
-                        {user.status === 'inactive' && (
+                        {/* Reactivate — never available for the permanently-locked bootstrap account */}
+                        {user.status === 'inactive' && !user.is_bootstrap && (
                           <button
                             onClick={() => handleApprove(user.id)}
                             disabled={actionLoading === user.id + '-approve'}
@@ -283,8 +285,13 @@ function AdminUsersContent() {
                             {actionLoading === user.id + '-approve' ? '…' : 'Reactivate'}
                           </button>
                         )}
-                        {/* Role change button — only shown for active users */}
-                        {user.status === 'active' && (
+                        {user.status === 'inactive' && user.is_bootstrap && (
+                          <span className="px-2 py-1 text-xs bg-gray-100 text-gray-500 dark:bg-gray-700/40 dark:text-gray-400 rounded italic">
+                            Permanently locked
+                          </span>
+                        )}
+                        {/* Role change — only shown for active non-bootstrap users */}
+                        {user.status === 'active' && !user.is_bootstrap && (
                           <button
                             onClick={() =>
                               handleRoleChange(user.id, user.role === 'admin' ? 'user' : 'admin')

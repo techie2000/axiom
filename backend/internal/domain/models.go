@@ -342,8 +342,9 @@ type User struct {
 	Status       UserStatus `gorm:"type:varchar(50);not null;default:'pending'" json:"status"`
 	ApprovedBy   *uuid.UUID `gorm:"type:uuid;column:approved_by" json:"approved_by,omitempty"`
 	ApprovedAt   *time.Time `gorm:"column:approved_at" json:"approved_at,omitempty"`
-	// IsBootstrap marks the default seed admin that must be replaced on first login
-	IsBootstrap bool `gorm:"column:is_bootstrap;default:false" json:"-"`
+	// IsBootstrap marks the default seed admin that must be replaced on first login.
+	// Exposed in API responses so the UI can lock down actions on this account.
+	IsBootstrap bool `gorm:"column:is_bootstrap;default:false" json:"is_bootstrap"`
 }
 
 // TableName overrides the table name

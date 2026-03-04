@@ -152,6 +152,12 @@ func (s *authService) ApproveUser(adminID, userID string) error {
 		return fmt.Errorf("user not found: %w", err)
 	}
 
+	// The bootstrap account must never be reactivated through any code path; its lifecycle
+	// is managed exclusively by auto-deactivation on first real-admin login.
+	if user.IsBootstrap {
+		return errors.New("the bootstrap admin account cannot be reactivated")
+	}
+
 	approverID, err := uuid.Parse(adminID)
 	if err != nil {
 		return fmt.Errorf("invalid admin ID: %w", err)
@@ -196,6 +202,12 @@ func (s *authService) UpdateUserRole(adminID, userID, role string) error {
 	user, err := s.repo.FindByID(userID)
 	if err != nil {
 		return fmt.Errorf("user not found: %w", err)
+	}
+
+	// Block all role changes on the bootstrap account — it must stay as admin until it is
+	// auto-deactivated, and once deactivated it is permanently locked.
+	if user.IsBootstrap {
+		return errors.New("the bootstrap admin account role cannot be changed")
 	}
 
 	// Prevent demoting the last active admin.

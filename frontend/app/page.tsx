@@ -6,7 +6,8 @@ import CurrenciesRecordsCard from './components/CurrenciesRecordsCard'
 import LanguagesRecordsCard from './components/LanguagesRecordsCard'
 import PageHeader from './components/PageHeader'
 import ProtectedLandingCard from './components/ProtectedLandingCard'
-import AdminLandingCard from './components/AdminLandingCard'
+import AdminSection from './components/AdminSection'
+import SignInPrompt from './components/SignInPrompt'
 
 export default function Home() {
   return (
@@ -17,6 +18,9 @@ export default function Home() {
           subtitle="Financial Services Static Data Management System"
           showBackLink={false}
         />
+
+        {/* Sign-in prompt — only visible to unauthenticated users */}
+        <SignInPrompt />
 
         {/* Public Reference Data Section */}
         <section className="mb-12">
@@ -109,24 +113,8 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Administration Section — visible to admins only (card self-hides when not admin) */}
-        <section className="mb-12">
-          <div className="flex items-center mb-6">
-            <span className="text-2xl mr-3">⚙️</span>
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Administration</h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400">System configuration and user management • Admin access required</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <AdminLandingCard
-              href="/admin/users"
-              title="User Management"
-              description="Review registration requests, approve or deactivate accounts, and manage user roles"
-              icon="👥"
-            />
-          </div>
-        </section>
+        {/* Administration Section — client component; hides itself for non-admins */}
+        <AdminSection />
       </div>
     </main>
   )
