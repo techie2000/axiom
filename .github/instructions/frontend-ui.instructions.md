@@ -218,6 +218,7 @@ EVERY visual change:
 - Include `Select All` and `Reset Default` actions in the selector.
 - The `Columns` count should reflect current visible column count.
 - Use the LEI Records pattern as the baseline implementation for grouped or ungrouped column selectors.
+- **Column visibility must be backed by `useUserPreference`** (see User Preference Standard below).
 
 ### Table Width Toggle Standard (Required)
 - Pages with wide data tables and optional columns must provide an `Expand/Normal` width toggle in the page header.
@@ -227,6 +228,77 @@ EVERY visual change:
   otherwise force immediate horizontal scrolling.
 - Keep horizontal scrolling as a fallback only; do not rely on horizontal scrolling as the primary
   way to access newly enabled columns.
+- **Page width must be backed by `useUserPreference`** (see User Preference Standard below).
+
+### User Preference Standard (Required)
+
+Any page-level setting that a user may reasonably want preserved across sessions and devices
+**must** be wired through the `useUserPreference` hook and accompanied by a `PreferenceSavePrompt`
+toast. Currently mandatory for all pages that expose an `Expand/Normal` width toggle or a column
+selector.
+
+#### Key rules
+
+- Import `useUserPreference` from `frontend/app/lib/useUserPreference.ts`.
+- Import `PreferenceSavePrompt` from `frontend/app/components/PreferenceSavePrompt.tsx`.
+- Use the page's URL slug as the `page_key` (e.g. `'countries'`, `'currencies'`, `'languages'`).
+  Use `'global'` only for truly cross-page preferences such as `theme`.
+- Compute `DEFAULT_VISIBLE_KEYS` **outside** the component (module-level constant) so it is stable.
+- Maintain two layers of state:
+  - **Pending local state** – applied immediately to keep the UI responsive.
+  - **Saved preference** – persisted via `setStoredExpanded` / `setStoredColumns` only when the
+    user confirms the `PreferenceSavePrompt`.
+- Use `effectiveExpandedWidth = localExpanded ?? expandedWidth` (pending takes priority).
+- Place `<PreferenceSavePrompt>` elements **outside** the `max-w-*` container so they are not
+  clipped by overflow or max-width styles.
+- Clear pending refs and local state inside `handleSave*` callbacks.
+- Do **not** clear local state in `handleDismiss*` callbacks — the UI change persists for the
+  session even when the user declines to save.
+
+#### Quick-start
+
+```tsx
+// 1. Expanded width preference
+const [storedExpanded, setStoredExpanded] = useUserPreference('my-page', 'expanded_width', 'true')
+const expandedWidth = storedExpanded === 'true'
+const [localExpanded, setLocalExpanded] = useState<boolean | null>(null)
+const [showWidthPrompt, setShowWidthPrompt] = useState(false)
+const pendingExpanded = useRef<boolean | null>(null)
+const effectiveExpandedWidth = localExpanded ?? expandedWidth
+
+const handleSetExpandedWidth = useCallback((value: boolean) => {
+  setLocalExpanded(value); pendingExpanded.current = value; setShowWidthPrompt(true)
+}, [])
+const handleSaveWidth = useCallback(() => {
+  if (pendingExpanded.current !== null) {
+    setStoredExpanded(String(pendingExpanded.current))
+    setLocalExpanded(null); pendingExpanded.current = null
+  }
+  setShowWidthPrompt(false)
+}, [setStoredExpanded])
+const handleDismissWidth = useCallback(() => { setShowWidthPrompt(false) }, [])
+
+// 2. Column visibility preference (column-selector pages only)
+const DEFAULT_VISIBLE_KEYS = AVAILABLE_COLUMNS.filter((c) => c.defaultVisible).map((c) => c.key).join(',')
+const [storedColumns, setStoredColumns] = useUserPreference('my-page', 'visible_columns', DEFAULT_VISIBLE_KEYS)
+const visibleColumns = useMemo(() => new Set(storedColumns.split(',').filter(Boolean)), [storedColumns])
+const [localColumns, setLocalColumns] = useState<Set<MyColumnKey> | null>(null)
+const [showColumnsPrompt, setShowColumnsPrompt] = useState(false)
+const pendingColumns = useRef<Set<MyColumnKey> | null>(null)
+const effectiveVisibleColumns = localColumns ?? visibleColumns
+```
+
+See docs/ui-patterns.md (User Preferences section) for the full
+step-by-step guide and integration checklist.
+
+#### Reference implementations
+
+| File | Preferences wired |
+| ---- | ----------------- |
+| `frontend/app/lei-records/page.tsx` | `expanded_width`, `visible_columns` |
+| `frontend/app/countries/page.tsx` | `expanded_width`, `visible_columns` |
+| `frontend/app/currencies/page.tsx` | `expanded_width` |
+| `frontend/app/languages/page.tsx` | `expanded_width` |
 
 ### Wide Table Scroll & Freeze Standard (Required)
 - Wide data tables must provide a **top horizontal scrollbar** synchronized with the main table body scrollbar.

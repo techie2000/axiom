@@ -5,10 +5,292 @@ optimized for performance, accessibility, and user experience.
 
 ## Table of Contents
 
+- [User Preferences](#user-preferences)
 - [Reusable Components](#reusable-components)
 - [Sticky Headers with Smooth Transitions](#sticky-headers-with-smooth-transitions)
 - [Frozen Columns Checklist](#frozen-columns-checklist)
 - [Best Practices](#best-practices)
+
+---
+
+## User Preferences
+
+Axiom persists per-user UI preferences to the database so they roam across devices and sessions.
+This section explains the hook, the save prompt, and the step-by-step process for wiring
+preferences into any page.
+
+### Architecture overview
+
+```text
+Browser session
+  └─ useUserPreference hook (shared module-level cache)
+       ├─ on first call  → GET /api/v1/preferences  (one round-trip, then cached)
+       ├─ on write       → PUT /api/v1/preferences  (async, best-effort)
+       └─ always mirrors → localStorage             (offline / pre-load fallback)
+```
+
+When the user is **not logged in** the hook falls back silently to `localStorage` only.
+
+### `useUserPreference` hook
+
+**File:** `frontend/app/lib/useUserPreference.ts`
+
+```tsx
+import { useUserPreference } from '../lib/useUserPreference'
+
+// Signature
+const [value, setValue, isLoading] = useUserPreference(pageKey, prefKey, defaultValue)
+```
+
+#### Parameters
+
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `pageKey` | `string` | Page identifier (e.g. `'countries'`, `'global'`). Use `'global'` for cross-page preferences. |
+| `prefKey` | `string` | Preference name (e.g. `'expanded_width'`, `'visible_columns'`, `'theme'`). |
+| `defaultValue` | `string` | Value to use when no preference has been saved yet. |
+
+#### Return values
+
+| Index | Name | Description |
+| ----- | ---- | ----------- |
+| 0 | `value` | Current preference string (server or localStorage, then default). |
+| 1 | `setValue` | Saves locally and persists to server. |
+| 2 | `isLoading` | `true` while the initial server fetch is in flight. |
+
+#### Lifecycle
+
+1. **Mount** – if the in-memory cache is not yet populated, fires one `GET /api/v1/preferences`
+   and populates the cache with all preferences for the current user.
+2. **Write** – `setValue(newValue)` updates React state, the module-level cache, `localStorage`,
+   and sends a `PUT /api/v1/preferences` request in the background.
+3. **Sign-out** – call `resetPreferencesCache()` so the next login gets fresh server data.
+
+#### `page_key` registry
+
+| Value | Page / context |
+| ----- | -------------- |
+| `global` | Cross-page (e.g. `theme`) |
+| `lei-records` | LEI Records (`/lei-records`) |
+| `countries` | Countries (`/countries`) |
+| `currencies` | Currencies (`/currencies`) |
+| `languages` | Languages (`/languages`) |
+
+Use the URL slug of the page as the `page_key` for any new page.
+
+### `PreferenceSavePrompt` component
+
+**File:** `frontend/app/components/PreferenceSavePrompt.tsx`
+
+An unobtrusive bottom-right toast that asks the user whether to save a changed preference as their
+default. It auto-dismisses after **8 seconds** if the user does not interact.
+
+```tsx
+import PreferenceSavePrompt from '../components/PreferenceSavePrompt'
+
+<PreferenceSavePrompt
+  visible={showWidthPrompt}
+  onSave={handleSaveWidth}
+  onDismiss={handleDismissWidth}
+  label="Save page width as your default?"
+/>
+```
+
+#### Props
+
+| Prop | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `visible` | `boolean` | — | Controls whether the toast is shown. |
+| `onSave` | `() => void` | — | Called when user clicks **Save**. Persist the preference here. |
+| `onDismiss` | `() => void` | — | Called on **No thanks** or auto-dismiss. |
+| `label` | `string` | `'Save this as your default?'` | Message shown inside the toast. |
+
+### Adding preferences to a new page
+
+Follow this pattern to add preference-backed state to any page. The pattern uses two layers:
+
+1. **Pending local state** – applied immediately so the UI is responsive.
+2. **Saved preference** – persisted to the server when the user confirms via the prompt.
+
+#### Step-by-step guide
+
+##### 1. Import the hook and prompt
+
+```tsx
+import { useCallback, useRef, useState } from 'react'
+import PreferenceSavePrompt from '../components/PreferenceSavePrompt'
+import { useUserPreference } from '../lib/useUserPreference'
+```
+
+##### 2. Wire up `expanded_width` preference
+
+```tsx
+// Read the stored preference ('true' | 'false')
+const [storedExpanded, setStoredExpanded] = useUserPreference(
+  'my-page',           // page_key  ← use the URL slug
+  'expanded_width',    // pref_key
+  'true',              // default: start expanded
+)
+const expandedWidth = storedExpanded === 'true'
+
+// Local pending state and prompt flag
+const [localExpanded, setLocalExpanded] = useState<boolean | null>(null)
+const [showWidthPrompt, setShowWidthPrompt] = useState(false)
+const pendingExpanded = useRef<boolean | null>(null)
+
+// Effective value: pending local > saved > default
+const effectiveExpandedWidth = localExpanded ?? expandedWidth
+
+// Handler called by the toggle button
+const handleSetExpandedWidth = useCallback((value: boolean) => {
+  setLocalExpanded(value)
+  pendingExpanded.current = value
+  setShowWidthPrompt(true)
+}, [])
+
+// Confirm save
+const handleSaveWidth = useCallback(() => {
+  if (pendingExpanded.current !== null) {
+    setStoredExpanded(String(pendingExpanded.current))
+    setLocalExpanded(null)
+    pendingExpanded.current = null
+  }
+  setShowWidthPrompt(false)
+}, [setStoredExpanded])
+
+// Dismiss without saving
+const handleDismissWidth = useCallback(() => { setShowWidthPrompt(false) }, [])
+```
+
+```tsx
+{/* Toggle button */}
+<button onClick={() => handleSetExpandedWidth(!effectiveExpandedWidth)}>
+  {effectiveExpandedWidth ? '⬅️ Normal' : '↔️ Expand'}
+</button>
+
+{/* Width prompt – renders outside the page container so it stays fixed bottom-right */}
+<PreferenceSavePrompt
+  visible={showWidthPrompt}
+  onSave={handleSaveWidth}
+  onDismiss={handleDismissWidth}
+  label="Save page width as your default?"
+/>
+```
+
+##### 3. Wire up `visible_columns` preference (column-selector pages only)
+
+```tsx
+// Compute the default visible set once at module level (outside the component)
+const DEFAULT_VISIBLE_KEYS = AVAILABLE_COLUMNS
+  .filter((c) => c.defaultVisible)
+  .map((c) => c.key)
+  .join(',')
+
+// Inside the component:
+const [storedColumns, setStoredColumns] = useUserPreference(
+  'my-page',
+  'visible_columns',
+  DEFAULT_VISIBLE_KEYS,
+)
+
+// Derive the Set from the comma-separated string
+const visibleColumns = useMemo<Set<MyColumnKey>>(() => {
+  if (!storedColumns) return new Set(AVAILABLE_COLUMNS.filter((c) => c.defaultVisible).map((c) => c.key))
+  return new Set(storedColumns.split(',').filter(Boolean) as MyColumnKey[])
+}, [storedColumns])
+
+// Local pending state
+const [localColumns, setLocalColumns] = useState<Set<MyColumnKey> | null>(null)
+const [showColumnsPrompt, setShowColumnsPrompt] = useState(false)
+const pendingColumns = useRef<Set<MyColumnKey> | null>(null)
+
+const effectiveVisibleColumns = localColumns ?? visibleColumns
+
+const handleSetVisibleColumns = useCallback((next: Set<MyColumnKey>) => {
+  setLocalColumns(next)
+  pendingColumns.current = next
+  setShowColumnsPrompt(true)
+}, [])
+
+const handleSaveColumns = useCallback(() => {
+  if (pendingColumns.current) {
+    setStoredColumns(Array.from(pendingColumns.current).join(','))
+    setLocalColumns(null)
+    pendingColumns.current = null
+  }
+  setShowColumnsPrompt(false)
+}, [setStoredColumns])
+
+const handleDismissColumns = useCallback(() => { setShowColumnsPrompt(false) }, [])
+```
+
+```tsx
+{/* Columns prompt */}
+<PreferenceSavePrompt
+  visible={showColumnsPrompt}
+  onSave={handleSaveColumns}
+  onDismiss={handleDismissColumns}
+  label="Save column selection as your default?"
+/>
+```
+
+##### 4. Place prompts outside the scrollable page container
+
+Both `<PreferenceSavePrompt>` elements use CSS `position: fixed` and must be rendered **outside**
+the `max-w-*` container div so they are not clipped:
+
+```tsx
+return (
+  <div className="min-h-screen p-8">
+    <div className={`${effectiveExpandedWidth ? 'max-w-full' : 'max-w-7xl'} mx-auto ...`}>
+      {/* page content */}
+    </div>
+
+    {/* Prompts live outside the container */}
+    <PreferenceSavePrompt visible={showWidthPrompt} onSave={handleSaveWidth} onDismiss={handleDismissWidth} label="Save page width as your default?" />
+    <PreferenceSavePrompt visible={showColumnsPrompt} onSave={handleSaveColumns} onDismiss={handleDismissColumns} label="Save column selection as your default?" />
+  </div>
+)
+```
+
+### Integration checklist
+
+When adding preferences to a page, verify each item:
+
+- [ ] Imported `useUserPreference` and `PreferenceSavePrompt`.
+- [ ] Used the page's URL slug as `page_key` (e.g. `'countries'`, not `'Countries'`).
+- [ ] `DEFAULT_VISIBLE_KEYS` computed **outside** the component function (module-level constant).
+- [ ] `effectiveExpandedWidth` / `effectiveVisibleColumns` used everywhere (not the raw stored value).
+- [ ] Both `<PreferenceSavePrompt>` elements placed **outside** the `max-w-*` container.
+- [ ] `handleSaveWidth` / `handleSaveColumns` clear the pending refs and local state after saving.
+- [ ] `handleDismissWidth` / `handleDismissColumns` only hide the prompt (do not clear local state,
+  so the UI change persists for this session even if not saved).
+- [ ] Verified in both light and dark mode that the toast is visible (it uses a dark semi-transparent
+  background that works in all themes).
+
+### Supported pages (current)
+
+| Page | `expanded_width` | `visible_columns` |
+| ---- | :--------------: | :---------------: |
+| LEI Records | ✅ | ✅ |
+| Countries | ✅ | ✅ |
+| Currencies | ✅ | — |
+| Languages | ✅ | — |
+
+### Sign-out cleanup
+
+When the user signs out, the preference cache must be cleared so the next login does not receive
+stale data. `UserBadge` already calls `resetPreferencesCache()` on sign-out:
+
+```tsx
+import { resetPreferencesCache } from '../lib/useUserPreference'
+
+// inside sign-out handler:
+resetPreferencesCache()
+localStorage.removeItem('axiom_token')
+localStorage.removeItem('axiom_user')
+router.push('/login')
+```
 
 ---
 
@@ -594,5 +876,6 @@ When adding a new UI pattern to this guide:
 
 - [ADR-0006: Next.js and Tailwind CSS](./adr/adr-0006-nextjs-tailwind-frontend.md)
 - [ADR-0008: Sticky Headers with Smooth Transitions](./adr/adr-0008-sticky-headers-with-smooth-transitions.md)
+- [ADR-0011: User Preferences](./adr/adr-0011-user-preferences.md)
 - [Frontend UI Guidelines](.github/instructions/frontend-ui.instructions.md)
 - [Performance Optimization](.github/instructions/performance-optimization.instructions.md)
