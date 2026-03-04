@@ -213,11 +213,12 @@ func (h *AuthHandler) ApproveUser(c *gin.Context) {
 
 // RejectUser godoc
 // @Summary Reject/deactivate a user (admin only)
-// @Description Deactivate a user account
+// @Description Deactivate a user account. Fails if this would remove the last active admin.
 // @Tags auth
 // @Produce json
 // @Param id path string true "User ID"
 // @Success 200 {object} object{message=string}
+// @Failure 400 {object} object{error=string}
 // @Security BearerAuth
 // @Router /auth/users/{id}/reject [post]
 func (h *AuthHandler) RejectUser(c *gin.Context) {
@@ -230,6 +231,41 @@ func (h *AuthHandler) RejectUser(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "User deactivated successfully"})
+}
+
+// updateRoleRequest is the expected body for PUT /auth/users/:id/role.
+type updateRoleRequest struct {
+	Role string `json:"role" binding:"required"`
+}
+
+// UpdateUserRole godoc
+// @Summary Change a user's role (admin only)
+// @Description Promote a user to admin or demote an admin to user. Fails if this would remove the last active admin.
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param id path string true "User ID"
+// @Param body body updateRoleRequest true "New role"
+// @Success 200 {object} object{message=string}
+// @Failure 400 {object} object{error=string}
+// @Security BearerAuth
+// @Router /auth/users/{id}/role [put]
+func (h *AuthHandler) UpdateUserRole(c *gin.Context) {
+	adminID := extractUserID(c)
+	userID := c.Param("id")
+
+	var req updateRoleRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "role is required"})
+		return
+	}
+
+	if err := h.auth.UpdateUserRole(adminID, userID, req.Role); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "User role updated successfully"})
 }
 
 // CountryHandler handles country endpoints

@@ -37,6 +37,20 @@ function statusBadge(status: string) {
   )
 }
 
+function roleBadge(role: string) {
+  return (
+    <span
+      className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+        role === 'admin'
+          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300'
+          : 'bg-gray-100 text-gray-700 dark:bg-gray-700/40 dark:text-gray-300'
+      }`}
+    >
+      {role}
+    </span>
+  )
+}
+
 function AdminUsersContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -90,7 +104,7 @@ function AdminUsersContent() {
   const handleApprove = async (id: string) => {
     const token = getToken()
     if (!token) return
-    setActionLoading(id)
+    setActionLoading(id + '-approve')
     try {
       const res = await fetch(`${API_BASE_URL}/api/v1/auth/users/${id}/approve`, {
         method: 'POST',
@@ -112,7 +126,7 @@ function AdminUsersContent() {
   const handleReject = async (id: string) => {
     const token = getToken()
     if (!token) return
-    setActionLoading(id)
+    setActionLoading(id + '-reject')
     try {
       const res = await fetch(`${API_BASE_URL}/api/v1/auth/users/${id}/reject`, {
         method: 'POST',
@@ -123,6 +137,30 @@ function AdminUsersContent() {
       } else {
         const data = await res.json()
         setError(data.error || 'Action failed')
+      }
+    } catch {
+      setError('Network error')
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const handleRoleChange = async (id: string, newRole: string) => {
+    const token = getToken()
+    if (!token) return
+    setActionLoading(id + '-role')
+    setError('')
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/auth/users/${id}/role`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: newRole }),
+      })
+      if (res.ok) {
+        await fetchUsers()
+      } else {
+        const data = await res.json()
+        setError(data.error || 'Role change failed')
       }
     } catch {
       setError('Network error')
@@ -146,9 +184,9 @@ function AdminUsersContent() {
               ⚠️ You are logged in with the default bootstrap administrator account.
             </p>
             <p className="text-amber-700 dark:text-amber-400 text-sm mt-1">
-              Please approve a real administrator account and then{' '}
-              <strong>log out and sign in as the new admin</strong>. The bootstrap account will be
-              deactivated once a real administrator approves another admin user.
+              Approve a pending user, then use the <strong>Promote to Admin</strong> button to grant
+              them admin rights. Once that real admin logs in, the bootstrap account will be
+              deactivated automatically.
             </p>
           </div>
         )}
@@ -209,11 +247,7 @@ function AdminUsersContent() {
                     <td className="px-4 py-3 text-gray-700 dark:text-gray-300 align-top font-mono text-xs">
                       {user.username}
                     </td>
-                    <td className="px-4 py-3 align-top">
-                      <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300">
-                        {user.role}
-                      </span>
-                    </td>
+                    <td className="px-4 py-3 align-top">{roleBadge(user.role)}</td>
                     <td className="px-4 py-3 align-top">{statusBadge(user.status)}</td>
                     <td className="px-4 py-3 text-gray-500 dark:text-gray-400 align-top text-xs">
                       {user.created_at && !user.created_at.startsWith('0001-')
@@ -221,32 +255,57 @@ function AdminUsersContent() {
                         : '–'}
                     </td>
                     <td className="px-4 py-3 align-top">
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
                         {user.status === 'pending' && (
                           <button
                             onClick={() => handleApprove(user.id)}
-                            disabled={actionLoading === user.id}
+                            disabled={actionLoading === user.id + '-approve'}
                             className="px-3 py-1 text-xs bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white rounded transition-colors"
                           >
-                            {actionLoading === user.id ? '…' : 'Approve'}
+                            {actionLoading === user.id + '-approve' ? '…' : 'Approve'}
                           </button>
                         )}
                         {user.status === 'active' && (
                           <button
                             onClick={() => handleReject(user.id)}
-                            disabled={actionLoading === user.id}
+                            disabled={actionLoading === user.id + '-reject'}
                             className="px-3 py-1 text-xs bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white rounded transition-colors"
                           >
-                            {actionLoading === user.id ? '…' : 'Deactivate'}
+                            {actionLoading === user.id + '-reject' ? '…' : 'Deactivate'}
                           </button>
                         )}
                         {user.status === 'inactive' && (
                           <button
                             onClick={() => handleApprove(user.id)}
-                            disabled={actionLoading === user.id}
+                            disabled={actionLoading === user.id + '-approve'}
                             className="px-3 py-1 text-xs bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded transition-colors"
                           >
-                            {actionLoading === user.id ? '…' : 'Reactivate'}
+                            {actionLoading === user.id + '-approve' ? '…' : 'Reactivate'}
+                          </button>
+                        )}
+                        {/* Role change button — only shown for active users */}
+                        {user.status === 'active' && (
+                          <button
+                            onClick={() =>
+                              handleRoleChange(user.id, user.role === 'admin' ? 'user' : 'admin')
+                            }
+                            disabled={actionLoading === user.id + '-role'}
+                            title={
+                              user.role === 'admin'
+                                ? 'Demote to regular user'
+                                : 'Promote to administrator'
+                            }
+                            className={`px-3 py-1 text-xs rounded transition-colors ${
+                              user.role === 'admin'
+                                ? 'bg-orange-500 hover:bg-orange-600 disabled:bg-orange-300 text-white'
+                                : 'bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white'
+                            }`}
+                          >
+                            {actionLoading === user.id + '-role'
+                              ? '…'
+                              : user.role === 'admin'
+                                ? 'Demote'
+                                : 'Promote to Admin'}
                           </button>
                         )}
                       </div>

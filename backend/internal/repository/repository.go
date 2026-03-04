@@ -410,6 +410,8 @@ type UserRepository interface {
 	FindByUsername(username string) (*domain.User, error)
 	FindAll(status string, limit, offset int) ([]*domain.User, error)
 	Update(user *domain.User) error
+	// CountActiveAdmins counts active (non-deleted) users whose role is admin.
+	CountActiveAdmins() (int64, error)
 }
 
 type userRepository struct {
@@ -463,4 +465,12 @@ func (r *userRepository) FindAll(status string, limit, offset int) ([]*domain.Us
 
 func (r *userRepository) Update(user *domain.User) error {
 	return r.db.Save(user).Error
+}
+
+func (r *userRepository) CountActiveAdmins() (int64, error) {
+	var count int64
+	err := r.db.Model(&domain.User{}).
+		Where("role = ? AND status = ?", domain.UserRoleAdmin, domain.UserStatusActive).
+		Count(&count).Error
+	return count, err
 }

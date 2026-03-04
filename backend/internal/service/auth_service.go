@@ -24,8 +24,10 @@ type AuthService interface {
 	GetUser(id string) (*domain.User, error)
 	// ApproveUser activates a pending user account.
 	ApproveUser(adminID, userID string) error
-	// RejectUser deactivates a user account.
+	// RejectUser deactivates a user account (fails if this would remove the last active admin).
 	RejectUser(adminID, userID string) error
+	// UpdateUserRole changes a user's role. Fails when demoting the last active admin.
+	UpdateUserRole(adminID, userID, role string) error
 	// EnsureBootstrapAdmin seeds the default admin account if no active admin exists.
 	EnsureBootstrapAdmin() error
 	// IsBootstrapAccount returns true when the given user ID belongs to the bootstrap admin.
@@ -110,11 +112,27 @@ func (s *authService) Login(email, password string) (*LoginResponse, error) {
 		return nil, fmt.Errorf("failed to generate token: %w", err)
 	}
 
+	// Auto-deactivate the bootstrap account when a real (non-bootstrap) admin logs in.
+	if user.Role == domain.UserRoleAdmin && !user.IsBootstrap {
+		s.deactivateBootstrap()
+	}
+
 	return &LoginResponse{
 		Token:       token,
 		User:        user,
 		IsBootstrap: user.IsBootstrap,
 	}, nil
+}
+
+// deactivateBootstrap sets the bootstrap seed account to inactive when it is no longer needed.
+// Failures are silently ignored so they never block a legitimate login.
+func (s *authService) deactivateBootstrap() {
+	bootstrap, err := s.repo.FindByID(bootstrapAdminID)
+	if err != nil || bootstrap == nil || bootstrap.Status == domain.UserStatusInactive {
+		return
+	}
+	bootstrap.Status = domain.UserStatusInactive
+	_ = s.repo.Update(bootstrap)
 }
 
 func (s *authService) ListUsers(status string, limit, offset int) ([]*domain.User, error) {
@@ -148,9 +166,49 @@ func (s *authService) RejectUser(adminID, userID string) error {
 	if err != nil {
 		return fmt.Errorf("user not found: %w", err)
 	}
+
+	// Prevent deactivating the last active admin.
+	if user.Role == domain.UserRoleAdmin && user.Status == domain.UserStatusActive {
+		count, err := s.repo.CountActiveAdmins()
+		if err != nil {
+			return fmt.Errorf("could not verify admin count: %w", err)
+		}
+		if count <= 1 {
+			return errors.New("cannot deactivate the last active admin user")
+		}
+	}
+
 	// TODO: record adminID in audit trail when audit logging is implemented
 	_ = adminID
 	user.Status = domain.UserStatusInactive
+	return s.repo.Update(user)
+}
+
+func (s *authService) UpdateUserRole(adminID, userID, role string) error {
+	newRole := domain.UserRole(role)
+	if newRole != domain.UserRoleAdmin && newRole != domain.UserRoleUser {
+		return fmt.Errorf("invalid role %q: must be 'admin' or 'user'", role)
+	}
+
+	user, err := s.repo.FindByID(userID)
+	if err != nil {
+		return fmt.Errorf("user not found: %w", err)
+	}
+
+	// Prevent demoting the last active admin.
+	if user.Role == domain.UserRoleAdmin && newRole == domain.UserRoleUser {
+		count, err := s.repo.CountActiveAdmins()
+		if err != nil {
+			return fmt.Errorf("could not verify admin count: %w", err)
+		}
+		if count <= 1 {
+			return errors.New("cannot demote the last active admin user")
+		}
+	}
+
+	// TODO: record adminID in audit trail when audit logging is implemented
+	_ = adminID
+	user.Role = newRole
 	return s.repo.Update(user)
 }
 

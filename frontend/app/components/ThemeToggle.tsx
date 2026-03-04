@@ -30,8 +30,8 @@ export default function ThemeToggle() {
   // Avoid hydration mismatch
   if (!mounted) {
     return (
-      <button className="px-4 py-2 rounded-lg opacity-50 cursor-not-allowed">
-        <span className="text-xl">🌓</span>
+      <button className="h-9 w-9 flex items-center justify-center rounded-lg opacity-50 cursor-not-allowed">
+        <span className="text-base leading-none">🌓</span>
       </button>
     )
   }
@@ -39,10 +39,10 @@ export default function ThemeToggle() {
   return (
     <button
       onClick={toggleTheme}
-      className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 transition-all"
+      className="h-9 w-9 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 transition-all"
       title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
     >
-      <span className="text-xl">{theme === 'dark' ? '☀️' : '🌙'}</span>
+      <span className="text-base leading-none">{theme === 'dark' ? '☀️' : '🌙'}</span>
     </button>
   )
 }

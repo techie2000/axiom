@@ -39,8 +39,8 @@ export default function UserBadge() {
 
   return (
     <div className="flex items-center gap-2">
-      <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 border border-white/20 text-sm">
-        <span className="text-lg" aria-hidden="true">👤</span>
+      <div className="flex items-center gap-2 h-9 px-3 rounded-lg bg-white/10 border border-white/20 text-sm">
+        <span className="text-base leading-none" aria-hidden="true">👤</span>
         <span className="font-medium text-gray-900 dark:text-white">{displayName}</span>
         <span className="px-1.5 py-0.5 text-xs font-semibold rounded bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300 capitalize">
           {user.role}
@@ -48,7 +48,7 @@ export default function UserBadge() {
       </div>
       <button
         onClick={handleSignOut}
-        className="px-3 py-1.5 text-sm rounded-lg bg-white/10 border border-white/20 hover:bg-red-500/20 hover:border-red-400/40 hover:text-red-300 transition-colors text-gray-700 dark:text-gray-300"
+        className="h-9 px-3 text-sm rounded-lg bg-white/10 border border-white/20 hover:bg-red-500/20 hover:border-red-400/40 hover:text-red-300 transition-colors text-gray-700 dark:text-gray-300"
         title="Sign out"
       >
         Sign out

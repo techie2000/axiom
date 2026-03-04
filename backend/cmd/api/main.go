@@ -306,6 +306,7 @@ func setupRouter(cfg *config.Config, h *handler.Handlers) *gin.Engine {
 				adminAuth.GET("/users", h.Auth.ListUsers)
 				adminAuth.POST("/users/:id/approve", h.Auth.ApproveUser)
 				adminAuth.POST("/users/:id/reject", h.Auth.RejectUser)
+				adminAuth.PUT("/users/:id/role", h.Auth.UpdateUserRole)
 			}
 
 			// Protected write operations for countries and currencies

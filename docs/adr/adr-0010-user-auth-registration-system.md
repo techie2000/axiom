@@ -184,9 +184,16 @@ Implement a custom user authentication and registration system comprising:
 - **IMP-007**: Operational runbook for bootstrap handover:
   1. Deploy the application (migration seeds `admin@axiom.local`).
   2. Log in with `admin@axiom.local` / `Admin1234!`.
-  3. A real administrator self-registers and the bootstrap admin approves the account.
-  4. The real admin logs in and sets the bootstrap account to `inactive` via the user-management UI.
-  5. Confirm no further login is possible with `admin@axiom.local`.
+  3. A real administrator self-registers (status defaults to `pending`).
+  4. The bootstrap admin opens **User Management**, approves the new account, then uses
+     the **Promote to Admin** button to change their role from `user` to `admin`.
+  5. The real admin logs in. On successful login by any non-bootstrap admin the system
+     automatically sets `admin@axiom.local` to `inactive`.
+  6. Confirm no further login is possible with `admin@axiom.local` (account is inactive).
+
+  Additional safeguards enforced by the system:
+  - Deactivating or demoting a user is blocked when it would remove the last active admin.
+  - The bootstrap account cannot be reactivated once a real admin has logged in.
 - **IMP-008**: Success criteria — no user can access protected API routes without a valid JWT issued
   to an `active` account; `pending` and `inactive` users receive `401 Unauthorized` on login;
   non-admin users receive `403 Forbidden` on user-management endpoints.
