@@ -415,9 +415,15 @@ jobs:
           
           if [ "${{ steps.parse-vulns.outputs.has_updates }}" == "true" ]; then
             echo "✅ **Updates Applied:**" >> $GITHUB_STEP_SUMMARY
-            [ "${{ steps.parse-vulns.outputs.has_alpine_updates }}" == "true" ] && echo "- Alpine packages updated" >> $GITHUB_STEP_SUMMARY
-            [ "${{ steps.parse-vulns.outputs.has_go_updates }}" == "true" ] && echo "- Go modules updated" >> $GITHUB_STEP_SUMMARY
-            [ "${{ steps.parse-vulns.outputs.has_npm_updates }}" == "true" ] && echo "- npm packages updated" >> $GITHUB_STEP_SUMMARY
+            if [ "${{ steps.parse-vulns.outputs.has_alpine_updates }}" == "true" ]; then
+              echo "- Alpine packages updated" >> $GITHUB_STEP_SUMMARY
+            fi
+            if [ "${{ steps.parse-vulns.outputs.has_go_updates }}" == "true" ]; then
+              echo "- Go modules updated" >> $GITHUB_STEP_SUMMARY
+            fi
+            if [ "${{ steps.parse-vulns.outputs.has_npm_updates }}" == "true" ]; then
+              echo "- npm packages updated" >> $GITHUB_STEP_SUMMARY
+            fi
           else
             echo "✅ No fixable vulnerabilities found" >> $GITHUB_STEP_SUMMARY
           fi
