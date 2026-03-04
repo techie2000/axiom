@@ -10,9 +10,8 @@ UPDATE lei_raw.lei_records
 SET
     search_vector =
         SETWEIGHT(TO_TSVECTOR('simple', COALESCE(legal_name, '')), 'A')
-        || SETWEIGHT(TO_TSVECTOR('simple', COALESCE(transliterated_legal_name, '')), 'B')
-        ||
-        SETWEIGHT(TO_TSVECTOR('simple', COALESCE(other_names::TEXT, '')), 'C')
+        || SETWEIGHT(TO_TSVECTOR('simple', COALESCE(transliterated_legal_name, '')), 'B') -- noqa: LT01
+        || SETWEIGHT(TO_TSVECTOR('simple', COALESCE(other_names::TEXT, '')), 'C') -- noqa: LT01
     ;
 
 -- Create GIN index on the search vector for fast full-text search
@@ -24,9 +23,8 @@ RETURNS TRIGGER AS $$
 BEGIN
     NEW.search_vector :=
         SETWEIGHT(TO_TSVECTOR('simple', COALESCE(NEW.legal_name, '')), 'A')
-        || SETWEIGHT(TO_TSVECTOR('simple', COALESCE(NEW.transliterated_legal_name, '')), 'B')
-        ||
-        SETWEIGHT(TO_TSVECTOR('simple', COALESCE(NEW.other_names::TEXT, '')), 'C')
+        || SETWEIGHT(TO_TSVECTOR('simple', COALESCE(NEW.transliterated_legal_name, '')), 'B') -- noqa: LT01
+        || SETWEIGHT(TO_TSVECTOR('simple', COALESCE(NEW.other_names::TEXT, '')), 'C') -- noqa: LT01
     ;
     RETURN NEW;
 END;
