@@ -238,11 +238,37 @@ func (s *authService) UpdateUserRole(adminID, userID, role string) error {
 }
 
 func (s *authService) EnsureBootstrapAdmin() error {
-	// Only create the bootstrap row if it does not already exist
-	if _, err := s.repo.FindByID(bootstrapAdminID); err == nil {
-		return nil // already seeded by migration
+	// First, check if there is already at least one active admin. If so, there is nothing to do.
+	count, err := s.repo.CountActiveAdmins()
+	if err != nil {
+		return fmt.Errorf("could not verify admin count: %w", err)
 	}
-	// If the DB migration has not run yet, skip silently – the migration handles the seed.
+	if count > 0 {
+		return nil
+	}
+
+	// No active admins exist. Ensure the bootstrap admin account is present and active.
+	user, err := s.repo.FindByID(bootstrapAdminID)
+	if err != nil {
+		// If the DB migration has not run yet (or the bootstrap row does not exist),
+		// skip silently – the migration is responsible for seeding the bootstrap admin.
+		return nil
+	}
+
+	// If the record with the bootstrap ID is not marked as a bootstrap account, treat this
+	// as a configuration error rather than silently modifying an arbitrary user.
+	if !user.IsBootstrap {
+		return fmt.Errorf("user %s is not marked as bootstrap admin account", bootstrapAdminID)
+	}
+
+	// Reactivate and enforce admin role on the bootstrap account when it is not currently active.
+	if user.Status != domain.UserStatusActive || user.Role != domain.UserRoleAdmin {
+		user.Status = domain.UserStatusActive
+		user.Role = domain.UserRoleAdmin
+		if err := s.repo.Update(user); err != nil {
+			return fmt.Errorf("failed to update bootstrap admin account: %w", err)
+		}
+	}
 	return nil
 }
 
