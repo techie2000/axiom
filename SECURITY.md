@@ -2,12 +2,15 @@
 
 ## Supported Versions
 
-The following versions of Axiom are currently receiving security updates:
+The following versions of Axiom are currently receiving security updates.
+The production version is always the version published as the latest GitHub Release
+(sourced automatically from the [`VERSION`](VERSION) file at release time):
 
-| Version        | Supported          |
-| -------------- | ------------------ |
-| latest (main)  | ✅ Supported       |
-| older releases | ❌ Not supported   |
+| Version                                                                                                                        | Supported                                         |
+| ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------- |
+| ![Latest prod release](https://img.shields.io/github/v/release/techie2000/axiom?label=prod) — `prod` branch                  | ✅ Supported — full SLA timelines apply           |
+| `uat` / `dev` / `main` branches (pre-release)                                                                                 | ⚠️ Taken seriously — SLA timelines do not apply  |
+| Any release older than the current prod release                                                                                | ❌ Not supported                                  |
 
 ## Reporting a Vulnerability
 
@@ -36,6 +39,10 @@ To help us triage and fix the issue as quickly as possible, please include:
 - Any suggested mitigations or fixes, if you have ideas
 
 ### What to Expect
+
+> **Note:** The response timelines below apply to vulnerabilities reported against the
+> **production (`prod`) branch**. Reports against `uat`, `dev`, `main`, or other pre-release
+> branches will be taken seriously but are not subject to the same SLA commitments.
 
 - **Acknowledgement**: We will acknowledge receipt of your report within **5 business days**
 - **Initial Assessment**: We will provide an initial assessment within **10 business days**
