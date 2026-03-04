@@ -9,7 +9,7 @@ services:
     ports:
       - "${POSTGRES_PORT}:5432"
     volumes:
-      - postgres_data_main:/var/lib/postgresql/data
+      - ./data/main/postgres:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
@@ -106,7 +106,6 @@ services:
       - axiom-main
 
 volumes:
-  postgres_data_main:
   rabbitmq_data_main:
   rabbitmq_log_main:
   frontend_node_modules_main:
