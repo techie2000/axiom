@@ -288,12 +288,12 @@ Modular domain knowledge packages that AI can load on-demand:
 
 ### Configuration Consistency (CRITICAL)
 When adding, removing, or modifying environment variables:
-1. Update all environment files: [`.env.dev`](../.env.dev), [`.env.uat`](../.env.uat), [`.env.prod`](../.env.prod) with the new variable and environment-appropriate values
-2. Update [`backend/internal/config/config.go`](../backend/internal/config/config.go) to load and validate the variable
-3. **Update all docker-compose files**: [`docker-compose.dev.yml`](../docker-compose.dev.yml), [`docker-compose.uat.yml`](../docker-compose.uat.yml), [`docker-compose.prod.yml`](../docker-compose.prod.yml) environment sections to include the variable
-4. **Update [`README.md`](../README.md)** configuration documentation with the new variable
-5. **Update [`docs/environments/`](../docs/environments/)** environment-specific documentation if applicable
-6. Create or update relevant ADRs in [`docs/adrs/`](../docs/adrs/) if the change affects core behavior or architecture
+1. Update all environment files: `.env.dev`, `.env.uat`, `.env.prod` with the new variable and environment-appropriate values
+2. Update `backend/internal/config/config.go` to load and validate the variable
+3. **Update all docker-compose files**: `docker-compose.dev.yml`, `docker-compose.uat.yml`, `docker-compose.prod.yml` environment sections to include the variable
+4. **Update `README.md`** configuration documentation with the new variable
+5. **Update `docs/environments/`** environment-specific documentation if applicable
+6. Create or update relevant ADRs in `docs/adr/` if the change affects core behavior or architecture
 
 **Common mistake**: Forgetting to sync all environment files and docker-compose configurations, causing configuration drift between dev, UAT, and production environments.
 
@@ -302,11 +302,11 @@ When adding, removing, or modifying environment variables:
 **Current State**: Module path is `github.com/techie2000/axiom` (properly configured for GitHub)
 
 **Backend Module:**
-- [`backend/go.mod`](../backend/go.mod): Uses `module github.com/techie2000/axiom`
+- `backend/go.mod`: Uses `module github.com/techie2000/axiom`
 - All backend imports use the full GitHub path: `github.com/techie2000/axiom/internal/*`
 
 **Root Module:**
-- [`go.mod`](../go.mod): Uses `module github.com/techie2000/axiom` for consistency
+- `go.mod`: Uses `module github.com/techie2000/axiom` for consistency
 
 **When adding new packages or imports:**
 1. Always use the full GitHub module path in imports
@@ -326,7 +326,7 @@ All significant design decisions must be documented in ADR format:
 - Located in `docs/adrs/ADR-XXX-decision-title.md`
 - Follow standard ADR template (see Project Standards section)
 - Include context, options considered, decision rationale, and consequences
-- Reference ADRs in [README](../README.md) and related documentation
+- Reference ADRs in `README.md` and related documentation
 
 ### Mermaid Diagrams
 All architecture and technical diagrams must use Mermaid format:
@@ -487,7 +487,7 @@ When making significant technical decisions:
 3. **Document Options**: List all considered alternatives with pros/cons
 4. **Make Decision**: Choose option with clear rationale
 5. **Update Diagrams**: Create or update Mermaid diagrams showing the decision's impact
-6. **Link Documentation**: Reference ADR in [README](../README.md), related docs, and code comments
+6. **Link Documentation**: Reference ADR in `README.md`, related docs, and code comments
 
 ## Test Maintenance Workflow (MANDATORY)
 
@@ -507,7 +507,7 @@ When modifying Go code in Axiom:
 - Integration tests: In `backend/tests/` directory
 - Test coverage target: >70% per module
 
-**See [`.github/instructions/test-driven-maintenance.instructions.md`](./instructions/test-driven-maintenance.instructions.md) for complete requirements.**
+**See `.github/instructions/test-driven-maintenance.instructions.md` for complete requirements.**
 
 ### ADR Creation Checklist
 
@@ -517,7 +517,7 @@ When modifying Go code in Axiom:
 - [ ] Consequences (positive and negative) listed
 - [ ] Mitigation strategies for negative consequences included
 - [ ] References and supporting documentation linked
-- [ ] ADR referenced in [README](../README.md) or relevant documentation
+- [ ] ADR referenced in `README.md` or relevant documentation
 - [ ] Related Mermaid diagrams created or updated
 
 ### Diagram Creation Checklist
