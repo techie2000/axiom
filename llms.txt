@@ -39,8 +39,11 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
 - [ADR-0005: RabbitMQ Async Processing](docs/adr/adr-0005-rabbitmq-async-processing.md): Message queue integration
 - [ADR-0006: Next.js and Tailwind Frontend](docs/adr/adr-0006-nextjs-tailwind-frontend.md): Frontend stack decisions
 - [ADR-0007: Docker Compose Local Dev](docs/adr/adr-0007-docker-compose-local-dev.md): Development environment
+- [ADR-0008: Sticky Headers with Smooth Transitions](docs/adr/adr-0008-sticky-headers-with-smooth-transitions.md): UI sticky header and scroll behaviour pattern
 - [ADR-0009: Git Branching Strategy](docs/adr/adr-0009-git-branching-strategy.md): Branch model and environment
   promotion gates
+- [ADR-0010: User Auth and Registration](docs/adr/adr-0010-user-auth-registration-system.md): Self-registration,
+  admin approval workflow, JWT issuance, and bootstrap admin strategy
 
 ## Deployment and Infrastructure
 

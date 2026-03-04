@@ -6,6 +6,8 @@ import CurrenciesRecordsCard from './components/CurrenciesRecordsCard'
 import LanguagesRecordsCard from './components/LanguagesRecordsCard'
 import PageHeader from './components/PageHeader'
 import ProtectedLandingCard from './components/ProtectedLandingCard'
+import AdminSection from './components/AdminSection'
+import SignInPrompt from './components/SignInPrompt'
 
 export default function Home() {
   return (
@@ -16,6 +18,9 @@ export default function Home() {
           subtitle="Financial Services Static Data Management System"
           showBackLink={false}
         />
+
+        {/* Sign-in prompt — only visible to unauthenticated users */}
+        <SignInPrompt />
 
         {/* Public Reference Data Section */}
         <section className="mb-12">
@@ -107,6 +112,9 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+        {/* Administration Section — client component; hides itself for non-admins */}
+        <AdminSection />
       </div>
     </main>
   )

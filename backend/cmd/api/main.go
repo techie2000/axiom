@@ -82,7 +82,7 @@ func main() {
 	}
 
 	// Initialize services with both data directories
-	services := service.NewServices(repos, db, leiDataDir, masterDataDir)
+	services := service.NewServices(repos, db, leiDataDir, masterDataDir, cfg.JWT.Secret, cfg.JWT.Expiry)
 
 	// Load master data on startup (idempotent - only loads if tables are empty)
 	logger.Info().Msg("Checking master data...")
@@ -299,6 +299,16 @@ func setupRouter(cfg *config.Config, h *handler.Handlers) *gin.Engine {
 		protected := v1.Group("")
 		protected.Use(middleware.JWTAuth(cfg))
 		{
+			// Admin-only user management routes
+			adminAuth := protected.Group("/auth")
+			adminAuth.Use(middleware.AdminRequired())
+			{
+				adminAuth.GET("/users", h.Auth.ListUsers)
+				adminAuth.POST("/users/:id/approve", h.Auth.ApproveUser)
+				adminAuth.POST("/users/:id/reject", h.Auth.RejectUser)
+				adminAuth.PUT("/users/:id/role", h.Auth.UpdateUserRole)
+			}
+
 			// Protected write operations for countries and currencies
 			protected.POST("/countries", h.Country.Create)
 			protected.PUT("/countries/:id", h.Country.Update)
