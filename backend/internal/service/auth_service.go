@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/techie2000/axiom/internal/domain"
 	"github.com/techie2000/axiom/internal/repository"
+	"github.com/techie2000/axiom/pkg/logger"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -125,14 +126,16 @@ func (s *authService) Login(email, password string) (*LoginResponse, error) {
 }
 
 // deactivateBootstrap sets the bootstrap seed account to inactive when it is no longer needed.
-// Failures are silently ignored so they never block a legitimate login.
+// Failures are logged as warnings but never block a legitimate login.
 func (s *authService) deactivateBootstrap() {
 	bootstrap, err := s.repo.FindByID(bootstrapAdminID)
 	if err != nil || bootstrap == nil || bootstrap.Status == domain.UserStatusInactive {
 		return
 	}
 	bootstrap.Status = domain.UserStatusInactive
-	_ = s.repo.Update(bootstrap)
+	if err := s.repo.Update(bootstrap); err != nil {
+		logger.Warn().Err(err).Msg("failed to auto-deactivate bootstrap admin account")
+	}
 }
 
 func (s *authService) ListUsers(status string, limit, offset int) ([]*domain.User, error) {

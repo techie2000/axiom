@@ -255,7 +255,7 @@ function AdminUsersContent() {
                         : '–'}
                     </td>
                     <td className="px-4 py-3 align-top">
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap gap-2" role="group" aria-label="User actions">
                         {user.status === 'pending' && (
                           <button
                             onClick={() => handleApprove(user.id)}
