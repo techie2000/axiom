@@ -4,7 +4,7 @@ author1: "techie2000"
 post_slug: "adr-0010-user-auth-registration-system"
 microsoft_alias: "techie2000"
 featured_image: "/assets/images/adr-0010-user-auth-registration-system.png"
-categories: ["backend", "security"]
+categories: ["backend"]
 tags: ["adr", "backend", "security", "authentication", "jwt", "user-management"]
 ai_note: "AI-assisted draft based on repository state and user request."
 summary: "Records the decision to implement a self-registration flow with admin approval, JWT issuance, and a bootstrap admin seed for the Axiom financial services static data management system."
