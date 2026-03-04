@@ -258,7 +258,7 @@ func (s *authService) EnsureBootstrapAdmin() error {
 	// If the record with the bootstrap ID is not marked as a bootstrap account, treat this
 	// as a configuration error rather than silently modifying an arbitrary user.
 	if !user.IsBootstrap {
-		return fmt.Errorf("user %s is not marked as bootstrap admin account", bootstrapAdminID)
+		return fmt.Errorf("bootstrap admin account configuration error: unexpected user record at bootstrap ID")
 	}
 
 	// Reactivate and enforce admin role on the bootstrap account when it is not currently active.

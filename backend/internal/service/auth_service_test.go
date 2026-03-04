@@ -645,3 +645,91 @@ func TestGetUser_Found(t *testing.T) {
 		t.Errorf("GetUser: want found@example.com, got %v", u.Email)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// EnsureBootstrapAdmin
+// ---------------------------------------------------------------------------
+
+// When an active admin already exists, EnsureBootstrapAdmin is a no-op.
+func TestEnsureBootstrapAdmin_ActiveAdminExists_NoOp(t *testing.T) {
+	repo := newAuthRepoStub()
+	repo.activeAdminCount = 1
+	boot := bootstrapUser()
+	boot.Status = domain.UserStatusInactive
+	repo.addUser(boot)
+	svc := newSvc(repo)
+
+	if err := svc.EnsureBootstrapAdmin(); err != nil {
+		t.Fatalf("expected no error when active admin exists, got: %v", err)
+	}
+	// Bootstrap account must remain inactive (not touched).
+	if repo.users[bootstrapAdminID].Status != domain.UserStatusInactive {
+		t.Error("bootstrap account must not be reactivated when active admin exists")
+	}
+}
+
+// When no active admin exists and the bootstrap row is present and inactive,
+// EnsureBootstrapAdmin must reactivate it.
+func TestEnsureBootstrapAdmin_ReactivatesBootstrap(t *testing.T) {
+	repo := newAuthRepoStub()
+	repo.activeAdminCount = 0
+	boot := bootstrapUser()
+	boot.Status = domain.UserStatusInactive
+	repo.addUser(boot)
+	svc := newSvc(repo)
+
+	if err := svc.EnsureBootstrapAdmin(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if repo.users[bootstrapAdminID].Status != domain.UserStatusActive {
+		t.Error("bootstrap account must be reactivated when no active admin exists")
+	}
+	if repo.users[bootstrapAdminID].Role != domain.UserRoleAdmin {
+		t.Error("bootstrap account must be set to admin role")
+	}
+}
+
+// When the row at the bootstrap UUID has IsBootstrap=false, the function must
+// return an error to avoid silently modifying an unrelated user.
+func TestEnsureBootstrapAdmin_NotBootstrapRow_ReturnsError(t *testing.T) {
+	repo := newAuthRepoStub()
+	repo.activeAdminCount = 0
+	imposter := &domain.User{
+		BaseModel:   domain.BaseModel{ID: uuid.MustParse(bootstrapAdminID)},
+		Email:       "imposter@example.com",
+		Role:        domain.UserRoleAdmin,
+		Status:      domain.UserStatusActive,
+		IsBootstrap: false,
+	}
+	repo.addUser(imposter)
+	svc := newSvc(repo)
+
+	err := svc.EnsureBootstrapAdmin()
+	if err == nil {
+		t.Error("expected error when bootstrap UUID row has IsBootstrap=false")
+	}
+}
+
+// When no active admin exists and the bootstrap row does not exist,
+// EnsureBootstrapAdmin must skip silently (migration not yet run).
+func TestEnsureBootstrapAdmin_BootstrapRowMissing_SilentSkip(t *testing.T) {
+	repo := newAuthRepoStub()
+	repo.activeAdminCount = 0
+	// No bootstrap row added — FindByID will return gorm.ErrRecordNotFound.
+	svc := newSvc(repo)
+
+	if err := svc.EnsureBootstrapAdmin(); err != nil {
+		t.Fatalf("expected silent skip when bootstrap row is absent, got: %v", err)
+	}
+}
+
+// When CountActiveAdmins returns a DB error, EnsureBootstrapAdmin must propagate it.
+func TestEnsureBootstrapAdmin_CountError_Propagated(t *testing.T) {
+	repo := newAuthRepoStub()
+	repo.countErr = errors.New("db unavailable")
+	svc := newSvc(repo)
+
+	if err := svc.EnsureBootstrapAdmin(); err == nil {
+		t.Error("expected error when CountActiveAdmins fails")
+	}
+}
