@@ -11,6 +11,7 @@ import (
 	"github.com/techie2000/axiom/internal/repository"
 	"github.com/techie2000/axiom/pkg/logger"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 // AuthService provides user registration, login, and administration functions.
@@ -68,12 +69,20 @@ func NewAuthService(repo repository.UserRepository, jwtSecret string, jwtExpiry 
 }
 
 func (s *authService) Register(req RegisterRequest) error {
-	// Check for duplicate email
-	if existing, _ := s.repo.FindByEmail(req.Email); existing != nil {
+	// Check for duplicate email — treat unexpected DB errors as hard failures.
+	existing, err := s.repo.FindByEmail(req.Email)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return fmt.Errorf("database error while checking existing email: %w", err)
+	}
+	if existing != nil {
 		return errors.New("email already registered")
 	}
-	// Check for duplicate username
-	if existing, _ := s.repo.FindByUsername(req.Username); existing != nil {
+	// Check for duplicate username — treat unexpected DB errors as hard failures.
+	existingU, err := s.repo.FindByUsername(req.Username)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return fmt.Errorf("database error while checking existing username: %w", err)
+	}
+	if existingU != nil {
 		return errors.New("username already taken")
 	}
 
@@ -101,7 +110,8 @@ func (s *authService) Login(email, password string) (*LoginResponse, error) {
 	}
 
 	if user.Status != domain.UserStatusActive {
-		return nil, errors.New("account is not active")
+		// Use a generic error to prevent revealing whether an e-mail is registered.
+		return nil, errors.New("invalid credentials")
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {

@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/techie2000/axiom/internal/domain"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 // ---------------------------------------------------------------------------
@@ -46,7 +47,7 @@ func (r *authRepoStub) Create(u *domain.User) error {
 func (r *authRepoStub) FindByID(id string) (*domain.User, error) {
 	u, ok := r.users[id]
 	if !ok {
-		return nil, errors.New("record not found")
+		return nil, gorm.ErrRecordNotFound
 	}
 	return u, nil
 }
@@ -57,7 +58,7 @@ func (r *authRepoStub) FindByEmail(email string) (*domain.User, error) {
 			return u, nil
 		}
 	}
-	return nil, errors.New("record not found")
+	return nil, gorm.ErrRecordNotFound
 }
 
 func (r *authRepoStub) FindByUsername(username string) (*domain.User, error) {
@@ -66,7 +67,7 @@ func (r *authRepoStub) FindByUsername(username string) (*domain.User, error) {
 			return u, nil
 		}
 	}
-	return nil, errors.New("record not found")
+	return nil, gorm.ErrRecordNotFound
 }
 
 func (r *authRepoStub) FindAll(status string, limit, offset int) ([]*domain.User, error) {
@@ -270,8 +271,8 @@ func TestLogin_InactiveAccount(t *testing.T) {
 	svc := newSvc(repo)
 
 	_, err := svc.Login("alice@example.com", "Password1!")
-	if err == nil || !strings.Contains(err.Error(), "not active") {
-		t.Errorf("expected 'not active' error, got %v", err)
+	if err == nil || !strings.Contains(err.Error(), "invalid credentials") {
+		t.Errorf("expected 'invalid credentials' error, got %v", err)
 	}
 }
 
@@ -287,8 +288,8 @@ func TestLogin_PendingAccount(t *testing.T) {
 	svc := newSvc(repo)
 
 	_, err := svc.Login("alice@example.com", "Password1!")
-	if err == nil || !strings.Contains(err.Error(), "not active") {
-		t.Errorf("expected 'not active' error, got %v", err)
+	if err == nil || !strings.Contains(err.Error(), "invalid credentials") {
+		t.Errorf("expected 'invalid credentials' error, got %v", err)
 	}
 }
 

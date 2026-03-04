@@ -118,6 +118,7 @@ type userResponse struct {
 	FullName    string  `json:"full_name"`
 	Role        string  `json:"role"`
 	Status      string  `json:"status"`
+	IsBootstrap bool    `json:"is_bootstrap"`
 	ApprovedBy  *string `json:"approved_by,omitempty"`
 	ApprovedAt  *string `json:"approved_at,omitempty"`
 	CreatedAt   string  `json:"created_at"`
@@ -125,20 +126,21 @@ type userResponse struct {
 
 func toUserResponse(u *domain.User) userResponse {
 	r := userResponse{
-		ID:        u.ID.String(),
-		Email:     u.Email,
-		Username:  u.Username,
-		FullName:  u.FullName,
-		Role:      string(u.Role),
-		Status:    string(u.Status),
-		CreatedAt: u.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		ID:          u.ID.String(),
+		Email:       u.Email,
+		Username:    u.Username,
+		FullName:    u.FullName,
+		Role:        string(u.Role),
+		Status:      string(u.Status),
+		IsBootstrap: u.IsBootstrap,
+		CreatedAt:   u.CreatedAt.UTC().Format("2006-01-02T15:04:05Z"),
 	}
 	if u.ApprovedBy != nil {
 		s := u.ApprovedBy.String()
 		r.ApprovedBy = &s
 	}
 	if u.ApprovedAt != nil {
-		s := u.ApprovedAt.Format("2006-01-02T15:04:05Z")
+		s := u.ApprovedAt.UTC().Format("2006-01-02T15:04:05Z")
 		r.ApprovedAt = &s
 	}
 	return r
