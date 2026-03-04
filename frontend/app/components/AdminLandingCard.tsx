@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import Badge from './Badge'
 
 interface AdminLandingCardProps {
   href: string
@@ -43,9 +44,7 @@ export default function AdminLandingCard({ href, title, description, icon }: Adm
             {description}
           </p>
           <div className="mt-auto">
-            <span className="px-2 py-1 bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 text-xs rounded">
-              Admin Only
-            </span>
+            <Badge variant="orange">Admin Only</Badge>
           </div>
         </div>
         <span className="text-3xl ml-4 shrink-0">{icon}</span>

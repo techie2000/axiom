@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import PageHeader from '../../components/PageHeader'
+import Alert from '../../components/Alert'
+import LoadingSpinner from '../../components/LoadingSpinner'
 
 const API_BASE_URL =
   typeof window !== 'undefined'
@@ -193,9 +195,7 @@ function AdminUsersContent() {
         )}
 
         {error && (
-          <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 dark:bg-red-900/20 dark:border-red-800">
-            <p className="text-red-700 dark:text-red-400 text-sm">{error}</p>
-          </div>
+          <Alert variant="error" className="mb-4">{error}</Alert>
         )}
 
         <div className="flex gap-2 mb-6">
@@ -215,7 +215,7 @@ function AdminUsersContent() {
         </div>
 
         {loading ? (
-          <div className="text-center py-16 text-gray-500 dark:text-gray-400">Loading users…</div>
+          <LoadingSpinner message="Loading users…" />
         ) : users.length === 0 ? (
           <div className="text-center py-16 text-gray-500 dark:text-gray-400">
             No {statusFilter || ''} users found.
@@ -336,13 +336,7 @@ function AdminUsersContent() {
 
 export default function AdminUsersPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center text-gray-500">
-          Loading…
-        </div>
-      }
-    >
+    <Suspense fallback={<LoadingSpinner message="Loading…" />}>
       <AdminUsersContent />
     </Suspense>
   )
