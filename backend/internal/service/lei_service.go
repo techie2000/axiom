@@ -47,6 +47,9 @@ const (
 
 	// Data directory for downloaded files (relative to working directory)
 	DefaultDataDirectory = "./data/lei"
+
+	gleifMetadataRequestTimeout = 30 * time.Second
+	gleifDownloadRequestTimeout = 2 * time.Hour
 )
 
 var leiCodePattern = regexp.MustCompile(`^[0-9A-Z]{18}[0-9]{2}$`)
@@ -101,6 +104,7 @@ type LEIService interface {
 	FindRetryableFailedFiles() ([]*domain.SourceFile, error)
 	ResetFailedFileForRetry(fileID uuid.UUID) error
 	UpdateSourceFile(file *domain.SourceFile) error
+	FindLatestSourceFile(fileType string) (*domain.SourceFile, error)
 
 	// Record management
 	CreateLEIRecord(record *domain.LEIRecord) error
@@ -109,6 +113,7 @@ type LEIService interface {
 	GetAllLEI(limit, offset int) ([]*domain.LEIRecord, error)
 	GetAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string) ([]*domain.LEIRecord, error)
 	CountLEIRecords() (int64, error)
+	CountLEIRecordsWithFilters(search, status, category, country string) (int64, error)
 	GetDistinctCountries() ([]domain.Country, error)
 	GetDistinctCategories() ([]string, error)
 	GetDistinctRegions() ([]string, error)
@@ -131,6 +136,9 @@ type leiService struct {
 	countryRepo repository.CountryRepository
 	dataDir     string // Directory to store downloaded files
 
+	processingLocksMu sync.Mutex
+	processingLocks   map[string]uuid.UUID
+
 	lookupCacheMu              sync.RWMutex
 	distinctCategories         []string
 	distinctCategoriesCachedAt time.Time
@@ -143,9 +151,10 @@ type leiService struct {
 // NewLEIService creates a new LEI service
 func NewLEIService(repo repository.LEIRepository, countryRepo repository.CountryRepository, dataDir string) LEIService {
 	return &leiService{
-		repo:        repo,
-		countryRepo: countryRepo,
-		dataDir:     dataDir,
+		repo:            repo,
+		countryRepo:     countryRepo,
+		dataDir:         dataDir,
+		processingLocks: make(map[string]uuid.UUID),
 	}
 }
 
@@ -203,7 +212,8 @@ func (pw *progressWriter) Write(p []byte) (int, error) {
 func (s *leiService) getLatestFileURLs() (*GLEIFPublishesResponse, error) {
 	log.Info().Str("url", GLEIFLatestPublishesURL).Msg("Fetching latest file URLs from GLEIF")
 
-	resp, err := http.Get(GLEIFLatestPublishesURL)
+	client := &http.Client{Timeout: gleifMetadataRequestTimeout}
+	resp, err := client.Get(GLEIFLatestPublishesURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch latest publishes: %w", err)
 	}
@@ -281,7 +291,8 @@ func (s *leiService) downloadFile(url, fileType, publishedAt string, expectedRec
 	}
 
 	// Download file
-	resp, err := http.Get(url)
+	client := &http.Client{Timeout: gleifDownloadRequestTimeout}
+	resp, err := client.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to download file: %w", err)
 	}
@@ -380,6 +391,12 @@ func (s *leiService) downloadFile(url, fileType, publishedAt string, expectedRec
 		return nil, fmt.Errorf("failed to create source file record: %w", err)
 	}
 
+	log.Info().
+		Str("source_file_id", sourceFile.ID.String()).
+		Str("file_name", sourceFile.FileName).
+		Str("file_type", sourceFile.FileType).
+		Msg("Created source file record")
+
 	return sourceFile, nil
 }
 
@@ -397,6 +414,63 @@ func (s *leiService) ProcessSourceFileWithResume(sourceFileID uuid.UUID, resumeF
 	if err != nil {
 		return fmt.Errorf("failed to find source file: %w", err)
 	}
+
+	if sourceFile.FileType == "FULL" &&
+		sourceFile.ProcessingStatus == "FAILED" &&
+		sourceFile.FailureCategory == "FILE_MISSING" {
+		latestFull, latestErr := s.repo.FindLatestSourceFile("FULL")
+		if latestErr == nil && latestFull != nil && latestFull.ID != sourceFile.ID {
+			if latestFull.ProcessingStatus == "PENDING" || latestFull.ProcessingStatus == "IN_PROGRESS" {
+				log.Warn().
+					Str("requested_source_file_id", sourceFile.ID.String()).
+					Str("requested_file_name", sourceFile.FileName).
+					Str("fallback_source_file_id", latestFull.ID.String()).
+					Str("fallback_file_name", latestFull.FileName).
+					Msg("Requested FULL source file is stale FILE_MISSING; switching to latest active FULL file")
+
+				sourceFile = latestFull
+				sourceFileID = latestFull.ID
+				s.rebindProcessingStatusToSourceFile("DAILY_FULL", latestFull.ID)
+			}
+		}
+	}
+
+	if sourceFile.FileType == "FULL" {
+		requestedPath := filepath.Join(s.dataDir, sourceFile.FileName)
+		if _, statErr := os.Stat(requestedPath); os.IsNotExist(statErr) {
+			latestFull, latestErr := s.repo.FindLatestSourceFile("FULL")
+			if latestErr == nil && latestFull != nil && latestFull.ID != sourceFile.ID {
+				if latestFull.ProcessingStatus == "PENDING" || latestFull.ProcessingStatus == "IN_PROGRESS" {
+					log.Warn().
+						Str("requested_source_file_id", sourceFile.ID.String()).
+						Str("requested_file_name", sourceFile.FileName).
+						Str("requested_file_path", requestedPath).
+						Str("fallback_source_file_id", latestFull.ID.String()).
+						Str("fallback_file_name", latestFull.FileName).
+						Msg("Requested FULL source file ZIP is missing; switching to latest active FULL file")
+
+					sourceFile = latestFull
+					sourceFileID = latestFull.ID
+					s.rebindProcessingStatusToSourceFile("DAILY_FULL", latestFull.ID)
+				}
+			}
+		}
+	}
+
+	canonicalSourceFile, canonicalErr := s.repo.FindSourceFileByID(sourceFileID.String())
+	if canonicalErr != nil {
+		return fmt.Errorf("failed to reload source file: %w", canonicalErr)
+	}
+	sourceFile = canonicalSourceFile
+
+	jobType := processingStatusJobTypeFromSourceFile(sourceFile)
+	acquired, lockedBy := s.tryAcquireProcessingLock(jobType, sourceFile.ID)
+	if !acquired {
+		return fmt.Errorf("%s is already processing source file %s", jobType, lockedBy.String())
+	}
+	defer s.releaseProcessingLock(jobType, sourceFile.ID)
+
+	s.syncProcessingStatusForSourceFile(sourceFile, "RUNNING", "")
 
 	// Update status to IN_PROGRESS and clear any historical failure data
 	sourceFile.ProcessingStatus = "IN_PROGRESS"
@@ -428,6 +502,7 @@ func (s *leiService) ProcessSourceFileWithResume(sourceFileID uuid.UUID, resumeF
 			if err := s.repo.UpdateSourceFile(sourceFile); err != nil {
 				log.Error().Err(err).Msg("Failed to update source file status")
 			}
+			s.syncProcessingStatusForSourceFile(sourceFile, "FAILED", sourceFile.ProcessingError)
 			return fmt.Errorf("source file not found: %s", filePath)
 		}
 
@@ -441,6 +516,7 @@ func (s *leiService) ProcessSourceFileWithResume(sourceFileID uuid.UUID, resumeF
 			if err := s.repo.UpdateSourceFile(sourceFile); err != nil {
 				log.Error().Err(err).Msg("Failed to update source file status")
 			}
+			s.syncProcessingStatusForSourceFile(sourceFile, "FAILED", sourceFile.ProcessingError)
 			return fmt.Errorf("failed to extract file: %w", extractErr)
 		}
 		log.Info().Str("json_path", jsonPath).Msg("File extracted successfully")
@@ -488,6 +564,7 @@ func (s *leiService) ProcessSourceFileWithResume(sourceFileID uuid.UUID, resumeF
 		if err := s.repo.UpdateSourceFile(sourceFile); err != nil {
 			log.Error().Err(err).Msg("Failed to update source file status")
 		}
+		s.syncProcessingStatusForSourceFile(sourceFile, "FAILED", err.Error())
 		return fmt.Errorf("failed to process JSON file: %w", err)
 	}
 
@@ -501,6 +578,8 @@ func (s *leiService) ProcessSourceFileWithResume(sourceFileID uuid.UUID, resumeF
 		return fmt.Errorf("failed to update source file status: %w", err)
 	}
 
+	s.syncProcessingStatusForSourceFile(sourceFile, "IDLE", "")
+
 	log.Info().
 		Str("source_file_id", sourceFileID.String()).
 		Int("total", sourceFile.TotalRecords).
@@ -509,6 +588,119 @@ func (s *leiService) ProcessSourceFileWithResume(sourceFileID uuid.UUID, resumeF
 		Msg("File processing completed")
 
 	return nil
+}
+
+func processingStatusJobTypeFromSourceFile(sourceFile *domain.SourceFile) string {
+	if sourceFile == nil {
+		return ""
+	}
+
+	jobType := strings.ToUpper(strings.TrimSpace(sourceFile.JobType))
+	switch jobType {
+	case "DAILY_FULL", "LEVEL1_FULL":
+		return "DAILY_FULL"
+	case "DAILY_DELTA", "LEVEL1_DELTA":
+		return "DAILY_DELTA"
+	case "MASTER_DATA_SYNC", "LEVEL2_RR", "LEVEL2_REPEX":
+		return jobType
+	}
+
+	fileType := strings.ToUpper(strings.TrimSpace(sourceFile.FileType))
+	switch fileType {
+	case "FULL":
+		return "DAILY_FULL"
+	case "DELTA":
+		return "DAILY_DELTA"
+	default:
+		return ""
+	}
+}
+
+func (s *leiService) syncProcessingStatusForSourceFile(sourceFile *domain.SourceFile, statusValue string, errorMessage string) {
+	jobType := processingStatusJobTypeFromSourceFile(sourceFile)
+	if jobType == "" {
+		return
+	}
+
+	status, err := s.repo.FindProcessingStatus(jobType)
+	if err != nil {
+		log.Warn().Err(err).Str("job_type", jobType).Msg("Failed to load processing status for source file sync")
+		return
+	}
+
+	now := time.Now()
+	status.Status = statusValue
+	status.ErrorMessage = errorMessage
+	status.CurrentSourceFileID = &sourceFile.ID
+	status.LastRunAt = &now
+	if statusValue == "IDLE" {
+		status.LastSuccessAt = &now
+		status.ErrorMessage = ""
+		status.CurrentSourceFileID = nil
+	}
+
+	if err := s.repo.UpdateProcessingStatus(status); err != nil {
+		log.Warn().Err(err).Str("job_type", jobType).Msg("Failed to update processing status for source file sync")
+	}
+}
+
+func (s *leiService) rebindProcessingStatusToSourceFile(jobType string, sourceFileID uuid.UUID) {
+	status, err := s.repo.FindProcessingStatus(jobType)
+	if err != nil {
+		log.Warn().Err(err).Str("job_type", jobType).Msg("Failed to load processing status for source-file rebinding")
+		return
+	}
+
+	now := time.Now()
+	status.Status = "RUNNING"
+	status.CurrentSourceFileID = &sourceFileID
+	status.LastRunAt = &now
+
+	if err := s.repo.UpdateProcessingStatus(status); err != nil {
+		log.Warn().Err(err).Str("job_type", jobType).Str("source_file_id", sourceFileID.String()).Msg("Failed to rebind processing status to source file")
+	}
+}
+
+func (s *leiService) tryAcquireProcessingLock(jobType string, sourceFileID uuid.UUID) (bool, uuid.UUID) {
+	normalizedJobType := strings.ToUpper(strings.TrimSpace(jobType))
+	if normalizedJobType == "" {
+		normalizedJobType = "SOURCE_FILE"
+	}
+
+	s.processingLocksMu.Lock()
+	defer s.processingLocksMu.Unlock()
+
+	if s.processingLocks == nil {
+		s.processingLocks = make(map[string]uuid.UUID)
+	}
+
+	if activeID, exists := s.processingLocks[normalizedJobType]; exists {
+		if activeID == sourceFileID {
+			return true, activeID
+		}
+		return false, activeID
+	}
+
+	s.processingLocks[normalizedJobType] = sourceFileID
+	return true, sourceFileID
+}
+
+func (s *leiService) releaseProcessingLock(jobType string, sourceFileID uuid.UUID) {
+	normalizedJobType := strings.ToUpper(strings.TrimSpace(jobType))
+	if normalizedJobType == "" {
+		normalizedJobType = "SOURCE_FILE"
+	}
+
+	s.processingLocksMu.Lock()
+	defer s.processingLocksMu.Unlock()
+
+	if s.processingLocks == nil {
+		return
+	}
+
+	if activeID, exists := s.processingLocks[normalizedJobType]; exists && activeID == sourceFileID {
+		delete(s.processingLocks, normalizedJobType)
+	}
 }
 
 // extractZipFile extracts the JSON file from a ZIP archive
@@ -604,6 +796,11 @@ func (s *leiService) ResetFailedFileForRetry(fileID uuid.UUID) error {
 // UpdateSourceFile updates a source file record
 func (s *leiService) UpdateSourceFile(file *domain.SourceFile) error {
 	return s.repo.UpdateSourceFile(file)
+}
+
+// FindLatestSourceFile finds the latest source file by type
+func (s *leiService) FindLatestSourceFile(fileType string) (*domain.SourceFile, error) {
+	return s.repo.FindLatestSourceFile(fileType)
 }
 
 // processJSONFile parses and processes the LEI JSON file
@@ -1355,6 +1552,11 @@ func (s *leiService) GetAllLEIWithFilters(limit, offset int, search, status, cat
 // CountLEIRecords returns the total count of LEI records
 func (s *leiService) CountLEIRecords() (int64, error) {
 	return s.repo.CountLEIRecords()
+}
+
+// CountLEIRecordsWithFilters returns LEI count with search and filters applied
+func (s *leiService) CountLEIRecordsWithFilters(search, status, category, country string) (int64, error) {
+	return s.repo.CountLEIRecordsWithFilters(search, status, category, country)
 }
 
 // GetDistinctCountries returns a sorted list of active countries from the countries reference table

@@ -23,6 +23,7 @@ type LEIRepository interface {
 	FindAllLEI(limit, offset int) ([]*domain.LEIRecord, error)
 	FindAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string) ([]*domain.LEIRecord, error)
 	CountLEIRecords() (int64, error)
+	CountLEIRecordsWithFilters(search, status, category, country string) (int64, error)
 	GetDistinctCountries() ([]string, error)
 	GetDistinctCategories() ([]string, error)
 	GetDistinctRegions() ([]string, error)
@@ -337,6 +338,48 @@ func (r *leiRepository) CountLEIRecords() (int64, error) {
 	if err := r.db.Model(&domain.LEIRecord{}).Count(&count).Error; err != nil {
 		return 0, err
 	}
+	return count, nil
+}
+
+// CountLEIRecordsWithFilters returns LEI count with search and filters applied
+func (r *leiRepository) CountLEIRecordsWithFilters(search, status, category, country string) (int64, error) {
+	var count int64
+	query := r.db.Model(&domain.LEIRecord{})
+
+	if search != "" {
+		if len(search) == 20 && isAlphanumeric(search) {
+			query = query.Where("lei = ?", search)
+		} else {
+			searchPattern := "%" + strings.TrimSpace(search) + "%"
+			query = query.Where(
+				"(legal_name ILIKE ? OR lei ILIKE ? OR COALESCE(other_names::text, '') ILIKE ?)",
+				searchPattern,
+				searchPattern,
+				searchPattern,
+			)
+		}
+	}
+
+	if status != "" {
+		if isNotSetStatusFilter(status) {
+			query = query.Where(notSetEntityStatusWhereClause)
+		} else {
+			query = query.Where("entity_status = ?", status)
+		}
+	}
+
+	if category != "" {
+		query = query.Where(normalizedEntityCategoryMatchWhereClause, category)
+	}
+
+	if country != "" {
+		query = query.Where("legal_address_country = ?", country)
+	}
+
+	if err := query.Count(&count).Error; err != nil {
+		return 0, err
+	}
+
 	return count, nil
 }
 
@@ -962,7 +1005,9 @@ func (r *leiRepository) FindSourceFileByHash(hash string) (*domain.SourceFile, e
 // FindLatestSourceFile finds the latest source file of a given type
 func (r *leiRepository) FindLatestSourceFile(fileType string) (*domain.SourceFile, error) {
 	var file domain.SourceFile
-	if err := r.db.Where("file_type = ?", fileType).Order("publication_date DESC").First(&file).Error; err != nil {
+	if err := r.db.Where("file_type = ?", fileType).
+		Order("publication_date DESC, downloaded_at DESC, created_at DESC, id DESC").
+		First(&file).Error; err != nil {
 		return nil, err
 	}
 	return &file, nil
@@ -1044,7 +1089,35 @@ func (r *leiRepository) FindProcessingStatus(jobType string) (*domain.FileProces
 
 // UpdateProcessingStatus updates the processing status
 func (r *leiRepository) UpdateProcessingStatus(status *domain.FileProcessingStatus) error {
-	return r.db.Save(status).Error
+	if status == nil {
+		return fmt.Errorf("processing status is nil")
+	}
+
+	updates := map[string]interface{}{
+		"status":                 status.Status,
+		"last_run_at":            status.LastRunAt,
+		"next_run_at":            status.NextRunAt,
+		"last_success_at":        status.LastSuccessAt,
+		"current_source_file_id": status.CurrentSourceFileID,
+		"error_message":          status.ErrorMessage,
+		"job_label":              status.JobLabel,
+		"depends_on_job_type":    status.DependsOnJobType,
+		"depends_on_job_label":   status.DependsOnJobLabel,
+		"updated_at":             time.Now(),
+	}
+
+	result := r.db.Model(&domain.FileProcessingStatus{}).
+		Where("job_type = ?", status.JobType).
+		Updates(updates)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		return r.db.Create(status).Error
+	}
+
+	return nil
 }
 
 // CreateAuditRecord creates a new audit record
@@ -1121,6 +1194,7 @@ func (r *leiRepository) BatchResolveOpenProcessingFailures(jobType string, natur
 		Where("job_type = ? AND natural_key IN ? AND resolved = FALSE", jobType, filtered).
 		Updates(updates).Error
 }
+
 // detectChanges compares two LEI records and returns a map of changed fields
 func (r *leiRepository) detectChanges(old, new *domain.LEIRecord) map[string]domain.LEIChangeDetection {
 	changes := make(map[string]domain.LEIChangeDetection)

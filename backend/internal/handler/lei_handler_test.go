@@ -18,6 +18,8 @@ type leiServiceStub struct {
 	service.LEIService
 	statuses map[string]*domain.FileProcessingStatus
 	errs     map[string]error
+	count    int64
+	countErr error
 }
 
 func (s *leiServiceStub) GetProcessingStatus(jobType string) (*domain.FileProcessingStatus, error) {
@@ -33,6 +35,13 @@ func (s *leiServiceStub) GetProcessingStatus(jobType string) (*domain.FileProces
 		}
 	}
 	return nil, errors.New("status not found")
+}
+
+func (s *leiServiceStub) CountLEIRecordsWithFilters(search, status, category, country string) (int64, error) {
+	if s.countErr != nil {
+		return 0, s.countErr
+	}
+	return s.count, nil
 }
 
 // schedulerServiceStub satisfies the SchedulerService interface for handler tests.
@@ -139,6 +148,38 @@ func executeGET(routePath string, requestPath string, handler gin.HandlerFunc) *
 	req := httptest.NewRequest(http.MethodGet, requestPath, nil)
 	r.ServeHTTP(w, req)
 	return w
+}
+
+func TestGetLEICount(t *testing.T) {
+	t.Run("returns count", func(t *testing.T) {
+		h := NewLEIHandler(&leiServiceStub{count: 42}, &schedulerServiceStub{})
+
+		resp := executeGET(
+			"/lei/count",
+			"/lei/count?search=ABC&status=ACTIVE&category=GENERAL&country=US",
+			h.GetLEICount,
+		)
+
+		if resp.Code != http.StatusOK {
+			t.Fatalf("expected status %d, got %d", http.StatusOK, resp.Code)
+		}
+		if !strings.Contains(resp.Body.String(), "\"count\":42") {
+			t.Fatalf("expected count payload, got %s", resp.Body.String())
+		}
+	})
+
+	t.Run("returns 500 on service error", func(t *testing.T) {
+		h := NewLEIHandler(&leiServiceStub{countErr: errors.New("db unavailable")}, &schedulerServiceStub{})
+
+		resp := executeGET("/lei/count", "/lei/count", h.GetLEICount)
+
+		if resp.Code != http.StatusInternalServerError {
+			t.Fatalf("expected status %d, got %d", http.StatusInternalServerError, resp.Code)
+		}
+		if !strings.Contains(resp.Body.String(), "Failed to retrieve LEI record count") {
+			t.Fatalf("expected error payload, got %s", resp.Body.String())
+		}
+	})
 }
 
 func TestTriggerFullSync_ConflictPaths(t *testing.T) {

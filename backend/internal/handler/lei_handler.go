@@ -199,6 +199,34 @@ func (h *LEIHandler) ListLEI(c *gin.Context) {
 	c.JSON(http.StatusOK, records)
 }
 
+// GetLEICount retrieves LEI record count with optional search and filters
+// @Summary Get LEI record count
+// @Description Get LEI record count with optional search and filters
+// @Tags LEI
+// @Accept json
+// @Produce json
+// @Param search query string false "Search term (LEI code or legal name)"
+// @Param status query string false "Entity status filter (e.g., ACTIVE, INACTIVE)"
+// @Param category query string false "Entity category filter (e.g., GENERAL, FUND)"
+// @Param country query string false "Country code filter (e.g., US, GB)"
+// @Success 200 {object} map[string]int64
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/lei/count [get]
+func (h *LEIHandler) GetLEICount(c *gin.Context) {
+	search := c.Query("search")
+	status := c.Query("status")
+	category := c.Query("category")
+	country := c.Query("country")
+
+	count, err := h.leiService.CountLEIRecordsWithFilters(search, status, category, country)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve LEI record count"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"count": count})
+}
+
 // GetAuditHistory retrieves audit history for an LEI
 // @Summary Get LEI audit history
 // @Description Get audit trail for a specific LEI record

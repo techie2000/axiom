@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -359,6 +360,54 @@ func TestNormalizeProcessingJobTypePrivateDelegates(t *testing.T) {
 	}
 }
 
+func TestProcessingStatusJobTypeFromSourceFile(t *testing.T) {
+	tests := []struct {
+		name string
+		file *domain.SourceFile
+		want string
+	}{
+		{
+			name: "nil source file",
+			file: nil,
+			want: "",
+		},
+		{
+			name: "level1 full maps to DAILY_FULL",
+			file: &domain.SourceFile{JobType: "LEVEL1_FULL", FileType: "FULL"},
+			want: "DAILY_FULL",
+		},
+		{
+			name: "daily delta maps to DAILY_DELTA",
+			file: &domain.SourceFile{JobType: "DAILY_DELTA", FileType: "DELTA"},
+			want: "DAILY_DELTA",
+		},
+		{
+			name: "unknown job type uses FULL fallback",
+			file: &domain.SourceFile{JobType: "UNKNOWN", FileType: "FULL"},
+			want: "DAILY_FULL",
+		},
+		{
+			name: "unknown job type uses DELTA fallback",
+			file: &domain.SourceFile{JobType: "UNKNOWN", FileType: "DELTA"},
+			want: "DAILY_DELTA",
+		},
+		{
+			name: "master data passes through",
+			file: &domain.SourceFile{JobType: "MASTER_DATA_SYNC", FileType: "FULL"},
+			want: "MASTER_DATA_SYNC",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := processingStatusJobTypeFromSourceFile(tt.file)
+			if got != tt.want {
+				t.Fatalf("processingStatusJobTypeFromSourceFile() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 // ---------------------------------------------------------------------------
 // batchResolveOpenProcessingFailures (leiService) – stub-based tests
 // ---------------------------------------------------------------------------
@@ -583,5 +632,293 @@ func TestProcessRecordsArray_FinalUpdatePersistsLastProcessedLEIForSmallFiles(t 
 	wantLastLEI := testLEICodeForIndex(recordCount - 1)
 	if *finalSnapshot.LastProcessedLEI != wantLastLEI {
 		t.Fatalf("expected LastProcessedLEI %q, got %q", wantLastLEI, *finalSnapshot.LastProcessedLEI)
+	}
+}
+
+type processSourceFileRepoStub struct {
+	repository.LEIRepository
+	sourceFile      *domain.SourceFile
+	latestFull      *domain.SourceFile
+	statuses        map[string]*domain.FileProcessingStatus
+	updatedStatuses []domain.FileProcessingStatus
+	updatedFiles    []domain.SourceFile
+}
+
+func (s *processSourceFileRepoStub) FindSourceFileByID(id string) (*domain.SourceFile, error) {
+	if s.sourceFile != nil && s.sourceFile.ID.String() == id {
+		copy := *s.sourceFile
+		if s.sourceFile.LastProcessedLEI != nil {
+			last := *s.sourceFile.LastProcessedLEI
+			copy.LastProcessedLEI = &last
+		}
+		return &copy, nil
+	}
+
+	if s.latestFull != nil && s.latestFull.ID.String() == id {
+		copy := *s.latestFull
+		if s.latestFull.LastProcessedLEI != nil {
+			last := *s.latestFull.LastProcessedLEI
+			copy.LastProcessedLEI = &last
+		}
+		return &copy, nil
+	}
+
+	if s.sourceFile == nil {
+		return nil, errors.New("source file not found")
+	}
+
+	copy := *s.sourceFile
+	if s.sourceFile.LastProcessedLEI != nil {
+		last := *s.sourceFile.LastProcessedLEI
+		copy.LastProcessedLEI = &last
+	}
+	return &copy, nil
+}
+
+func (s *processSourceFileRepoStub) UpdateSourceFile(file *domain.SourceFile) error {
+	copy := *file
+	if file.LastProcessedLEI != nil {
+		last := *file.LastProcessedLEI
+		copy.LastProcessedLEI = &last
+	}
+	s.updatedFiles = append(s.updatedFiles, copy)
+	return nil
+}
+
+func (s *processSourceFileRepoStub) FindLatestSourceFile(fileType string) (*domain.SourceFile, error) {
+	if fileType != "FULL" || s.latestFull == nil {
+		return nil, errors.New("latest file not found")
+	}
+	copy := *s.latestFull
+	if s.latestFull.LastProcessedLEI != nil {
+		last := *s.latestFull.LastProcessedLEI
+		copy.LastProcessedLEI = &last
+	}
+	return &copy, nil
+}
+
+func (s *processSourceFileRepoStub) FindProcessingStatus(jobType string) (*domain.FileProcessingStatus, error) {
+	if s.statuses == nil {
+		s.statuses = make(map[string]*domain.FileProcessingStatus)
+	}
+	status, ok := s.statuses[jobType]
+	if !ok {
+		return nil, errors.New("status not found")
+	}
+	copy := *status
+	if status.CurrentSourceFileID != nil {
+		id := *status.CurrentSourceFileID
+		copy.CurrentSourceFileID = &id
+	}
+	return &copy, nil
+}
+
+func (s *processSourceFileRepoStub) UpdateProcessingStatus(status *domain.FileProcessingStatus) error {
+	copy := *status
+	if status.CurrentSourceFileID != nil {
+		id := *status.CurrentSourceFileID
+		copy.CurrentSourceFileID = &id
+	}
+	s.updatedStatuses = append(s.updatedStatuses, copy)
+	if s.statuses == nil {
+		s.statuses = make(map[string]*domain.FileProcessingStatus)
+	}
+	s.statuses[status.JobType] = &copy
+	return nil
+}
+
+func TestProcessSourceFileWithResume_RejectsConcurrentJobExecution(t *testing.T) {
+	sourceID := uuid.New()
+	otherSourceID := uuid.New()
+
+	repoStub := &processSourceFileRepoStub{
+		sourceFile: &domain.SourceFile{
+			ID:       sourceID,
+			FileName: "lei-FULL-concurrency.json.zip",
+			FileType: "FULL",
+			JobType:  "DAILY_FULL",
+		},
+	}
+
+	svc := &leiService{
+		repo:            repoStub,
+		dataDir:         t.TempDir(),
+		processingLocks: make(map[string]uuid.UUID),
+	}
+
+	acquired, _ := svc.tryAcquireProcessingLock("DAILY_FULL", otherSourceID)
+	if !acquired {
+		t.Fatalf("failed to seed lock for concurrent execution test")
+	}
+	defer svc.releaseProcessingLock("DAILY_FULL", otherSourceID)
+
+	err := svc.ProcessSourceFileWithResume(sourceID, "")
+	if err == nil {
+		t.Fatalf("expected concurrent execution rejection error")
+	}
+
+	if !strings.Contains(err.Error(), "already processing source file") {
+		t.Fatalf("expected concurrent processing error, got %v", err)
+	}
+}
+
+func TestProcessSourceFileWithResume_MissingSourceFileSyncsFailedStatus(t *testing.T) {
+	sourceID := uuid.New()
+	tempDir := t.TempDir()
+
+	repoStub := &processSourceFileRepoStub{
+		sourceFile: &domain.SourceFile{
+			ID:       sourceID,
+			FileName: "lei-FULL-missing.json.zip",
+			FileType: "FULL",
+			JobType:  "DAILY_FULL",
+		},
+		statuses: map[string]*domain.FileProcessingStatus{
+			"DAILY_FULL": {
+				JobType: "DAILY_FULL",
+				Status:  "IDLE",
+			},
+		},
+	}
+
+	svc := &leiService{
+		repo:            repoStub,
+		dataDir:         tempDir,
+		processingLocks: make(map[string]uuid.UUID),
+	}
+
+	err := svc.ProcessSourceFileWithResume(sourceID, "")
+	if err == nil {
+		t.Fatalf("expected missing source file error")
+	}
+
+	wantPath := filepath.Join(tempDir, "lei-FULL-missing.json.zip")
+	if !strings.Contains(err.Error(), wantPath) {
+		t.Fatalf("expected error to include missing file path %q, got %v", wantPath, err)
+	}
+
+	if len(repoStub.updatedStatuses) < 2 {
+		t.Fatalf("expected at least RUNNING and FAILED status updates, got %d", len(repoStub.updatedStatuses))
+	}
+
+	finalStatus := repoStub.updatedStatuses[len(repoStub.updatedStatuses)-1]
+	if finalStatus.Status != "FAILED" {
+		t.Fatalf("expected final processing status FAILED, got %q", finalStatus.Status)
+	}
+	if !strings.Contains(finalStatus.ErrorMessage, "source file not found") {
+		t.Fatalf("expected missing source file error message, got %q", finalStatus.ErrorMessage)
+	}
+	if finalStatus.CurrentSourceFileID == nil || *finalStatus.CurrentSourceFileID != sourceID {
+		t.Fatalf("expected final status to reference source file %s", sourceID.String())
+	}
+}
+
+func TestProcessSourceFileWithResume_UsesLatestFullFallbackForStaleFileMissing(t *testing.T) {
+	staleID := uuid.New()
+	latestID := uuid.New()
+	tempDir := t.TempDir()
+
+	repoStub := &processSourceFileRepoStub{
+		sourceFile: &domain.SourceFile{
+			ID:               staleID,
+			FileName:         "lei-FULL-stale.json.zip",
+			FileType:         "FULL",
+			JobType:          "DAILY_FULL",
+			ProcessingStatus: "FAILED",
+			FailureCategory:  "FILE_MISSING",
+		},
+		latestFull: &domain.SourceFile{
+			ID:               latestID,
+			FileName:         "lei-FULL-latest.json.zip",
+			FileType:         "FULL",
+			JobType:          "DAILY_FULL",
+			ProcessingStatus: "PENDING",
+		},
+		statuses: map[string]*domain.FileProcessingStatus{
+			"DAILY_FULL": {
+				JobType: "DAILY_FULL",
+				Status:  "IDLE",
+			},
+		},
+	}
+
+	svc := &leiService{
+		repo:            repoStub,
+		dataDir:         tempDir,
+		processingLocks: make(map[string]uuid.UUID),
+	}
+
+	err := svc.ProcessSourceFileWithResume(staleID, "")
+	if err == nil {
+		t.Fatalf("expected missing latest source file error")
+	}
+
+	wantLatestPath := filepath.Join(tempDir, "lei-FULL-latest.json.zip")
+	if !strings.Contains(err.Error(), wantLatestPath) {
+		t.Fatalf("expected fallback to latest FULL file path %q, got %v", wantLatestPath, err)
+	}
+
+	if len(repoStub.updatedStatuses) < 2 {
+		t.Fatalf("expected RUNNING and FAILED status updates, got %d", len(repoStub.updatedStatuses))
+	}
+
+	finalStatus := repoStub.updatedStatuses[len(repoStub.updatedStatuses)-1]
+	if finalStatus.CurrentSourceFileID == nil || *finalStatus.CurrentSourceFileID != latestID {
+		t.Fatalf("expected status to point to fallback latest source file %s", latestID.String())
+	}
+}
+
+func TestProcessSourceFileWithResume_UsesLatestFullFallbackWhenZipMissingWithoutFailureCategory(t *testing.T) {
+	staleID := uuid.New()
+	latestID := uuid.New()
+	tempDir := t.TempDir()
+
+	repoStub := &processSourceFileRepoStub{
+		sourceFile: &domain.SourceFile{
+			ID:               staleID,
+			FileName:         "lei-FULL-stale-no-category.json.zip",
+			FileType:         "FULL",
+			JobType:          "DAILY_FULL",
+			ProcessingStatus: "FAILED",
+			FailureCategory:  "",
+		},
+		latestFull: &domain.SourceFile{
+			ID:               latestID,
+			FileName:         "lei-FULL-latest-no-category.json.zip",
+			FileType:         "FULL",
+			JobType:          "DAILY_FULL",
+			ProcessingStatus: "PENDING",
+		},
+		statuses: map[string]*domain.FileProcessingStatus{
+			"DAILY_FULL": {
+				JobType: "DAILY_FULL",
+				Status:  "IDLE",
+			},
+		},
+	}
+
+	svc := &leiService{
+		repo:            repoStub,
+		dataDir:         tempDir,
+		processingLocks: make(map[string]uuid.UUID),
+	}
+
+	err := svc.ProcessSourceFileWithResume(staleID, "")
+	if err == nil {
+		t.Fatalf("expected missing latest source file error")
+	}
+
+	wantLatestPath := filepath.Join(tempDir, "lei-FULL-latest-no-category.json.zip")
+	if !strings.Contains(err.Error(), wantLatestPath) {
+		t.Fatalf("expected fallback to latest FULL file path %q, got %v", wantLatestPath, err)
+	}
+
+	if len(repoStub.updatedStatuses) < 2 {
+		t.Fatalf("expected RUNNING and FAILED status updates, got %d", len(repoStub.updatedStatuses))
+	}
+
+	finalStatus := repoStub.updatedStatuses[len(repoStub.updatedStatuses)-1]
+	if finalStatus.CurrentSourceFileID == nil || *finalStatus.CurrentSourceFileID != latestID {
+		t.Fatalf("expected status to point to fallback latest source file %s", latestID.String())
 	}
 }
