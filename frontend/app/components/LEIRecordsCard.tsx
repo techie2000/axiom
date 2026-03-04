@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 
 interface LEIStatus {
+  count?: number
   current_source_file?: {
     total_records?: number
   }
@@ -18,11 +19,17 @@ export default function LEIRecordsCard() {
       try {
         const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
         
-        const response = await fetch(`${API_URL}/api/v1/lei/status/DAILY_FULL`, { cache: 'no-store' })
+        const response = await fetch(`${API_URL}/api/v1/lei/count`, { cache: 'no-store' })
 
         if (response.ok) {
           const data: LEIStatus = await response.json()
-          setTotalRecords(data.current_source_file?.total_records || 0)
+          setTotalRecords(data.count || 0)
+        } else {
+          const fallbackResponse = await fetch(`${API_URL}/api/v1/lei/status/DAILY_FULL`, { cache: 'no-store' })
+          if (fallbackResponse.ok) {
+            const fallbackData: LEIStatus = await fallbackResponse.json()
+            setTotalRecords(fallbackData.current_source_file?.total_records || 0)
+          }
         }
       } catch (error) {
         console.error('Failed to fetch LEI record count:', error)

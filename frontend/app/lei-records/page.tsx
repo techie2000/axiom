@@ -69,6 +69,16 @@ interface Country {
   active: boolean
 }
 
+interface LEICountResponse {
+  count: number
+}
+
+interface LEIStatusResponse {
+  current_source_file?: {
+    total_records?: number
+  }
+}
+
 interface ColumnConfig {
   key: keyof LEIRecord
   label: string
@@ -244,14 +254,31 @@ export default function LEIRecordsPage() {
   useEffect(() => {
     const fetchTotalRecords = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/v1/lei/status/DAILY_FULL`, { 
+        const params = new URLSearchParams()
+
+        if (debouncedSearch) params.append('search', debouncedSearch)
+        if (statusFilter) params.append('status', normalizeStatusFilterForAPI(statusFilter))
+        if (categoryFilter) params.append('category', categoryFilter)
+        if (countryFilter) params.append('country', countryFilter)
+
+        const response = await fetch(`${API_BASE_URL}/api/v1/lei/count?${params.toString()}`, {
           method: 'GET',
           cache: 'no-store',
           next: { revalidate: 0 }
         })
         if (response.ok) {
-          const data = await response.json()
-          setTotalRecords(data.current_source_file?.total_records || 0)
+          const data: LEICountResponse = await response.json()
+          setTotalRecords(data.count || 0)
+        } else {
+          const fallbackResponse = await fetch(`${API_BASE_URL}/api/v1/lei/status/DAILY_FULL`, {
+            method: 'GET',
+            cache: 'no-store',
+            next: { revalidate: 0 }
+          })
+          if (fallbackResponse.ok) {
+            const fallbackData: LEIStatusResponse = await fallbackResponse.json()
+            setTotalRecords(fallbackData.current_source_file?.total_records || 0)
+          }
         }
       } catch (err) {
         console.error('Failed to fetch total records:', err)
@@ -261,7 +288,7 @@ export default function LEIRecordsPage() {
     // Refresh every 30 seconds to get live updates during sync
     const interval = setInterval(fetchTotalRecords, 30000)
     return () => clearInterval(interval)
-  }, [API_BASE_URL])
+  }, [API_BASE_URL, debouncedSearch, statusFilter, categoryFilter, countryFilter])
 
   // Fetch region and legal form resolver maps from backend metadata endpoints
   useEffect(() => {
@@ -806,7 +833,11 @@ export default function LEIRecordsPage() {
     return visibleCount > 0 && visibleCount < groupColumns.length
   }
 
-  const totalPages = Math.ceil(totalRecords / itemsPerPage)
+  const fallbackTotalRecords = records.length > 0
+    ? ((currentPage - 1) * itemsPerPage) + records.length + (hasMorePages ? 1 : 0)
+    : 0
+  const effectiveTotalRecords = totalRecords > 0 ? totalRecords : fallbackTotalRecords
+  const totalPages = Math.max(1, Math.ceil(effectiveTotalRecords / itemsPerPage))
   const hasActiveFilters = debouncedSearch || statusFilter || categoryFilter || countryFilter
   const visibleColumnsInOrder = AVAILABLE_COLUMNS.filter((col) => visibleColumns.has(col.key))
   const LEI_COLUMN_WIDTH_PX = 184
@@ -993,14 +1024,14 @@ export default function LEIRecordsPage() {
         )}
 
         <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <StatCard title="Total Records" value={totalRecords.toLocaleString()} />
+          <StatCard title="Total Records" value={effectiveTotalRecords.toLocaleString()} />
           <StatCard
             title="Current Page"
             value={`${currentPage} ${hasActiveFilters ? '(filtered)' : `of ${totalPages.toLocaleString()}`}`}
           />
           <StatCard
             title="Showing"
-            value={`${((currentPage - 1) * itemsPerPage) + 1}-${Math.min(currentPage * itemsPerPage, totalRecords)}`}
+            value={records.length === 0 ? '0-0' : `${((currentPage - 1) * itemsPerPage) + 1}-${((currentPage - 1) * itemsPerPage) + records.length}`}
           />
         </div>
 
