@@ -3,7 +3,7 @@ post_title: "ADR-0010: User Authentication and Registration System"
 author1: "techie2000"
 post_slug: "adr-0010-user-auth-registration-system"
 microsoft_alias: "techie2000"
-featured_image: "https://placehold.co/1200x630.png"
+featured_image: "/assets/images/adr-0010-user-auth-registration-system.png"
 categories: ["backend", "security"]
 tags: ["adr", "backend", "security", "authentication", "jwt", "user-management"]
 ai_note: "AI-assisted draft based on repository state and user request."
