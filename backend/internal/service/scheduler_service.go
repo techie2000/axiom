@@ -553,6 +553,28 @@ func (s *schedulerService) resumeInterruptedFullSyncOnStartup() (bool, error) {
 				log.Error().Err(getErr).Msg("Failed to get DAILY_FULL status after resume failure")
 				return
 			}
+
+			if strings.Contains(strings.ToLower(err.Error()), "source file not found") {
+				log.Warn().
+					Err(err).
+					Str("source_file_id", fileID.String()).
+					Msg("Auto-resume source file missing; resetting to IDLE and triggering fresh full sync")
+
+				status.Status = "IDLE"
+				status.ErrorMessage = "Auto-resume skipped: source file missing"
+				status.CurrentSourceFileID = nil
+				status.NextRunAt = s.calculateNextDailyFullRun()
+				if updateErr := s.leiService.UpdateProcessingStatus(status); updateErr != nil {
+					log.Error().Err(updateErr).Msg("Failed to reset DAILY_FULL status to IDLE after missing resume file")
+					return
+				}
+
+				if freshErr := s.RunDailyFullSync(); freshErr != nil {
+					log.Error().Err(freshErr).Msg("Fresh full sync failed after missing resume file")
+				}
+				return
+			}
+
 			status.Status = "FAILED"
 			status.ErrorMessage = err.Error()
 			status.CurrentSourceFileID = nil
