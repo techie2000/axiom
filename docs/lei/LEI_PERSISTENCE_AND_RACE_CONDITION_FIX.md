@@ -66,47 +66,58 @@ if deltaStatus.Status == "RUNNING" {
 
 #### Solution Implemented
 
-Added Docker volume mount for data persistence:
+Added bind mounts for direct host-filesystem access (dev and main environments):
 
-Configuration in **docker-compose.dev.yml**:
+Configuration in **docker-compose.dev.yml** and **docker-compose.main.yml**:
 
 ```yaml
+# docker-compose.dev.yml
 backend:
   environment:
-    LEI_DATA_DIR: ${LEI_DATA_DIR}  # NEW: Environment variable
+    LEI_DATADIR: ${LEI_DATADIR}  # Loaded from .env.dev; maps to cfg.LEI.DataDir
   volumes:
-    - lei_data_dev:/root/data/lei  # NEW: Volume mount
-  
-volumes:
-  postgres_data_dev:
-  lei_data_dev:  # NEW: Named volume for LEI data
+    - ./data/dev/lei:/root/data/lei      # Bind mount for LEI files (dev)
+    - ./data/dev/postgres:/var/lib/postgresql/data  # Bind mount for Postgres (dev)
+
+# docker-compose.main.yml
+backend:
+  environment:
+    LEI_DATADIR: ${LEI_DATADIR}  # Loaded from .env.main; maps to cfg.LEI.DataDir
+  volumes:
+    - ./data/main/lei:/root/data/lei     # Bind mount for LEI files (main)
+    - ./data/main/postgres:/var/lib/postgresql/data  # Bind mount for Postgres (main)
 ```
 
-Environment variable in **.env.dev**:
+> **Note:** Neither dev nor main uses Docker named volumes for LEI data or Postgres. Both use
+> host bind mounts so files are directly accessible in your file explorer, VS Code, and Windows Explorer.
+
+Environment variable in **.env.dev** / **.env.main**:
 
 ```env
-LEI_DATA_DIR=/root/data/lei
+LEI_DATADIR=/root/data/lei  # Inside container, mapped to ./data/<env>/lei on host
 ```
 
-Code changes in **backend/cmd/api/main.go**:
+Code in **backend/internal/config/config.go** reads the env var via viper:
 
 ```go
-// NEW: Read from environment variable with fallback
-leiDataDir := os.Getenv("LEI_DATA_DIR")
-if leiDataDir == "" {
-    leiDataDir = "./data/lei"
-}
+viper.SetDefault("lei.datadir", "./data/lei")
+// LEI_DATADIR environment variable is automatically mapped to cfg.LEI.DataDir
 ```
 
 ### 3. ✅ Database Persistence (Already Working)
 
 #### Status
 
-Database already has proper volume mount:
+Database persistence is handled via bind mounts in both dev and main:
 
 ```yaml
+# dev
 volumes:
-  - postgres_data_dev:/var/lib/postgresql/data
+  - ./data/dev/postgres:/var/lib/postgresql/data
+
+# main
+volumes:
+  - ./data/main/postgres:/var/lib/postgresql/data
 ```
 
 Database survives container rebuilds. ✅
@@ -120,58 +131,64 @@ Database survives container rebuilds. ✅
    - `RunDailyDeltaSync()`: Check DAILY_FULL status
    - `RunDailyFullSync()`: Check DAILY_DELTA status
 
-2. **backend/cmd/api/main.go**
-   - Read `LEI_DATA_DIR` from environment variable
-   - Fallback to `./data/lei` if not set
+2. **backend/internal/config/config.go**
+   - `LEI_DATADIR` environment variable mapped to `cfg.LEI.DataDir` via viper
+   - Default: `./data/lei`
 
 ### Configuration Changes (Storage Strategy)
 
-#### Development Environment (Bind Mounts)
+#### Development and Main Environments (Bind Mounts)
 
-1. **docker-compose.dev.yml**
+1. **docker-compose.dev.yml** / **docker-compose.main.yml**
 
-- Added `LEI_DATA_DIR` environment variable
-- Changed to `./data/lei:/root/data/lei` **bind mount** (direct filesystem access)
+- `LEI_DATADIR` environment variable (loaded from `.env.dev` / `.env.main`)
+- `./data/dev/lei:/root/data/lei` bind mount for LEI files (dev)
+- `./data/main/lei:/root/data/lei` bind mount for LEI files (main)
 - ✅ Files visible in VS Code and Windows Explorer
 - ✅ Easy debugging and inspection
 
-1. **.env.dev**
-   - Added `LEI_DATA_DIR=/root/data/lei`
+2. **.env.dev** / **.env.main**
+   - `LEI_DATADIR=/root/data/lei`
 
 #### UAT/Production Environments (Docker Volumes)
 
 1. **docker-compose.uat.yml**
 
-- Added `LEI_DATA_DIR` environment variable
-- Added `lei_data_uat:/root/data/lei` **volume mount** (better performance)
-- Created `lei_data_uat` named volume
+- `LEI_DATADIR` environment variable
+- `lei_data_uat:/root/data/lei` **volume mount** (better performance)
+- `lei_data_uat` named volume
 
-1. **.env.uat**
-   - Added `LEI_DATA_DIR=/root/data/lei`
+2. **.env.uat**
+   - `LEI_DATADIR=/root/data/lei`
 
-2. **docker-compose.prod.yml**
-   - Added `LEI_DATA_DIR` environment variable
-   - Added `lei_data_prod:/root/data/lei` **volume mount** (better performance)
-   - Created `lei_data_prod` named volume
+3. **docker-compose.prod.yml**
+   - `LEI_DATADIR` environment variable
+   - `lei_data_prod:/root/data/lei` **volume mount** (better performance)
+   - `lei_data_prod` named volume
 
-3. **.env.prod**
-   - Added `LEI_DATA_DIR=/root/data/lei`
+4. **.env.prod**
+   - `LEI_DATADIR=/root/data/lei`
 
 ### Storage Strategy Summary
 
-| Environment | Storage Type   | Location             | Rationale                                     |
-| ----------- | -------------- | -------------------- | --------------------------------------------- |
-| **dev**     | Bind Mount     | `./data/lei` on host | Easy debugging, file inspection in VS Code    |
-| **uat**     | Docker Volume  | Docker-managed       | Better performance, production-like           |
-| **prod**    | Docker Volume  | Docker-managed       | Best performance, isolation, reliability      |
+| Environment | Data Type    | Storage Type  | Location                          | Rationale                                    |
+| ----------- | ------------ | ------------- | --------------------------------- | -------------------------------------------- |
+| **dev**     | Postgres DB  | Bind Mount    | `./data/dev/postgres` on host     | Direct filesystem access for easy inspection |
+| **dev**     | LEI files    | Bind Mount    | `./data/dev/lei` on host          | Easy debugging, file inspection in VS Code   |
+| **main**    | Postgres DB  | Bind Mount    | `./data/main/postgres` on host    | Direct filesystem access for easy inspection |
+| **main**    | LEI files    | Bind Mount    | `./data/main/lei` on host         | Easy debugging, file inspection in VS Code   |
+| **uat**     | Postgres DB  | Docker Volume | `postgres_data_uat` (Docker-managed) | Better performance, production-like       |
+| **uat**     | LEI files    | Docker Volume | `lei_data_uat` (Docker-managed)      | Better performance, production-like       |
+| **prod**    | Postgres DB  | Docker Volume | `postgres_data_prod` (Docker-managed) | Best performance, isolation, reliability |
+| **prod**    | LEI files    | Docker Volume | `lei_data_prod` (Docker-managed)      | Best performance, isolation, reliability |
 
 ## Testing & Verification
 
 ### Current Status
 
 - **Full sync in progress:** 39,657+ records processed (out of 3.2M)
-- **Files persisted in volume:** `lei_data_dev` Docker volume
-- **Database persisted:** `postgres_data_dev` Docker volume
+- **LEI files persisted:** `./data/dev/lei` bind mount on host (dev); `./data/main/lei` (main)
+- **Database persisted:** `./data/dev/postgres` bind mount (dev); `./data/main/postgres` (main)
 
 ### Testing After Container Rebuild
 
@@ -231,51 +248,169 @@ Expected log:
 
 ### Multi-Environment Support
 
-- ✅ Consistent configuration across dev/uat/prod
-- ✅ Each environment has isolated volumes
+- ✅ Consistent configuration across dev/main/uat/prod
+- ✅ Each environment has isolated bind mounts or volumes
 - ✅ Environment-specific data directories
 - ✅ Production-ready configuration
 
 ## Volume Management
 
-### Viewing Volumes
+Both dev and main use **host bind mounts** for LEI files and Postgres data.
+UAT and prod use Docker-managed named volumes for LEI files (Postgres is also a named volume there).
+
+### Viewing Data
+
+**Bash:**
+
+```bash
+# Dev — inspect bind-mount directories directly
+ls -lh ./data/dev/lei/
+ls -lh ./data/dev/postgres/
+
+# Main — inspect bind-mount directories directly
+ls -lh ./data/main/lei/
+ls -lh ./data/main/postgres/
+
+# UAT/prod — list Docker volumes
+docker volume ls | grep axiom
+```
+
+**PowerShell:**
 
 ```powershell
-# List all volumes
+# Dev — inspect bind-mount directories directly
+Get-ChildItem ./data/dev/lei/
+Get-ChildItem ./data/dev/postgres/
+
+# Main — inspect bind-mount directories directly
+Get-ChildItem ./data/main/lei/
+Get-ChildItem ./data/main/postgres/
+
+# UAT/prod — list Docker volumes
 docker volume ls | Select-String "axiom"
-
-# Inspect volume details
-docker volume inspect axiom-dev_lei_data_dev
-
-# Check volume size
-docker system df -v | Select-String "lei_data"
 ```
 
-### Backup Volumes
+### Backup Data
 
-```powershell
-# Backup LEI data volume
-docker run --rm -v axiom-dev_lei_data_dev:/data -v ${PWD}:/backup alpine tar czf /backup/lei-data-backup.tar.gz /data
+**Bash:**
 
-# Backup database volume  
-docker run --rm -v axiom-dev_postgres_data_dev:/data -v ${PWD}:/backup alpine tar czf /backup/postgres-backup.tar.gz /data
+```bash
+# Backup dev LEI files (bind mount — copy the host directory)
+tar czf lei-dev-backup.tar.gz ./data/dev/lei
+
+# Backup dev Postgres (bind mount — copy the host directory)
+tar czf postgres-dev-backup.tar.gz ./data/dev/postgres
+
+# Backup main LEI files (bind mount — copy the host directory)
+tar czf lei-main-backup.tar.gz ./data/main/lei
+
+# Backup main Postgres (bind mount — copy the host directory)
+tar czf postgres-main-backup.tar.gz ./data/main/postgres
+
+# Backup UAT LEI data (Docker volume)
+docker run --rm -v axiom-uat_lei_data_uat:/data -v ${PWD}:/backup alpine \
+  tar czf /backup/lei-uat-backup.tar.gz /data
 ```
 
-### Restore Volumes
+**PowerShell:**
 
 ```powershell
-# Restore LEI data volume
-docker run --rm -v axiom-dev_lei_data_dev:/data -v ${PWD}:/backup alpine tar xzf /backup/lei-data-backup.tar.gz -C /
+# Backup dev LEI files (bind mount — copy the host directory)
+Compress-Archive -Path ./data/dev/lei -DestinationPath lei-dev-backup.zip
 
-# Restore database volume
-docker run --rm -v axiom-dev_postgres_data_dev:/data -v ${PWD}:/backup alpine tar xzf /backup/postgres-backup.tar.gz -C /
+# Backup dev Postgres (bind mount — copy the host directory)
+Compress-Archive -Path ./data/dev/postgres -DestinationPath postgres-dev-backup.zip
+
+# Backup main LEI files (bind mount — copy the host directory)
+Compress-Archive -Path ./data/main/lei -DestinationPath lei-main-backup.zip
+
+# Backup main Postgres (bind mount — copy the host directory)
+Compress-Archive -Path ./data/main/postgres -DestinationPath postgres-main-backup.zip
+
+# Backup UAT LEI data (Docker volume)
+docker run --rm -v axiom-uat_lei_data_uat:/data -v "${PWD}:/backup" alpine `
+  tar czf /backup/lei-uat-backup.tar.gz /data
 ```
 
-### Clean Up Volumes
+### Restore Data
+
+**Bash:**
+
+```bash
+# Restore dev Postgres (bind mount — stop Postgres first, then replace the directory)
+docker compose --env-file .env.dev -f docker-compose.dev.yml stop postgres
+rm -rf ./data/dev/postgres
+tar xzf postgres-dev-backup.tar.gz
+docker compose --env-file .env.dev -f docker-compose.dev.yml start postgres
+
+# Restore main Postgres (same pattern)
+docker compose --env-file .env.main -f docker-compose.main.yml stop postgres
+rm -rf ./data/main/postgres
+tar xzf postgres-main-backup.tar.gz
+docker compose --env-file .env.main -f docker-compose.main.yml start postgres
+
+# Restore UAT LEI data (Docker volume)
+docker run --rm -v axiom-uat_lei_data_uat:/data -v ${PWD}:/backup alpine \
+  tar xzf /backup/lei-uat-backup.tar.gz -C /
+```
+
+**PowerShell:**
 
 ```powershell
-# Remove specific volume (WARNING: Data loss!)
-docker volume rm axiom-dev_lei_data_dev
+# Restore dev Postgres (bind mount — stop Postgres first, then replace the directory)
+docker compose --env-file .env.dev -f docker-compose.dev.yml stop postgres
+Remove-Item -Recurse -Force ./data/dev/postgres
+Expand-Archive -Path postgres-dev-backup.zip -DestinationPath .
+docker compose --env-file .env.dev -f docker-compose.dev.yml start postgres
+
+# Restore main Postgres (same pattern)
+docker compose --env-file .env.main -f docker-compose.main.yml stop postgres
+Remove-Item -Recurse -Force ./data/main/postgres
+Expand-Archive -Path postgres-main-backup.zip -DestinationPath .
+docker compose --env-file .env.main -f docker-compose.main.yml start postgres
+
+# Restore UAT LEI data (Docker volume)
+docker run --rm -v axiom-uat_lei_data_uat:/data -v "${PWD}:/backup" alpine `
+  tar xzf /backup/lei-uat-backup.tar.gz -C /
+```
+
+### Clean Up Data
+
+**Bash:**
+
+```bash
+# Reset dev data (bind mounts — delete host directories, WARNING: Data loss!)
+docker compose --env-file .env.dev -f docker-compose.dev.yml stop postgres
+rm -rf ./data/dev/postgres
+rm -rf ./data/dev/lei
+
+# Reset main data (bind mounts — delete host directories, WARNING: Data loss!)
+docker compose --env-file .env.main -f docker-compose.main.yml stop postgres
+rm -rf ./data/main/postgres
+rm -rf ./data/main/lei
+
+# Remove UAT/prod Docker volumes (WARNING: Data loss!)
+docker volume rm axiom-uat_lei_data_uat axiom-prod_lei_data_prod
+
+# Remove all unused volumes
+docker volume prune
+```
+
+**PowerShell:**
+
+```powershell
+# Reset dev data (bind mounts — delete host directories, WARNING: Data loss!)
+docker compose --env-file .env.dev -f docker-compose.dev.yml stop postgres
+Remove-Item -Recurse -Force ./data/dev/postgres
+Remove-Item -Recurse -Force ./data/dev/lei
+
+# Reset main data (bind mounts — delete host directories, WARNING: Data loss!)
+docker compose --env-file .env.main -f docker-compose.main.yml stop postgres
+Remove-Item -Recurse -Force ./data/main/postgres
+Remove-Item -Recurse -Force ./data/main/lei
+
+# Remove UAT/prod Docker volumes (WARNING: Data loss!)
+docker volume rm axiom-uat_lei_data_uat axiom-prod_lei_data_prod
 
 # Remove all unused volumes
 docker volume prune
@@ -291,33 +426,80 @@ Run the monitoring script anytime:
 
 Check for race condition prevention in logs:
 
+**Bash:**
+
+```bash
+docker logs axiom-dev-backend 2>&1 | grep "prevent race"
+docker logs axiom-main-backend 2>&1 | grep "prevent race"
+```
+
+**PowerShell:**
+
 ```powershell
 docker logs axiom-dev-backend 2>&1 | Select-String "prevent race"
+docker logs axiom-main-backend 2>&1 | Select-String "prevent race"
 ```
 
 ## Migration Notes
 
 ### Existing Data
 
-If you already have LEI data in containers (like now):
+If you already have LEI data in containers:
 
 #### Option 1: Let it complete and persist
 
 - Current full sync will complete (~9 hours)
-- Data will be saved to new `lei_data_dev` volume
+- Data will be saved to the bind-mount directory (`./data/dev/lei` or `./data/main/lei`)
 - Future rebuilds will preserve this data
 
-#### Option 2: Start fresh
+#### Option 2: Start fresh (dev)
+
+**Bash:**
+
+```bash
+# Stop containers
+docker compose --env-file .env.dev -f docker-compose.dev.yml down
+
+# Remove bind-mount directories (WARNING: Data loss!)
+rm -rf ./data/dev/postgres
+rm -rf ./data/dev/lei
+
+# Restart (will trigger fresh full sync)
+docker compose --env-file .env.dev -f docker-compose.dev.yml up -d
+```
+
+**PowerShell:**
 
 ```powershell
 # Stop containers
-docker-compose --env-file .env.dev -f docker-compose.dev.yml down
+docker compose --env-file .env.dev -f docker-compose.dev.yml down
 
-# Remove old volumes (WARNING: Data loss!)
-docker volume rm axiom-dev_postgres_data_dev axiom-dev_lei_data_dev
+# Remove bind-mount directories (WARNING: Data loss!)
+Remove-Item -Recurse -Force ./data/dev/postgres
+Remove-Item -Recurse -Force ./data/dev/lei
 
 # Restart (will trigger fresh full sync)
-docker-compose --env-file .env.dev -f docker-compose.dev.yml up -d
+docker compose --env-file .env.dev -f docker-compose.dev.yml up -d
+```
+
+#### Option 2: Start fresh (main)
+
+**Bash:**
+
+```bash
+docker compose --env-file .env.main -f docker-compose.main.yml down
+rm -rf ./data/main/postgres
+rm -rf ./data/main/lei
+docker compose --env-file .env.main -f docker-compose.main.yml up -d
+```
+
+**PowerShell:**
+
+```powershell
+docker compose --env-file .env.main -f docker-compose.main.yml down
+Remove-Item -Recurse -Force ./data/main/postgres
+Remove-Item -Recurse -Force ./data/main/lei
+docker compose --env-file .env.main -f docker-compose.main.yml up -d
 ```
 
 ## References
