@@ -1250,11 +1250,7 @@ func (h *UserPreferenceHandler) SetPreference(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, preferenceResponse{
-		PageKey:         req.PageKey,
-		PreferenceKey:   req.PreferenceKey,
-		PreferenceValue: req.PreferenceValue,
-	})
+	c.JSON(http.StatusOK, preferenceResponse(req))
 }
 
 // DeletePreference godoc
