@@ -32,7 +32,7 @@ Use this as a fast lookup for the MD rules configured in this repo:
    as this will be generated based on the title.
 2. **Lists**: Use bullet points or numbered lists for lists. Ensure proper indentation and spacing.
 3. **Code Blocks**: **ALWAYS specify language for fenced code blocks.** Use triple backticks with language identifier
-   (e.g., ```go, ```json, ```bash, ```text).
+  (for example: triple-backtick-go, triple-backtick-json, triple-backtick-bash, triple-backtick-text).
 4. **Links**: Use proper markdown syntax for links. Ensure that links are valid and accessible.
 5. **Images**: Use proper markdown syntax for images. Include alt text for accessibility.
 6. **Tables**: Use markdown tables for tabular data. Ensure proper formatting and alignment.
@@ -52,25 +52,21 @@ Follow these guidelines for formatting and structuring your markdown content:
   substitute.** Always use proper heading syntax.
   - ✅ **GOOD**: `#### Section Title`
   - ❌ **BAD**: `**Section Title**` (emphasis used as heading)
+  - Heading levels must increase by only one level at a time (MD001-compliant).
+    Example: `##` → `###` is valid, but `##` → `####` is not.
 - **Lists**: Use `-` for bullet points and `1.` for numbered lists. Indent nested lists with two spaces.
 - **Code Blocks**: **ALWAYS specify language.** Use triple backticks with language identifier immediately after
   opening backticks.
-  - ✅ **GOOD**: ` ```go`, ` ```json`, ` ```bash`, ` ```text`, ` ```yaml`
-  - ❌ **BAD**: ` ``` ` (no language specified)
+  - ✅ **GOOD**: triple-backtick-go, triple-backtick-json, triple-backtick-bash, triple-backtick-text,
+    triple-backtick-yaml
+  - ❌ **BAD**: triple backticks without any language tag
   - Common languages: `go`, `json`, `yaml`, `bash`, `text`, `markdown`, `dockerfile`, `sql`
 - **Line Length**: **Maximum 120 characters per line.** Break long lines by:
   - Splitting sentences at natural break points
   - Breaking after commas or conjunctions
   - Using soft line breaks (newlines without blank lines)
-  - Example:
-    ```text
-    ✅ GOOD:
-    A high-performance service that monitors directories for
-    CSV files and converts them to JSON format.
-
-    ❌ BAD:
-    A high-performance service that monitors directories for CSV files and converts them to JSON format with routing capabilities.
-    ```
+  - ✅ **GOOD**: Wrap long prose at natural sentence boundaries.
+  - ❌ **BAD**: Keep long prose as one unbroken line beyond 120 characters.
 - **Links**: Use markdown link syntax with descriptive text and valid targets.
   For docs references in instruction files, prefer plain text paths (for example `docs/architecture.md`) to avoid
   false prompts-diagnostics missing-file warnings.
@@ -99,32 +95,42 @@ Follow these guidelines for formatting and structuring your markdown content:
   - Headings must be surrounded by blank lines, including one blank line below each heading (MD022-compliant).
   - Fenced code blocks must have one blank line above and below (MD031-compliant).
 
-#### Common MD031/MD032 Failure Patterns
+### Common MD031/MD032 Failure Patterns
 
-```markdown
-✅ GOOD
-Paragraph introducing a list.
+- ✅ **GOOD list spacing**
 
-- First item
-- Second item
+  ~~~markdown
+  Paragraph introducing a list.
 
-✅ GOOD
-Paragraph introducing code.
+  - First item
+  - Second item
+  ~~~
 
-```sql
-SELECT 1;
-```
+- ✅ **GOOD fenced-code spacing**
 
-❌ BAD
-Paragraph introducing a list.
-- First item
+  ~~~markdown
+  Paragraph introducing code.
 
-❌ BAD
-Paragraph introducing code.
-```sql
-SELECT 1;
-```
-```
+  ```sql
+  SELECT 1;
+  ```
+  ~~~
+
+- ❌ **BAD list spacing**
+
+  ~~~markdown
+  Paragraph introducing a list.
+  - First item
+  ~~~
+
+- ❌ **BAD fenced-code spacing**
+
+  ~~~markdown
+  Paragraph introducing code.
+  ```sql
+  SELECT 1;
+  ```
+  ~~~
 
 ### Mandatory Pre-Submission Checks (for any edited `.md` file)
 
@@ -133,11 +139,13 @@ SELECT 1;
 - In fenced code blocks, preserve executable integrity for command examples;
   do not split commands solely to satisfy line-length limits.
 - Run markdown diagnostics before finishing markdown edits.
+- Fix **all MD001 heading-increment violations** in edited sections.
 - Fix **all MD013 line-length violations** introduced in edited  non-code-block sections (max 120 chars per line).
-- Fix **all MD060 table-column-style violations** in edited tables.
-- Fix **all MD032 list-spacing violations** in edited sections.
-- Fix **all MD031 fenced-code-spacing violations** in edited sections.
 - Fix **all MD022 heading-spacing violations** in edited sections.
+- Fix **all MD031 fenced-code-spacing violations** in edited sections.
+- Fix **all MD032 list-spacing violations** in edited sections.
+- Fix **all MD040 fenced-code-language violations** in edited sections.
+- Fix **all MD060 table-column-style violations** in edited tables.
 - Do not leave newly introduced markdownlint warnings in the edited regions.
 
 ## Validation Requirements
