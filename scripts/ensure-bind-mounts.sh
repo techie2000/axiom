@@ -65,8 +65,8 @@ if [[ "$(uname -s)" == "Linux" ]]; then
     docker run --rm \
         -v "${POSTGRES_DIR_ABS}:/target" \
         alpine:latest \
-        sh -c "chown 70:70 /target && chmod 700 /target"
-    success "Ownership of $POSTGRES_DIR set to 70:70 (postgres user in alpine image)"
+        sh -c "chown -R 70:70 /target && chmod 700 /target"
+    success "Ownership of $POSTGRES_DIR set to 70:70 (postgres user in postgres:17-alpine)"
 else
     info "Non-Linux host ($(uname -s)) — Docker Desktop manages permissions, skipping chown."
 fi
