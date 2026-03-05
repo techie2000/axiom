@@ -5,7 +5,6 @@ on:
     types: [opened]
 
 permissions:
-  contents: read
   issues: write
 
 jobs:
@@ -125,13 +124,19 @@ jobs:
                 })
               } catch (error) {
                 if (error.status === 404) {
-                  await github.rest.issues.createLabel({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    name: labelDef.name,
-                    color: labelDef.color,
-                    description: labelDef.description
-                  })
+                  try {
+                    await github.rest.issues.createLabel({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      name: labelDef.name,
+                      color: labelDef.color,
+                      description: labelDef.description
+                    })
+                  } catch (createError) {
+                    if (createError.status !== 422) {
+                      throw createError
+                    }
+                  }
                 } else {
                   throw error
                 }
