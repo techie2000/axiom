@@ -70,7 +70,7 @@ services:
       - "${BACKEND_PORT}:8080"
     volumes:
       - ./data/main/lei:/root/data/lei  # Bind mount for developer access (main environment)
-      - ./log/main:/root/log            # Persist logs for debugging (main environment)
+      - ${LOG_MAIN_DIR:-./log/main}:/root/log  # Persist logs; parameterized so test stacks use isolated paths
       - ./backend/config.yaml:/root/config/config.yaml:ro  # Mount config file with CORS settings
     depends_on:
       postgres:
