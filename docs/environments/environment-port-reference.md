@@ -86,11 +86,13 @@ Containers follow the pattern: `axiom-{env}-{service}`
 - axiom-uat-network
 - axiom-prod-network
 
-## Volume Names
+## Postgres Data Storage
 
-- postgres_data_dev
-- postgres_data_uat
-- postgres_data_prod
+| Environment | Storage Type  | Location                             |
+| ----------- | ------------- | ------------------------------------ |
+| dev         | Bind mount    | `./data/dev/postgres` (host dir)     |
+| uat         | Docker volume | `postgres_data_uat`                  |
+| prod        | Docker volume | `postgres_data_prod`                 |
 
 ## Make Commands Quick Reference
 

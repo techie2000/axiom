@@ -158,8 +158,11 @@ make docker-uat-up
 # Stop all environments
 make docker-all-down
 
-# Remove volumes (WARNING: This deletes all data!)
-docker volume rm postgres_data_dev postgres_data_uat postgres_data_prod
+# Remove dev postgres data (bind mount — delete the host directory)
+rm -rf ./data/dev/postgres
+
+# Remove UAT and prod postgres volumes (Docker-managed)
+docker volume rm postgres_data_uat postgres_data_prod
 
 # Start fresh
 make docker-all-up

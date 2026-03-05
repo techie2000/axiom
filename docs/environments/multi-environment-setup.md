@@ -280,13 +280,14 @@ This ensures complete isolation between environments.
 
 ## Volume Management
 
-Data volumes are environment-specific:
+Postgres data persistence is environment-specific:
 
-- `postgres_data_dev`
-- `postgres_data_uat`
-- `postgres_data_prod`
+- **dev** — bind mount at `./data/dev/postgres` on the host (files visible in your file explorer)
+- **uat** — Docker-managed named volume `postgres_data_uat`
+- **prod** — Docker-managed named volume `postgres_data_prod`
 
-This allows each environment to maintain its own persistent data.
+This allows each environment to maintain its own persistent data while giving the dev environment
+direct filesystem access for easy inspection.
 
 ## Common Use Cases
 
@@ -372,14 +373,30 @@ If you need to reset an environment's data:
 # Stop the environment
 make docker-dev-down
 
-# Remove the volume
-docker volume rm postgres_data_dev
+# Remove the bind-mount directory (dev uses a host bind mount, not a Docker volume)
+rm -rf ./data/dev/postgres
 
 # Restart the environment
 make docker-dev-up
 
 # Run migrations
 make migrate-dev-up
+```
+
+For UAT or prod (which use Docker-managed volumes):
+
+```bash
+# Stop the environment
+make docker-uat-down
+
+# Remove the volume
+docker volume rm axiom-uat_postgres_data_uat
+
+# Restart the environment
+make docker-uat-up
+
+# Run migrations
+make migrate-uat-up
 ```
 
 ### Viewing All Environment Resources
@@ -391,7 +408,10 @@ docker ps -a | grep axiom
 # View all networks
 docker network ls | grep axiom
 
-# View all volumes
+# View dev postgres data (bind mount — host directory)
+ls -la ./data/dev/postgres
+
+# View UAT/prod volumes (Docker-managed)
 docker volume ls | grep postgres_data
 ```
 

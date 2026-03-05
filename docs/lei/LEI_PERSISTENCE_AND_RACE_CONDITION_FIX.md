@@ -78,9 +78,11 @@ backend:
     - lei_data_dev:/root/data/lei  # NEW: Volume mount
   
 volumes:
-  postgres_data_dev:
   lei_data_dev:  # NEW: Named volume for LEI data
 ```
+
+> **Note:** Postgres no longer uses a named volume in dev. It uses a bind mount at
+> `./data/dev/postgres` on the host, giving you direct filesystem access to the database files.
 
 Environment variable in **.env.dev**:
 
@@ -102,11 +104,11 @@ if leiDataDir == "" {
 
 #### Status
 
-Database already has proper volume mount:
+Database already has proper persistence. In dev it uses a **bind mount**:
 
 ```yaml
 volumes:
-  - postgres_data_dev:/var/lib/postgresql/data
+  - ./data/dev/postgres:/var/lib/postgresql/data
 ```
 
 Database survives container rebuilds. ✅
@@ -159,11 +161,12 @@ Database survives container rebuilds. ✅
 
 ### Storage Strategy Summary
 
-| Environment | Storage Type   | Location             | Rationale                                     |
-| ----------- | -------------- | -------------------- | --------------------------------------------- |
-| **dev**     | Bind Mount     | `./data/lei` on host | Easy debugging, file inspection in VS Code    |
-| **uat**     | Docker Volume  | Docker-managed       | Better performance, production-like           |
-| **prod**    | Docker Volume  | Docker-managed       | Best performance, isolation, reliability      |
+| Environment | Storage Type   | Location                     | Rationale                                     |
+| ----------- | -------------- | ---------------------------- | --------------------------------------------- |
+| **dev**     | Bind Mount     | `./data/dev/postgres` on host | Direct filesystem access for easy inspection  |
+| **dev LEI** | Bind Mount     | `./data/lei` on host         | Easy debugging, file inspection in VS Code    |
+| **uat**     | Docker Volume  | Docker-managed               | Better performance, production-like           |
+| **prod**    | Docker Volume  | Docker-managed               | Best performance, isolation, reliability      |
 
 ## Testing & Verification
 
@@ -171,7 +174,7 @@ Database survives container rebuilds. ✅
 
 - **Full sync in progress:** 39,657+ records processed (out of 3.2M)
 - **Files persisted in volume:** `lei_data_dev` Docker volume
-- **Database persisted:** `postgres_data_dev` Docker volume
+- **Database persisted:** `./data/dev/postgres` bind mount (host directory)
 
 ### Testing After Container Rebuild
 
@@ -257,8 +260,8 @@ docker system df -v | Select-String "lei_data"
 # Backup LEI data volume
 docker run --rm -v axiom-dev_lei_data_dev:/data -v ${PWD}:/backup alpine tar czf /backup/lei-data-backup.tar.gz /data
 
-# Backup database volume  
-docker run --rm -v axiom-dev_postgres_data_dev:/data -v ${PWD}:/backup alpine tar czf /backup/postgres-backup.tar.gz /data
+# Backup database (bind mount — just copy the host directory)
+tar czf postgres-backup.tar.gz ./data/dev/postgres
 ```
 
 ### Restore Volumes
@@ -267,15 +270,22 @@ docker run --rm -v axiom-dev_postgres_data_dev:/data -v ${PWD}:/backup alpine ta
 # Restore LEI data volume
 docker run --rm -v axiom-dev_lei_data_dev:/data -v ${PWD}:/backup alpine tar xzf /backup/lei-data-backup.tar.gz -C /
 
-# Restore database volume
-docker run --rm -v axiom-dev_postgres_data_dev:/data -v ${PWD}:/backup alpine tar xzf /backup/postgres-backup.tar.gz -C /
+# Restore database (bind mount — stop containers first, then replace the directory)
+docker compose --env-file .env.dev -f docker-compose.dev.yml stop postgres
+rm -rf ./data/dev/postgres
+tar xzf postgres-backup.tar.gz
+docker compose --env-file .env.dev -f docker-compose.dev.yml start postgres
 ```
 
 ### Clean Up Volumes
 
 ```powershell
-# Remove specific volume (WARNING: Data loss!)
+# Remove LEI data volume (WARNING: Data loss!)
 docker volume rm axiom-dev_lei_data_dev
+
+# Reset postgres data (bind mount — delete the host directory, WARNING: Data loss!)
+docker compose --env-file .env.dev -f docker-compose.dev.yml stop postgres
+rm -rf ./data/dev/postgres
 
 # Remove all unused volumes
 docker volume prune
@@ -311,13 +321,16 @@ If you already have LEI data in containers (like now):
 
 ```powershell
 # Stop containers
-docker-compose --env-file .env.dev -f docker-compose.dev.yml down
+docker compose --env-file .env.dev -f docker-compose.dev.yml down
 
-# Remove old volumes (WARNING: Data loss!)
-docker volume rm axiom-dev_postgres_data_dev axiom-dev_lei_data_dev
+# Remove postgres bind-mount directory (WARNING: Data loss!)
+Remove-Item -Recurse -Force ./data/dev/postgres
+
+# Remove LEI data volume (WARNING: Data loss!)
+docker volume rm axiom-dev_lei_data_dev
 
 # Restart (will trigger fresh full sync)
-docker-compose --env-file .env.dev -f docker-compose.dev.yml up -d
+docker compose --env-file .env.dev -f docker-compose.dev.yml up -d
 ```
 
 ## References
