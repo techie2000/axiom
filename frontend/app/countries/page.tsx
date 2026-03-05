@@ -98,6 +98,9 @@ export default function CountriesPage() {
   const [localColumns, setLocalColumns] = useState<Set<CountryColumnKey> | null>(null)
   const [showWidthPrompt, setShowWidthPrompt] = useState(false)
   const [showColumnsPrompt, setShowColumnsPrompt] = useState(false)
+  // Incrementing this counter resets the 8-second auto-dismiss timer so users
+  // always get 8 s from their *last* column change rather than their first.
+  const [columnsSaveVersion, setColumnsSaveVersion] = useState(0)
   const pendingExpanded = useRef<boolean | null>(null)
   const pendingColumns = useRef<Set<CountryColumnKey> | null>(null)
 
@@ -114,6 +117,7 @@ export default function CountriesPage() {
     setLocalColumns(next)
     pendingColumns.current = next
     setShowColumnsPrompt(true)
+    setColumnsSaveVersion(v => v + 1)
   }, [])
 
   const handleSaveWidth = useCallback(() => {
@@ -714,6 +718,7 @@ export default function CountriesPage() {
       />
       <PreferenceSavePrompt
         visible={showColumnsPrompt}
+        resetKey={columnsSaveVersion}
         onSave={handleSaveColumns}
         onDismiss={handleDismissColumns}
         label="Save column selection as your default?"

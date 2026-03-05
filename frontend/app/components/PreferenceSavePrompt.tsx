@@ -5,6 +5,13 @@ import { useEffect, useRef, useState } from 'react'
 interface Props {
   /** When true the prompt is shown. */
   visible: boolean
+  /**
+   * Increment this counter each time an additional change is made while the
+   * prompt is already visible. The 8-second auto-dismiss timer restarts
+   * whenever resetKey changes, so users always have 8 s from their *last*
+   * change rather than their first.
+   */
+  resetKey?: number
   /** Called when the user confirms saving; caller should persist and dismiss. */
   onSave: () => void
   /** Called when the user dismisses without saving. */
@@ -20,7 +27,7 @@ interface Props {
  *
  * The prompt auto-dismisses after 8 seconds if the user does not interact.
  */
-export default function PreferenceSavePrompt({ visible, onSave, onDismiss, label }: Props) {
+export default function PreferenceSavePrompt({ visible, resetKey, onSave, onDismiss, label }: Props) {
   const [show, setShow] = useState(false)
   // Use refs to always call the latest callbacks, avoiding stale closure issues.
   const onDismissRef = useRef(onDismiss)
@@ -39,7 +46,7 @@ export default function PreferenceSavePrompt({ visible, onSave, onDismiss, label
     } else {
       setShow(false)
     }
-  }, [visible])
+  }, [visible, resetKey])
 
   if (!show) return null
 

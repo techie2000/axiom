@@ -174,6 +174,9 @@ export default function LEIRecordsPage() {
   // Prompt to save preference when user changes columns or width.
   const [showColumnSavePrompt, setShowColumnSavePrompt] = useState(false)
   const [showWidthSavePrompt, setShowWidthSavePrompt] = useState(false)
+  // Incrementing these counters resets the 8-second auto-dismiss timer in
+  // PreferenceSavePrompt so users always get 8 s from their *last* change.
+  const [columnSaveVersion, setColumnSaveVersion] = useState(0)
   // Track whether the current value differs from the stored preference.
   const pendingColumns = useRef<Set<keyof LEIRecord> | null>(null)
   const pendingExpanded = useRef<boolean | null>(null)
@@ -189,6 +192,7 @@ export default function LEIRecordsPage() {
     setLocalColumns(newCols)
     pendingColumns.current = newCols
     setShowColumnSavePrompt(true)
+    setColumnSaveVersion(v => v + 1)
   }, [])
 
   const handleSetExpandedWidth = useCallback((value: boolean) => {
@@ -1977,6 +1981,7 @@ export default function LEIRecordsPage() {
       {/* Unobtrusive prompts to save changed preferences */}
       <PreferenceSavePrompt
         visible={showColumnSavePrompt}
+        resetKey={columnSaveVersion}
         label="Save column selection as your default?"
         onSave={handleSaveColumns}
         onDismiss={handleDismissColumns}
