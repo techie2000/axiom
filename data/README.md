@@ -30,7 +30,8 @@ data/
 
 ## Worktree/PR Testing
 
-When testing with additional worktrees, use an isolated env file with a unique `COMPOSE_PROJECT_NAME` so test runs do not collide with your main environment data/volumes.
+When testing with additional worktrees, use an isolated env file with a unique `COMPOSE_PROJECT_NAME` so test
+runs do not collide with your main environment data/volumes.
 
 ```bash
 ./scripts/new-main-test-env.ps1 -Name pr107
