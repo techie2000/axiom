@@ -158,14 +158,16 @@ make docker-uat-up
 # Stop all environments
 make docker-all-down
 
-# Remove dev postgres data (bind mount — delete the host directory)
+# Remove dev and main postgres data (bind mounts — delete host directories)
 rm -rf ./data/dev/postgres
+rm -rf ./data/main/postgres
 
 # Remove UAT and prod postgres volumes (Docker-managed; names include COMPOSE_PROJECT_NAME prefix)
 docker volume rm axiom-uat_postgres_data_uat axiom-prod_postgres_data_prod
 
 # Start fresh
 make docker-all-up
+make migrate-main-up
 make migrate-dev-up
 make migrate-uat-up
 make migrate-prod-up
