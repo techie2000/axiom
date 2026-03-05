@@ -7,6 +7,27 @@ applyTo: '**/*.md'
 
 The following markdown content rules are enforced by markdownlint and MUST be followed:
 
+### Markdownlint Rule Quick Reference
+
+Use this as a fast lookup for the MD rules configured in this repo:
+
+| Rule | What it checks | Repo setting |
+| ---- | -------------- | ------------ |
+| MD003 | Heading style format | `atx` (`#`, `##`, `###`) |
+| MD004 | Unordered list marker style | `dash` (`-`) |
+| MD007 | Nested list indentation | `2` spaces |
+| MD013 | Line length | max `120`; ignore code blocks and tables |
+| MD022 | Blank lines around headings | enabled |
+| MD024 | Duplicate heading names | allowed only for non-sibling headings |
+| MD025 | Multiple top-level headings (H1) | disabled |
+| MD031 | Blank lines around fenced code blocks | enabled |
+| MD032 | Blank lines around lists | enabled |
+| MD033 | Inline HTML usage | restricted allowlist (`details`, `summary`, `img`, `br`, `sub`, `sup`) |
+| MD034 | Bare URLs without markdown links | disabled |
+| MD040 | Language info on fenced code blocks | enabled |
+| MD041 | First line must be top-level heading | disabled |
+| MD046 | Code block style | `fenced` only |
+
 1. **Headings**: Use appropriate heading levels (H2, H3, etc.) to structure your content. Do not use an H1 heading,
    as this will be generated based on the title.
 2. **Lists**: Use bullet points or numbered lists for lists. Ensure proper indentation and spacing.
@@ -74,14 +95,48 @@ Follow these guidelines for formatting and structuring your markdown content:
     - ❌ `|------|----|-----------|`
 - **Whitespace**: Use blank lines to separate sections and improve readability. Avoid excessive whitespace.
   - Lists must be surrounded by blank lines (MD032-compliant).
+  - If a paragraph is immediately followed by a list, insert one blank line first.
   - Headings must be surrounded by blank lines, including one blank line below each heading (MD022-compliant).
+  - Fenced code blocks must have one blank line above and below (MD031-compliant).
+
+#### Common MD031/MD032 Failure Patterns
+
+```markdown
+✅ GOOD
+Paragraph introducing a list.
+
+- First item
+- Second item
+
+✅ GOOD
+Paragraph introducing code.
+
+```sql
+SELECT 1;
+```
+
+❌ BAD
+Paragraph introducing a list.
+- First item
+
+❌ BAD
+Paragraph introducing code.
+```sql
+SELECT 1;
+```
+```
 
 ### Mandatory Pre-Submission Checks (for any edited `.md` file)
 
+- Treat MD013 as a hard gate for non-code-block markdown lines: do not finish
+  a task while any edited non-code-block markdown line is over 120 chars.
+- In fenced code blocks, preserve executable integrity for command examples;
+  do not split commands solely to satisfy line-length limits.
 - Run markdown diagnostics before finishing markdown edits.
-- Fix **all MD013 line-length violations** introduced in edited sections (max 120 chars per line).
+- Fix **all MD013 line-length violations** introduced in edited  non-code-block sections (max 120 chars per line).
 - Fix **all MD060 table-column-style violations** in edited tables.
 - Fix **all MD032 list-spacing violations** in edited sections.
+- Fix **all MD031 fenced-code-spacing violations** in edited sections.
 - Fix **all MD022 heading-spacing violations** in edited sections.
 - Do not leave newly introduced markdownlint warnings in the edited regions.
 

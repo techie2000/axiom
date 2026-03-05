@@ -57,7 +57,8 @@
     "Tee-Object": true,
     "Test-Path": true,
     "Write-Error": true,
-    "wsl": true
+    "wsl": true,
+    "git remote": true
   },
   "cSpell.words": [
     "adduser",
@@ -183,6 +184,8 @@
     "Vitest",
     "Warshall",
     "WCAG",
+    "Worktree",
+    "worktrees",
     "XFRA",
     "xmldoc",
     "XNAS",
