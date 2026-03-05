@@ -553,3 +553,15 @@ When an AI agent creates a pull request, it should complete standard PR hygiene 
 3. Post a concise verification checklist comment relevant to the changed files.
 
 Only ask follow-up questions if required metadata cannot be applied (for example, reviewer handle is unavailable).
+
+## GitHub Comment Formatting (REQUIRED)
+
+When posting PR/issue comments, checklists, or review summaries via CLI/API:
+
+1. Use **real multiline Markdown**, not escaped newline text. The rendered comment must show bullets and checkboxes on separate lines.
+2. **Do not post literal escape sequences** like `\\n`, `\\t`, or JSON-escaped text into comment bodies.
+3. Prefer safe body construction patterns:
+   - PowerShell here-strings with actual line breaks, or
+   - `gh api ... --method PATCH/POST -f "body=..."` where the body variable already contains real newlines.
+4. Immediately verify the posted body (for example with `gh api ... --jq .body` or `gh pr view --comments`) and fix in-place if formatting is not human-readable.
+5. For checklist comments, keep concise one-line bullets and avoid shell-escaped artifacts in the final rendered text.

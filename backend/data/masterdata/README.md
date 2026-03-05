@@ -6,26 +6,34 @@ loaded into the Axiom database.
 ## Files
 
 ### continents.json
+
 Continent reference data (7 entries)
+
 - Maps continent codes to continent names
 - Codes: AF, AN, AS, EU, NA, OC, SA
 
 ### languages.json
+
 Language reference data (184 entries)
+
 - ISO 639-1 two-letter language codes
 - English and native language names
 - Right-to-left (RTL) flag for languages like Arabic and Hebrew
 - Coverage: European, Asian, African, Middle Eastern, and Indigenous languages
 
 ### currencies.json
+
 Currency reference data (180 entries)
+
 - ISO 4217 three-letter currency codes
 - Currency symbols (international and native)
 - Decimal places and rounding information
 - Coverage: All active currencies from all continents, plus precious metals and special codes
 
 ### countries.json
+
 Country reference data (196 entries)
+
 - ISO 3166-1 alpha-2 and alpha-3 country codes
 - Official and native country names
 - Phone codes, capitals, regions
@@ -33,7 +41,9 @@ Country reference data (196 entries)
 - Coverage: All recognized countries worldwide
 
 ### alert_country_codes.json
+
 ALERT Direct to ISO country code mappings (62 entries)
+
 - Maps proprietary ALERT Direct country codes to ISO 3166-1 alpha-2 codes
 - Only includes entries where the ALERT Direct code differs from the ISO code
 - ALERT Web and ALERT Plus use standard ISO codes and do not require mapping
@@ -44,6 +54,7 @@ ALERT Direct to ISO country code mappings (62 entries)
 ## Data Standards
 
 All data follows international ISO standards:
+
 - **ISO 3166-1**: Country codes
 - **ISO 4217**: Currency codes (all 180 active currencies)
 - **ISO 639-1**: Language codes
@@ -51,12 +62,14 @@ All data follows international ISO standards:
 ## Loading
 
 These files are automatically loaded into the database:
+
 1. **At application startup** - if tables are empty
 2. **Daily at 1 AM** - checks for updates and reloads if changed (runs BEFORE LEI sync at 2 AM)
 
 The loading process is idempotent (safe to run multiple times) and logs all actions.
 
-**Loading Order**: 
+**Loading Order**:
+
 1. Continents (no dependencies)
 2. Languages (no dependencies)
 3. **Currencies** (no dependencies - loaded first)
@@ -67,6 +80,7 @@ The loading process is idempotent (safe to run multiple times) and logs all acti
 ## Updating
 
 To update master data:
+
 1. Edit the appropriate JSON file
 2. Validate JSON syntax (use `jq` or online validator)
 3. Test locally by deleting data and restarting the application
@@ -76,6 +90,7 @@ To update master data:
 ## Schema
 
 ### Continent Entry
+
 ```json
 {
   "EU": "Europe"
@@ -83,6 +98,7 @@ To update master data:
 ```
 
 ### Language Entry
+
 ```json
 {
   "en": {
@@ -100,6 +116,7 @@ To update master data:
 ```
 
 ### Currency Entry
+
 ```json
 {
   "USD": {
@@ -115,6 +132,7 @@ To update master data:
 ```
 
 ### Country Entry
+
 ```json
 {
   "code": "US",
@@ -131,6 +149,7 @@ To update master data:
 ```
 
 ### Code Mapping Entry
+
 ```json
 {
     "from_system": "ALERT",
@@ -143,9 +162,8 @@ To update master data:
 }
 ```
 
-
-
 Files are validated during loading:
+
 - JSON syntax must be valid
 - Required fields must be present
 - Codes must be unique

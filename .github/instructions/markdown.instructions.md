@@ -7,11 +7,32 @@ applyTo: '**/*.md'
 
 The following markdown content rules are enforced by markdownlint and MUST be followed:
 
+### Markdownlint Rule Quick Reference
+
+Use this as a fast lookup for the MD rules configured in this repo:
+
+| Rule | What it checks | Repo setting |
+| ---- | -------------- | ------------ |
+| MD003 | Heading style format | `atx` (`#`, `##`, `###`) |
+| MD004 | Unordered list marker style | `dash` (`-`) |
+| MD007 | Nested list indentation | `2` spaces |
+| MD013 | Line length | max `120`; ignore code blocks and tables |
+| MD022 | Blank lines around headings | enabled |
+| MD024 | Duplicate heading names | allowed only for non-sibling headings |
+| MD025 | Multiple top-level headings (H1) | disabled |
+| MD031 | Blank lines around fenced code blocks | enabled |
+| MD032 | Blank lines around lists | enabled |
+| MD033 | Inline HTML usage | restricted allowlist (`details`, `summary`, `img`, `br`, `sub`, `sup`) |
+| MD034 | Bare URLs without markdown links | disabled |
+| MD040 | Language info on fenced code blocks | enabled |
+| MD041 | First line must be top-level heading | disabled |
+| MD046 | Code block style | `fenced` only |
+
 1. **Headings**: Use appropriate heading levels (H2, H3, etc.) to structure your content. Do not use an H1 heading,
    as this will be generated based on the title.
 2. **Lists**: Use bullet points or numbered lists for lists. Ensure proper indentation and spacing.
 3. **Code Blocks**: **ALWAYS specify language for fenced code blocks.** Use triple backticks with language identifier
-   (e.g., ```go, ```json, ```bash, ```text).
+  (for example: triple-backtick-go, triple-backtick-json, triple-backtick-bash, triple-backtick-text).
 4. **Links**: Use proper markdown syntax for links. Ensure that links are valid and accessible.
 5. **Images**: Use proper markdown syntax for images. Include alt text for accessibility.
 6. **Tables**: Use markdown tables for tabular data. Ensure proper formatting and alignment.
@@ -31,25 +52,21 @@ Follow these guidelines for formatting and structuring your markdown content:
   substitute.** Always use proper heading syntax.
   - ✅ **GOOD**: `#### Section Title`
   - ❌ **BAD**: `**Section Title**` (emphasis used as heading)
+  - Heading levels must increase by only one level at a time (MD001-compliant).
+    Example: `##` → `###` is valid, but `##` → `####` is not.
 - **Lists**: Use `-` for bullet points and `1.` for numbered lists. Indent nested lists with two spaces.
 - **Code Blocks**: **ALWAYS specify language.** Use triple backticks with language identifier immediately after
   opening backticks.
-  - ✅ **GOOD**: ` ```go`, ` ```json`, ` ```bash`, ` ```text`, ` ```yaml`
-  - ❌ **BAD**: ` ``` ` (no language specified)
+  - ✅ **GOOD**: triple-backtick-go, triple-backtick-json, triple-backtick-bash, triple-backtick-text,
+    triple-backtick-yaml
+  - ❌ **BAD**: triple backticks without any language tag
   - Common languages: `go`, `json`, `yaml`, `bash`, `text`, `markdown`, `dockerfile`, `sql`
 - **Line Length**: **Maximum 120 characters per line.** Break long lines by:
   - Splitting sentences at natural break points
   - Breaking after commas or conjunctions
   - Using soft line breaks (newlines without blank lines)
-  - Example:
-    ```text
-    ✅ GOOD:
-    A high-performance service that monitors directories for
-    CSV files and converts them to JSON format.
-
-    ❌ BAD:
-    A high-performance service that monitors directories for CSV files and converts them to JSON format with routing capabilities.
-    ```
+  - ✅ **GOOD**: Wrap long prose at natural sentence boundaries.
+  - ❌ **BAD**: Keep long prose as one unbroken line beyond 120 characters.
 - **Links**: Use markdown link syntax with descriptive text and valid targets.
   For docs references in instruction files, prefer plain text paths (for example `docs/architecture.md`) to avoid
   false prompts-diagnostics missing-file warnings.
@@ -74,15 +91,61 @@ Follow these guidelines for formatting and structuring your markdown content:
     - ❌ `|------|----|-----------|`
 - **Whitespace**: Use blank lines to separate sections and improve readability. Avoid excessive whitespace.
   - Lists must be surrounded by blank lines (MD032-compliant).
+  - If a paragraph is immediately followed by a list, insert one blank line first.
   - Headings must be surrounded by blank lines, including one blank line below each heading (MD022-compliant).
+  - Fenced code blocks must have one blank line above and below (MD031-compliant).
+
+### Common MD031/MD032 Failure Patterns
+
+- ✅ **GOOD list spacing**
+
+  ~~~markdown
+  Paragraph introducing a list.
+
+  - First item
+  - Second item
+  ~~~
+
+- ✅ **GOOD fenced-code spacing**
+
+  ~~~markdown
+  Paragraph introducing code.
+
+  ```sql
+  SELECT 1;
+  ```
+  ~~~
+
+- ❌ **BAD list spacing**
+
+  ~~~markdown
+  Paragraph introducing a list.
+  - First item
+  ~~~
+
+- ❌ **BAD fenced-code spacing**
+
+  ~~~markdown
+  Paragraph introducing code.
+  ```sql
+  SELECT 1;
+  ```
+  ~~~
 
 ### Mandatory Pre-Submission Checks (for any edited `.md` file)
 
+- Treat MD013 as a hard gate for non-code-block markdown lines: do not finish
+  a task while any edited non-code-block markdown line is over 120 chars.
+- In fenced code blocks, preserve executable integrity for command examples;
+  do not split commands solely to satisfy line-length limits.
 - Run markdown diagnostics before finishing markdown edits.
-- Fix **all MD013 line-length violations** introduced in edited sections (max 120 chars per line).
-- Fix **all MD060 table-column-style violations** in edited tables.
-- Fix **all MD032 list-spacing violations** in edited sections.
+- Fix **all MD001 heading-increment violations** in edited sections.
+- Fix **all MD013 line-length violations** introduced in edited  non-code-block sections (max 120 chars per line).
 - Fix **all MD022 heading-spacing violations** in edited sections.
+- Fix **all MD031 fenced-code-spacing violations** in edited sections.
+- Fix **all MD032 list-spacing violations** in edited sections.
+- Fix **all MD040 fenced-code-language violations** in edited sections.
+- Fix **all MD060 table-column-style violations** in edited tables.
 - Do not leave newly introduced markdownlint warnings in the edited regions.
 
 ## Validation Requirements

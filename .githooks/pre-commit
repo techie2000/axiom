@@ -23,7 +23,7 @@ echo "Linting markdown files:"
 echo "$STAGED_MD_FILES"
 
 # Run markdownlint on staged files
-if echo "$STAGED_MD_FILES" | xargs markdownlint --config .markdownlint.json; then
+if echo "$STAGED_MD_FILES" | xargs markdownlint --config .markdownlint.yaml; then
     echo "✅ Markdown linting passed"
     exit 0
 else
