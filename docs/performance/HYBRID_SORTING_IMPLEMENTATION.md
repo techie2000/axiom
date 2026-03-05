@@ -25,6 +25,7 @@ LIMIT 50
 ```
 
 **Why Slow?**
+
 - Sorting 3.2M records by legal_name requires scanning the entire table
 - Trigram (GIN) indexes are optimized for ILIKE searches, not ORDER BY
 - B-tree index on legal_name would help, but still slower than filtering first
@@ -32,6 +33,7 @@ LIMIT 50
 ### The Solution: Hybrid Approach
 
 **Strategy**: Change default sort behavior based on query context
+
 - **No search/filter**: Show recently updated records (ORDER BY updated_at DESC)
   - Fast: Index scan on updated_at (~20-50ms)
   - Better UX: Users see latest data changes immediately
@@ -50,6 +52,7 @@ LIMIT 50
 **Migration 000011**: Add B-tree index on updated_at
 
 **File**: `backend/migrations/000011_add_updated_at_index.up.sql`
+
 ```sql
 CREATE INDEX IF NOT EXISTS idx_lei_records_updated_at 
 ON lei_raw.lei_records(updated_at DESC) 
@@ -57,6 +60,7 @@ WHERE deleted_at IS NULL;
 ```
 
 **Benefits**:
+
 - ORDER BY updated_at DESC uses index scan (~20-50ms)
 - Partial index (WHERE deleted_at IS NULL) keeps index small and fast
 - Descending order matches query pattern (most recent first)
@@ -114,6 +118,7 @@ query = query.Order("updated_at desc")
 **Lines Added**: After stats cards, before filters section
 
 **Visual Indicator**: Info box shown when no filters are active
+
 ```tsx
 {!hasActiveFilters && (
   <div className="mb-6 bg-blue-50 border-2 border-blue-200 ...">
@@ -133,7 +138,8 @@ query = query.Order("updated_at desc")
 )}
 ```
 
-**Purpose**: 
+**Purpose**:
+
 - Informs users why sorting changed (transparency)
 - Encourages search/filter usage (better for performance)
 - Only shows when browsing all records (hides when filtering)
@@ -145,14 +151,14 @@ query = query.Order("updated_at desc")
 ### Before Hybrid Approach
 
 | Query Type | Sort Field | Result Set | Time | Status |
-|------------|-----------|------------|------|--------|
+| ---------- | ---------- | ---------- | ---- | ------ |
 | No filter | legal_name ASC | 3.2M rows → LIMIT 50 | 1276ms | ❌ SLOW |
 | With search | legal_name ASC | ~100 rows | 80-97ms | ✅ FAST |
 
 ### After Hybrid Approach
 
 | Query Type | Sort Field | Result Set | Time | Status |
-|------------|-----------|------------|------|--------|
+| ---------- | ---------- | ---------- | ---- | ------ |
 | No filter | **updated_at DESC** | 3.2M rows → LIMIT 50 | **~20-50ms** | ✅ FAST |
 | With search | legal_name ASC | ~100 rows | 80-97ms | ✅ FAST |
 
@@ -165,12 +171,14 @@ query = query.Order("updated_at desc")
 ### Default Behavior (No Parameters)
 
 **Before**:
+
 ```bash
 GET /api/v1/lei
 # Returns: 50 records sorted by legal_name ASC (SLOW: 1276ms)
 ```
 
 **After**:
+
 ```bash
 GET /api/v1/lei
 # Returns: 50 records sorted by updated_at DESC (FAST: ~30ms)
@@ -179,6 +187,7 @@ GET /api/v1/lei
 ### With Search/Filter
 
 **Before and After** (unchanged):
+
 ```bash
 GET /api/v1/lei?search=bank
 # Returns: Filtered records sorted by legal_name ASC (FAST: ~80ms)
@@ -190,6 +199,7 @@ GET /api/v1/lei?status=ACTIVE
 ### Explicit Sort Override
 
 Users can still explicitly request legal_name sorting:
+
 ```bash
 GET /api/v1/lei?sortBy=legal_name&sortOrder=asc
 # Returns: 50 records sorted by legal_name ASC (SLOW: 1276ms)
@@ -201,20 +211,24 @@ GET /api/v1/lei?sortBy=legal_name&sortOrder=asc
 ## User Experience Improvements
 
 ### 1. **Faster Initial Load**
+
 - Page loads 25-60x faster (~30ms vs 1276ms)
 - No more waiting when first landing on LEI Records page
 
 ### 2. **More Relevant Default View**
+
 - Recently updated records shown first
 - Users immediately see latest data changes
 - Better for monitoring and audit purposes
 
 ### 3. **Transparent Behavior**
+
 - Info box explains sorting when browsing all records
 - Users understand why results aren't alphabetical
 - Guidance to use search/filter for sorted results
 
 ### 4. **Expected Behavior When Filtering**
+
 - Search/filter results still sorted alphabetically
 - Users get expected behavior when narrowing results
 - No confusion or learning curve
@@ -226,11 +240,13 @@ GET /api/v1/lei?sortBy=legal_name&sortOrder=asc
 ### Test 1: Initial Load (No Filters)
 
 **Command**:
+
 ```bash
 curl "http://localhost:18080/api/v1/lei?limit=50"
 ```
 
 **Expected**:
+
 - Response time: < 50ms
 - Results sorted by updated_at DESC (newest first)
 - No SLOW SQL warning in logs
@@ -238,11 +254,13 @@ curl "http://localhost:18080/api/v1/lei?limit=50"
 ### Test 2: Search Query
 
 **Command**:
+
 ```bash
 curl "http://localhost:18080/api/v1/lei?search=bank&limit=50"
 ```
 
 **Expected**:
+
 - Response time: 80-100ms
 - Results sorted by legal_name ASC (alphabetical)
 - Matches previous behavior
@@ -250,11 +268,13 @@ curl "http://localhost:18080/api/v1/lei?search=bank&limit=50"
 ### Test 3: Status Filter
 
 **Command**:
+
 ```bash
 curl "http://localhost:18080/api/v1/lei?status=ACTIVE&limit=50"
 ```
 
 **Expected**:
+
 - Response time: 90-120ms
 - Results sorted by legal_name ASC
 - Matches previous behavior
@@ -262,11 +282,13 @@ curl "http://localhost:18080/api/v1/lei?status=ACTIVE&limit=50"
 ### Test 4: Explicit Sort Override
 
 **Command**:
+
 ```bash
 curl "http://localhost:18080/api/v1/lei?sortBy=legal_name&sortOrder=asc&limit=50"
 ```
 
 **Expected**:
+
 - Response time: ~1276ms (slow, as expected)
 - Results sorted by legal_name ASC
 - SLOW SQL warning appears (expected for large unsorted dataset)
@@ -274,6 +296,7 @@ curl "http://localhost:18080/api/v1/lei?sortBy=legal_name&sortOrder=asc&limit=50
 ### Test 5: Frontend Info Box
 
 **Steps**:
+
 1. Open http://localhost:13000/lei-records
 2. Observe blue info box: "Showing recently updated records"
 3. Enter search term in search box
@@ -286,6 +309,7 @@ curl "http://localhost:18080/api/v1/lei?sortBy=legal_name&sortOrder=asc&limit=50
 ## Deployment
 
 ### Prerequisites
+
 - Backend must be rebuilt with new repository logic
 - Database migration 000011 must be applied
 - Frontend should be rebuilt (optional - works without rebuild)
@@ -293,21 +317,25 @@ curl "http://localhost:18080/api/v1/lei?sortBy=legal_name&sortOrder=asc&limit=50
 ### Deployment Steps
 
 1. **Build Backend**:
+
    ```bash
    docker compose --env-file .env.dev -f docker-compose.dev.yml build backend
    ```
 
 2. **Restart Backend** (migrations run automatically):
+
    ```bash
    docker compose --env-file .env.dev -f docker-compose.dev.yml up -d backend
    ```
 
 3. **Verify Migration Applied**:
+
    ```bash
    docker exec axiom-dev-postgres psql -U axiom -d axiom_dev -c "\d lei_raw.lei_records" | grep "idx_lei_records_updated_at"
    ```
 
 4. **Optional: Rebuild Frontend**:
+
    ```bash
    docker compose --env-file .env.dev -f docker-compose.dev.yml build frontend
    docker compose --env-file .env.dev -f docker-compose.dev.yml up -d frontend
@@ -326,6 +354,7 @@ curl "http://localhost:18080/api/v1/lei?sortBy=legal_name&sortOrder=asc&limit=50
    - Performance will degrade back to 1276ms for initial load
 
 3. **Rollback migration** (if index causes issues):
+
    ```bash
    docker exec axiom-dev-backend migrate -path /root/migrations \
      -database "postgres://axiom:axiom@postgres:5432/axiom_dev?sslmode=disable" \
@@ -337,21 +366,25 @@ curl "http://localhost:18080/api/v1/lei?sortBy=legal_name&sortOrder=asc&limit=50
 ## Future Enhancements
 
 ### 1. **User Preference Persistence**
+
 - Allow users to set default sort preference
 - Store in localStorage or user profile
 - Override system default for power users
 
 ### 2. **Smart Sort Suggestions**
+
 - Analyze query patterns
 - Suggest optimal sort based on filters applied
 - "Did you mean to sort by legal_name?" prompt
 
 ### 3. **Performance Monitoring**
+
 - Track query times by sort field
 - Alert if any sort becomes slow
 - Recommend index additions proactively
 
 ### 4. **Column Sorting Indicators**
+
 - Add sort arrows to column headers
 - Show current sort field visually
 - Allow click-to-sort on any column
@@ -365,16 +398,19 @@ curl "http://localhost:18080/api/v1/lei?sortBy=legal_name&sortOrder=asc&limit=50
 We considered adding `CREATE INDEX idx_lei_records_legal_name_btree ON lei_raw.lei_records(legal_name)`, but:
 
 **Pros**:
+
 - Would improve ORDER BY legal_name to ~200-400ms (vs 1276ms)
 - Users could browse alphabetically without filtering
 
 **Cons**:
+
 - Still 4-8x slower than updated_at approach (~30ms)
 - Encourages bad UX pattern (browsing 3.2M unsorted records)
 - Additional index maintenance overhead
 - Larger index size (~50-100MB extra)
 
 **Decision**: Hybrid approach is better
+
 - Faster initial load (30ms vs 200-400ms)
 - Encourages good search/filter habits
 - Smaller database footprint
@@ -390,6 +426,7 @@ We considered adding `CREATE INDEX idx_lei_records_legal_name_btree ON lei_raw.l
 ### Index Maintenance
 
 The `idx_lei_records_updated_at` index is updated on:
+
 - Every record UPDATE (updated_at changes automatically)
 - Every record INSERT (updated_at set to NOW())
 - Minimal overhead: B-tree updates are O(log n) = ~22 operations for 3.2M records
@@ -418,6 +455,7 @@ By intelligently choosing sort fields based on query context:
 - ✅ No breaking changes: API still accepts explicit sort parameters
 
 Combined with the Dynamic SELECT optimization (Phase 2), LEI Records queries are now:
+
 - **Phase 2**: Search queries 5-6x faster (489ms → 80-97ms)
 - **Phase 3**: Initial load 25-60x faster (1276ms → 20-50ms)
 
