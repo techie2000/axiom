@@ -9,6 +9,13 @@ services:
     ports:
       - "${POSTGRES_PORT}:5432"
     volumes:
+      # Bind mount replaces the former named volume `postgres_data_dev`.
+      # ⚠️  MIGRATION: if you have existing data in the old named volume, copy it before starting:
+      #   docker run --rm \
+      #     -v postgres_data_dev:/source:ro \
+      #     -v "$(pwd)/data/dev/postgres":/target \
+      #     alpine sh -c "cp -a /source/. /target/"
+      # See docs/environments/postgres-bind-mount-migration.md for full details and rollback steps.
       - ${POSTGRES_DATA_DIR}:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
