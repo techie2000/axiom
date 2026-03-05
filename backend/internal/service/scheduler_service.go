@@ -1004,6 +1004,7 @@ func (s *schedulerService) RunDailyFullSync() error {
 	// Update status
 	status.Status = "RUNNING"
 	status.ErrorMessage = ""
+	status.CurrentSourceFileID = nil
 	now := time.Now()
 	status.LastRunAt = &now
 	if err := s.leiService.UpdateProcessingStatus(status); err != nil {

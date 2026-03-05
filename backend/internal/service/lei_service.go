@@ -1505,6 +1505,9 @@ func (s *leiService) UpdateProcessingStatus(status *domain.FileProcessingStatus)
 		} else {
 			status.DependsOnJobLabel = ""
 		}
+		if status.CurrentSourceFileID == nil {
+			status.CurrentSourceFile = nil
+		}
 	}
 	return s.repo.UpdateProcessingStatus(status)
 }

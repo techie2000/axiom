@@ -1044,7 +1044,31 @@ func (r *leiRepository) FindProcessingStatus(jobType string) (*domain.FileProces
 
 // UpdateProcessingStatus updates the processing status
 func (r *leiRepository) UpdateProcessingStatus(status *domain.FileProcessingStatus) error {
-	return r.db.Save(status).Error
+	if status == nil {
+		return fmt.Errorf("status is nil")
+	}
+
+	if status.ID == uuid.Nil {
+		return r.db.Omit("CurrentSourceFile").Create(status).Error
+	}
+
+	updates := map[string]interface{}{
+		"job_type":                status.JobType,
+		"job_label":               status.JobLabel,
+		"status":                  status.Status,
+		"last_run_at":             status.LastRunAt,
+		"next_run_at":             status.NextRunAt,
+		"last_success_at":         status.LastSuccessAt,
+		"depends_on_job_label":    status.DependsOnJobLabel,
+		"current_source_file_id":  status.CurrentSourceFileID,
+		"depends_on_job_type":     status.DependsOnJobType,
+		"error_message":           status.ErrorMessage,
+		"updated_at":              time.Now(),
+	}
+
+	return r.db.Model(&domain.FileProcessingStatus{}).
+		Where("id = ?", status.ID).
+		Updates(updates).Error
 }
 
 // CreateAuditRecord creates a new audit record
