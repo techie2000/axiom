@@ -270,7 +270,31 @@ func (s *schedulerService) Start() error {
 					}
 				}()
 			} else {
-				log.Info().Int64("existing_records", count).Msg("Database has existing records, waiting for scheduled full sync")
+				fullStatus, statusErr := s.leiService.GetProcessingStatus("DAILY_FULL")
+				now := time.Now()
+				if statusErr == nil && fullStatus.Status != "RUNNING" && fullStatus.NextRunAt != nil &&
+					(fullStatus.NextRunAt.Before(now) || fullStatus.NextRunAt.Equal(now)) {
+					log.Info().
+						Int64("existing_records", count).
+						Time("overdue_next_run", *fullStatus.NextRunAt).
+						Msg("Database has existing records and DAILY_FULL is overdue, triggering catch-up full sync now")
+
+					go func() {
+						if err := s.RunDailyMasterDataSync(); err != nil {
+							log.Error().Err(err).Msg("Catch-up master data sync check failed; continuing with LEI sync")
+						}
+						if err := s.RunDailyFullSync(); err != nil {
+							log.Error().Err(err).Msg("Failed to run catch-up full sync")
+							return
+						}
+						log.Info().Msg("Catch-up Level 1 sync succeeded, triggering dependent Level 2 sync")
+						if err := s.RunLevel2Sync(); err != nil {
+							log.Error().Err(err).Msg("Failed to run Level 2 sync after catch-up full sync")
+						}
+					}()
+				} else {
+					log.Info().Int64("existing_records", count).Msg("Database has existing records, waiting for scheduled full sync")
+				}
 			}
 		}
 	}
