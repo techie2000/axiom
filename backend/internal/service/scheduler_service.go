@@ -539,6 +539,46 @@ func (s *schedulerService) resumeInterruptedFullSyncOnStartup() (bool, error) {
 		return false, nil
 	}
 
+	fileID := interruptedFile.ID
+	fileAvailable, err := s.leiService.SourceFileExists(fileID)
+	if err != nil {
+		return false, fmt.Errorf("failed to verify interrupted source file availability: %w", err)
+	}
+
+	if !fileAvailable {
+		log.Warn().
+			Str("source_file_id", fileID.String()).
+			Str("file_name", interruptedFile.FileName).
+			Msg("Interrupted full-sync source file is missing; marking file failed and triggering fresh full sync")
+
+		interruptedFile.ProcessingStatus = "FAILED"
+		interruptedFile.ProcessingError = "Source file missing on startup; resumed processing skipped"
+		interruptedFile.FailureCategory = "FILE_MISSING"
+		if updateErr := s.leiService.UpdateSourceFile(interruptedFile); updateErr != nil {
+			log.Error().Err(updateErr).Str("source_file_id", fileID.String()).Msg("Failed to mark missing interrupted file as FAILED")
+		}
+
+		status, statusErr := s.leiService.GetProcessingStatus("DAILY_FULL")
+		if statusErr != nil {
+			status = &domain.FileProcessingStatus{JobType: "DAILY_FULL", Status: "IDLE"}
+		}
+		status.Status = "IDLE"
+		status.ErrorMessage = "Auto-resume skipped: source file missing"
+		status.CurrentSourceFileID = nil
+		status.NextRunAt = s.calculateNextDailyFullRun()
+		if updateErr := s.leiService.UpdateProcessingStatus(status); updateErr != nil {
+			log.Error().Err(updateErr).Msg("Failed to reset DAILY_FULL status after missing interrupted file")
+		}
+
+		go func() {
+			if freshErr := s.RunDailyFullSync(); freshErr != nil {
+				log.Error().Err(freshErr).Msg("Fresh full sync failed after missing interrupted source file")
+			}
+		}()
+
+		return true, nil
+	}
+
 	status, err := s.leiService.GetProcessingStatus("DAILY_FULL")
 	if err != nil {
 		status = &domain.FileProcessingStatus{
@@ -548,7 +588,6 @@ func (s *schedulerService) resumeInterruptedFullSyncOnStartup() (bool, error) {
 	}
 
 	now := time.Now()
-	fileID := interruptedFile.ID
 	status.Status = "RUNNING"
 	status.LastRunAt = &now
 	status.CurrentSourceFileID = &fileID
@@ -867,6 +906,7 @@ func (s *schedulerService) RunDailyDeltaSync() error {
 	// Update status
 	status.Status = "RUNNING"
 	status.ErrorMessage = ""
+	status.CurrentSourceFileID = nil
 	now := time.Now()
 	status.LastRunAt = &now
 	if err := s.leiService.UpdateProcessingStatus(status); err != nil {

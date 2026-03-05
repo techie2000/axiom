@@ -93,6 +93,7 @@ type LEIService interface {
 	// File download and management
 	DownloadFullFile() (*domain.SourceFile, error)
 	DownloadDeltaFile() (*domain.SourceFile, error)
+	SourceFileExists(sourceFileID uuid.UUID) (bool, error)
 
 	// File processing
 	ProcessSourceFile(sourceFileID uuid.UUID) error
@@ -604,6 +605,24 @@ func (s *leiService) ResetFailedFileForRetry(fileID uuid.UUID) error {
 // UpdateSourceFile updates a source file record
 func (s *leiService) UpdateSourceFile(file *domain.SourceFile) error {
 	return s.repo.UpdateSourceFile(file)
+}
+
+// SourceFileExists checks whether the source file record exists and its file is present on disk
+func (s *leiService) SourceFileExists(sourceFileID uuid.UUID) (bool, error) {
+	sourceFile, err := s.repo.FindSourceFileByID(sourceFileID.String())
+	if err != nil {
+		return false, err
+	}
+
+	filePath := filepath.Join(s.dataDir, sourceFile.FileName)
+	if _, err := os.Stat(filePath); err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return true, nil
 }
 
 // processJSONFile parses and processes the LEI JSON file
