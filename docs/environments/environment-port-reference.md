@@ -88,12 +88,15 @@ Containers follow the pattern: `axiom-{env}-{service}`
 
 ## Postgres Data Storage
 
-| Environment | Storage Type  | Location                             |
+| Environment | Storage Type  | Location / Key                       |
 | ----------- | ------------- | ------------------------------------ |
 | dev         | Bind mount    | `./data/dev/postgres` (host dir)     |
-| uat         | Docker volume | `postgres_data_uat`                  |
-| prod        | Docker volume | `postgres_data_prod`                 |
+| uat         | Docker volume | Compose key: `postgres_data_uat`     |
+| prod        | Docker volume | Compose key: `postgres_data_prod`    |
 
+Note: Docker Compose prefixes named volumes with the project name.
+For example, the `postgres_data_uat` key becomes a volume such as `axiom-uat_postgres_data_uat`.
+When running `docker volume ls` or `docker volume rm`, use the prefixed names shown by Docker.
 ## Make Commands Quick Reference
 
 ```bash

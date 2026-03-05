@@ -283,8 +283,10 @@ This ensures complete isolation between environments.
 Postgres data persistence is environment-specific:
 
 - **dev** — bind mount at `./data/dev/postgres` on the host (files visible in your file explorer)
-- **uat** — Docker-managed named volume `postgres_data_uat`
-- **prod** — Docker-managed named volume `postgres_data_prod`
+- **uat** — Docker-managed named volume with Compose volume key `postgres_data_uat`
+  and actual Docker volume name `${COMPOSE_PROJECT_NAME}_postgres_data_uat`
+- **prod** — Docker-managed named volume with Compose volume key `postgres_data_prod`
+  and actual Docker volume name `${COMPOSE_PROJECT_NAME}_postgres_data_prod`
 
 This allows each environment to maintain its own persistent data while giving the dev environment
 direct filesystem access for easy inspection.
@@ -386,17 +388,20 @@ make migrate-dev-up
 For UAT or prod (which use Docker-managed volumes):
 
 ```bash
+# Set the environment: use "uat" or "prod"
+ENV=uat
+
 # Stop the environment
-make docker-uat-down
+make docker-$ENV-down
 
 # Remove the volume
-docker volume rm axiom-uat_postgres_data_uat
+docker volume rm axiom-$ENV_postgres_data_$ENV
 
 # Restart the environment
-make docker-uat-up
+make docker-$ENV-up
 
 # Run migrations
-make migrate-uat-up
+make migrate-$ENV-up
 ```
 
 ### Viewing All Environment Resources
