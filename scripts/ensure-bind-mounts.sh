@@ -56,7 +56,11 @@ info "  logs          : $LOG_DIR"
 # (typically root:root when first created by Docker), which prevents the
 # postgres process (UID 70 in Alpine) from initialising the data directory.
 if [[ "$(uname -s)" == "Linux" ]]; then
-    POSTGRES_DIR_ABS="$(realpath "$POSTGRES_DIR")"
+    if command -v realpath >/dev/null 2>&1; then
+        POSTGRES_DIR_ABS="$(realpath "$POSTGRES_DIR")"
+    else
+        POSTGRES_DIR_ABS="$(cd "$POSTGRES_DIR" && pwd -P)"
+    fi
     info "Linux host detected — setting postgres data dir ownership to UID 70:70 via docker..."
     docker run --rm \
         -v "${POSTGRES_DIR_ABS}:/target" \

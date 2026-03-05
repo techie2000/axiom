@@ -137,16 +137,19 @@ prefix to avoid conflicts:
 
 1. **Bind-mount directory setup** (`scripts/ensure-bind-mounts.sh`) — creates `./data/{env}/postgres`,
    `./data/{env}/lei`, and `./log/{env}` if they do not exist. On Linux hosts the Postgres data
-   directory is also `chown`-ed to UID 70:70 (the `postgres` user inside `postgres:17-alpine`) via a
-   temporary Docker container, so no `sudo` is required. On macOS and Windows, Docker Desktop
-   manages volume ownership automatically and the `chown` step is skipped.
-2. **PostgreSQL major-version precheck/upgrade** (`scripts/upgrade-postgres.sh`) — if the existing
-   data was created by an older Postgres major version, the data is backed up and migrated
-   automatically.
+   directory is also `chown`-ed to UID 70:70
+   (the `postgres` user inside `postgres:17-alpine`)
+   via a temporary Docker container, so no `sudo` is required.
+   On macOS and Windows, Docker Desktop manages volume ownership automatically
+   and the `chown` step is skipped.
+2. **PostgreSQL major-version precheck/upgrade** (`scripts/upgrade-postgres.sh`) —
+   if the existing data was created by an older Postgres major version,
+   the data is backed up and migrated automatically.
 
 `make docker-dev-restart` and `make docker-main-restart` run the same steps before restarting.
-`make docker-uat-up`, `make docker-prod-up`, and their restart counterparts run only the Postgres
-upgrade precheck, as those environments use Docker-managed named volumes (no chown needed).
+`make docker-uat-up`, `make docker-prod-up`, and their restart counterparts
+run only the Postgres upgrade precheck,
+as those environments use Docker-managed named volumes (no chown needed).
 
 ```bash
 # Start development environment

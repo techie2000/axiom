@@ -57,6 +57,9 @@ if ($IsLinux) {
         -v "${PostgresDirAbs}:/target" `
         alpine:latest `
         sh -c "chown 70:70 /target && chmod 700 /target"
+    if ($LASTEXITCODE -ne 0) {
+        throw "docker run failed with exit code $LASTEXITCODE while setting ownership for '$PostgresDirAbs'"
+    }
     Write-Success "Ownership of $PostgresDir set to 70:70 (postgres user in alpine image)"
 } else {
     Write-Info "Non-Linux host — Docker Desktop manages permissions, skipping chown."
