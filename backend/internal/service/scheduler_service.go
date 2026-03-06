@@ -907,6 +907,7 @@ func (s *schedulerService) RunDailyDeltaSync() error {
 	status.Status = "RUNNING"
 	status.ErrorMessage = ""
 	status.CurrentSourceFileID = nil
+	status.ProgressMessage = "Preparing delta sync"
 	now := time.Now()
 	status.LastRunAt = &now
 	if err := s.leiService.UpdateProcessingStatus(status); err != nil {
@@ -954,6 +955,7 @@ func (s *schedulerService) doDeltaSyncWork(status *domain.FileProcessingStatus, 
 	if err := s.leiService.ProcessSourceFile(sourceFile.ID); err != nil {
 		status.Status = "FAILED"
 		status.ErrorMessage = err.Error()
+		status.ProgressMessage = ""
 		if updateErr := s.leiService.UpdateProcessingStatus(status); updateErr != nil {
 			log.Error().Err(updateErr).Msg("Failed to update delta sync processing status to FAILED")
 		}
@@ -965,6 +967,7 @@ func (s *schedulerService) doDeltaSyncWork(status *domain.FileProcessingStatus, 
 	status.LastSuccessAt = &now
 	status.NextRunAt = calculateNextRun(s.deltaSyncInterval)
 	status.ErrorMessage = ""
+	status.ProgressMessage = ""
 	if err := s.leiService.UpdateProcessingStatus(status); err != nil {
 		log.Error().Err(err).Msg("Failed to update processing status")
 	}
@@ -1005,6 +1008,7 @@ func (s *schedulerService) RunDailyFullSync() error {
 	status.Status = "RUNNING"
 	status.ErrorMessage = ""
 	status.CurrentSourceFileID = nil
+	status.ProgressMessage = "Preparing full sync"
 	now := time.Now()
 	status.LastRunAt = &now
 	if err := s.leiService.UpdateProcessingStatus(status); err != nil {
@@ -1028,6 +1032,7 @@ func (s *schedulerService) doFullSyncWork(status *domain.FileProcessingStatus, n
 			status.LastSuccessAt = &now
 			status.NextRunAt = s.calculateNextDailyFullRun()
 			status.ErrorMessage = ""
+			status.ProgressMessage = ""
 			if updateErr := s.leiService.UpdateProcessingStatus(status); updateErr != nil {
 				log.Error().Err(updateErr).Msg("Failed to update full sync status to IDLE")
 			}
@@ -1036,6 +1041,7 @@ func (s *schedulerService) doFullSyncWork(status *domain.FileProcessingStatus, n
 		// Real error
 		status.Status = "FAILED"
 		status.ErrorMessage = err.Error()
+		status.ProgressMessage = ""
 		if updateErr := s.leiService.UpdateProcessingStatus(status); updateErr != nil {
 			log.Error().Err(updateErr).Msg("Failed to update full sync status to FAILED")
 		}
@@ -1044,6 +1050,7 @@ func (s *schedulerService) doFullSyncWork(status *domain.FileProcessingStatus, n
 
 	// Update status with current file
 	status.CurrentSourceFileID = &sourceFile.ID
+	status.ProgressMessage = fmt.Sprintf("Extracting %s", sourceFile.FileName)
 	if updateErr := s.leiService.UpdateProcessingStatus(status); updateErr != nil {
 		log.Error().Err(updateErr).Msg("Failed to update full sync current file")
 	}
@@ -1058,6 +1065,7 @@ func (s *schedulerService) doFullSyncWork(status *domain.FileProcessingStatus, n
 	if err := s.leiService.ProcessSourceFileWithResume(sourceFile.ID, resumeLEI); err != nil {
 		status.Status = "FAILED"
 		status.ErrorMessage = err.Error()
+		status.ProgressMessage = ""
 		if updateErr := s.leiService.UpdateProcessingStatus(status); updateErr != nil {
 			log.Error().Err(updateErr).Msg("Failed to update full sync processing status to FAILED")
 		}
@@ -1070,6 +1078,7 @@ func (s *schedulerService) doFullSyncWork(status *domain.FileProcessingStatus, n
 	status.LastSuccessAt = &now
 	status.NextRunAt = s.calculateNextDailyFullRun()
 	status.ErrorMessage = ""
+	status.ProgressMessage = ""
 	if err := s.leiService.UpdateProcessingStatus(status); err != nil {
 		log.Error().Err(err).Msg("Failed to update processing status")
 	}

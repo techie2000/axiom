@@ -159,6 +159,34 @@ func cloneStringSlice(values []string) []string {
 	return cloned
 }
 
+func statusJobTypeFromFileType(fileType string) string {
+	switch strings.ToUpper(strings.TrimSpace(fileType)) {
+	case "FULL":
+		return "DAILY_FULL"
+	case "DELTA":
+		return "DAILY_DELTA"
+	default:
+		return ""
+	}
+}
+
+func (s *leiService) setProgressMessage(jobType, message string) {
+	if strings.TrimSpace(jobType) == "" {
+		return
+	}
+
+	status, err := s.GetProcessingStatus(jobType)
+	if err != nil {
+		log.Warn().Err(err).Str("job_type", jobType).Msg("Unable to set progress message: status not found")
+		return
+	}
+
+	status.ProgressMessage = strings.TrimSpace(message)
+	if err := s.UpdateProcessingStatus(status); err != nil {
+		log.Warn().Err(err).Str("job_type", jobType).Msg("Unable to persist progress message")
+	}
+}
+
 // progressWriter wraps an io.Writer to log extraction progress periodically
 type progressWriter struct {
 	writer      io.Writer
@@ -275,6 +303,12 @@ func (s *leiService) DownloadDeltaFile() (*domain.SourceFile, error) {
 // downloadFile downloads a file from GLEIF and creates a SourceFile record
 func (s *leiService) downloadFile(url, fileType, publishedAt string, expectedRecordCount int) (*domain.SourceFile, error) {
 	log.Info().Str("url", url).Str("type", fileType).Msg("Starting file download from GLEIF")
+	jobType := statusJobTypeFromFileType(fileType)
+	remoteFileName := filepath.Base(strings.TrimSpace(url))
+	if remoteFileName == "." || remoteFileName == "" || remoteFileName == "/" {
+		remoteFileName = "latest file"
+	}
+	s.setProgressMessage(jobType, fmt.Sprintf("Downloading %s", remoteFileName))
 
 	// Create data directory if it doesn't exist
 	if err := os.MkdirAll(s.dataDir, 0755); err != nil {
@@ -329,6 +363,7 @@ func (s *leiService) downloadFile(url, fileType, publishedAt string, expectedRec
 		Int64("size", fileSize).
 		Str("hash", fileHash).
 		Msg("File downloaded successfully")
+	s.setProgressMessage(jobType, fmt.Sprintf("Downloaded %s", fileName))
 
 	// Check if we already have a completed file with this hash
 	existingFile, err := s.repo.FindSourceFileByHash(fileHash)
@@ -362,12 +397,12 @@ func (s *leiService) downloadFile(url, fileType, publishedAt string, expectedRec
 	}
 
 	// Create SourceFile record
-	jobType := domain.JobTypeFromFileType(fileType)
+	sourceFileJobType := domain.JobTypeFromFileType(fileType)
 	sourceFile := &domain.SourceFile{
 		FileName:         fileName,
 		FileType:         fileType,
-		JobType:          jobType,
-		JobLabel:         domain.JobTypeDisplayName(jobType),
+		JobType:          sourceFileJobType,
+		JobLabel:         domain.JobTypeDisplayName(sourceFileJobType),
 		FileURL:          url,
 		FileSize:         fileSize,
 		FileHash:         fileHash,
@@ -380,6 +415,8 @@ func (s *leiService) downloadFile(url, fileType, publishedAt string, expectedRec
 	if err := s.repo.CreateSourceFile(sourceFile); err != nil {
 		return nil, fmt.Errorf("failed to create source file record: %w", err)
 	}
+
+	s.setProgressMessage(jobType, fmt.Sprintf("Extracting %s", fileName))
 
 	return sourceFile, nil
 }
@@ -398,6 +435,9 @@ func (s *leiService) ProcessSourceFileWithResume(sourceFileID uuid.UUID, resumeF
 	if err != nil {
 		return fmt.Errorf("failed to find source file: %w", err)
 	}
+
+	jobType := statusJobTypeFromFileType(sourceFile.FileType)
+	s.setProgressMessage(jobType, fmt.Sprintf("Extracting %s", sourceFile.FileName))
 
 	// Update status to IN_PROGRESS and clear any historical failure data
 	sourceFile.ProcessingStatus = "IN_PROGRESS"
@@ -445,8 +485,10 @@ func (s *leiService) ProcessSourceFileWithResume(sourceFileID uuid.UUID, resumeF
 			return fmt.Errorf("failed to extract file: %w", extractErr)
 		}
 		log.Info().Str("json_path", jsonPath).Msg("File extracted successfully")
+		s.setProgressMessage(jobType, fmt.Sprintf("Processing records from %s", sourceFile.FileName))
 	} else {
 		log.Info().Str("json_path", jsonPath).Msg("Using previously extracted file")
+		s.setProgressMessage(jobType, fmt.Sprintf("Processing records from %s", sourceFile.FileName))
 	}
 	defer func() {
 		if err := os.Remove(jsonPath); err != nil {
@@ -1507,6 +1549,9 @@ func (s *leiService) UpdateProcessingStatus(status *domain.FileProcessingStatus)
 		}
 		if status.CurrentSourceFileID == nil {
 			status.CurrentSourceFile = nil
+		}
+		if status.Status != "RUNNING" {
+			status.ProgressMessage = ""
 		}
 	}
 	return s.repo.UpdateProcessingStatus(status)

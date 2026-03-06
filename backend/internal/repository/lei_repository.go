@@ -1063,6 +1063,7 @@ func (r *leiRepository) UpdateProcessingStatus(status *domain.FileProcessingStat
 		"current_source_file_id":  status.CurrentSourceFileID,
 		"depends_on_job_type":     status.DependsOnJobType,
 		"error_message":           status.ErrorMessage,
+		"progress_message":        status.ProgressMessage,
 		"updated_at":              time.Now(),
 	}
 

@@ -28,6 +28,7 @@ interface ProcessingStatus {
   current_source_file_id: string | null
   current_source_file: SourceFile | null
   error_message: string
+  progress_message: string
 }
 
 interface MasterDataCounts {
@@ -430,6 +431,7 @@ export default function LEIStatusPage() {
     const file = status.current_source_file
     const isImportJob = jobKey === 'DAILY_FULL' || jobKey === 'DAILY_DELTA' || jobKey === 'LEVEL2_RR' || jobKey === 'LEVEL2_REPEX'
     const isMasterDataJob = jobKey === 'MASTER_DATA_SYNC'
+    const progressMessage = status.progress_message?.trim() || ''
     const fallbackTotalRecords = isMasterDataJob ? (masterDataCounts?.total ?? 0) : 0
     const totalRecords = file ? file.total_records : fallbackTotalRecords
     const successfulProcessed = file
@@ -514,6 +516,9 @@ export default function LEIStatusPage() {
           <>
             {file && status.status === 'RUNNING' && (
               <div className="mb-6">
+                {progressMessage && (
+                  <p className="text-sm text-blue-700 dark:text-blue-300 mb-2">⏳ {progressMessage}</p>
+                )}
                 {file.total_records > 0 ? (
                   <>
                     <div className="flex justify-between text-sm mb-2">
@@ -531,7 +536,9 @@ export default function LEIStatusPage() {
                   </>
                 ) : (
                   <div className="text-sm text-gray-600 dark:text-gray-400">
-                    <p className="mb-2">⏳ Downloading file... ({file.processed_records.toLocaleString()} records processed)</p>
+                    <p className="mb-2">
+                      ⏳ {progressMessage || 'Preparing file for processing...'} ({file.processed_records.toLocaleString()} records processed)
+                    </p>
                     <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden">
                       <div className="bg-blue-600 dark:bg-blue-500 h-4 rounded-full animate-pulse" style={{ width: '30%' }} />
                     </div>
@@ -658,6 +665,11 @@ export default function LEIStatusPage() {
                 <p><span className="font-medium text-gray-700 dark:text-gray-300">Total Records:</span> {totalRecords > 0 ? totalRecords.toLocaleString() : '-'}</p>
                 <p><span className="font-medium text-gray-700 dark:text-gray-300">Processed:</span> {totalRecords > 0 ? `${successfulProcessed.toLocaleString()} records` : '-'}</p>
                 <p className="truncate"><span className="font-medium text-gray-700 dark:text-gray-300">Last LEI:</span> {file?.last_processed_lei || '-'}</p>
+                {status.status === 'RUNNING' && progressMessage && (
+                  <p className="text-blue-700 dark:text-blue-300">
+                    <span className="font-medium">Progress:</span> {progressMessage}
+                  </p>
+                )}
                 {isMasterDataJob && masterDataCounts && (
                   <p>
                     <span className="font-medium text-gray-700 dark:text-gray-300">Breakdown:</span>{' '}
@@ -765,6 +777,11 @@ export default function LEIStatusPage() {
           {status?.error_message && (
             <p className="text-red-600 dark:text-red-400 text-xs mt-1 truncate" title={status.error_message}>
               ⚠️ {status.error_message}
+            </p>
+          )}
+          {!status?.error_message && status?.status === 'RUNNING' && status?.progress_message && (
+            <p className="text-blue-700 dark:text-blue-300 text-xs mt-1 truncate" title={status.progress_message}>
+              ⏳ {status.progress_message}
             </p>
           )}
         </div>
