@@ -40,11 +40,13 @@ docker-logs: ## Show logs from all services (default/legacy)
 # Main branch environment (intraday development/fixes)
 docker-main-up: ## Start main branch environment (ports: 48080, 43000, 45432)
 	@if command -v bash >/dev/null 2>&1; then \
+		bash scripts/ensure-bind-mounts.sh main; \
 		bash scripts/upgrade-postgres.sh main --yes; \
 	elif command -v pwsh >/dev/null 2>&1; then \
+		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/ensure-bind-mounts.ps1 -Environment main; \
 		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/upgrade-postgres.ps1 -Environment main -Yes; \
 	else \
-		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run PostgreSQL upgrade precheck."; \
+		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run bind-mount setup or PostgreSQL upgrade precheck."; \
 		exit 1; \
 	fi
 	docker-compose --env-file .env.main -f docker-compose.main.yml up -d
@@ -57,11 +59,13 @@ docker-main-logs: ## Show logs from main branch environment
 
 docker-main-restart: ## Restart main branch environment
 	@if command -v bash >/dev/null 2>&1; then \
+		bash scripts/ensure-bind-mounts.sh main; \
 		bash scripts/upgrade-postgres.sh main --yes; \
 	elif command -v pwsh >/dev/null 2>&1; then \
+		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/ensure-bind-mounts.ps1 -Environment main; \
 		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/upgrade-postgres.ps1 -Environment main -Yes; \
 	else \
-		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run PostgreSQL upgrade precheck."; \
+		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run bind-mount setup or PostgreSQL upgrade precheck."; \
 		exit 1; \
 	fi
 	docker-compose --env-file .env.main -f docker-compose.main.yml restart
@@ -69,11 +73,13 @@ docker-main-restart: ## Restart main branch environment
 # Development environment
 docker-dev-up: ## Start development environment (ports: 18080, 13000, 15432)
 	@if command -v bash >/dev/null 2>&1; then \
+		bash scripts/ensure-bind-mounts.sh dev; \
 		bash scripts/upgrade-postgres.sh dev --yes; \
 	elif command -v pwsh >/dev/null 2>&1; then \
+		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/ensure-bind-mounts.ps1 -Environment dev; \
 		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/upgrade-postgres.ps1 -Environment dev -Yes; \
 	else \
-		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run PostgreSQL upgrade precheck."; \
+		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run bind-mount setup or PostgreSQL upgrade precheck."; \
 		exit 1; \
 	fi
 	docker-compose --env-file .env.dev -f docker-compose.dev.yml up -d
@@ -86,11 +92,13 @@ docker-dev-logs: ## Show logs from development environment
 
 docker-dev-restart: ## Restart development environment
 	@if command -v bash >/dev/null 2>&1; then \
+		bash scripts/ensure-bind-mounts.sh dev; \
 		bash scripts/upgrade-postgres.sh dev --yes; \
 	elif command -v pwsh >/dev/null 2>&1; then \
+		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/ensure-bind-mounts.ps1 -Environment dev; \
 		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/upgrade-postgres.ps1 -Environment dev -Yes; \
 	else \
-		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run PostgreSQL upgrade precheck."; \
+		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run bind-mount setup or PostgreSQL upgrade precheck."; \
 		exit 1; \
 	fi
 	docker-compose --env-file .env.dev -f docker-compose.dev.yml restart

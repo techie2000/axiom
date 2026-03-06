@@ -9,7 +9,27 @@ services:
     ports:
       - "${POSTGRES_PORT}:5432"
     volumes:
-      - postgres_data_dev:/var/lib/postgresql/data
+      # Dev Postgres now stores data in a bind mount so that database files are visible on the host:
+      #   ./data/dev/postgres -> /var/lib/postgresql/data
+      #
+      # If you previously used the legacy named volume `postgres_data_dev`, you can perform a one-time
+      # migration of your local dev data into this bind mount with:
+      #
+      #   docker run --rm \
+      #     -v postgres_data_dev:/from \
+      #     -v "$(pwd)/data/dev/postgres":/to \
+      #     alpine sh -c 'cd /from && cp -a . /to'
+      #
+      # After migrating, you can safely remove the old volume with:
+      #   docker volume rm postgres_data_dev
+      # Bind mount replaces the former named volume `postgres_data_dev`.
+      # ⚠️  MIGRATION: if you have existing data in the old named volume, copy it before starting:
+      #   docker run --rm \
+      #     -v postgres_data_dev:/source:ro \
+      #     -v "$(pwd)/data/dev/postgres":/target \
+      #     alpine sh -c "cp -a /source/. /target/"
+      # See docs/environments/postgres-bind-mount-migration.md for full details and rollback steps.
+      - ${POSTGRES_DATA_DIR}:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
@@ -105,7 +125,6 @@ services:
       - axiom-dev
 
 volumes:
-  postgres_data_dev:
   rabbitmq_data_dev:
   rabbitmq_log_dev:
   frontend_node_modules_dev:
