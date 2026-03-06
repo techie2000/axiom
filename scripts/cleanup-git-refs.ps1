@@ -141,7 +141,7 @@ $results | Sort-Object Namespace | Format-Table -AutoSize
 $workspaceResults = @()
 
 foreach ($workspaceDir in $WorkspaceDirs) {
-    $normalizedWorkspaceDir = $workspaceDir.Trim('/', '\\')
+    $normalizedWorkspaceDir = $workspaceDir.Trim('/', '\')
     if ([string]::IsNullOrWhiteSpace($normalizedWorkspaceDir)) {
         continue
     }
