@@ -68,14 +68,16 @@ func TestStatusJobTypeFromFileType_WhitespaceTrimmed(t *testing.T) {
 type progressMsgRepoStub struct {
 	repository.LEIRepository
 
-	statusToReturn    *domain.FileProcessingStatus
-	findErr           error
-	updateErr         error
-	updateCallCount   int
-	capturedMessage   string
+	statusToReturn  *domain.FileProcessingStatus
+	findErr         error
+	updateErr       error
+	findCallCount   int
+	updateCallCount int
+	capturedMessage string
 }
 
 func (s *progressMsgRepoStub) FindProcessingStatus(_ string) (*domain.FileProcessingStatus, error) {
+	s.findCallCount++
 	return s.statusToReturn, s.findErr
 }
 
@@ -97,8 +99,11 @@ func TestSetProgressMessage_BlankJobTypeIsNoOp(t *testing.T) {
 
 	svc.setProgressMessage("", "Downloading file")
 
+	if stub.findCallCount != 0 {
+		t.Errorf("blank jobType: expected no FindProcessingStatus call, got %d", stub.findCallCount)
+	}
 	if stub.updateCallCount != 0 {
-		t.Errorf("blank jobType: expected no repo calls, got %d", stub.updateCallCount)
+		t.Errorf("blank jobType: expected no UpdateProcessingStatus call, got %d", stub.updateCallCount)
 	}
 }
 
@@ -108,8 +113,11 @@ func TestSetProgressMessage_WhitespaceOnlyJobTypeIsNoOp(t *testing.T) {
 
 	svc.setProgressMessage("   ", "Downloading file")
 
+	if stub.findCallCount != 0 {
+		t.Errorf("whitespace jobType: expected no FindProcessingStatus call, got %d", stub.findCallCount)
+	}
 	if stub.updateCallCount != 0 {
-		t.Errorf("whitespace jobType: expected no repo calls, got %d", stub.updateCallCount)
+		t.Errorf("whitespace jobType: expected no UpdateProcessingStatus call, got %d", stub.updateCallCount)
 	}
 }
 

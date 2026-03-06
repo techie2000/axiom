@@ -150,7 +150,13 @@ func TestResumeInterruptedFullSyncOnStartup_MissingFileClearsCurrentSourceFileID
 	}
 	svc := newSchedulerWithResumeStub(stub)
 
-	_, _ = svc.resumeInterruptedFullSyncOnStartup()
+	resumed, err := svc.resumeInterruptedFullSyncOnStartup()
+	if err != nil {
+		t.Fatalf("expected no error from missing-file path, got %v", err)
+	}
+	if !resumed {
+		t.Fatal("expected resumed=true when missing file triggers fresh sync")
+	}
 
 	stub.mu.Lock()
 	defer stub.mu.Unlock()
@@ -180,8 +186,14 @@ func TestResumeInterruptedFullSyncOnStartup_MissingFileSetsNextRunAt(t *testing.
 	svc := newSchedulerWithResumeStub(stub)
 
 	before := time.Now()
-	_, _ = svc.resumeInterruptedFullSyncOnStartup()
+	resumed, err := svc.resumeInterruptedFullSyncOnStartup()
 	after := time.Now().Add(25 * time.Hour)
+	if err != nil {
+		t.Fatalf("expected no error from missing-file path, got %v", err)
+	}
+	if !resumed {
+		t.Fatal("expected resumed=true when missing file triggers fresh sync")
+	}
 
 	stub.mu.Lock()
 	defer stub.mu.Unlock()
@@ -213,7 +225,13 @@ func TestResumeInterruptedFullSyncOnStartup_MissingFileLaunchesFreshSync(t *test
 	}
 	svc := newSchedulerWithResumeStub(stub)
 
-	_, _ = svc.resumeInterruptedFullSyncOnStartup()
+	resumed, err := svc.resumeInterruptedFullSyncOnStartup()
+	if err != nil {
+		t.Fatalf("resumeInterruptedFullSyncOnStartup returned error: %v", err)
+	}
+	if !resumed {
+		t.Fatalf("expected resumed=true for interrupted FULL sync, got false")
+	}
 
 	// Wait for the goroutine to call GetProcessingStatus("DAILY_FULL") (its first action),
 	// confirming RunDailyFullSync was invoked.

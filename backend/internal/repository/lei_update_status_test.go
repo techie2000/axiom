@@ -130,10 +130,15 @@ func TestUpdateProcessingStatus_WheresOnID(t *testing.T) {
 	_ = r.UpdateProcessingStatus(status)
 
 	sql := cap.last()
-	if !strings.Contains(sql, "WHERE") {
-		t.Errorf("expected UPDATE to have a WHERE clause scoped to the row ID, SQL: %s", sql)
-	}
-	if !strings.Contains(sql, "id") {
-		t.Errorf("expected WHERE clause to reference id column, SQL: %s", sql)
+	// Require a WHERE clause that specifically scopes the update to the row id.
+	// Check for the patterns a GORM DryRun dialector can emit ("WHERE id =",
+	// "WHERE \"id\" =", or ".\"id\" =") to avoid matching column names that
+	// merely contain the substring "id" (e.g. current_source_file_id).
+	hasIDWhere := strings.Contains(sql, "WHERE id") ||
+		strings.Contains(sql, "WHERE \"id\"") ||
+		strings.Contains(sql, " id =") ||
+		strings.Contains(sql, ".\"id\"")
+	if !hasIDWhere {
+		t.Errorf("expected WHERE clause to scope update by id column, SQL: %s", sql)
 	}
 }
