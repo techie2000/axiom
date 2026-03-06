@@ -1,13 +1,15 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react'
 import Alert from '../components/Alert'
 import Badge from '../components/Badge'
 import CountryFlag from '../components/CountryFlag'
 import LoadingSpinner from '../components/LoadingSpinner'
 import PageHeader from '../components/PageHeader'
+import PreferenceSavePrompt from '../components/PreferenceSavePrompt'
 import StatCard from '../components/StatCard'
 import SyncedWideTable from '../components/SyncedWideTable'
+import { useUserPreference } from '../lib/useUserPreference'
 import { Country, normalizeCountriesPayload, summarizeCountriesDataQuality } from './normalization'
 
 type CountryColumnKey =
@@ -48,6 +50,8 @@ const AVAILABLE_COLUMNS: ColumnConfig[] = [
   { key: 'active', label: 'Active', defaultVisible: false, width: 'w-24' },
 ]
 
+const DEFAULT_VISIBLE_KEYS = AVAILABLE_COLUMNS.filter((c) => c.defaultVisible).map((c) => c.key).join(',')
+
 const CONTINENT_NAMES: Record<string, string> = {
   AF: 'Africa',
   AN: 'Antarctica',
@@ -76,12 +80,67 @@ export default function CountriesPage() {
   const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('all')
   const [languagesByCode, setLanguagesByCode] = useState<Map<string, string>>(new Map())
   const [showReferenceCodes, setShowReferenceCodes] = useState(false)
-  const [expandedWidth, setExpandedWidth] = useState(true)
   const [showColumnSelector, setShowColumnSelector] = useState(false)
   const [filterBarHeight, setFilterBarHeight] = useState(0)
-  const [visibleColumns, setVisibleColumns] = useState<Set<CountryColumnKey>>(
-    new Set(AVAILABLE_COLUMNS.filter((column) => column.defaultVisible).map((column) => column.key))
-  )
+
+  // Preference-backed states
+  const [storedExpanded, setStoredExpanded] = useUserPreference('countries', 'expanded_width', 'true')
+  const [storedColumns, setStoredColumns] = useUserPreference('countries', 'visible_columns', DEFAULT_VISIBLE_KEYS)
+
+  const expandedWidth = storedExpanded === 'true'
+  const visibleColumns = useMemo<Set<CountryColumnKey>>(() => {
+    if (!storedColumns) return new Set(AVAILABLE_COLUMNS.filter((c) => c.defaultVisible).map((c) => c.key))
+    return new Set(storedColumns.split(',').filter(Boolean) as CountryColumnKey[])
+  }, [storedColumns])
+
+  // Pending preference state (applies immediately, saves on user confirmation)
+  const [localExpanded, setLocalExpanded] = useState<boolean | null>(null)
+  const [localColumns, setLocalColumns] = useState<Set<CountryColumnKey> | null>(null)
+  const [showWidthPrompt, setShowWidthPrompt] = useState(false)
+  const [showColumnsPrompt, setShowColumnsPrompt] = useState(false)
+  // Incrementing this counter resets the 8-second auto-dismiss timer so users
+  // always get 8 s from their *last* column change rather than their first.
+  const [columnsSaveVersion, setColumnsSaveVersion] = useState(0)
+  const pendingExpanded = useRef<boolean | null>(null)
+  const pendingColumns = useRef<Set<CountryColumnKey> | null>(null)
+
+  const effectiveExpandedWidth = localExpanded ?? expandedWidth
+  const effectiveVisibleColumns = localColumns ?? visibleColumns
+
+  const handleSetExpandedWidth = useCallback((value: boolean) => {
+    setLocalExpanded(value)
+    pendingExpanded.current = value
+    setShowWidthPrompt(true)
+  }, [])
+
+  const handleSetVisibleColumns = useCallback((next: Set<CountryColumnKey>) => {
+    setLocalColumns(next)
+    pendingColumns.current = next
+    setShowColumnsPrompt(true)
+    setColumnsSaveVersion(v => v + 1)
+  }, [])
+
+  const handleSaveWidth = useCallback(() => {
+    if (pendingExpanded.current !== null) {
+      setStoredExpanded(String(pendingExpanded.current))
+      setLocalExpanded(null)
+      pendingExpanded.current = null
+    }
+    setShowWidthPrompt(false)
+  }, [setStoredExpanded])
+
+  const handleDismissWidth = useCallback(() => { setShowWidthPrompt(false) }, [])
+
+  const handleSaveColumns = useCallback(() => {
+    if (pendingColumns.current) {
+      setStoredColumns(Array.from(pendingColumns.current).join(','))
+      setLocalColumns(null)
+      pendingColumns.current = null
+    }
+    setShowColumnsPrompt(false)
+  }, [setStoredColumns])
+
+  const handleDismissColumns = useCallback(() => { setShowColumnsPrompt(false) }, [])
 
   const API_BASE_URL = typeof window !== 'undefined'
     ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080')
@@ -211,16 +270,16 @@ export default function CountriesPage() {
     })
     .sort((left, right) => left.name.localeCompare(right.name, undefined, { sensitivity: 'base' }))
 
-  const visibleColumnsInOrder = AVAILABLE_COLUMNS.filter((column) => visibleColumns.has(column.key))
+  const visibleColumnsInOrder = AVAILABLE_COLUMNS.filter((column) => effectiveVisibleColumns.has(column.key))
 
   const toggleColumn = (columnKey: CountryColumnKey) => {
-    const next = new Set(visibleColumns)
+    const next = new Set(effectiveVisibleColumns)
     if (next.has(columnKey)) {
       next.delete(columnKey)
     } else {
       next.add(columnKey)
     }
-    setVisibleColumns(next)
+    handleSetVisibleColumns(next)
   }
 
   const formatListValue = (values: string[]): string => {
@@ -308,18 +367,18 @@ export default function CountriesPage() {
 
   return (
     <div className="min-h-screen p-8">
-      <div className={`${expandedWidth ? 'max-w-full' : 'max-w-7xl'} mx-auto transition-all duration-300`}>
+      <div className={`${effectiveExpandedWidth ? 'max-w-full' : 'max-w-7xl'} mx-auto transition-all duration-300`}>
         <PageHeader
           title="Countries"
           subtitle="Browse ISO 3166 country codes and reference data"
           actions={
             <>
               <button
-                onClick={() => setExpandedWidth(!expandedWidth)}
+                onClick={() => handleSetExpandedWidth(!effectiveExpandedWidth)}
                 className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 transition-colors text-white text-sm font-medium"
-                title={expandedWidth ? 'Normal Width' : 'Expanded Width'}
+                title={effectiveExpandedWidth ? 'Normal Width' : 'Expanded Width'}
               >
-                {expandedWidth ? '⬅️ Normal' : '↔️ Expand'}
+                {effectiveExpandedWidth ? '⬅️ Normal' : '↔️ Expand'}
               </button>
               <button
                 onClick={() => setShowReferenceCodes(!showReferenceCodes)}
@@ -333,20 +392,20 @@ export default function CountriesPage() {
                   onClick={() => setShowColumnSelector(!showColumnSelector)}
                   className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 transition-colors text-white text-sm font-medium"
                 >
-                  ⚙️ Columns ({visibleColumns.size})
+                  ⚙️ Columns ({effectiveVisibleColumns.size})
                 </button>
 
                 {showColumnSelector && (
                   <div className="absolute right-0 mt-2 w-72 max-h-96 overflow-y-auto bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-white/20 rounded-lg shadow-xl z-50 p-3">
                     <div className="flex gap-2 text-xs mb-3">
                       <button
-                        onClick={() => setVisibleColumns(new Set(AVAILABLE_COLUMNS.map((column) => column.key)))}
+                        onClick={() => handleSetVisibleColumns(new Set(AVAILABLE_COLUMNS.map((column) => column.key)))}
                         className="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded hover:bg-blue-200 dark:hover:bg-blue-800"
                       >
                         Select All
                       </button>
                       <button
-                        onClick={() => setVisibleColumns(new Set(AVAILABLE_COLUMNS.filter((column) => column.defaultVisible).map((column) => column.key)))}
+                        onClick={() => handleSetVisibleColumns(new Set(AVAILABLE_COLUMNS.filter((column) => column.defaultVisible).map((column) => column.key)))}
                         className="px-2 py-1 bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
                       >
                         Reset
@@ -360,7 +419,7 @@ export default function CountriesPage() {
                         >
                           <input
                             type="checkbox"
-                            checked={visibleColumns.has(column.key)}
+                            checked={effectiveVisibleColumns.has(column.key)}
                             onChange={() => toggleColumn(column.key)}
                             className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                           />
@@ -523,7 +582,7 @@ export default function CountriesPage() {
         <div className="bg-white dark:bg-white/5 rounded-lg shadow border-2 border-gray-200 dark:border-white/10">
           <SyncedWideTable
             stickyTopOffset={hasActiveFilters ? filterBarHeight : 0}
-            dependencyKey={`${expandedWidth}-${showReferenceCodes}-${visibleColumnsInOrder.map((column) => column.key).join('|')}-${filteredCountries.length}`}
+            dependencyKey={`${effectiveExpandedWidth}-${showReferenceCodes}-${visibleColumnsInOrder.map((column) => column.key).join('|')}-${filteredCountries.length}`}
             headerRow={(
               <tr>
                 {visibleColumnsInOrder.map((column) => (
@@ -650,6 +709,20 @@ export default function CountriesPage() {
           <p>Data source: ISO 3166 Country Codes • Public reference data</p>
         </div>
       </div>
+
+      <PreferenceSavePrompt
+        visible={showWidthPrompt}
+        onSave={handleSaveWidth}
+        onDismiss={handleDismissWidth}
+        label="Save page width as your default?"
+      />
+      <PreferenceSavePrompt
+        visible={showColumnsPrompt}
+        resetKey={columnsSaveVersion}
+        onSave={handleSaveColumns}
+        onDismiss={handleDismissColumns}
+        label="Save column selection as your default?"
+      />
     </div>
   )
 }
