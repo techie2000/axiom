@@ -151,10 +151,12 @@ make docker-prod-up
 make docker-all-up
 ```
 
-### Safe Main-Branch Testing (No Volume Collisions)
+### Safe Main-Branch Testing (Isolated Containers, Volumes, Ports, and Logs)
 
 When testing PRs/worktrees against the `main` compose file, avoid reusing `.env.main` across multiple folders.
-Use an isolated env file per test stack so each run gets its own container/volume names and host ports.
+Use an isolated env file per test stack so each run gets its own container/volume names, host ports, and log
+directory. LEI data (`./data/main/lei`) is intentionally shared across stacks so cached data does not have to
+be re-downloaded for each test run.
 
 ```bash
 # Create an isolated env (example: pr107)

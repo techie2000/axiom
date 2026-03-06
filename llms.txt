@@ -72,6 +72,8 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
 
 - [Automated Security Updates](docs/security/AUTOMATED_UPDATES.md): Comprehensive guide to automated security update system
 - [Security Updates 2026-02](docs/security/SECURITY_UPDATES_2026-02.md): February 2026 security updates documentation
+- [Security Update Summary](docs/security/SECURITY_UPDATE_SUMMARY.md): Summary of security vulnerability fixes
+  applied to Docker base images and Go/npm dependencies
 - [Security Documentation](docs/security/README.md): Security overview and related documentation
 
 ## Optional
@@ -86,3 +88,15 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
 - [Delta URL Fix](docs/DELTA_URL_FIX_SUMMARY.md): Bug fix summary for GLEIF delta URL parsing
 - [Backend Config](backend/config.yaml): Application configuration reference
 - [API Main Entry](backend/cmd/api/main.go): Backend application entry point
+- [Master Data Files](backend/data/masterdata/README.md): JSON reference data files for countries, currencies,
+  continents, languages, and ALERT Direct country code mappings
+- [Hybrid Sorting Implementation](docs/performance/HYBRID_SORTING_IMPLEMENTATION.md): Intelligent default sorting
+  based on query context for LEI records (1276ms → <50ms initial load optimisation)
+- [Data Directory Guide](data/README.md): Safety rules and structure for environment data persistence (dev/main)
+- [Dev Data Guide](data/dev/README.md): Dev-environment-specific data persistence reminders
+- [Main Data Guide](data/main/README.md): Main-environment-specific data persistence reminders
+- [Backups Guide](backups/README.md): Timestamped backup workflow, directory structure, and restore guidance
+- [Test Stack Isolation Script](scripts/new-main-test-env.ps1): Creates isolated .env files for PR/worktree
+  test stacks with unique project names, ports, and log directories
+- [Postgres Backup Script](scripts/backup-main-postgres.ps1): Creates timestamped pg_dump backups from the
+  running main Postgres container
