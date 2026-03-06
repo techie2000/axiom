@@ -270,7 +270,31 @@ func (s *schedulerService) Start() error {
 					}
 				}()
 			} else {
-				log.Info().Int64("existing_records", count).Msg("Database has existing records, waiting for scheduled full sync")
+				fullStatus, statusErr := s.leiService.GetProcessingStatus("DAILY_FULL")
+				now := time.Now()
+				if statusErr == nil && fullStatus.Status != "RUNNING" && fullStatus.NextRunAt != nil &&
+					(fullStatus.NextRunAt.Before(now) || fullStatus.NextRunAt.Equal(now)) {
+					log.Info().
+						Int64("existing_records", count).
+						Time("overdue_next_run", *fullStatus.NextRunAt).
+						Msg("Database has existing records and DAILY_FULL is overdue, triggering catch-up full sync now")
+
+					go func() {
+						if err := s.RunDailyMasterDataSync(); err != nil {
+							log.Error().Err(err).Msg("Catch-up master data sync check failed; continuing with LEI sync")
+						}
+						if err := s.RunDailyFullSync(); err != nil {
+							log.Error().Err(err).Msg("Failed to run catch-up full sync")
+							return
+						}
+						log.Info().Msg("Catch-up Level 1 sync succeeded, triggering dependent Level 2 sync")
+						if err := s.RunLevel2Sync(); err != nil {
+							log.Error().Err(err).Msg("Failed to run Level 2 sync after catch-up full sync")
+						}
+					}()
+				} else {
+					log.Info().Int64("existing_records", count).Msg("Database has existing records, waiting for scheduled full sync")
+				}
 			}
 		}
 	}
@@ -515,6 +539,46 @@ func (s *schedulerService) resumeInterruptedFullSyncOnStartup() (bool, error) {
 		return false, nil
 	}
 
+	fileID := interruptedFile.ID
+	fileAvailable, err := s.leiService.SourceFileExists(fileID)
+	if err != nil {
+		return false, fmt.Errorf("failed to verify interrupted source file availability: %w", err)
+	}
+
+	if !fileAvailable {
+		log.Warn().
+			Str("source_file_id", fileID.String()).
+			Str("file_name", interruptedFile.FileName).
+			Msg("Interrupted full-sync source file is missing; marking file failed and triggering fresh full sync")
+
+		interruptedFile.ProcessingStatus = "FAILED"
+		interruptedFile.ProcessingError = "Source file missing on startup; resumed processing skipped"
+		interruptedFile.FailureCategory = "FILE_MISSING"
+		if updateErr := s.leiService.UpdateSourceFile(interruptedFile); updateErr != nil {
+			log.Error().Err(updateErr).Str("source_file_id", fileID.String()).Msg("Failed to mark missing interrupted file as FAILED")
+		}
+
+		status, statusErr := s.leiService.GetProcessingStatus("DAILY_FULL")
+		if statusErr != nil {
+			status = &domain.FileProcessingStatus{JobType: "DAILY_FULL", Status: "IDLE"}
+		}
+		status.Status = "IDLE"
+		status.ErrorMessage = "Auto-resume skipped: source file missing"
+		status.CurrentSourceFileID = nil
+		status.NextRunAt = s.calculateNextDailyFullRun()
+		if updateErr := s.leiService.UpdateProcessingStatus(status); updateErr != nil {
+			log.Error().Err(updateErr).Msg("Failed to reset DAILY_FULL status after missing interrupted file")
+		}
+
+		go func() {
+			if freshErr := s.RunDailyFullSync(); freshErr != nil {
+				log.Error().Err(freshErr).Msg("Fresh full sync failed after missing interrupted source file")
+			}
+		}()
+
+		return true, nil
+	}
+
 	status, err := s.leiService.GetProcessingStatus("DAILY_FULL")
 	if err != nil {
 		status = &domain.FileProcessingStatus{
@@ -524,7 +588,6 @@ func (s *schedulerService) resumeInterruptedFullSyncOnStartup() (bool, error) {
 	}
 
 	now := time.Now()
-	fileID := interruptedFile.ID
 	status.Status = "RUNNING"
 	status.LastRunAt = &now
 	status.CurrentSourceFileID = &fileID
@@ -553,6 +616,28 @@ func (s *schedulerService) resumeInterruptedFullSyncOnStartup() (bool, error) {
 				log.Error().Err(getErr).Msg("Failed to get DAILY_FULL status after resume failure")
 				return
 			}
+
+			if strings.Contains(strings.ToLower(err.Error()), "source file not found") {
+				log.Warn().
+					Err(err).
+					Str("source_file_id", fileID.String()).
+					Msg("Auto-resume source file missing; resetting to IDLE and triggering fresh full sync")
+
+				status.Status = "IDLE"
+				status.ErrorMessage = "Auto-resume skipped: source file missing"
+				status.CurrentSourceFileID = nil
+				status.NextRunAt = s.calculateNextDailyFullRun()
+				if updateErr := s.leiService.UpdateProcessingStatus(status); updateErr != nil {
+					log.Error().Err(updateErr).Msg("Failed to reset DAILY_FULL status to IDLE after missing resume file")
+					return
+				}
+
+				if freshErr := s.RunDailyFullSync(); freshErr != nil {
+					log.Error().Err(freshErr).Msg("Fresh full sync failed after missing resume file")
+				}
+				return
+			}
+
 			status.Status = "FAILED"
 			status.ErrorMessage = err.Error()
 			status.CurrentSourceFileID = nil
@@ -821,6 +906,8 @@ func (s *schedulerService) RunDailyDeltaSync() error {
 	// Update status
 	status.Status = "RUNNING"
 	status.ErrorMessage = ""
+	status.CurrentSourceFileID = nil
+	status.ProgressMessage = "Preparing delta sync"
 	now := time.Now()
 	status.LastRunAt = &now
 	if err := s.leiService.UpdateProcessingStatus(status); err != nil {
@@ -868,6 +955,7 @@ func (s *schedulerService) doDeltaSyncWork(status *domain.FileProcessingStatus, 
 	if err := s.leiService.ProcessSourceFile(sourceFile.ID); err != nil {
 		status.Status = "FAILED"
 		status.ErrorMessage = err.Error()
+		status.ProgressMessage = ""
 		if updateErr := s.leiService.UpdateProcessingStatus(status); updateErr != nil {
 			log.Error().Err(updateErr).Msg("Failed to update delta sync processing status to FAILED")
 		}
@@ -879,6 +967,7 @@ func (s *schedulerService) doDeltaSyncWork(status *domain.FileProcessingStatus, 
 	status.LastSuccessAt = &now
 	status.NextRunAt = calculateNextRun(s.deltaSyncInterval)
 	status.ErrorMessage = ""
+	status.ProgressMessage = ""
 	if err := s.leiService.UpdateProcessingStatus(status); err != nil {
 		log.Error().Err(err).Msg("Failed to update processing status")
 	}
@@ -918,6 +1007,8 @@ func (s *schedulerService) RunDailyFullSync() error {
 	// Update status
 	status.Status = "RUNNING"
 	status.ErrorMessage = ""
+	status.CurrentSourceFileID = nil
+	status.ProgressMessage = "Preparing full sync"
 	now := time.Now()
 	status.LastRunAt = &now
 	if err := s.leiService.UpdateProcessingStatus(status); err != nil {
@@ -941,6 +1032,7 @@ func (s *schedulerService) doFullSyncWork(status *domain.FileProcessingStatus, n
 			status.LastSuccessAt = &now
 			status.NextRunAt = s.calculateNextDailyFullRun()
 			status.ErrorMessage = ""
+			status.ProgressMessage = ""
 			if updateErr := s.leiService.UpdateProcessingStatus(status); updateErr != nil {
 				log.Error().Err(updateErr).Msg("Failed to update full sync status to IDLE")
 			}
@@ -949,6 +1041,7 @@ func (s *schedulerService) doFullSyncWork(status *domain.FileProcessingStatus, n
 		// Real error
 		status.Status = "FAILED"
 		status.ErrorMessage = err.Error()
+		status.ProgressMessage = ""
 		if updateErr := s.leiService.UpdateProcessingStatus(status); updateErr != nil {
 			log.Error().Err(updateErr).Msg("Failed to update full sync status to FAILED")
 		}
@@ -957,6 +1050,7 @@ func (s *schedulerService) doFullSyncWork(status *domain.FileProcessingStatus, n
 
 	// Update status with current file
 	status.CurrentSourceFileID = &sourceFile.ID
+	status.ProgressMessage = fmt.Sprintf("Extracting %s", sourceFile.FileName)
 	if updateErr := s.leiService.UpdateProcessingStatus(status); updateErr != nil {
 		log.Error().Err(updateErr).Msg("Failed to update full sync current file")
 	}
@@ -971,6 +1065,7 @@ func (s *schedulerService) doFullSyncWork(status *domain.FileProcessingStatus, n
 	if err := s.leiService.ProcessSourceFileWithResume(sourceFile.ID, resumeLEI); err != nil {
 		status.Status = "FAILED"
 		status.ErrorMessage = err.Error()
+		status.ProgressMessage = ""
 		if updateErr := s.leiService.UpdateProcessingStatus(status); updateErr != nil {
 			log.Error().Err(updateErr).Msg("Failed to update full sync processing status to FAILED")
 		}
@@ -983,6 +1078,7 @@ func (s *schedulerService) doFullSyncWork(status *domain.FileProcessingStatus, n
 	status.LastSuccessAt = &now
 	status.NextRunAt = s.calculateNextDailyFullRun()
 	status.ErrorMessage = ""
+	status.ProgressMessage = ""
 	if err := s.leiService.UpdateProcessingStatus(status); err != nil {
 		log.Error().Err(err).Msg("Failed to update processing status")
 	}

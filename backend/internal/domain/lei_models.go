@@ -209,7 +209,8 @@ type FileProcessingStatus struct {
 	// Known chain: DAILY_FULL → LEVEL2_RR → LEVEL2_REPEX.
 	DependsOnJobType string `gorm:"size:50" json:"depends_on_job_type"`
 
-	ErrorMessage string `gorm:"type:text" json:"error_message"`
+	ErrorMessage    string `gorm:"type:text" json:"error_message"`
+	ProgressMessage string `gorm:"type:text" json:"progress_message"`
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
