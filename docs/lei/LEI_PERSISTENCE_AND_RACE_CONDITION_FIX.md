@@ -147,7 +147,7 @@ Database survives container rebuilds. ✅
 - ✅ Files visible in VS Code and Windows Explorer
 - ✅ Easy debugging and inspection
 
-2. **.env.dev** / **.env.main**
+1. **.env.dev** / **.env.main**
    - `LEI_DATADIR=/root/data/lei`
 
 #### UAT/Production Environments (Docker Volumes)
@@ -158,29 +158,29 @@ Database survives container rebuilds. ✅
 - `lei_data_uat:/root/data/lei` **volume mount** (better performance)
 - `lei_data_uat` named volume
 
-2. **.env.uat**
+1. **.env.uat**
    - `LEI_DATADIR=/root/data/lei`
 
-3. **docker-compose.prod.yml**
+1. **docker-compose.prod.yml**
    - `LEI_DATADIR` environment variable
    - `lei_data_prod:/root/data/lei` **volume mount** (better performance)
    - `lei_data_prod` named volume
 
-4. **.env.prod**
+1. **.env.prod**
    - `LEI_DATADIR=/root/data/lei`
 
 ### Storage Strategy Summary
 
-| Environment | Data Type    | Storage Type  | Location                          | Rationale                                    |
-| ----------- | ------------ | ------------- | --------------------------------- | -------------------------------------------- |
-| **dev**     | Postgres DB  | Bind Mount    | `./data/dev/postgres` on host     | Direct filesystem access for easy inspection |
-| **dev**     | LEI files    | Bind Mount    | `./data/dev/lei` on host          | Easy debugging, file inspection in VS Code   |
-| **main**    | Postgres DB  | Bind Mount    | `./data/main/postgres` on host    | Direct filesystem access for easy inspection |
-| **main**    | LEI files    | Bind Mount    | `./data/main/lei` on host         | Easy debugging, file inspection in VS Code   |
-| **uat**     | Postgres DB  | Docker Volume | `postgres_data_uat` (Docker-managed) | Better performance, production-like       |
-| **uat**     | LEI files    | Docker Volume | `lei_data_uat` (Docker-managed)      | Better performance, production-like       |
-| **prod**    | Postgres DB  | Docker Volume | `postgres_data_prod` (Docker-managed) | Best performance, isolation, reliability |
-| **prod**    | LEI files    | Docker Volume | `lei_data_prod` (Docker-managed)      | Best performance, isolation, reliability |
+| Environment | Data Type   | Storage Type  | Location                               | Rationale                                    |
+| ----------- | ----------- | ------------- | -------------------------------------- | -------------------------------------------- |
+| **dev**     | Postgres DB | Bind Mount    | `./data/dev/postgres` on host          | Direct filesystem access for easy inspection |
+| **dev**     | LEI files   | Bind Mount    | `./data/dev/lei` on host               | Easy debugging, file inspection in VS Code   |
+| **main**    | Postgres DB | Bind Mount    | `./data/main/postgres` on host         | Direct filesystem access for easy inspection |
+| **main**    | LEI files   | Bind Mount    | `./data/main/lei` on host              | Easy debugging, file inspection in VS Code   |
+| **uat**     | Postgres DB | Docker Volume | `postgres_data_uat` (Docker-managed)   | Better performance, production-like          |
+| **uat**     | LEI files   | Docker Volume | `lei_data_uat` (Docker-managed)        | Better performance, production-like          |
+| **prod**    | Postgres DB | Docker Volume | `postgres_data_prod` (Docker-managed)  | Best performance, isolation, reliability     |
+| **prod**    | LEI files   | Docker Volume | `lei_data_prod` (Docker-managed)       | Best performance, isolation, reliability     |
 
 ## Testing & Verification
 
