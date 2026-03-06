@@ -35,11 +35,39 @@ $ErrorActionPreference = 'Stop'
 function Resolve-RepoRoot {
     param([string]$Path)
 
-    if (Test-Path -LiteralPath (Join-Path $Path '.git')) {
-        return (Resolve-Path -LiteralPath $Path).Path
+    # Normalize to a full path first
+    $resolvedPath = (Resolve-Path -LiteralPath $Path).Path
+
+    # Prefer git for repo root detection (handles subfolders and worktrees)
+    if (Get-Command git -ErrorAction SilentlyContinue) {
+        try {
+            $gitTopLevel = & git -C $resolvedPath rev-parse --show-toplevel 2>$null
+            if ($LASTEXITCODE -eq 0 -and $gitTopLevel) {
+                return (Resolve-Path -LiteralPath $gitTopLevel.Trim()).Path
+            }
+        }
+        catch {
+            # Fall back to walking up the directory tree below
+        }
     }
 
-    throw "No .git directory found under: $Path"
+    # Fallback: walk up parent directories looking for a .git entry (directory or file)
+    $current = $resolvedPath
+    while ($current -and (Test-Path -LiteralPath $current)) {
+        $gitPath = Join-Path $current '.git'
+        if (Test-Path -LiteralPath $gitPath) {
+            return (Resolve-Path -LiteralPath $current).Path
+        }
+
+        $parent = Split-Path -Path $current -Parent
+        if (-not $parent -or $parent -eq $current) {
+            break
+        }
+
+        $current = $parent
+    }
+
+    throw "No .git directory found under: $Path or its parent directories."
 }
 
 function Remove-EmptyDirectoryWithRetry {
