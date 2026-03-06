@@ -569,7 +569,8 @@ When posting PR/issue comments, checklists, or review summaries via CLI/API:
 ## Git Ref Cleanup Guardrail (REQUIRED)
 
 When terminal output shows repeated prompts like:
-- `Deletion of directory '.git/...` failed. Should I try again? (y/n)`
+
+- `Deletion of directory '.git/...' failed. Should I try again? (y/n)`
 
 then the agent must proactively run:
 
