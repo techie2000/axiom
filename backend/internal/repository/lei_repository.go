@@ -1064,7 +1064,7 @@ func (r *leiRepository) UpdateProcessingStatus(status *domain.FileProcessingStat
 		"depends_on_job_type":     status.DependsOnJobType,
 		"error_message":           status.ErrorMessage,
 		"progress_message":        status.ProgressMessage,
-		"updated_at":              time.Now(),
+		"updated_at":              gorm.Expr("NOW()"),
 	}
 
 	return r.db.Model(&domain.FileProcessingStatus{}).
