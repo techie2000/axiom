@@ -565,3 +565,19 @@ When posting PR/issue comments, checklists, or review summaries via CLI/API:
    - `gh api ... --method PATCH/POST -f "body=..."` where the body variable already contains real newlines.
 4. Immediately verify the posted body (for example with `gh api ... --jq .body` or `gh pr view --comments`) and fix in-place if formatting is not human-readable.
 5. For checklist comments, keep concise one-line bullets and avoid shell-escaped artifacts in the final rendered text.
+
+## Git Ref Cleanup Guardrail (REQUIRED)
+
+When terminal output shows repeated prompts like:
+- `Deletion of directory '.git/...` failed. Should I try again? (y/n)`
+
+then the agent must proactively run:
+
+- `pwsh ./scripts/cleanup-git-refs.ps1 -RepoPath <repo-root> -PruneEmptyParents`
+
+before retrying branch/ref deletion, `pack-refs`, or `git gc` operations.
+
+Notes:
+- Do not wait for the user to interrupt and ask.
+- Prefer this script-based cleanup flow over repeated interactive prompt retries.
+- If the script reports `NOT_EMPTY:*`, preserve those refs and continue with non-destructive operations.
