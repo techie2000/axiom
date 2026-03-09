@@ -1,8 +1,6 @@
 'use client'
 
-/* eslint-disable react-hooks/exhaustive-deps */
-
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Alert from '../components/Alert'
 import ActionableStatCard from '../components/ActionableStatCard'
 import Badge from '../components/Badge'
@@ -57,20 +55,13 @@ export default function LanguagesPage() {
     ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080')
     : 'http://backend:8080'
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      fetchLanguages()
-    }
-  }, [])
-
   useEffect(() => {
     const rawToken = localStorage.getItem('axiom_token')
     const normalizedToken = rawToken?.replace(/^Bearer\s+/i, '').trim() ?? ''
     setIsLoggedIn(normalizedToken !== '' && normalizedToken !== 'undefined' && normalizedToken !== 'null')
   }, [])
 
-  const fetchLanguages = async () => {
+  const fetchLanguages = useCallback(async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/v1/languages`, {
         headers: {
@@ -96,7 +87,13 @@ export default function LanguagesPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [API_BASE_URL])
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      fetchLanguages()
+    }
+  }, [fetchLanguages])
 
   const handleSort = (field: LanguageSortField) => {
     if (sortField !== field) {

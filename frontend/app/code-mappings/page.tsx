@@ -1,8 +1,6 @@
 'use client'
 
-/* eslint-disable react-hooks/exhaustive-deps */
-
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Alert from '../components/Alert'
 import Badge from '../components/Badge'
 import LoadingSpinner from '../components/LoadingSpinner'
@@ -34,14 +32,7 @@ export default function CodeMappingsPage() {
     ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080')
     : 'http://backend:8080'
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      fetchMappings()
-    }
-  }, [])
-
-  const fetchMappings = async () => {
+  const fetchMappings = useCallback(async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/v1/code-mappings?limit=100`, {
         headers: {
@@ -68,7 +59,13 @@ export default function CodeMappingsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [API_BASE_URL])
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      fetchMappings()
+    }
+  }, [fetchMappings])
 
   const filteredMappings = mappings.filter(m =>
     m.from_system.toLowerCase().includes(searchTerm.toLowerCase()) ||

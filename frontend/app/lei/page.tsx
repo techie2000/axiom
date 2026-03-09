@@ -1,8 +1,6 @@
 'use client'
 
-/* eslint-disable react-hooks/exhaustive-deps */
-
-import { useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import Alert from '../components/Alert'
 import LoadingSpinner from '../components/LoadingSpinner'
 import PageHeader from '../components/PageHeader'
@@ -89,7 +87,7 @@ export default function LEIStatusPage() {
     ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080')
     : 'http://backend:8080'
 
-  const fetchStatus = async () => {
+  const fetchStatus = useCallback(async () => {
     try {
       const [
         mdResponse,
@@ -142,7 +140,7 @@ export default function LEIStatusPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [API_BASE_URL])
 
   const getAuthToken = (): string | null => {
     const rawToken = localStorage.getItem('axiom_token')
@@ -291,19 +289,17 @@ export default function LEIStatusPage() {
     setLevel2FailuresExpandedByJob(prev => ({ ...prev, [jobType]: true }))
   }
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (typeof window !== 'undefined') {
       fetchStatus()
     }
-  }, [])
+  }, [fetchStatus])
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!autoRefresh) return
     const interval = setInterval(fetchStatus, 5000)
     return () => clearInterval(interval)
-  }, [autoRefresh])
+  }, [autoRefresh, fetchStatus])
 
   useEffect(() => {
     const handleEscapeKey = (event: KeyboardEvent) => {

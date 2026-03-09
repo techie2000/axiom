@@ -1,7 +1,5 @@
 'use client'
 
-/* eslint-disable react-hooks/exhaustive-deps */
-
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import Alert from '../components/Alert'
@@ -246,18 +244,18 @@ export default function LEIRecordsPage() {
   const backHref = isLoggedIn ? '/dashboard' : '/home'
   const backLabel = isLoggedIn ? '← Back to Dashboard' : '← Back to Home'
 
-  const isNotSetStatusFilterValue = (value: string): boolean => {
+  const isNotSetStatusFilterValue = useCallback((value: string): boolean => {
     const normalized = value.trim().replaceAll(' ', '_').toUpperCase()
     return normalized === 'NULL' || normalized === 'NOT_SET'
-  }
+  }, [])
 
-  const formatStatusFilterLabel = (value: string): string => {
+  const formatStatusFilterLabel = useCallback((value: string): string => {
     return isNotSetStatusFilterValue(value) ? 'Not Set' : value
-  }
+  }, [isNotSetStatusFilterValue])
 
-  const normalizeStatusFilterForAPI = (value: string): string => {
+  const normalizeStatusFilterForAPI = useCallback((value: string): string => {
     return isNotSetStatusFilterValue(value) ? 'NULL' : value
-  }
+  }, [isNotSetStatusFilterValue])
 
   const categoryOptions = useMemo(() => {
     const values = new Set<string>()
@@ -435,15 +433,7 @@ export default function LEIRecordsPage() {
     return () => clearTimeout(timer)
   }, [searchTerm])
 
-  // Fetch records when filters, page, or visible columns change
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      fetchRecords()
-    }
-  }, [currentPage, debouncedSearch, statusFilter, categoryFilter, countryFilter, itemsPerPage, sortField, sortDirection, effectiveVisibleColumns])
-
-  const fetchRecords = async () => {
+  const fetchRecords = useCallback(async () => {
     try {
       setLoading(true)
       const offset = (currentPage - 1) * itemsPerPage
@@ -510,7 +500,26 @@ export default function LEIRecordsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [
+    API_BASE_URL,
+    categoryFilter,
+    countryFilter,
+    currentPage,
+    debouncedSearch,
+    effectiveVisibleColumns,
+    itemsPerPage,
+    normalizeStatusFilterForAPI,
+    sortDirection,
+    sortField,
+    statusFilter,
+  ])
+
+  // Fetch records when filters, page, or visible columns change
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      fetchRecords()
+    }
+  }, [fetchRecords])
 
   const clearFilters = () => {
     setSearchTerm('')
@@ -654,7 +663,6 @@ export default function LEIRecordsPage() {
   }, [selectedRecord, API_BASE_URL])
 
   // Fetch managing LOU names for all records in table
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const fetchManagingLouNamesForTable = async () => {
       // Get unique managing LOU codes from current records
@@ -696,7 +704,7 @@ export default function LEIRecordsPage() {
     if (records.length > 0) {
       fetchManagingLouNamesForTable()
     }
-  }, [records, API_BASE_URL])
+  }, [records, managingLouNames, API_BASE_URL])
 
   // Parse other_names JSONB field
   interface OtherName {

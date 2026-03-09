@@ -1,8 +1,6 @@
 'use client'
 
-/* eslint-disable react-hooks/exhaustive-deps */
-
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Alert from '../components/Alert'
 import ActionableStatCard from '../components/ActionableStatCard'
 import Badge from '../components/Badge'
@@ -57,20 +55,13 @@ export default function CurrenciesPage() {
     ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080')
     : 'http://backend:8080'
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      fetchCurrencies()
-    }
-  }, [])
-
   useEffect(() => {
     const rawToken = localStorage.getItem('axiom_token')
     const normalizedToken = rawToken?.replace(/^Bearer\s+/i, '').trim() ?? ''
     setIsLoggedIn(normalizedToken !== '' && normalizedToken !== 'undefined' && normalizedToken !== 'null')
   }, [])
 
-  const fetchCurrencies = async () => {
+  const fetchCurrencies = useCallback(async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/v1/currencies`, {
         headers: {
@@ -95,7 +86,13 @@ export default function CurrenciesPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [API_BASE_URL])
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      fetchCurrencies()
+    }
+  }, [fetchCurrencies])
 
   const alertClsCount = currencies.filter(c => c.is_alert_cls_allowed).length
   const ofacCount = currencies.filter(c => c.is_ofac_sanctioned).length
