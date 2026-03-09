@@ -1,12 +1,14 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Alert from '../components/Alert'
 import Badge from '../components/Badge'
 import LoadingSpinner from '../components/LoadingSpinner'
 import PageHeader from '../components/PageHeader'
+import PreferenceSavePrompt from '../components/PreferenceSavePrompt'
 import StatCard from '../components/StatCard'
 import SyncedWideTable from '../components/SyncedWideTable'
+import { useUserPreference } from '../lib/useUserPreference'
 
 interface Currency {
   id: string
@@ -33,8 +35,33 @@ export default function CurrenciesPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [complianceFilter, setComplianceFilter] = useState<ComplianceFilter>('all')
   const [showReferenceCodes, setShowReferenceCodes] = useState(false)
-  const [expandedWidth, setExpandedWidth] = useState(true)
   const [filterBarHeight, setFilterBarHeight] = useState(0)
+
+  // Preference-backed expanded width
+  const [storedExpanded, setStoredExpanded] = useUserPreference('currencies', 'expanded_width', 'true')
+  const expandedWidth = storedExpanded === 'true'
+  const [localExpanded, setLocalExpanded] = useState<boolean | null>(null)
+  const [showWidthPrompt, setShowWidthPrompt] = useState(false)
+  const pendingExpanded = useRef<boolean | null>(null)
+
+  const effectiveExpandedWidth = localExpanded ?? expandedWidth
+
+  const handleSetExpandedWidth = useCallback((value: boolean) => {
+    setLocalExpanded(value)
+    pendingExpanded.current = value
+    setShowWidthPrompt(true)
+  }, [])
+
+  const handleSaveWidth = useCallback(() => {
+    if (pendingExpanded.current !== null) {
+      setStoredExpanded(String(pendingExpanded.current))
+      setLocalExpanded(null)
+      pendingExpanded.current = null
+    }
+    setShowWidthPrompt(false)
+  }, [setStoredExpanded])
+
+  const handleDismissWidth = useCallback(() => { setShowWidthPrompt(false) }, [])
 
   const API_BASE_URL = typeof window !== 'undefined'
     ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080')
@@ -121,7 +148,7 @@ export default function CurrenciesPage() {
 
   return (
     <div className="min-h-screen p-8">
-      <div className={`${expandedWidth ? 'max-w-full' : 'max-w-7xl'} mx-auto transition-all duration-300`}>
+      <div className={`${effectiveExpandedWidth ? 'max-w-full' : 'max-w-7xl'} mx-auto transition-all duration-300`}>
         {/* Header */}
         <PageHeader
           title="Currencies"
@@ -129,11 +156,11 @@ export default function CurrenciesPage() {
           actions={
             <>
               <button
-                onClick={() => setExpandedWidth(!expandedWidth)}
+                onClick={() => handleSetExpandedWidth(!effectiveExpandedWidth)}
                 className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 transition-colors text-white text-sm font-medium"
-                title={expandedWidth ? 'Normal Width' : 'Expanded Width'}
+                title={effectiveExpandedWidth ? 'Normal Width' : 'Expanded Width'}
               >
-                {expandedWidth ? '⬅️ Normal' : '↔️ Expand'}
+                {effectiveExpandedWidth ? '⬅️ Normal' : '↔️ Expand'}
               </button>
               <button
                 onClick={() => setShowReferenceCodes(!showReferenceCodes)}
@@ -241,7 +268,7 @@ export default function CurrenciesPage() {
         <div className="bg-white dark:bg-white/5 rounded-lg shadow border-2 border-gray-200 dark:border-white/10">
           <SyncedWideTable
             stickyTopOffset={hasActiveFilters ? filterBarHeight : 0}
-            dependencyKey={`${expandedWidth}-${showReferenceCodes}-${filteredCurrencies.length}-${complianceFilter}-${searchTerm}`}
+            dependencyKey={`${effectiveExpandedWidth}-${showReferenceCodes}-${filteredCurrencies.length}-${complianceFilter}-${searchTerm}`}
             headerRow={(
               <tr>
                 <th className="w-64 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -339,6 +366,13 @@ export default function CurrenciesPage() {
           <p>Data source: ISO 4217 Currency Codes • ALERT CLS permitted currencies • OFAC sanctions list</p>
         </div>
       </div>
+
+      <PreferenceSavePrompt
+        visible={showWidthPrompt}
+        onSave={handleSaveWidth}
+        onDismiss={handleDismissWidth}
+        label="Save page width as your default?"
+      />
     </div>
   )
 }

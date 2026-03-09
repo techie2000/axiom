@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { resetPreferencesCache } from '../lib/useUserPreference'
 
 interface StoredUser {
   id: string
@@ -30,6 +31,8 @@ export default function UserBadge() {
   const handleSignOut = () => {
     localStorage.removeItem('axiom_token')
     localStorage.removeItem('axiom_user')
+    // Clear in-memory preference cache so the next login starts fresh.
+    resetPreferencesCache()
     router.push('/login')
   }
 

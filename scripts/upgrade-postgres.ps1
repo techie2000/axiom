@@ -65,8 +65,18 @@ if (-not $PgUser)      { Write-Fail "POSTGRES_USER not set in $EnvFile" }
 if (-not $PgPassword)  { Write-Fail "POSTGRES_PASSWORD not set in $EnvFile" }
 if (-not $PgDb)        { Write-Fail "POSTGRES_DB not set in $EnvFile" }
 
-$ContainerName = "$ProjectName-postgres"
-$VolumeName    = "${ProjectName}_postgres_data_${Environment}"
+$ContainerName   = "$ProjectName-postgres"
+$VolumeName      = "${ProjectName}_postgres_data_${Environment}"
+$PostgresDataDir = $envMap['POSTGRES_DATA_DIR']
+
+# Determine storage type: bind mount (main/dev) vs named Docker volume (uat/prod).
+# If POSTGRES_DATA_DIR is set in the env file the environment uses a host bind mount.
+$UseBindMount = -not [string]::IsNullOrEmpty($PostgresDataDir)
+if ($UseBindMount) {
+    $DataSrc = $PostgresDataDir
+} else {
+    $DataSrc = $VolumeName
+}
 
 # ── Header ────────────────────────────────────────────────────────────────────
 Write-Host ""
@@ -76,23 +86,47 @@ Write-Host "======================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Info "Project:   $ProjectName"
 Write-Info "Container: $ContainerName"
-Write-Info "Volume:    $VolumeName"
+if ($UseBindMount) {
+    Write-Info "Data:      $DataSrc (bind mount)"
+} else {
+    Write-Info "Volume:    $VolumeName"
+}
 Write-Info "Target PG: $TargetPgVersion"
 Write-Host ""
 
-# ── Check volume exists ───────────────────────────────────────────────────────
-docker volume inspect $VolumeName 2>&1 | Out-Null
-if ($LASTEXITCODE -ne 0) {
-    Write-Success "Volume '$VolumeName' does not exist - no existing data to migrate."
-    Write-Success "The postgres:${TargetPgVersion}-alpine container will initialise a fresh database on first start."
-    exit 0
+# ── Check data exists ─────────────────────────────────────────────────────────
+if ($UseBindMount) {
+    $dirEmpty = -not (Test-Path $DataSrc) -or
+                (Get-ChildItem $DataSrc -Force -ErrorAction SilentlyContinue | Measure-Object).Count -eq 0
+    if ($dirEmpty) {
+        Write-Success "Bind-mount directory '$DataSrc' does not exist or is empty - no existing data to migrate."
+        Write-Success "The postgres:${TargetPgVersion}-alpine container will initialise a fresh database on first start."
+        exit 0
+    }
+} else {
+    docker volume inspect $VolumeName 2>&1 | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Success "Volume '$VolumeName' does not exist - no existing data to migrate."
+        Write-Success "The postgres:${TargetPgVersion}-alpine container will initialise a fresh database on first start."
+        exit 0
+    }
 }
 
-# ── Read PG_VERSION from volume ───────────────────────────────────────────────
-$CurrentPgVersion = docker run --rm `
-    -v "${VolumeName}:/var/lib/postgresql/data" `
-    alpine:latest `
-    sh -c "cat /var/lib/postgresql/data/PG_VERSION 2>/dev/null || echo 'unknown'"
+# ── Read PG_VERSION ───────────────────────────────────────────────────────────
+if ($UseBindMount) {
+    # For bind mounts the data directory is on the host, so we can read PG_VERSION directly.
+    $pgVersionFile = Join-Path $DataSrc "PG_VERSION"
+    if (Test-Path $pgVersionFile) {
+        $CurrentPgVersion = (Get-Content $pgVersionFile -Raw).Trim()
+    } else {
+        $CurrentPgVersion = "unknown"
+    }
+} else {
+    $CurrentPgVersion = docker run --rm `
+        -v "${VolumeName}:/var/lib/postgresql/data" `
+        alpine:latest `
+        sh -c "cat /var/lib/postgresql/data/PG_VERSION 2>/dev/null || echo 'unknown'"
+}
 
 Write-Info "Detected data version: PostgreSQL $CurrentPgVersion"
 
@@ -102,8 +136,13 @@ if ($CurrentPgVersion -eq "$TargetPgVersion") {
 }
 
 if ($CurrentPgVersion -eq "unknown") {
-    Write-Warn "Could not read PG_VERSION from volume. The volume may be empty or uninitialised."
-    Write-Warn "If so, you can remove it safely: docker volume rm $VolumeName"
+    if ($UseBindMount) {
+        Write-Warn "Could not read PG_VERSION from $DataSrc. The directory may be empty or uninitialised."
+        Write-Warn "If so, you can remove it safely: Remove-Item -Recurse -Force '$DataSrc'"
+    } else {
+        Write-Warn "Could not read PG_VERSION from volume. The volume may be empty or uninitialised."
+        Write-Warn "If so, you can remove it safely: docker volume rm $VolumeName"
+    }
     exit 1
 }
 
@@ -113,7 +152,11 @@ Write-Warn "PostgreSQL data upgrade required: v${CurrentPgVersion} -> v${TargetP
 Write-Warn "This will:"
 Write-Host "   1. Stop any running environment services"
 Write-Host "   2. Back up all databases to ${BackupDir}\"
-Write-Host "   3. Remove the existing volume ($VolumeName)"
+if ($UseBindMount) {
+    Write-Host "   3. Rename the existing data directory to a timestamped backup"
+} else {
+    Write-Host "   3. Remove the existing volume ($VolumeName)"
+}
 Write-Host "   4. Start postgres:${TargetPgVersion}-alpine and restore the backup"
 Write-Host ""
 
@@ -138,13 +181,26 @@ $BackupFile = Join-Path $BackupDir "postgres-${Environment}-v${CurrentPgVersion}
 docker rm -f $TempContainer 2>&1 | Out-Null
 
 Write-Info "Step 2/5: Starting temporary postgres:${CurrentPgVersion}-alpine container to take backup..."
+
+# For bind mounts docker requires an absolute path; resolve it from the host working directory.
+if ($UseBindMount) {
+    try {
+        $DataAbs = (Resolve-Path $DataSrc -ErrorAction Stop).Path
+    } catch {
+        Write-Fail "Cannot resolve bind-mount path '$DataSrc': $_"
+    }
+    $MountArg = "${DataAbs}:/var/lib/postgresql/data"
+} else {
+    $MountArg = "${VolumeName}:/var/lib/postgresql/data"
+}
+
 docker run -d `
     --name $TempContainer `
     -e POSTGRES_USER=$PgUser `
     -e POSTGRES_PASSWORD=$PgPassword `
     -e POSTGRES_DB=$PgDb `
     -e PGDATA=/var/lib/postgresql/data `
-    -v "${VolumeName}:/var/lib/postgresql/data" `
+    -v $MountArg `
     "postgres:${CurrentPgVersion}-alpine" | Out-Null
 
 Write-Info "Waiting for temporary container to be ready..."
@@ -175,10 +231,21 @@ docker rm -f $TempContainer | Out-Null
 $sizeKB = [math]::Round((Get-Item $BackupFile).Length / 1KB, 0)
 Write-Success "Backup saved: $BackupFile ($sizeKB KB)"
 
-# ── Step 3: Remove old volume ─────────────────────────────────────────────────
-Write-Info "Step 3/5: Removing old volume ($VolumeName)..."
-docker volume rm $VolumeName | Out-Null
-Write-Success "Old volume removed."
+# ── Step 3: Remove or rename old data ────────────────────────────────────────
+if ($UseBindMount) {
+    $BakDir = "${DataSrc}.bak.${Timestamp}"
+    Write-Info "Step 3/5: Renaming data directory to $BakDir..."
+    try {
+        Move-Item $DataSrc $BakDir -ErrorAction Stop
+    } catch {
+        Write-Fail "Failed to rename '$DataSrc' to '$BakDir' — check permissions and disk space, then retry. Error: $_"
+    }
+    Write-Success "Data directory backed up to: $BakDir"
+} else {
+    Write-Info "Step 3/5: Removing old volume ($VolumeName)..."
+    docker volume rm $VolumeName | Out-Null
+    Write-Success "Old volume removed."
+}
 
 # ── Step 4: Start new postgres (v17) ─────────────────────────────────────────
 Write-Info "Step 4/5: Starting postgres:${TargetPgVersion}-alpine..."
@@ -211,7 +278,10 @@ Write-Host " PostgreSQL upgrade complete!"         -ForegroundColor Green
 Write-Host "======================================" -ForegroundColor Green
 Write-Host ""
 Write-Success "Data migrated: v${CurrentPgVersion} -> v${TargetPgVersion}"
-Write-Success "Backup retained at: $BackupFile"
+Write-Success "SQL backup retained at: $BackupFile"
+if ($UseBindMount) {
+    Write-Success "Old data directory backed up to: ${DataSrc}.bak.${Timestamp}"
+}
 Write-Host ""
 Write-Info "Start the full environment with:"
 Write-Host "   docker compose --env-file $EnvFile -f $ComposeFile up -d"

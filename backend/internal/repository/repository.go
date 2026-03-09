@@ -7,33 +7,35 @@ import (
 
 // Repositories holds all repository interfaces
 type Repositories struct {
-	Country     CountryRepository
-	Currency    CurrencyRepository
-	Language    LanguageRepository
-	Entity      EntityRepository
-	Instrument  InstrumentRepository
-	Account     AccountRepository
-	SSI         SSIRepository
-	LEI         LEIRepository
-	LEILevel2   LEILevel2Repository
-	CodeMapping CodeMappingRepository
-	User        UserRepository
+	Country        CountryRepository
+	Currency       CurrencyRepository
+	Language       LanguageRepository
+	Entity         EntityRepository
+	Instrument     InstrumentRepository
+	Account        AccountRepository
+	SSI            SSIRepository
+	LEI            LEIRepository
+	LEILevel2      LEILevel2Repository
+	CodeMapping    CodeMappingRepository
+	User           UserRepository
+	UserPreference UserPreferenceRepository
 }
 
 // NewRepositories creates a new repositories instance
 func NewRepositories(db *gorm.DB) *Repositories {
 	return &Repositories{
-		Country:     NewCountryRepository(db),
-		Currency:    NewCurrencyRepository(db),
-		Language:    NewLanguageRepository(db),
-		Entity:      NewEntityRepository(db),
-		Instrument:  NewInstrumentRepository(db),
-		Account:     NewAccountRepository(db),
-		SSI:         NewSSIRepository(db),
-		LEI:         NewLEIRepository(db),
-		LEILevel2:   NewLEILevel2Repository(db),
-		CodeMapping: NewCodeMappingRepository(db),
-		User:        NewUserRepository(db),
+		Country:        NewCountryRepository(db),
+		Currency:       NewCurrencyRepository(db),
+		Language:       NewLanguageRepository(db),
+		Entity:         NewEntityRepository(db),
+		Instrument:     NewInstrumentRepository(db),
+		Account:        NewAccountRepository(db),
+		SSI:            NewSSIRepository(db),
+		LEI:            NewLEIRepository(db),
+		LEILevel2:      NewLEILevel2Repository(db),
+		CodeMapping:    NewCodeMappingRepository(db),
+		User:           NewUserRepository(db),
+		UserPreference: NewUserPreferenceRepository(db),
 	}
 }
 
@@ -473,4 +475,64 @@ func (r *userRepository) CountActiveAdmins() (int64, error) {
 		Where("role = ? AND status = ?", domain.UserRoleAdmin, domain.UserStatusActive).
 		Count(&count).Error
 	return count, err
+}
+
+// UserPreferenceRepository interface
+type UserPreferenceRepository interface {
+	// GetByPage returns all preferences for a user on a given page.
+	GetByPage(userID, pageKey string) ([]*domain.UserPreference, error)
+	// GetAll returns all preferences for a user across all pages.
+	GetAll(userID string) ([]*domain.UserPreference, error)
+	// Upsert creates or updates a single preference.
+	Upsert(pref *domain.UserPreference) error
+	// Delete removes a preference by user, page, and preference key.
+	Delete(userID, pageKey, preferenceKey string) error
+}
+
+type userPreferenceRepository struct {
+	db *gorm.DB
+}
+
+// NewUserPreferenceRepository creates a new user preference repository.
+func NewUserPreferenceRepository(db *gorm.DB) UserPreferenceRepository {
+	return &userPreferenceRepository{db: db}
+}
+
+func (r *userPreferenceRepository) GetByPage(userID, pageKey string) ([]*domain.UserPreference, error) {
+	var prefs []*domain.UserPreference
+	if err := r.db.
+		Where("user_id = ? AND page_key = ?", userID, pageKey).
+		Find(&prefs).Error; err != nil {
+		return nil, err
+	}
+	return prefs, nil
+}
+
+func (r *userPreferenceRepository) GetAll(userID string) ([]*domain.UserPreference, error) {
+	var prefs []*domain.UserPreference
+	if err := r.db.
+		Where("user_id = ?", userID).
+		Find(&prefs).Error; err != nil {
+		return nil, err
+	}
+	return prefs, nil
+}
+
+func (r *userPreferenceRepository) Upsert(pref *domain.UserPreference) error {
+	return r.db.
+		Where(domain.UserPreference{
+			UserID:        pref.UserID,
+			PageKey:       pref.PageKey,
+			PreferenceKey: pref.PreferenceKey,
+		}).
+		Assign(domain.UserPreference{
+			PreferenceValue: pref.PreferenceValue,
+		}).
+		FirstOrCreate(pref).Error
+}
+
+func (r *userPreferenceRepository) Delete(userID, pageKey, preferenceKey string) error {
+	return r.db.
+		Where("user_id = ? AND page_key = ? AND preference_key = ?", userID, pageKey, preferenceKey).
+		Delete(&domain.UserPreference{}).Error
 }
