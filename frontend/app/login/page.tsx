@@ -44,7 +44,7 @@ export default function LoginPage() {
         // Bootstrap admin must create a real admin account first
         router.push('/admin/users?bootstrap=true')
       } else {
-        router.push('/')
+        router.push('/dashboard')
       }
     } catch {
       setError('Network error – please try again')
