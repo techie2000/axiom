@@ -219,6 +219,16 @@ export default function LEIRecordsPage() {
     setShowColumnSavePrompt(false)
   }, [])
 
+  // Save the current effective column selection as the stored default without a new toast cycle.
+  // Column preferences cannot reuse the hook's saveCurrentValue because they are Set-based
+  // (serialised as a comma-separated string), not a simple boolean.
+  const handleSaveColumnsNow = useCallback(() => {
+    setStoredColumns(Array.from(effectiveVisibleColumns).join(','))
+    setLocalColumns(null)
+    pendingColumns.current = null
+    setShowColumnSavePrompt(false)
+  }, [effectiveVisibleColumns, setStoredColumns])
+
   const toggleLocationDisplayMode = locationDisplayPreference.toggle
 
   // New features
@@ -998,6 +1008,15 @@ export default function LEIRecordsPage() {
               >
                 {effectiveExpandedWidth ? '⬅️ Normal' : '↔️ Expand'}
               </button>
+              {expandedWidthPreference.hasUnsavedChanges && (
+                <button
+                  onClick={expandedWidthPreference.saveCurrentValue}
+                  className="px-3 py-2 rounded-lg bg-green-700 hover:bg-green-600 transition-colors text-white text-xs font-medium"
+                  title="Save current page width as your permanent default"
+                >
+                  💾 Save width
+                </button>
+              )}
 
               <div className="relative">
                 <button
@@ -1032,6 +1051,15 @@ export default function LEIRecordsPage() {
                         >
                           Reset to Default
                         </button>
+                        {localColumns !== null && (
+                          <button
+                            onClick={handleSaveColumnsNow}
+                            className="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded hover:bg-green-200 dark:hover:bg-green-800 ml-auto"
+                            title="Save current column selection as your permanent default"
+                          >
+                            💾 Save as default
+                          </button>
+                        )}
                       </div>
                     </div>
 

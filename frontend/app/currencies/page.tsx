@@ -209,13 +209,24 @@ export default function CurrenciesPage() {
           backHref={backHref}
           backLabel={backLabel}
           actions={
-            <button
-              onClick={expandedWidthPreference.toggle}
-              className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 transition-colors text-white text-sm font-medium"
-              title={effectiveExpandedWidth ? 'Normal Width' : 'Expanded Width'}
-            >
-              {effectiveExpandedWidth ? '⬅️ Normal' : '↔️ Expand'}
-            </button>
+            <>
+              <button
+                onClick={expandedWidthPreference.toggle}
+                className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 transition-colors text-white text-sm font-medium"
+                title={effectiveExpandedWidth ? 'Normal Width' : 'Expanded Width'}
+              >
+                {effectiveExpandedWidth ? '⬅️ Normal' : '↔️ Expand'}
+              </button>
+              {expandedWidthPreference.hasUnsavedChanges && (
+                <button
+                  onClick={expandedWidthPreference.saveCurrentValue}
+                  className="px-3 py-2 rounded-lg bg-green-700 hover:bg-green-600 transition-colors text-white text-xs font-medium"
+                  title="Save current page width as your permanent default"
+                >
+                  💾 Save width
+                </button>
+              )}
+            </>
           }
         />
 
