@@ -7,8 +7,11 @@ import CountryFlag from '../components/CountryFlag'
 import LoadingSpinner from '../components/LoadingSpinner'
 import PageHeader from '../components/PageHeader'
 import PreferenceSavePrompt from '../components/PreferenceSavePrompt'
+import ReferenceDetailList from '../components/ReferenceDetailList'
+import SortableHeaderCell from '../components/SortableHeaderCell'
 import StatCard from '../components/StatCard'
 import SyncedWideTable from '../components/SyncedWideTable'
+import { useDeferredBooleanPreference } from '../lib/useDeferredBooleanPreference'
 import { useUserPreference } from '../lib/useUserPreference'
 import { Country, normalizeCountriesPayload, summarizeCountriesDataQuality } from './normalization'
 
@@ -42,7 +45,7 @@ const AVAILABLE_COLUMNS: ColumnConfig[] = [
   { key: 'alpha3', label: 'Alpha-3 (Secondary)', defaultVisible: true, width: 'w-36' },
   { key: 'numeric_code', label: 'Numeric', defaultVisible: false, width: 'w-28' },
   { key: 'capital', label: 'Capital', defaultVisible: false, width: 'w-40' },
-  { key: 'continent', label: 'Continent', defaultVisible: true, width: 'w-28' },
+  { key: 'continent', label: 'Continent', defaultVisible: true, width: 'w-36' },
   { key: 'region', label: 'Region', defaultVisible: true, width: 'w-44' },
   { key: 'languages', label: 'Languages', defaultVisible: false, width: 'min-w-36' },
   { key: 'currency_codes', label: 'Currency Codes', defaultVisible: false, width: 'min-w-36' },
@@ -65,7 +68,16 @@ const CONTINENT_NAMES: Record<string, string> = {
 interface LanguageOption {
   code: string
   name: string
+  [key: string]: unknown
 }
+
+interface CurrencyOption {
+  code: string
+  name: string
+  [key: string]: unknown
+}
+
+const CENTER_ALIGNED_COLUMNS = new Set<CountryColumnKey>(['alpha2', 'alpha3', 'active'])
 
 export default function CountriesPage() {
   const filterBarRef = useRef<HTMLDivElement>(null)
@@ -78,40 +90,43 @@ export default function CountriesPage() {
   const [continentFilter, setContinentFilter] = useState('')
   const [regionFilter, setRegionFilter] = useState('')
   const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('all')
-  const [languagesByCode, setLanguagesByCode] = useState<Map<string, string>>(new Map())
-  const [showReferenceCodes, setShowReferenceCodes] = useState(false)
+  const [sortField, setSortField] = useState<CountryColumnKey | null>(null)
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+  const [languagesByCode, setLanguagesByCode] = useState<Map<string, LanguageOption>>(new Map())
+  const [currenciesByCode, setCurrenciesByCode] = useState<Map<string, CurrencyOption>>(new Map())
   const [showColumnSelector, setShowColumnSelector] = useState(false)
   const [filterBarHeight, setFilterBarHeight] = useState(0)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
 
   // Preference-backed states
-  const [storedExpanded, setStoredExpanded] = useUserPreference('countries', 'expanded_width', 'true')
+  const expandedWidthPreference = useDeferredBooleanPreference({
+    pageKey: 'countries',
+    preferenceKey: 'expanded_width',
+    defaultValue: true,
+  })
   const [storedColumns, setStoredColumns] = useUserPreference('countries', 'visible_columns', DEFAULT_VISIBLE_KEYS)
+  const referenceDisplayPreference = useDeferredBooleanPreference({
+    pageKey: 'countries',
+    preferenceKey: 'display_reference_codes',
+    defaultValue: false,
+  })
 
-  const expandedWidth = storedExpanded === 'true'
   const visibleColumns = useMemo<Set<CountryColumnKey>>(() => {
     if (!storedColumns) return new Set(AVAILABLE_COLUMNS.filter((c) => c.defaultVisible).map((c) => c.key))
     return new Set(storedColumns.split(',').filter(Boolean) as CountryColumnKey[])
   }, [storedColumns])
 
   // Pending preference state (applies immediately, saves on user confirmation)
-  const [localExpanded, setLocalExpanded] = useState<boolean | null>(null)
   const [localColumns, setLocalColumns] = useState<Set<CountryColumnKey> | null>(null)
-  const [showWidthPrompt, setShowWidthPrompt] = useState(false)
   const [showColumnsPrompt, setShowColumnsPrompt] = useState(false)
   // Incrementing this counter resets the 8-second auto-dismiss timer so users
   // always get 8 s from their *last* column change rather than their first.
   const [columnsSaveVersion, setColumnsSaveVersion] = useState(0)
-  const pendingExpanded = useRef<boolean | null>(null)
   const pendingColumns = useRef<Set<CountryColumnKey> | null>(null)
 
-  const effectiveExpandedWidth = localExpanded ?? expandedWidth
+  const effectiveExpandedWidth = expandedWidthPreference.value
   const effectiveVisibleColumns = localColumns ?? visibleColumns
-
-  const handleSetExpandedWidth = useCallback((value: boolean) => {
-    setLocalExpanded(value)
-    pendingExpanded.current = value
-    setShowWidthPrompt(true)
-  }, [])
+  const showReferenceCodes = referenceDisplayPreference.value
 
   const handleSetVisibleColumns = useCallback((next: Set<CountryColumnKey>) => {
     setLocalColumns(next)
@@ -119,17 +134,6 @@ export default function CountriesPage() {
     setShowColumnsPrompt(true)
     setColumnsSaveVersion(v => v + 1)
   }, [])
-
-  const handleSaveWidth = useCallback(() => {
-    if (pendingExpanded.current !== null) {
-      setStoredExpanded(String(pendingExpanded.current))
-      setLocalExpanded(null)
-      pendingExpanded.current = null
-    }
-    setShowWidthPrompt(false)
-  }, [setStoredExpanded])
-
-  const handleDismissWidth = useCallback(() => { setShowWidthPrompt(false) }, [])
 
   const handleSaveColumns = useCallback(() => {
     if (pendingColumns.current) {
@@ -147,10 +151,9 @@ export default function CountriesPage() {
     : 'http://backend:8080'
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      fetchCountries()
-      fetchLanguages()
-    }
+    const rawToken = localStorage.getItem('axiom_token')
+    const normalizedToken = rawToken?.replace(/^Bearer\s+/i, '').trim() ?? ''
+    setIsLoggedIn(normalizedToken !== '' && normalizedToken !== 'undefined' && normalizedToken !== 'null')
   }, [])
 
   useEffect(() => {
@@ -187,7 +190,7 @@ export default function CountriesPage() {
     }
   }, [showColumnSelector])
 
-  const fetchLanguages = async () => {
+  const fetchLanguages = useCallback(async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/v1/languages?limit=500&offset=0`, {
         headers: {
@@ -200,21 +203,46 @@ export default function CountriesPage() {
       }
 
       const data = await response.json()
-      const map = new Map<string, string>()
+      const map = new Map<string, LanguageOption>()
       ;(Array.isArray(data) ? data : []).forEach((language: LanguageOption) => {
         const code = String(language?.code || '').trim().toLowerCase()
-        const name = String(language?.name || '').trim()
-        if (code && name) {
-          map.set(code, name)
+        if (code) {
+          map.set(code, language)
         }
       })
       setLanguagesByCode(map)
     } catch {
       // Non-blocking: languages can still render as codes
     }
-  }
+  }, [API_BASE_URL])
 
-  const fetchCountries = async () => {
+  const fetchCurrencies = useCallback(async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/currencies`, {
+        headers: {
+          'Accept': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        return
+      }
+
+      const data = await response.json()
+      const map = new Map<string, CurrencyOption>()
+      ;(Array.isArray(data) ? data : []).forEach((currency: CurrencyOption) => {
+        const code = String(currency?.code || '').trim().toUpperCase()
+        if (code) {
+          map.set(code, currency)
+        }
+      })
+      setCurrenciesByCode(map)
+    } catch {
+      // Non-blocking: currencies can still render as codes
+    }
+  }, [API_BASE_URL])
+
+  const fetchCountries = useCallback(async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/v1/countries`, {
         headers: {
@@ -252,6 +280,34 @@ export default function CountriesPage() {
     } finally {
       setLoading(false)
     }
+  }, [API_BASE_URL])
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      fetchCountries()
+      fetchLanguages()
+      fetchCurrencies()
+    }
+  }, [fetchCountries, fetchLanguages, fetchCurrencies])
+
+  const handleSort = (field: CountryColumnKey) => {
+    if (field === 'flag') {
+      return
+    }
+
+    if (sortField !== field) {
+      setSortField(field)
+      setSortDirection('asc')
+      return
+    }
+
+    if (sortDirection === 'asc') {
+      setSortDirection('desc')
+      return
+    }
+
+    setSortField(null)
+    setSortDirection('asc')
   }
 
   const filteredCountries = countries
@@ -268,7 +324,85 @@ export default function CountriesPage() {
       if (activeFilter === 'active') return country.active
       return !country.active
     })
-    .sort((left, right) => left.name.localeCompare(right.name, undefined, { sensitivity: 'base' }))
+    .sort((left, right) => {
+      if (!sortField) {
+        const defaultNameCompare = left.name.localeCompare(right.name, undefined, { sensitivity: 'base' })
+        if (defaultNameCompare !== 0) {
+          return defaultNameCompare
+        }
+
+        return left.alpha2.localeCompare(right.alpha2, undefined, { sensitivity: 'base' })
+      }
+
+      const normalizeCodeList = (values: string[]) => values.map((value) => String(value || '').trim().toUpperCase()).filter(Boolean)
+
+      const getComparableValue = (country: Country): string | number => {
+        switch (sortField) {
+          case 'name':
+            return country.name || ''
+          case 'alpha2':
+            return country.alpha2 || ''
+          case 'alpha3':
+            return country.alpha3 || ''
+          case 'numeric_code':
+            return country.numeric_code || ''
+          case 'native_name':
+            return country.native_name || ''
+          case 'capital':
+            return country.capital || ''
+          case 'continent': {
+            const normalizedCode = String(country.continent || '').trim().toUpperCase()
+            if (showReferenceCodes) {
+              return normalizedCode
+            }
+            return CONTINENT_NAMES[normalizedCode] || normalizedCode
+          }
+          case 'region':
+            return country.region || ''
+          case 'phone_codes':
+            return country.phone_codes.map((value) => String(value || '').trim()).filter(Boolean).map((value) => (value.startsWith('+') ? value : `+${value}`)).join(', ')
+          case 'currency_codes': {
+            const normalizedValues = normalizeCodeList(country.currency_codes)
+            if (showReferenceCodes) {
+              return normalizedValues.join(', ')
+            }
+            return normalizedValues.map((code) => getCurrencyName(code)).join(', ')
+          }
+          case 'languages': {
+            const normalizedValues = country.languages.map((value) => String(value || '').trim().toLowerCase()).filter(Boolean)
+            if (showReferenceCodes) {
+              return normalizedValues.join(', ')
+            }
+            return normalizedValues.map((code) => getLanguageName(code)).join(', ')
+          }
+          case 'active':
+            return Number(country.active)
+          case 'flag':
+          default:
+            return country.name || ''
+        }
+      }
+
+      const leftValue = getComparableValue(left)
+      const rightValue = getComparableValue(right)
+
+      let comparison = 0
+      if (typeof leftValue === 'number' && typeof rightValue === 'number') {
+        comparison = leftValue - rightValue
+      } else {
+        comparison = String(leftValue).localeCompare(String(rightValue), undefined, { sensitivity: 'base', numeric: true })
+      }
+
+      if (comparison === 0) {
+        comparison = left.name.localeCompare(right.name, undefined, { sensitivity: 'base' })
+      }
+
+      if (comparison === 0) {
+        comparison = left.alpha2.localeCompare(right.alpha2, undefined, { sensitivity: 'base' })
+      }
+
+      return sortDirection === 'asc' ? comparison : -comparison
+    })
 
   const visibleColumnsInOrder = AVAILABLE_COLUMNS.filter((column) => effectiveVisibleColumns.has(column.key))
 
@@ -282,27 +416,26 @@ export default function CountriesPage() {
     handleSetVisibleColumns(next)
   }
 
-  const formatListValue = (values: string[]): string => {
-    if (!values || values.length === 0) return '-'
-    return values.join(', ')
-  }
-
-  const formatLanguageListValue = (values: string[]): string => {
-    if (!values || values.length === 0) return '-'
-
-    if (showReferenceCodes) {
-      return values
-        .map((code) => String(code || '').trim().toLowerCase())
-        .filter(Boolean)
-        .join(', ')
+  const getLanguageName = (code: string): string => {
+    const normalizedCode = String(code || '').trim().toLowerCase()
+    if (!normalizedCode) {
+      return code
     }
 
-    return values
-      .map((code) => {
-        const normalizedCode = String(code || '').trim().toLowerCase()
-        return languagesByCode.get(normalizedCode) || code
-      })
-      .join(', ')
+    const details = languagesByCode.get(normalizedCode)
+    const name = String(details?.name || '').trim()
+    return name || code
+  }
+
+  const getCurrencyName = (code: string): string => {
+    const normalizedCode = String(code || '').trim().toUpperCase()
+    if (!normalizedCode) {
+      return code
+    }
+
+    const details = currenciesByCode.get(normalizedCode)
+    const name = String(details?.name || '').trim()
+    return name || code
   }
 
   const formatPhoneCodeListValue = (values: string[]): string => {
@@ -330,6 +463,9 @@ export default function CountriesPage() {
     }
     if (column.key === 'languages') {
       return showReferenceCodes ? 'Language Codes' : 'Language Names'
+    }
+    if (column.key === 'currency_codes') {
+      return showReferenceCodes ? 'Currency Codes' : 'Currency Names'
     }
     return column.label
   }
@@ -365,23 +501,28 @@ export default function CountriesPage() {
     return <LoadingSpinner message="Loading countries..." />
   }
 
+  const backHref = isLoggedIn ? '/dashboard' : '/home'
+  const backLabel = isLoggedIn ? '← Back to Dashboard' : '← Back to Home'
+
   return (
     <div className="min-h-screen p-8">
       <div className={`${effectiveExpandedWidth ? 'max-w-full' : 'max-w-7xl'} mx-auto transition-all duration-300`}>
         <PageHeader
           title="Countries"
           subtitle="Browse ISO 3166 country codes and reference data"
+          backHref={backHref}
+          backLabel={backLabel}
           actions={
             <>
               <button
-                onClick={() => handleSetExpandedWidth(!effectiveExpandedWidth)}
+                onClick={expandedWidthPreference.toggle}
                 className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 transition-colors text-white text-sm font-medium"
                 title={effectiveExpandedWidth ? 'Normal Width' : 'Expanded Width'}
               >
                 {effectiveExpandedWidth ? '⬅️ Normal' : '↔️ Expand'}
               </button>
               <button
-                onClick={() => setShowReferenceCodes(!showReferenceCodes)}
+                onClick={referenceDisplayPreference.toggle}
                 className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 transition-colors text-white text-sm font-medium"
                 title={showReferenceCodes ? 'Display mode: codes' : 'Display mode: names'}
               >
@@ -455,6 +596,12 @@ export default function CountriesPage() {
           </Alert>
         )}
 
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <StatCard title="Total Countries" value={countries.length} />
+          <StatCard title="Filtered Results" value={filteredCountries.length} />
+          <StatCard title="Data Standard" value="ISO 3166" />
+        </div>
+
         <div className="mb-6 bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm rounded-lg p-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
             <div>
@@ -522,12 +669,6 @@ export default function CountriesPage() {
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <StatCard title="Total Countries" value={countries.length} />
-          <StatCard title="Filtered Results" value={filteredCountries.length} />
-          <StatCard title="Data Standard" value="ISO 3166" />
-        </div>
-
         {hasActiveFilters && (
           <div
             ref={filterBarRef}
@@ -586,12 +727,16 @@ export default function CountriesPage() {
             headerRow={(
               <tr>
                 {visibleColumnsInOrder.map((column) => (
-                  <th
+                  <SortableHeaderCell
                     key={column.key}
-                    className={`${column.width || 'min-w-32'} px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-800`}
-                  >
-                    {getColumnLabel(column)}
-                  </th>
+                    className={`${column.width || 'min-w-32'} px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-800`}
+                    align={CENTER_ALIGNED_COLUMNS.has(column.key) ? 'center' : 'left'}
+                    sortable={column.key !== 'flag'}
+                    label={getColumnLabel(column)}
+                    onSort={column.key === 'flag' ? undefined : () => handleSort(column.key)}
+                    isActiveSort={sortField === column.key}
+                    sortDirection={sortDirection}
+                  />
                 ))}
               </tr>
             )}
@@ -620,13 +765,13 @@ export default function CountriesPage() {
                             )
                           case 'alpha2':
                             return (
-                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-center">
                                 <Badge variant="blue" mono>{country.alpha2 || '-'}</Badge>
                               </td>
                             )
                           case 'alpha3':
                             return (
-                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-center">
                                 <Badge variant="green" mono>{country.alpha3 || '-'}</Badge>
                               </td>
                             )
@@ -669,18 +814,41 @@ export default function CountriesPage() {
                           case 'currency_codes':
                             return (
                               <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                                {formatListValue(country.currency_codes)}
+                                <ReferenceDetailList
+                                  values={country.currency_codes}
+                                  normalizeValue={(value) => String(value || '').trim().toUpperCase()}
+                                  getDisplayValue={(normalizedValue) => (showReferenceCodes ? normalizedValue : getCurrencyName(normalizedValue))}
+                                  getDetails={(normalizedValue) => currenciesByCode.get(normalizedValue)}
+                                  preferredOrder={[
+                                    'code',
+                                    'name',
+                                    'symbol',
+                                    'symbol_native',
+                                    'decimal_digits',
+                                    'rounding',
+                                    'name_plural',
+                                    'active',
+                                    'is_alert_cls_allowed',
+                                    'is_ofac_sanctioned',
+                                  ]}
+                                />
                               </td>
                             )
                           case 'languages':
                             return (
                               <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                                {formatLanguageListValue(country.languages)}
+                                <ReferenceDetailList
+                                  values={country.languages}
+                                  normalizeValue={(value) => String(value || '').trim().toLowerCase()}
+                                  getDisplayValue={(normalizedValue) => (showReferenceCodes ? normalizedValue : getLanguageName(normalizedValue))}
+                                  getDetails={(normalizedValue) => languagesByCode.get(normalizedValue)}
+                                  preferredOrder={['code', 'name', 'native', 'rtl']}
+                                />
                               </td>
                             )
                           case 'active':
                             return (
-                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm">
+                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-center">
                                 {country.active ? <Badge variant="green" shape="pill">Active</Badge> : <Badge variant="gray" shape="pill">Inactive</Badge>}
                               </td>
                             )
@@ -711,9 +879,10 @@ export default function CountriesPage() {
       </div>
 
       <PreferenceSavePrompt
-        visible={showWidthPrompt}
-        onSave={handleSaveWidth}
-        onDismiss={handleDismissWidth}
+        visible={expandedWidthPreference.showPrompt}
+        resetKey={expandedWidthPreference.promptResetKey}
+        onSave={expandedWidthPreference.save}
+        onDismiss={expandedWidthPreference.dismiss}
         label="Save page width as your default?"
       />
       <PreferenceSavePrompt
@@ -722,6 +891,13 @@ export default function CountriesPage() {
         onSave={handleSaveColumns}
         onDismiss={handleDismissColumns}
         label="Save column selection as your default?"
+      />
+      <PreferenceSavePrompt
+        visible={referenceDisplayPreference.showPrompt}
+        resetKey={referenceDisplayPreference.promptResetKey}
+        onSave={referenceDisplayPreference.save}
+        onDismiss={referenceDisplayPreference.dismiss}
+        label="Save display mode as your default?"
       />
     </div>
   )

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import Alert from '../components/Alert'
 import LoadingSpinner from '../components/LoadingSpinner'
 import PageHeader from '../components/PageHeader'
@@ -56,6 +56,7 @@ interface Level2ProcessingFailure {
 type ImportJobType = 'DAILY_FULL' | 'DAILY_DELTA' | 'LEVEL2_RR' | 'LEVEL2_REPEX'
 
 export default function LEIStatusPage() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [masterDataStatus, setMasterDataStatus] = useState<ProcessingStatus | null>(null)
   const [fullStatus, setFullStatus] = useState<ProcessingStatus | null>(null)
   const [deltaStatus, setDeltaStatus] = useState<ProcessingStatus | null>(null)
@@ -86,7 +87,7 @@ export default function LEIStatusPage() {
     ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080')
     : 'http://backend:8080'
 
-  const fetchStatus = async () => {
+  const fetchStatus = useCallback(async () => {
     try {
       const [
         mdResponse,
@@ -139,6 +140,43 @@ export default function LEIStatusPage() {
     } finally {
       setLoading(false)
     }
+  }, [API_BASE_URL])
+
+  const getAuthToken = (): string | null => {
+    const rawToken = localStorage.getItem('axiom_token')
+    if (!rawToken) return null
+
+    const normalizedToken = rawToken.replace(/^Bearer\s+/i, '').trim()
+    if (!normalizedToken || normalizedToken === 'undefined' || normalizedToken === 'null') {
+      return null
+    }
+
+    return normalizedToken
+  }
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    setIsLoggedIn(getAuthToken() !== null)
+  }, [])
+
+  const isJwtExpired = (token: string): boolean => {
+    const parts = token.split('.')
+    if (parts.length !== 3) return true
+
+    try {
+      const payloadBase64Url = parts[1]
+      const payloadBase64 = payloadBase64Url.replace(/-/g, '+').replace(/_/g, '/')
+      const paddingLength = (4 - (payloadBase64.length % 4)) % 4
+      const paddedPayloadBase64 = payloadBase64 + '='.repeat(paddingLength)
+      const payloadJson = atob(paddedPayloadBase64)
+      const payload = JSON.parse(payloadJson) as { exp?: number }
+
+      if (typeof payload.exp !== 'number') return false
+      const nowEpoch = Math.floor(Date.now() / 1000)
+      return payload.exp <= nowEpoch
+    } catch {
+      return true
+    }
   }
 
   const triggerJob = async (endpoint: string, successMessage: string) => {
@@ -149,12 +187,25 @@ export default function LEIStatusPage() {
     }
 
     try {
-      const token = localStorage.getItem('token') || localStorage.getItem('jwt') || localStorage.getItem('authToken')
+      const token = getAuthToken()
+      const tokenExpired = token ? isJwtExpired(token) : null
+
+      if (!token) {
+        showTriggerMessage('Authorization required. Log in again and retry.', 'warning')
+        return
+      }
+
+      if (tokenExpired) {
+        localStorage.removeItem('axiom_token')
+        showTriggerMessage('Session expired. Log in again and retry.', 'warning')
+        return
+      }
+
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: 'POST',
         headers: {
           Accept: 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          Authorization: `Bearer ${token}`,
         },
       })
 
@@ -177,6 +228,9 @@ export default function LEIStatusPage() {
           : 'Failed to trigger job'
       }
       const isAuthFailure = response.status === 401 || response.status === 403
+      if (isAuthFailure) {
+        localStorage.removeItem('axiom_token')
+      }
       const authHint = isAuthFailure ? ' Log in again and retry.' : ''
       showTriggerMessage(`${backendMessage}${authHint}`, isAuthFailure ? 'warning' : 'error')
     } catch (err) {
@@ -242,13 +296,13 @@ export default function LEIStatusPage() {
     if (typeof window !== 'undefined') {
       fetchStatus()
     }
-  }, [])
+  }, [fetchStatus])
 
   useEffect(() => {
     if (!autoRefresh) return
     const interval = setInterval(fetchStatus, 5000)
     return () => clearInterval(interval)
-  }, [autoRefresh])
+  }, [autoRefresh, fetchStatus])
 
   useEffect(() => {
     const handleEscapeKey = (event: KeyboardEvent) => {
@@ -796,6 +850,8 @@ export default function LEIStatusPage() {
 
   const showFullChildren = fullExpanded || fullStatus?.status === 'RUNNING' || rrStatus?.status === 'RUNNING' || repexStatus?.status === 'RUNNING'
   const showRrChild = rrExpanded || rrStatus?.status === 'RUNNING' || repexStatus?.status === 'RUNNING'
+  const backHref = isLoggedIn ? '/dashboard' : '/home'
+  const backLabel = isLoggedIn ? '← Back to Dashboard' : '← Back to Home'
 
   return (
     <div className="min-h-screen p-8">
@@ -803,6 +859,8 @@ export default function LEIStatusPage() {
         <PageHeader
           title="LEI Data Processing"
           subtitle="Real-time monitoring of GLEIF data synchronization"
+          backHref={backHref}
+          backLabel={backLabel}
           actions={
             <>
               <button

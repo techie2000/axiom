@@ -9,6 +9,8 @@ optimized for performance, accessibility, and user experience.
 - [Reusable Components](#reusable-components)
 - [Sticky Headers with Smooth Transitions](#sticky-headers-with-smooth-transitions)
 - [Frozen Columns Checklist](#frozen-columns-checklist)
+- [Brand Theme Asset Switch](#brand-theme-asset-switch)
+- [Entry Route Model](#entry-route-model)
 - [Best Practices](#best-practices)
 
 ---
@@ -460,7 +462,7 @@ import PageHeader from '../components/PageHeader'
 | ------ | ---- | ------- | ----------- |
 | `title` | `string` | — | Page heading (rendered as `h1`) |
 | `subtitle` | `string` | — | Descriptive subtext below the heading |
-| `backHref` | `string` | `'/'` | Destination of the back link |
+| `backHref` | `string` | `'/home'` | Destination of the back link |
 | `backLabel` | `string` | `'← Back to Home'` | Back link label |
 | `actions` | `ReactNode` | — | Extra controls rendered left of `ThemeToggle` |
 
@@ -830,6 +832,91 @@ to prevent divider drift and bleed-through.
 - [ ] Verify seam behavior in all combinations: light/dark, narrow/expanded width, and after
   small + large horizontal scroll movements.
 - [ ] Verify no horizontal content bleeds through the frozen divider boundary at any scroll position.
+
+---
+
+## Brand Theme Asset Switch
+
+Use this when you want to switch the active brand from the current primary set to the prepared
+black/white variant.
+
+### Source and generated asset locations
+
+- Primary source: `docs/assets/branding/axiom-logo-source.jfif`
+- Alternate source: `docs/assets/branding/axiom-logo-alt-bw-source.jfif`
+- Active runtime assets: `frontend/public/branding/*`
+- Alternate runtime assets: `frontend/public/branding/alt-bw/*`
+
+### Activate the alternate icon set
+
+Edit `frontend/app/layout.tsx` in `metadata.icons`:
+
+```tsx
+icons: {
+  icon: [
+    { url: '/branding/alt-bw/favicon.ico' },
+    { url: '/branding/alt-bw/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+    { url: '/branding/alt-bw/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+  ],
+  apple: '/branding/alt-bw/apple-touch-icon.png',
+},
+```
+
+### Activate the alternate landing-page logo
+
+Edit `frontend/app/page.tsx` and set the logo image `src` to:
+
+```tsx
+src="/branding/alt-bw/logo.png"
+```
+
+### Revert to primary branding
+
+- Restore icon paths in `frontend/app/layout.tsx` back to `/branding/...`
+- Restore landing logo `src` in `frontend/app/page.tsx` back to `/branding/logo.png`
+
+---
+
+## Entry Route Model
+
+The frontend uses a two-step entry flow:
+
+- `/` — branding-only entry page with navigation choices.
+- `/home` — public reference data hub (countries, currencies, languages, LEI records).
+- `/dashboard` — combined all-options module landing (public + protected + acquisition + admin section).
+
+Protected modules remain behind authentication and are reached after sign-in.
+
+### Navigation defaults
+
+- `PageHeader` default back link points to `/home`.
+- For mixed-access pages (available to both public and authenticated users), make the back target auth-aware:
+  - authenticated user → `/dashboard`
+  - public user → `/home`
+- For auth-only module pages, use explicit `backHref="/dashboard"` and `backLabel="← Back to Dashboard"`.
+
+### Current `PageHeader` route matrix
+
+| Route | Access model | Back-link behaviour |
+| ----- | ------------ | ------------------- |
+| `/dashboard` | Auth-only landing | No back link (`showBackLink={false}`) |
+| `/home` | Public landing | No back link (`showBackLink={false}`) |
+| `/admin/users` | Auth-only | Fixed to `/dashboard` |
+| `/accounts` | Auth-only | Fixed to `/dashboard` |
+| `/instruments` | Auth-only | Fixed to `/dashboard` |
+| `/ssi` | Auth-only | Fixed to `/dashboard` |
+| `/code-mappings` | Auth-only | Fixed to `/dashboard` |
+| `/countries` | Mixed-access | Auth-aware (`/dashboard` if logged in, else `/home`) |
+| `/currencies` | Mixed-access | Auth-aware (`/dashboard` if logged in, else `/home`) |
+| `/languages` | Mixed-access | Auth-aware (`/dashboard` if logged in, else `/home`) |
+| `/lei` | Mixed-access | Auth-aware (`/dashboard` if logged in, else `/home`) |
+| `/lei-records` | Mixed-access | Auth-aware (`/dashboard` if logged in, else `/home`) |
+
+- New pages must declare one of these three models: public landing (no back link),
+  auth-only (fixed `/dashboard`), or mixed-access (auth-aware `/dashboard`/`/home`).
+- Login success redirects to `/dashboard` for non-bootstrap users.
+- `/home` shows `All Modules` only for authenticated users; it routes to `/dashboard`.
+- Auth pages may still use explicit links to `/` when they should return to the branding entry.
 
 ---
 

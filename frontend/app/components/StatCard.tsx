@@ -10,7 +10,7 @@ const accentClasses: Record<NonNullable<StatCardProps['accent']>, { border: stri
   blue:    { border: 'border-blue-200 dark:border-blue-500/30',   text: 'text-blue-700 dark:text-blue-400',   label: 'text-blue-700 dark:text-blue-400'   },
   yellow:  { border: 'border-yellow-200 dark:border-yellow-500/30', text: 'text-yellow-700 dark:text-yellow-400', label: 'text-yellow-700 dark:text-yellow-400' },
   purple:  { border: 'border-purple-200 dark:border-purple-500/30', text: 'text-purple-700 dark:text-purple-400', label: 'text-purple-700 dark:text-purple-400' },
-  gray:    { border: 'border-gray-300 dark:border-gray-500/30', text: 'text-gray-700 dark:text-gray-300', label: 'text-gray-700 dark:text-gray-300' },
+  gray:    { border: 'border-slate-200 dark:border-slate-500/30', text: 'text-slate-700 dark:text-slate-300', label: 'text-slate-700 dark:text-slate-300' },
   default: { border: 'border-gray-200 dark:border-white/10',      text: 'text-gray-900 dark:text-white',      label: 'text-gray-600 dark:text-gray-400'   },
 }
 

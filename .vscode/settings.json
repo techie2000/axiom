@@ -58,7 +58,10 @@
     "Test-Path": true,
     "Write-Error": true,
     "wsl": true,
-    "git remote": true
+    "git remote": true,
+    "npx markdownlint-cli2": true,
+    "git rev-list": true,
+    "git switch": true
   },
   "cSpell.words": [
     "adduser",

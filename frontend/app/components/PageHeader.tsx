@@ -15,7 +15,7 @@ interface PageHeaderProps {
 export default function PageHeader({
   title,
   subtitle,
-  backHref = '/',
+  backHref = '/home',
   backLabel = '← Back to Home',
   showBackLink = true,
   actions,

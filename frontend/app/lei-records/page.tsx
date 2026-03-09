@@ -6,9 +6,11 @@ import Alert from '../components/Alert'
 import CountryFlag from '../components/CountryFlag'
 import PageHeader from '../components/PageHeader'
 import PreferenceSavePrompt from '../components/PreferenceSavePrompt'
+import ReferenceDetailList from '../components/ReferenceDetailList'
 import SearchInputWithOverflowTooltip from '../components/SearchInputWithOverflowTooltip'
 import StatCard from '../components/StatCard'
 import SyncedWideTable from '../components/SyncedWideTable'
+import { useDeferredBooleanPreference } from '../lib/useDeferredBooleanPreference'
 import { useUserPreference } from '../lib/useUserPreference'
 import { formatEnumDisplayValue, formatLEICellValue, getStatusBadgePresentation, normalizeRecordNullLikeValues } from './null-utils'
 
@@ -67,8 +69,10 @@ interface LEIRecord {
 interface Country {
   code: string
   name: string
+  alpha3_code?: string
   region?: string
   active: boolean
+  [key: string]: unknown
 }
 
 interface ColumnConfig {
@@ -133,8 +137,10 @@ const AVAILABLE_COLUMNS: ColumnConfig[] = [
 
 // Pre-computed default visible column keys for use as preference default value.
 const DEFAULT_VISIBLE_KEYS = AVAILABLE_COLUMNS.filter(col => col.defaultVisible).map(col => col.key).join(',')
+const COUNTRY_DETAIL_ORDER = ['code', 'name', 'alpha3_code', 'region', 'active']
 
 export default function LEIRecordsPage() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [records, setRecords] = useState<LEIRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -162,43 +168,42 @@ export default function LEIRecordsPage() {
 
   // Preference-backed column visibility – serialised as a comma-separated list in the store.
   const [storedColumns, setStoredColumns] = useUserPreference('lei-records', 'visible_columns', DEFAULT_VISIBLE_KEYS)
-  const [storedExpanded, setStoredExpanded] = useUserPreference('lei-records', 'expanded_width', 'false')
+  const expandedWidthPreference = useDeferredBooleanPreference({
+    pageKey: 'lei-records',
+    preferenceKey: 'expanded_width',
+    defaultValue: false,
+  })
+  const locationDisplayPreference = useDeferredBooleanPreference({
+    pageKey: 'lei-records',
+    preferenceKey: 'display_location_codes',
+    defaultValue: false,
+  })
 
   const visibleColumns = useMemo<Set<keyof LEIRecord>>(() => {
     if (!storedColumns) return new Set(AVAILABLE_COLUMNS.filter(col => col.defaultVisible).map(col => col.key))
     return new Set(storedColumns.split(',').filter(Boolean) as Array<keyof LEIRecord>)
   }, [storedColumns])
 
-  const expandedWidth = storedExpanded === 'true'
-
   // Prompt to save preference when user changes columns or width.
   const [showColumnSavePrompt, setShowColumnSavePrompt] = useState(false)
-  const [showWidthSavePrompt, setShowWidthSavePrompt] = useState(false)
   // Incrementing these counters resets the 8-second auto-dismiss timer in
   // PreferenceSavePrompt so users always get 8 s from their *last* change.
   const [columnSaveVersion, setColumnSaveVersion] = useState(0)
   // Track whether the current value differs from the stored preference.
   const pendingColumns = useRef<Set<keyof LEIRecord> | null>(null)
-  const pendingExpanded = useRef<boolean | null>(null)
 
   // Apply pending column changes immediately (local state) even before saving.
   const [localColumns, setLocalColumns] = useState<Set<keyof LEIRecord> | null>(null)
-  const [localExpanded, setLocalExpanded] = useState<boolean | null>(null)
 
   const effectiveVisibleColumns = localColumns ?? visibleColumns
-  const effectiveExpandedWidth = localExpanded ?? expandedWidth
+  const effectiveExpandedWidth = expandedWidthPreference.value
+  const showLocationCodes = locationDisplayPreference.value
 
   const handleSetVisibleColumns = useCallback((newCols: Set<keyof LEIRecord>) => {
     setLocalColumns(newCols)
     pendingColumns.current = newCols
     setShowColumnSavePrompt(true)
     setColumnSaveVersion(v => v + 1)
-  }, [])
-
-  const handleSetExpandedWidth = useCallback((value: boolean) => {
-    setLocalExpanded(value)
-    pendingExpanded.current = value
-    setShowWidthSavePrompt(true)
   }, [])
 
   const handleSaveColumns = useCallback(() => {
@@ -214,18 +219,7 @@ export default function LEIRecordsPage() {
     setShowColumnSavePrompt(false)
   }, [])
 
-  const handleSaveWidth = useCallback(() => {
-    if (pendingExpanded.current !== null) {
-      setStoredExpanded(String(pendingExpanded.current))
-      setLocalExpanded(null)
-      pendingExpanded.current = null
-    }
-    setShowWidthSavePrompt(false)
-  }, [setStoredExpanded])
-
-  const handleDismissWidth = useCallback(() => {
-    setShowWidthSavePrompt(false)
-  }, [])
+  const toggleLocationDisplayMode = locationDisplayPreference.toggle
 
   // New features
   const [selectedRecord, setSelectedRecord] = useState<LEIRecord | null>(null)
@@ -233,7 +227,6 @@ export default function LEIRecordsPage() {
   const [managingLouName, setManagingLouName] = useState<string | null>(null)
   const [managingLouNames, setManagingLouNames] = useState<Map<string, string>>(new Map())
   const [dateDisplayMode, setDateDisplayMode] = useState<'relative' | 'absolute'>('relative')
-  const [showLocationCodes, setShowLocationCodes] = useState(false)
 
   const API_BASE_URL = typeof window !== 'undefined' 
     ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080')
@@ -241,18 +234,28 @@ export default function LEIRecordsPage() {
 
   const statusOptions = ['ACTIVE', 'INACTIVE', 'LAPSED', 'MERGED', 'RETIRED', 'NULL']
 
-  const isNotSetStatusFilterValue = (value: string): boolean => {
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const rawToken = localStorage.getItem('axiom_token')
+    const normalizedToken = rawToken?.replace(/^Bearer\s+/i, '').trim() ?? ''
+    setIsLoggedIn(normalizedToken !== '' && normalizedToken !== 'undefined' && normalizedToken !== 'null')
+  }, [])
+
+  const backHref = isLoggedIn ? '/dashboard' : '/home'
+  const backLabel = isLoggedIn ? '← Back to Dashboard' : '← Back to Home'
+
+  const isNotSetStatusFilterValue = useCallback((value: string): boolean => {
     const normalized = value.trim().replaceAll(' ', '_').toUpperCase()
     return normalized === 'NULL' || normalized === 'NOT_SET'
-  }
+  }, [])
 
-  const formatStatusFilterLabel = (value: string): string => {
+  const formatStatusFilterLabel = useCallback((value: string): string => {
     return isNotSetStatusFilterValue(value) ? 'Not Set' : value
-  }
+  }, [isNotSetStatusFilterValue])
 
-  const normalizeStatusFilterForAPI = (value: string): string => {
+  const normalizeStatusFilterForAPI = useCallback((value: string): string => {
     return isNotSetStatusFilterValue(value) ? 'NULL' : value
-  }
+  }, [isNotSetStatusFilterValue])
 
   const categoryOptions = useMemo(() => {
     const values = new Set<string>()
@@ -277,6 +280,17 @@ export default function LEIRecordsPage() {
 
     return Array.from(values).sort((lhs, rhs) => lhs.localeCompare(rhs))
   }, [categoryOptionsFromAPI, categoryFilter, records])
+
+  const countryByCode = useMemo(() => {
+    const map = new Map<string, Country>()
+    countryOptions.forEach((country) => {
+      const code = String(country?.code || '').trim().toUpperCase()
+      if (code) {
+        map.set(code, country)
+      }
+    })
+    return map
+  }, [countryOptions])
 
   // Fetch countries and categories list on mount
   useEffect(() => {
@@ -419,14 +433,7 @@ export default function LEIRecordsPage() {
     return () => clearTimeout(timer)
   }, [searchTerm])
 
-  // Fetch records when filters, page, or visible columns change
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      fetchRecords()
-    }
-  }, [currentPage, debouncedSearch, statusFilter, categoryFilter, countryFilter, itemsPerPage, sortField, sortDirection, effectiveVisibleColumns])
-
-  const fetchRecords = async () => {
+  const fetchRecords = useCallback(async () => {
     try {
       setLoading(true)
       const offset = (currentPage - 1) * itemsPerPage
@@ -493,7 +500,26 @@ export default function LEIRecordsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [
+    API_BASE_URL,
+    categoryFilter,
+    countryFilter,
+    currentPage,
+    debouncedSearch,
+    effectiveVisibleColumns,
+    itemsPerPage,
+    normalizeStatusFilterForAPI,
+    sortDirection,
+    sortField,
+    statusFilter,
+  ])
+
+  // Fetch records when filters, page, or visible columns change
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      fetchRecords()
+    }
+  }, [fetchRecords])
 
   const clearFilters = () => {
     setSearchTerm('')
@@ -678,7 +704,7 @@ export default function LEIRecordsPage() {
     if (records.length > 0) {
       fetchManagingLouNamesForTable()
     }
-  }, [records, API_BASE_URL])
+  }, [records, managingLouNames, API_BASE_URL])
 
   // Parse other_names JSONB field
   interface OtherName {
@@ -742,7 +768,14 @@ export default function LEIRecordsPage() {
     const normalizedCode = (countryCode || '').trim().toUpperCase()
     if (!normalizedCode) return null
 
-    return countryOptions.find(c => c.code.toUpperCase() === normalizedCode)?.name || null
+    return countryByCode.get(normalizedCode)?.name || null
+  }
+
+  const getCountryDetailsByCode = (countryCode: string): Country | undefined => {
+    const normalizedCode = (countryCode || '').trim().toUpperCase()
+    if (!normalizedCode) return undefined
+
+    return countryByCode.get(normalizedCode)
   }
 
   const getRegionNameByCode = (regionCode: string): string | null => {
@@ -954,10 +987,12 @@ export default function LEIRecordsPage() {
         <PageHeader
           title="LEI Records"
           subtitle="GLEIF Legal Entity Identifiers (ISO 17442)"
+          backHref={backHref}
+          backLabel={backLabel}
           actions={
             <>
               <button
-                onClick={() => handleSetExpandedWidth(!effectiveExpandedWidth)}
+                onClick={expandedWidthPreference.toggle}
                 className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 transition-colors text-white text-sm font-medium flex items-center gap-2"
                 title={effectiveExpandedWidth ? 'Normal Width' : 'Expanded Width'}
               >
@@ -1040,7 +1075,7 @@ export default function LEIRecordsPage() {
               </div>
 
               <button
-                onClick={() => setShowLocationCodes(!showLocationCodes)}
+                onClick={toggleLocationDisplayMode}
                 className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 transition-colors text-white text-sm font-medium"
                 title={showLocationCodes ? 'Display mode: codes' : 'Display mode: names'}
               >
@@ -1241,7 +1276,7 @@ export default function LEIRecordsPage() {
                     onClick={() => setSearchTerm('')}
                     className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors flex items-center gap-1"
                   >
-                    Search: "{debouncedSearch}" <span className="ml-1">✕</span>
+                    Search: &quot;{debouncedSearch}&quot; <span className="ml-1">✕</span>
                   </button>
                 )}
                 {statusFilter && (
@@ -1453,7 +1488,13 @@ export default function LEIRecordsPage() {
                                   })()}
                                 </div>
                               ) : isCountryColumn ? (
-                                formatCountryDisplay(String(value || ''))
+                                <ReferenceDetailList
+                                  values={[String(value || '')]}
+                                  normalizeValue={(rawValue) => String(rawValue || '').trim().toUpperCase()}
+                                  getDisplayValue={(normalizedValue) => formatCountryDisplay(normalizedValue)}
+                                  getDetails={(normalizedValue) => getCountryDetailsByCode(normalizedValue)}
+                                  preferredOrder={COUNTRY_DETAIL_ORDER}
+                                />
                               ) : isCountryFlagColumn ? (
                                 <CountryFlag
                                   countryCode={String(record.legal_address_country || '')}
@@ -1570,7 +1611,7 @@ export default function LEIRecordsPage() {
                 </button>
                 <span className="text-gray-600 dark:text-gray-400 ml-2">Display:</span>
                 <button
-                  onClick={() => setShowLocationCodes(!showLocationCodes)}
+                  onClick={toggleLocationDisplayMode}
                   className="px-3 py-1 rounded-lg bg-indigo-100 hover:bg-indigo-200 dark:bg-indigo-900 dark:hover:bg-indigo-800 text-indigo-900 dark:text-indigo-100 transition-colors font-medium"
                 >
                   {showLocationCodes ? '🏷️ Codes' : '🏷️ Names'}
@@ -1759,7 +1800,13 @@ export default function LEIRecordsPage() {
                       <div>
                         <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{showLocationCodes ? 'Country Code' : 'Country Name'}</label>
                         <p className="text-sm text-gray-900 dark:text-white mt-1 flex items-center gap-2">
-                          <span>{formatCountryDisplay(selectedRecord.legal_address_country)}</span>
+                          <ReferenceDetailList
+                            values={[selectedRecord.legal_address_country]}
+                            normalizeValue={(rawValue) => String(rawValue || '').trim().toUpperCase()}
+                            getDisplayValue={(normalizedValue) => formatCountryDisplay(normalizedValue)}
+                            getDetails={(normalizedValue) => getCountryDetailsByCode(normalizedValue)}
+                            preferredOrder={COUNTRY_DETAIL_ORDER}
+                          />
                           <CountryFlag
                             countryCode={String(selectedRecord.legal_address_country || '')}
                             title={formatCountryDisplay(selectedRecord.legal_address_country)}
@@ -1838,7 +1885,13 @@ export default function LEIRecordsPage() {
                       <div>
                         <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{showLocationCodes ? 'Country Code' : 'Country Name'}</label>
                         <p className="text-sm text-gray-900 dark:text-white mt-1 flex items-center gap-2">
-                          <span>{formatCountryDisplay(selectedRecord.legal_address_country)}</span>
+                          <ReferenceDetailList
+                            values={[selectedRecord.legal_address_country]}
+                            normalizeValue={(rawValue) => String(rawValue || '').trim().toUpperCase()}
+                            getDisplayValue={(normalizedValue) => formatCountryDisplay(normalizedValue)}
+                            getDetails={(normalizedValue) => getCountryDetailsByCode(normalizedValue)}
+                            preferredOrder={COUNTRY_DETAIL_ORDER}
+                          />
                           <CountryFlag
                             countryCode={String(selectedRecord.legal_address_country || '')}
                             title={formatCountryDisplay(selectedRecord.legal_address_country)}
@@ -1849,7 +1902,13 @@ export default function LEIRecordsPage() {
                       <div>
                         <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{showLocationCodes ? 'Country Code' : 'Country Name'}</label>
                         <p className="text-sm text-gray-900 dark:text-white mt-1 flex items-center gap-2">
-                          <span>{formatCountryDisplay(selectedRecord.hq_address_country)}</span>
+                          <ReferenceDetailList
+                            values={[selectedRecord.hq_address_country]}
+                            normalizeValue={(rawValue) => String(rawValue || '').trim().toUpperCase()}
+                            getDisplayValue={(normalizedValue) => formatCountryDisplay(normalizedValue)}
+                            getDetails={(normalizedValue) => getCountryDetailsByCode(normalizedValue)}
+                            preferredOrder={COUNTRY_DETAIL_ORDER}
+                          />
                           <CountryFlag
                             countryCode={String(selectedRecord.hq_address_country || '')}
                             title={formatCountryDisplay(selectedRecord.hq_address_country)}
@@ -1987,10 +2046,18 @@ export default function LEIRecordsPage() {
         onDismiss={handleDismissColumns}
       />
       <PreferenceSavePrompt
-        visible={showWidthSavePrompt}
+        visible={expandedWidthPreference.showPrompt}
+        resetKey={expandedWidthPreference.promptResetKey}
         label="Save page width as your default?"
-        onSave={handleSaveWidth}
-        onDismiss={handleDismissWidth}
+        onSave={expandedWidthPreference.save}
+        onDismiss={expandedWidthPreference.dismiss}
+      />
+      <PreferenceSavePrompt
+        visible={locationDisplayPreference.showPrompt}
+        resetKey={locationDisplayPreference.promptResetKey}
+        label="Save display mode as your default?"
+        onSave={locationDisplayPreference.save}
+        onDismiss={locationDisplayPreference.dismiss}
       />
     </div>
   )

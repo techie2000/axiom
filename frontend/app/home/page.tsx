@@ -1,41 +1,86 @@
 import Link from 'next/link'
-import ThemeToggle from '../components/ThemeToggle'
+import Image from 'next/image'
+import CountriesRecordsCard from '../components/CountriesRecordsCard'
+import CurrenciesRecordsCard from '../components/CurrenciesRecordsCard'
+import LanguagesRecordsCard from '../components/LanguagesRecordsCard'
+import LEIRecordsCard from '../components/LEIRecordsCard'
+import SignInPrompt from '../components/SignInPrompt'
+import AllModulesButton from '../components/AllModulesButton'
 
-const publicModules = [
-  { href: '/lei', label: 'LEI Records' },
-  { href: '/lei-records', label: 'LEI Import Status' },
-  { href: '/countries', label: 'Countries' },
-  { href: '/currencies', label: 'Currencies' },
-  { href: '/languages', label: 'Languages' },
-]
-
-export default function PublicHomePage() {
+export default function PublicDataHomePage() {
   return (
     <main className="min-h-screen p-8">
-      <div className="max-w-5xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <Link href="/" className="text-blue-500 hover:text-blue-400 text-sm font-medium">
-            ← Back to Landing
-          </Link>
-          <ThemeToggle />
-        </div>
+      <div className="max-w-7xl mx-auto">
+        <section className="mb-10 bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm rounded-2xl shadow-lg p-6 md:p-8">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+            <div className="flex items-center gap-4 md:gap-5">
+              <Image
+                src="/branding/logo.svg"
+                alt="Axiom brand"
+                width={88}
+                height={88}
+                className="rounded-xl border border-gray-200 dark:border-white/10"
+                priority
+              />
+              <div>
+                <span className="inline-block mb-2 text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  Axiom platform
+                </span>
+                <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
+                  Public Reference Data
+                </h1>
+                <p className="mt-2 text-gray-600 dark:text-gray-300">
+                  Publicly accessible ISO standards and LEI reference datasets.
+                </p>
+              </div>
+            </div>
 
-        <section className="bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm rounded-2xl shadow-lg p-7 md:p-9">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">Public Reference Data</h1>
-          <p className="mt-3 text-gray-700 dark:text-gray-200">
-            Browse publicly available static reference datasets without signing in.
-          </p>
+            <div className="flex flex-wrap gap-3">
+              <AllModulesButton />
+            </div>
+          </div>
+        </section>
 
-          <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {publicModules.map((module) => (
-              <Link
-                key={module.href}
-                href={module.href}
-                className="rounded-lg border-2 border-gray-200 dark:border-white/15 bg-white dark:bg-white/5 px-4 py-3 font-medium text-gray-900 dark:text-white hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors"
-              >
-                {module.label}
-              </Link>
-            ))}
+        <section className="mb-8">
+          <h2 className="text-3xl font-bold mb-2 text-gray-900 dark:text-white">Data Catalog</h2>
+          <p className="text-gray-600 dark:text-gray-300">Browse available public datasets</p>
+        </section>
+
+        <SignInPrompt />
+
+        <section className="mb-12">
+          <div className="mb-5 flex flex-wrap gap-2">
+            <Link
+              href="/countries"
+              className="px-3 py-1.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300"
+            >
+              ISO 3166 Countries
+            </Link>
+            <Link
+              href="/currencies"
+              className="px-3 py-1.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300"
+            >
+              ISO 4217 Currencies
+            </Link>
+            <Link
+              href="/languages"
+              className="px-3 py-1.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300"
+            >
+              ISO Languages
+            </Link>
+            <Link
+              href="/lei-records"
+              className="px-3 py-1.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300"
+            >
+              LEI Records
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 auto-rows-fr">
+            <CountriesRecordsCard />
+            <CurrenciesRecordsCard />
+            <LanguagesRecordsCard />
+            <LEIRecordsCard />
           </div>
         </section>
       </div>
