@@ -119,6 +119,7 @@ function Resolve-RepoRoot {
 }
 
 function Remove-EmptyDirectoryWithRetry {
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Medium')]
     param(
         [string]$Path,
         [int]$Retries,
@@ -158,9 +159,8 @@ function Remove-EmptyDirectoryWithRetry {
                 }
             }
 
-            if ($WhatIfPreference) {
-                Write-Host "What if: remove empty directory '$Path'" -ForegroundColor DarkGray
-                return 'WHATIF'
+            if (-not $PSCmdlet.ShouldProcess($Path, 'Remove empty directory')) {
+                return 'SKIPPED'
             }
 
             Remove-Item -LiteralPath $Path -Force -ErrorAction Stop
