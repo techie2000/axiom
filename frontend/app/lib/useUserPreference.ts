@@ -2,6 +2,18 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+const PREFERENCE_SAVE_ERROR_EVENT = 'axiom:preference-save-error'
+
+class PreferenceSaveError extends Error {
+  status?: number
+
+  constructor(message: string, status?: number) {
+    super(message)
+    this.name = 'PreferenceSaveError'
+    this.status = status
+  }
+}
+
 const API_BASE_URL =
   typeof window !== 'undefined'
     ? process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080'
@@ -51,8 +63,10 @@ async function savePreferenceToServer(
   preferenceValue: string,
 ): Promise<void> {
   const token = getToken()
-  if (!token) return
-  await fetch(`${API_BASE_URL}/api/v1/preferences`, {
+  if (!token) {
+    throw new PreferenceSaveError('missing auth token', 401)
+  }
+  const response = await fetch(`${API_BASE_URL}/api/v1/preferences`, {
     method: 'PUT',
     headers: {
       Authorization: `Bearer ${token}`,
@@ -60,6 +74,10 @@ async function savePreferenceToServer(
     },
     body: JSON.stringify({ page_key: pageKey, preference_key: preferenceKey, preference_value: preferenceValue }),
   })
+
+  if (!response.ok) {
+    throw new PreferenceSaveError(`failed to persist preference (${response.status})`, response.status)
+  }
 }
 
 /**
@@ -147,8 +165,30 @@ export function useUserPreference(
         localStorage.setItem(localKey, newValue)
       }
       // Persist to server asynchronously (best-effort).
-      savePreferenceToServer(pageKey, prefKey, newValue).catch(() => {
-        // Silently ignore server errors – local value is already saved.
+      savePreferenceToServer(pageKey, prefKey, newValue).catch((error) => {
+        console.warn(`Failed to save preference to server: ${pageKey}/${prefKey}`)
+
+        const status =
+          error instanceof PreferenceSaveError && typeof error.status === 'number'
+            ? error.status
+            : undefined
+
+        if (typeof window !== 'undefined' && (status === 401 || status === 403)) {
+          localStorage.removeItem('axiom_token')
+          localStorage.removeItem('axiom_user')
+          resetPreferencesCache()
+        }
+
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent(PREFERENCE_SAVE_ERROR_EVENT, {
+            detail: {
+              pageKey,
+              preferenceKey: prefKey,
+              reason: error instanceof Error ? error.message : 'unknown error',
+              status,
+            },
+          }))
+        }
       })
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps

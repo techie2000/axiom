@@ -1,434 +1,861 @@
 [
   {
-    "code": "AF",
-    "alpha3_code": "AFG",
-    "name": "Afghanistan",
-    "native_name": "افغانستان",
-    "phone_codes": [93],
-    "continent": "AS",
-    "capital": "Kabul",
-    "currency_codes": ["AFN"],
-    "languages": ["ps", "uz", "tk"],
-    "region": "Southern Asia"
-  },
-  {
-    "code": "AL",
-    "alpha3_code": "ALB",
-    "name": "Albania",
-    "native_name": "Shqipëria",
-    "phone_codes": [355],
-    "continent": "EU",
-    "capital": "Tirana",
-    "currency_codes": ["ALL"],
-    "languages": ["sq"],
-    "region": "Southern Europe"
-  },
-  {
-    "code": "DZ",
-    "alpha3_code": "DZA",
-    "name": "Algeria",
-    "native_name": "الجزائر",
-    "phone_codes": [213],
-    "continent": "AF",
-    "capital": "Algiers",
-    "currency_codes": ["DZD"],
-    "languages": ["ar"],
-    "region": "Northern Africa"
-  },
-  {
     "code": "AD",
     "alpha3_code": "AND",
     "name": "Andorra",
     "native_name": "Andorra",
-    "phone_codes": [376],
+    "phone_codes": [
+      376
+    ],
     "continent": "EU",
     "capital": "Andorra la Vella",
-    "currency_codes": ["EUR"],
-    "languages": ["ca"],
+    "currency_codes": [
+      "EUR"
+    ],
+    "languages": [
+      "ca"
+    ],
     "region": "Southern Europe"
   },
   {
-    "code": "AO",
-    "alpha3_code": "AGO",
-    "name": "Angola",
-    "native_name": "Angola",
-    "phone_codes": [244],
-    "continent": "AF",
-    "capital": "Luanda",
-    "currency_codes": ["AOA"],
-    "languages": ["pt"],
-    "region": "Middle Africa"
+    "code": "AE",
+    "alpha3_code": "ARE",
+    "name": "United Arab Emirates",
+    "native_name": "الإمارات العربية المتحدة",
+    "phone_codes": [
+      971
+    ],
+    "continent": "AS",
+    "capital": "Abu Dhabi",
+    "currency_codes": [
+      "AED"
+    ],
+    "languages": [
+      "ar"
+    ],
+    "region": "Western Asia"
+  },
+  {
+    "code": "AF",
+    "alpha3_code": "AFG",
+    "name": "Afghanistan",
+    "native_name": "افغانستان",
+    "phone_codes": [
+      93
+    ],
+    "continent": "AS",
+    "capital": "Kabul",
+    "currency_codes": [
+      "AFN"
+    ],
+    "languages": [
+      "ps",
+      "uz",
+      "tk"
+    ],
+    "region": "Southern Asia"
   },
   {
     "code": "AG",
     "alpha3_code": "ATG",
     "name": "Antigua and Barbuda",
     "native_name": "Antigua and Barbuda",
-    "phone_codes": [1268],
+    "phone_codes": [
+      1268
+    ],
     "continent": "NA",
     "capital": "Saint John's",
-    "currency_codes": ["XCD"],
-    "languages": ["en"],
+    "currency_codes": [
+      "XCD"
+    ],
+    "languages": [
+      "en"
+    ],
     "region": "Caribbean"
   },
   {
-    "code": "AR",
-    "alpha3_code": "ARG",
-    "name": "Argentina",
-    "native_name": "Argentina",
-    "phone_codes": [54],
-    "continent": "SA",
-    "capital": "Buenos Aires",
-    "currency_codes": ["ARS"],
-    "languages": ["es"],
-    "region": "South America"
+    "code": "AI",
+    "alpha3_code": "AIA",
+    "name": "Anguilla",
+    "native_name": "Anguilla",
+    "phone_codes": [
+      1264
+    ],
+    "continent": "NA",
+    "capital": "The Valley",
+    "currency_codes": [
+      "XCD"
+    ],
+    "languages": [],
+    "region": "Latin America and the Caribbean"
+  },
+  {
+    "code": "AL",
+    "alpha3_code": "ALB",
+    "name": "Albania",
+    "native_name": "Shqipëria",
+    "phone_codes": [
+      355
+    ],
+    "continent": "EU",
+    "capital": "Tirana",
+    "currency_codes": [
+      "ALL"
+    ],
+    "languages": [
+      "sq"
+    ],
+    "region": "Southern Europe"
   },
   {
     "code": "AM",
     "alpha3_code": "ARM",
     "name": "Armenia",
     "native_name": "Հայաստան",
-    "phone_codes": [374],
+    "phone_codes": [
+      374
+    ],
     "continent": "AS",
     "capital": "Yerevan",
-    "currency_codes": ["AMD"],
-    "languages": ["hy"],
+    "currency_codes": [
+      "AMD"
+    ],
+    "languages": [
+      "hy"
+    ],
     "region": "Western Asia"
   },
   {
-    "code": "AU",
-    "alpha3_code": "AUS",
-    "name": "Australia",
-    "native_name": "Australia",
-    "phone_codes": [61],
+    "code": "AO",
+    "alpha3_code": "AGO",
+    "name": "Angola",
+    "native_name": "Angola",
+    "phone_codes": [
+      244
+    ],
+    "continent": "AF",
+    "capital": "Luanda",
+    "currency_codes": [
+      "AOA"
+    ],
+    "languages": [
+      "pt"
+    ],
+    "region": "Middle Africa"
+  },
+  {
+    "code": "AQ",
+    "alpha3_code": "ATA",
+    "name": "Antarctica",
+    "native_name": "Antarctica",
+    "phone_codes": [],
+    "continent": "AN",
+    "capital": "-",
+    "currency_codes": [
+      ""
+    ],
+    "languages": [],
+    "region": "Antarctic"
+  },
+  {
+    "code": "AR",
+    "alpha3_code": "ARG",
+    "name": "Argentina",
+    "native_name": "Argentina",
+    "phone_codes": [
+      54
+    ],
+    "continent": "SA",
+    "capital": "Buenos Aires",
+    "currency_codes": [
+      "ARS"
+    ],
+    "languages": [
+      "es"
+    ],
+    "region": "South America"
+  },
+  {
+    "code": "AS",
+    "alpha3_code": "ASM",
+    "name": "American Samoa",
+    "native_name": "American Samoa",
+    "phone_codes": [
+      1684
+    ],
     "continent": "OC",
-    "capital": "Canberra",
-    "currency_codes": ["AUD"],
-    "languages": ["en"],
-    "region": "Australia and New Zealand"
+    "capital": "Pago Pago",
+    "currency_codes": [
+      "USD"
+    ],
+    "languages": [],
+    "region": "Polynesia"
   },
   {
     "code": "AT",
     "alpha3_code": "AUT",
     "name": "Austria",
     "native_name": "Österreich",
-    "phone_codes": [43],
+    "phone_codes": [
+      43
+    ],
     "continent": "EU",
     "capital": "Vienna",
-    "currency_codes": ["EUR"],
-    "languages": ["de"],
+    "currency_codes": [
+      "EUR"
+    ],
+    "languages": [
+      "de"
+    ],
     "region": "Western Europe"
+  },
+  {
+    "code": "AU",
+    "alpha3_code": "AUS",
+    "name": "Australia",
+    "native_name": "Australia",
+    "phone_codes": [
+      61
+    ],
+    "continent": "OC",
+    "capital": "Canberra",
+    "currency_codes": [
+      "AUD"
+    ],
+    "languages": [
+      "en"
+    ],
+    "region": "Australia and New Zealand"
+  },
+  {
+    "code": "AW",
+    "alpha3_code": "ABW",
+    "name": "Aruba",
+    "native_name": "Aruba",
+    "phone_codes": [
+      297
+    ],
+    "continent": "NA",
+    "capital": "Oranjestad",
+    "currency_codes": [
+      "AWG"
+    ],
+    "languages": [],
+    "region": "Latin America and the Caribbean"
+  },
+  {
+    "code": "AX",
+    "alpha3_code": "ALA",
+    "name": "Åland Islands",
+    "native_name": "Åland",
+    "phone_codes": [
+      35818
+    ],
+    "continent": "EU",
+    "capital": "Mariehamn",
+    "currency_codes": [
+      "EUR"
+    ],
+    "languages": [],
+    "region": "Northern Europe"
   },
   {
     "code": "AZ",
     "alpha3_code": "AZE",
     "name": "Azerbaijan",
     "native_name": "Azərbaycan",
-    "phone_codes": [994],
+    "phone_codes": [
+      994
+    ],
     "continent": "AS",
     "capital": "Baku",
-    "currency_codes": ["AZN"],
-    "languages": ["az"],
+    "currency_codes": [
+      "AZN"
+    ],
+    "languages": [
+      "az"
+    ],
     "region": "Western Asia"
-  },
-  {
-    "code": "BS",
-    "alpha3_code": "BHS",
-    "name": "Bahamas",
-    "native_name": "Bahamas",
-    "phone_codes": [1242],
-    "continent": "NA",
-    "capital": "Nassau",
-    "currency_codes": ["BSD"],
-    "languages": ["en"],
-    "region": "Caribbean"
-  },
-  {
-    "code": "BH",
-    "alpha3_code": "BHR",
-    "name": "Bahrain",
-    "native_name": "البحرين",
-    "phone_codes": [973],
-    "continent": "AS",
-    "capital": "Manama",
-    "currency_codes": ["BHD"],
-    "languages": ["ar"],
-    "region": "Western Asia"
-  },
-  {
-    "code": "BD",
-    "alpha3_code": "BGD",
-    "name": "Bangladesh",
-    "native_name": "বাংলাদেশ",
-    "phone_codes": [880],
-    "continent": "AS",
-    "capital": "Dhaka",
-    "currency_codes": ["BDT"],
-    "languages": ["bn"],
-    "region": "Southern Asia"
-  },
-  {
-    "code": "BB",
-    "alpha3_code": "BRB",
-    "name": "Barbados",
-    "native_name": "Barbados",
-    "phone_codes": [1246],
-    "continent": "NA",
-    "capital": "Bridgetown",
-    "currency_codes": ["BBD"],
-    "languages": ["en"],
-    "region": "Caribbean"
-  },
-  {
-    "code": "BY",
-    "alpha3_code": "BLR",
-    "name": "Belarus",
-    "native_name": "Беларусь",
-    "phone_codes": [375],
-    "continent": "EU",
-    "capital": "Minsk",
-    "currency_codes": ["BYN"],
-    "languages": ["be", "ru"],
-    "region": "Eastern Europe"
-  },
-  {
-    "code": "BE",
-    "alpha3_code": "BEL",
-    "name": "Belgium",
-    "native_name": "België",
-    "phone_codes": [32],
-    "continent": "EU",
-    "capital": "Brussels",
-    "currency_codes": ["EUR"],
-    "languages": ["nl", "fr", "de"],
-    "region": "Western Europe"
-  },
-  {
-    "code": "BZ",
-    "alpha3_code": "BLZ",
-    "name": "Belize",
-    "native_name": "Belize",
-    "phone_codes": [501],
-    "continent": "NA",
-    "capital": "Belmopan",
-    "currency_codes": ["BZD"],
-    "languages": ["en"],
-    "region": "Central America"
-  },
-  {
-    "code": "BJ",
-    "alpha3_code": "BEN",
-    "name": "Benin",
-    "native_name": "Bénin",
-    "phone_codes": [229],
-    "continent": "AF",
-    "capital": "Porto-Novo",
-    "currency_codes": ["XOF"],
-    "languages": ["fr"],
-    "region": "Western Africa"
-  },
-  {
-    "code": "BT",
-    "alpha3_code": "BTN",
-    "name": "Bhutan",
-    "native_name": "འབྲུག",
-    "phone_codes": [975],
-    "continent": "AS",
-    "capital": "Thimphu",
-    "currency_codes": ["BTN", "INR"],
-    "languages": ["dz"],
-    "region": "Southern Asia"
-  },
-  {
-    "code": "BO",
-    "alpha3_code": "BOL",
-    "name": "Bolivia",
-    "native_name": "Bolivia",
-    "phone_codes": [591],
-    "continent": "SA",
-    "capital": "Sucre",
-    "currency_codes": ["BOB"],
-    "languages": ["es", "ay", "qu"],
-    "region": "South America"
   },
   {
     "code": "BA",
     "alpha3_code": "BIH",
     "name": "Bosnia and Herzegovina",
     "native_name": "Bosna i Hercegovina",
-    "phone_codes": [387],
+    "phone_codes": [
+      387
+    ],
     "continent": "EU",
     "capital": "Sarajevo",
-    "currency_codes": ["BAM"],
-    "languages": ["bs", "hr", "sr"],
+    "currency_codes": [
+      "BAM"
+    ],
+    "languages": [
+      "bs",
+      "hr",
+      "sr"
+    ],
     "region": "Southern Europe"
   },
   {
-    "code": "BW",
-    "alpha3_code": "BWA",
-    "name": "Botswana",
-    "native_name": "Botswana",
-    "phone_codes": [267],
-    "continent": "AF",
-    "capital": "Gaborone",
-    "currency_codes": ["BWP"],
-    "languages": ["en", "tn"],
-    "region": "Southern Africa"
+    "code": "BB",
+    "alpha3_code": "BRB",
+    "name": "Barbados",
+    "native_name": "Barbados",
+    "phone_codes": [
+      1246
+    ],
+    "continent": "NA",
+    "capital": "Bridgetown",
+    "currency_codes": [
+      "BBD"
+    ],
+    "languages": [
+      "en"
+    ],
+    "region": "Caribbean"
   },
   {
-    "code": "BR",
-    "alpha3_code": "BRA",
-    "name": "Brazil",
-    "native_name": "Brasil",
-    "phone_codes": [55],
-    "continent": "SA",
-    "capital": "Brasília",
-    "currency_codes": ["BRL"],
-    "languages": ["pt"],
-    "region": "South America"
-  },
-  {
-    "code": "BN",
-    "alpha3_code": "BRN",
-    "name": "Brunei",
-    "native_name": "Brunei",
-    "phone_codes": [673],
+    "code": "BD",
+    "alpha3_code": "BGD",
+    "name": "Bangladesh",
+    "native_name": "বাংলাদেশ",
+    "phone_codes": [
+      880
+    ],
     "continent": "AS",
-    "capital": "Bandar Seri Begawan",
-    "currency_codes": ["BND"],
-    "languages": ["ms"],
-    "region": "South-Eastern Asia"
+    "capital": "Dhaka",
+    "currency_codes": [
+      "BDT"
+    ],
+    "languages": [
+      "bn"
+    ],
+    "region": "Southern Asia"
   },
   {
-    "code": "BG",
-    "alpha3_code": "BGR",
-    "name": "Bulgaria",
-    "native_name": "България",
-    "phone_codes": [359],
+    "code": "BE",
+    "alpha3_code": "BEL",
+    "name": "Belgium",
+    "native_name": "België",
+    "phone_codes": [
+      32
+    ],
     "continent": "EU",
-    "capital": "Sofia",
-    "currency_codes": ["BGN"],
-    "languages": ["bg"],
-    "region": "Eastern Europe"
+    "capital": "Brussels",
+    "currency_codes": [
+      "EUR"
+    ],
+    "languages": [
+      "nl",
+      "fr",
+      "de"
+    ],
+    "region": "Western Europe"
   },
   {
     "code": "BF",
     "alpha3_code": "BFA",
     "name": "Burkina Faso",
     "native_name": "Burkina Faso",
-    "phone_codes": [226],
+    "phone_codes": [
+      226
+    ],
     "continent": "AF",
     "capital": "Ouagadougou",
-    "currency_codes": ["XOF"],
-    "languages": ["fr"],
+    "currency_codes": [
+      "XOF"
+    ],
+    "languages": [
+      "fr"
+    ],
     "region": "Western Africa"
+  },
+  {
+    "code": "BG",
+    "alpha3_code": "BGR",
+    "name": "Bulgaria",
+    "native_name": "България",
+    "phone_codes": [
+      359
+    ],
+    "continent": "EU",
+    "capital": "Sofia",
+    "currency_codes": [
+      "BGN"
+    ],
+    "languages": [
+      "bg"
+    ],
+    "region": "Eastern Europe"
+  },
+  {
+    "code": "BH",
+    "alpha3_code": "BHR",
+    "name": "Bahrain",
+    "native_name": "البحرين",
+    "phone_codes": [
+      973
+    ],
+    "continent": "AS",
+    "capital": "Manama",
+    "currency_codes": [
+      "BHD"
+    ],
+    "languages": [
+      "ar"
+    ],
+    "region": "Western Asia"
   },
   {
     "code": "BI",
     "alpha3_code": "BDI",
     "name": "Burundi",
     "native_name": "Burundi",
-    "phone_codes": [257],
+    "phone_codes": [
+      257
+    ],
     "continent": "AF",
     "capital": "Gitega",
-    "currency_codes": ["BIF"],
-    "languages": ["fr", "rn"],
+    "currency_codes": [
+      "BIF"
+    ],
+    "languages": [
+      "fr",
+      "rn"
+    ],
     "region": "Eastern Africa"
   },
   {
-    "code": "KH",
-    "alpha3_code": "KHM",
-    "name": "Cambodia",
-    "native_name": "កម្ពុជា",
-    "phone_codes": [855],
+    "code": "BJ",
+    "alpha3_code": "BEN",
+    "name": "Benin",
+    "native_name": "Bénin",
+    "phone_codes": [
+      229
+    ],
+    "continent": "AF",
+    "capital": "Porto-Novo",
+    "currency_codes": [
+      "XOF"
+    ],
+    "languages": [
+      "fr"
+    ],
+    "region": "Western Africa"
+  },
+  {
+    "code": "BL",
+    "alpha3_code": "BLM",
+    "name": "Saint Barthélemy",
+    "native_name": "Saint-Barthélemy",
+    "phone_codes": [
+      590
+    ],
+    "continent": "NA",
+    "capital": "Gustavia",
+    "currency_codes": [
+      "EUR"
+    ],
+    "languages": [],
+    "region": "Latin America and the Caribbean"
+  },
+  {
+    "code": "BM",
+    "alpha3_code": "BMU",
+    "name": "Bermuda",
+    "native_name": "Bermuda",
+    "phone_codes": [
+      1441
+    ],
+    "continent": "NA",
+    "capital": "Hamilton",
+    "currency_codes": [
+      "BMD"
+    ],
+    "languages": [],
+    "region": "Northern America"
+  },
+  {
+    "code": "BN",
+    "alpha3_code": "BRN",
+    "name": "Brunei",
+    "native_name": "Brunei",
+    "phone_codes": [
+      673
+    ],
     "continent": "AS",
-    "capital": "Phnom Penh",
-    "currency_codes": ["KHR"],
-    "languages": ["km"],
+    "capital": "Bandar Seri Begawan",
+    "currency_codes": [
+      "BND"
+    ],
+    "languages": [
+      "ms"
+    ],
     "region": "South-Eastern Asia"
   },
   {
-    "code": "CM",
-    "alpha3_code": "CMR",
-    "name": "Cameroon",
-    "native_name": "Cameroun",
-    "phone_codes": [237],
+    "code": "BO",
+    "alpha3_code": "BOL",
+    "name": "Bolivia",
+    "native_name": "Bolivia",
+    "phone_codes": [
+      591
+    ],
+    "continent": "SA",
+    "capital": "Sucre",
+    "currency_codes": [
+      "BOB"
+    ],
+    "languages": [
+      "es",
+      "ay",
+      "qu"
+    ],
+    "region": "South America"
+  },
+  {
+    "code": "BQ",
+    "alpha3_code": "BES",
+    "name": "Bonaire, Sint Eustatius and Saba",
+    "native_name": "Caribisch Nederland",
+    "phone_codes": [
+      599
+    ],
+    "continent": "NA",
+    "capital": "Kralendijk",
+    "currency_codes": [
+      "USD"
+    ],
+    "languages": [],
+    "region": "Latin America and the Caribbean"
+  },
+  {
+    "code": "BR",
+    "alpha3_code": "BRA",
+    "name": "Brazil",
+    "native_name": "Brasil",
+    "phone_codes": [
+      55
+    ],
+    "continent": "SA",
+    "capital": "Brasília",
+    "currency_codes": [
+      "BRL"
+    ],
+    "languages": [
+      "pt"
+    ],
+    "region": "South America"
+  },
+  {
+    "code": "BS",
+    "alpha3_code": "BHS",
+    "name": "Bahamas",
+    "native_name": "Bahamas",
+    "phone_codes": [
+      1242
+    ],
+    "continent": "NA",
+    "capital": "Nassau",
+    "currency_codes": [
+      "BSD"
+    ],
+    "languages": [
+      "en"
+    ],
+    "region": "Caribbean"
+  },
+  {
+    "code": "BT",
+    "alpha3_code": "BTN",
+    "name": "Bhutan",
+    "native_name": "འབྲུག",
+    "phone_codes": [
+      975
+    ],
+    "continent": "AS",
+    "capital": "Thimphu",
+    "currency_codes": [
+      "BTN",
+      "INR"
+    ],
+    "languages": [
+      "dz"
+    ],
+    "region": "Southern Asia"
+  },
+  {
+    "code": "BV",
+    "alpha3_code": "BVT",
+    "name": "Bouvet Island",
+    "native_name": "Bouvetøya",
+    "phone_codes": [
+      47
+    ],
+    "continent": "NA",
+    "capital": "-",
+    "currency_codes": [
+      ""
+    ],
+    "languages": [],
+    "region": "Latin America and the Caribbean"
+  },
+  {
+    "code": "BW",
+    "alpha3_code": "BWA",
+    "name": "Botswana",
+    "native_name": "Botswana",
+    "phone_codes": [
+      267
+    ],
     "continent": "AF",
-    "capital": "Yaoundé",
-    "currency_codes": ["XAF"],
-    "languages": ["en", "fr"],
-    "region": "Middle Africa"
+    "capital": "Gaborone",
+    "currency_codes": [
+      "BWP"
+    ],
+    "languages": [
+      "en",
+      "tn"
+    ],
+    "region": "Southern Africa"
+  },
+  {
+    "code": "BY",
+    "alpha3_code": "BLR",
+    "name": "Belarus",
+    "native_name": "Беларусь",
+    "phone_codes": [
+      375
+    ],
+    "continent": "EU",
+    "capital": "Minsk",
+    "currency_codes": [
+      "BYN"
+    ],
+    "languages": [
+      "be",
+      "ru"
+    ],
+    "region": "Eastern Europe"
+  },
+  {
+    "code": "BZ",
+    "alpha3_code": "BLZ",
+    "name": "Belize",
+    "native_name": "Belize",
+    "phone_codes": [
+      501
+    ],
+    "continent": "NA",
+    "capital": "Belmopan",
+    "currency_codes": [
+      "BZD"
+    ],
+    "languages": [
+      "en"
+    ],
+    "region": "Central America"
   },
   {
     "code": "CA",
     "alpha3_code": "CAN",
     "name": "Canada",
     "native_name": "Canada",
-    "phone_codes": [1],
+    "phone_codes": [
+      1
+    ],
     "continent": "NA",
     "capital": "Ottawa",
-    "currency_codes": ["CAD"],
-    "languages": ["en", "fr"],
+    "currency_codes": [
+      "CAD"
+    ],
+    "languages": [
+      "en",
+      "fr"
+    ],
     "region": "North America"
   },
   {
-    "code": "CV",
-    "alpha3_code": "CPV",
-    "name": "Cape Verde",
-    "native_name": "Cabo Verde",
-    "phone_codes": [238],
+    "code": "CC",
+    "alpha3_code": "CCK",
+    "name": "Cocos (Keeling) Islands",
+    "native_name": "Cocos (Keeling) Islands",
+    "phone_codes": [
+      61
+    ],
+    "continent": "OC",
+    "capital": "West Island",
+    "currency_codes": [
+      "AUD"
+    ],
+    "languages": [],
+    "region": "Australia and New Zealand"
+  },
+  {
+    "code": "CD",
+    "alpha3_code": "COD",
+    "name": "Congo (Democratic Republic)",
+    "native_name": "République démocratique du Congo",
+    "phone_codes": [
+      243
+    ],
     "continent": "AF",
-    "capital": "Praia",
-    "currency_codes": ["CVE"],
-    "languages": ["pt"],
-    "region": "Western Africa"
+    "capital": "Kinshasa",
+    "currency_codes": [
+      "CDF"
+    ],
+    "languages": [
+      "fr"
+    ],
+    "region": "Middle Africa"
   },
   {
     "code": "CF",
     "alpha3_code": "CAF",
     "name": "Central African Republic",
     "native_name": "République centrafricaine",
-    "phone_codes": [236],
+    "phone_codes": [
+      236
+    ],
     "continent": "AF",
     "capital": "Bangui",
-    "currency_codes": ["XAF"],
-    "languages": ["fr", "sg"],
+    "currency_codes": [
+      "XAF"
+    ],
+    "languages": [
+      "fr",
+      "sg"
+    ],
     "region": "Middle Africa"
   },
   {
-    "code": "TD",
-    "alpha3_code": "TCD",
-    "name": "Chad",
-    "native_name": "Tchad",
-    "phone_codes": [235],
+    "code": "CG",
+    "alpha3_code": "COG",
+    "name": "Congo",
+    "native_name": "Congo",
+    "phone_codes": [
+      242
+    ],
     "continent": "AF",
-    "capital": "N'Djamena",
-    "currency_codes": ["XAF"],
-    "languages": ["fr", "ar"],
+    "capital": "Brazzaville",
+    "currency_codes": [
+      "XAF"
+    ],
+    "languages": [
+      "fr"
+    ],
     "region": "Middle Africa"
+  },
+  {
+    "code": "CH",
+    "alpha3_code": "CHE",
+    "name": "Switzerland",
+    "native_name": "Schweiz",
+    "phone_codes": [
+      41
+    ],
+    "continent": "EU",
+    "capital": "Bern",
+    "currency_codes": [
+      "CHF"
+    ],
+    "languages": [
+      "de",
+      "fr",
+      "it",
+      "rm"
+    ],
+    "region": "Western Europe"
+  },
+  {
+    "code": "CI",
+    "alpha3_code": "CIV",
+    "name": "Côte d'Ivoire",
+    "native_name": "Côte d'Ivoire",
+    "phone_codes": [
+      225
+    ],
+    "continent": "AF",
+    "capital": "Yamoussoukro",
+    "currency_codes": [
+      "XOF"
+    ],
+    "languages": [
+      "fr"
+    ],
+    "region": "Western Africa"
+  },
+  {
+    "code": "CK",
+    "alpha3_code": "COK",
+    "name": "Cook Islands",
+    "native_name": "Cook Islands",
+    "phone_codes": [
+      682
+    ],
+    "continent": "OC",
+    "capital": "Avarua",
+    "currency_codes": [
+      "CKD",
+      "NZD"
+    ],
+    "languages": [],
+    "region": "Polynesia"
   },
   {
     "code": "CL",
     "alpha3_code": "CHL",
     "name": "Chile",
     "native_name": "Chile",
-    "phone_codes": [56],
+    "phone_codes": [
+      56
+    ],
     "continent": "SA",
     "capital": "Santiago",
-    "currency_codes": ["CLP"],
-    "languages": ["es"],
+    "currency_codes": [
+      "CLP"
+    ],
+    "languages": [
+      "es"
+    ],
     "region": "South America"
+  },
+  {
+    "code": "CM",
+    "alpha3_code": "CMR",
+    "name": "Cameroon",
+    "native_name": "Cameroun",
+    "phone_codes": [
+      237
+    ],
+    "continent": "AF",
+    "capital": "Yaoundé",
+    "currency_codes": [
+      "XAF"
+    ],
+    "languages": [
+      "en",
+      "fr"
+    ],
+    "region": "Middle Africa"
   },
   {
     "code": "CN",
     "alpha3_code": "CHN",
     "name": "China",
     "native_name": "中国",
-    "phone_codes": [86],
+    "phone_codes": [
+      86
+    ],
     "continent": "AS",
     "capital": "Beijing",
-    "currency_codes": ["CNY"],
-    "languages": ["zh"],
+    "currency_codes": [
+      "CNY"
+    ],
+    "languages": [
+      "zh"
+    ],
     "region": "Eastern Asia"
   },
   {
@@ -436,107 +863,123 @@
     "alpha3_code": "COL",
     "name": "Colombia",
     "native_name": "Colombia",
-    "phone_codes": [57],
+    "phone_codes": [
+      57
+    ],
     "continent": "SA",
     "capital": "Bogotá",
-    "currency_codes": ["COP"],
-    "languages": ["es"],
+    "currency_codes": [
+      "COP"
+    ],
+    "languages": [
+      "es"
+    ],
     "region": "South America"
-  },
-  {
-    "code": "KM",
-    "alpha3_code": "COM",
-    "name": "Comoros",
-    "native_name": "Comores",
-    "phone_codes": [269],
-    "continent": "AF",
-    "capital": "Moroni",
-    "currency_codes": ["KMF"],
-    "languages": ["ar", "fr"],
-    "region": "Eastern Africa"
-  },
-  {
-    "code": "CG",
-    "alpha3_code": "COG",
-    "name": "Congo",
-    "native_name": "Congo",
-    "phone_codes": [242],
-    "continent": "AF",
-    "capital": "Brazzaville",
-    "currency_codes": ["XAF"],
-    "languages": ["fr"],
-    "region": "Middle Africa"
-  },
-  {
-    "code": "CD",
-    "alpha3_code": "COD",
-    "name": "Congo (Democratic Republic)",
-    "native_name": "République démocratique du Congo",
-    "phone_codes": [243],
-    "continent": "AF",
-    "capital": "Kinshasa",
-    "currency_codes": ["CDF"],
-    "languages": ["fr"],
-    "region": "Middle Africa"
   },
   {
     "code": "CR",
     "alpha3_code": "CRI",
     "name": "Costa Rica",
     "native_name": "Costa Rica",
-    "phone_codes": [506],
+    "phone_codes": [
+      506
+    ],
     "continent": "NA",
     "capital": "San José",
-    "currency_codes": ["CRC"],
-    "languages": ["es"],
+    "currency_codes": [
+      "CRC"
+    ],
+    "languages": [
+      "es"
+    ],
     "region": "Central America"
-  },
-  {
-    "code": "CI",
-    "alpha3_code": "CIV",
-    "name": "Côte d'Ivoire",
-    "native_name": "Côte d'Ivoire",
-    "phone_codes": [225],
-    "continent": "AF",
-    "capital": "Yamoussoukro",
-    "currency_codes": ["XOF"],
-    "languages": ["fr"],
-    "region": "Western Africa"
-  },
-  {
-    "code": "HR",
-    "alpha3_code": "HRV",
-    "name": "Croatia",
-    "native_name": "Hrvatska",
-    "phone_codes": [385],
-    "continent": "EU",
-    "capital": "Zagreb",
-    "currency_codes": ["EUR"],
-    "languages": ["hr"],
-    "region": "Southern Europe"
   },
   {
     "code": "CU",
     "alpha3_code": "CUB",
     "name": "Cuba",
     "native_name": "Cuba",
-    "phone_codes": [53],
+    "phone_codes": [
+      53
+    ],
     "continent": "NA",
     "capital": "Havana",
-    "currency_codes": ["CUP", "CUC"],
-    "languages": ["es"],
+    "currency_codes": [
+      "CUP",
+      "CUC"
+    ],
+    "languages": [
+      "es"
+    ],
     "region": "Caribbean"
+  },
+  {
+    "code": "CV",
+    "alpha3_code": "CPV",
+    "name": "Cape Verde",
+    "native_name": "Cabo Verde",
+    "phone_codes": [
+      238
+    ],
+    "continent": "AF",
+    "capital": "Praia",
+    "currency_codes": [
+      "CVE"
+    ],
+    "languages": [
+      "pt"
+    ],
+    "region": "Western Africa"
+  },
+  {
+    "code": "CW",
+    "alpha3_code": "CUW",
+    "name": "Curaçao",
+    "native_name": "Curaçao",
+    "phone_codes": [
+      599
+    ],
+    "continent": "NA",
+    "capital": "Willemstad",
+    "currency_codes": [
+      "ANG"
+    ],
+    "languages": [],
+    "region": "Latin America and the Caribbean"
+  },
+  {
+    "code": "CX",
+    "alpha3_code": "CXR",
+    "name": "Christmas Island",
+    "native_name": "Christmas Island",
+    "phone_codes": [
+      61
+    ],
+    "continent": "OC",
+    "capital": "Flying Fish Cove",
+    "currency_codes": [
+      "AUD"
+    ],
+    "languages": [],
+    "region": "Australia and New Zealand"
   },
   {
     "code": "CY",
     "alpha3_code": "CYP",
     "name": "Cyprus",
     "native_name": "Κύπρος",
-    "phone_codes": [357],
+    "phone_codes": [
+      357
+    ],
     "continent": "EU",
     "capital": "Nicosia",
-    "currency_codes": ["EUR"],
-    "languages": ["el", "tr"],
+    "currency_codes": [
+      "EUR"
+    ],
+    "languages": [
+      "el",
+      "tr"
+    ],
     "region": "Southern Europe"
   },
   {
@@ -544,47 +987,90 @@
     "alpha3_code": "CZE",
     "name": "Czech Republic",
     "native_name": "Česká republika",
-    "phone_codes": [420],
+    "phone_codes": [
+      420
+    ],
     "continent": "EU",
     "capital": "Prague",
-    "currency_codes": ["CZK"],
-    "languages": ["cs"],
+    "currency_codes": [
+      "CZK"
+    ],
+    "languages": [
+      "cs"
+    ],
     "region": "Eastern Europe"
   },
   {
-    "code": "DK",
-    "alpha3_code": "DNK",
-    "name": "Denmark",
-    "native_name": "Danmark",
-    "phone_codes": [45],
+    "code": "DE",
+    "alpha3_code": "DEU",
+    "name": "Germany",
+    "native_name": "Deutschland",
+    "phone_codes": [
+      49
+    ],
     "continent": "EU",
-    "capital": "Copenhagen",
-    "currency_codes": ["DKK"],
-    "languages": ["da"],
-    "region": "Northern Europe"
+    "capital": "Berlin",
+    "currency_codes": [
+      "EUR"
+    ],
+    "languages": [
+      "de"
+    ],
+    "region": "Western Europe"
   },
   {
     "code": "DJ",
     "alpha3_code": "DJI",
     "name": "Djibouti",
     "native_name": "Djibouti",
-    "phone_codes": [253],
+    "phone_codes": [
+      253
+    ],
     "continent": "AF",
     "capital": "Djibouti",
-    "currency_codes": ["DJF"],
-    "languages": ["fr", "ar"],
+    "currency_codes": [
+      "DJF"
+    ],
+    "languages": [
+      "fr",
+      "ar"
+    ],
     "region": "Eastern Africa"
+  },
+  {
+    "code": "DK",
+    "alpha3_code": "DNK",
+    "name": "Denmark",
+    "native_name": "Danmark",
+    "phone_codes": [
+      45
+    ],
+    "continent": "EU",
+    "capital": "Copenhagen",
+    "currency_codes": [
+      "DKK"
+    ],
+    "languages": [
+      "da"
+    ],
+    "region": "Northern Europe"
   },
   {
     "code": "DM",
     "alpha3_code": "DMA",
     "name": "Dominica",
     "native_name": "Dominica",
-    "phone_codes": [1767],
+    "phone_codes": [
+      1767
+    ],
     "continent": "NA",
     "capital": "Roseau",
-    "currency_codes": ["XCD"],
-    "languages": ["en"],
+    "currency_codes": [
+      "XCD"
+    ],
+    "languages": [
+      "en"
+    ],
     "region": "Caribbean"
   },
   {
@@ -592,1355 +1078,130 @@
     "alpha3_code": "DOM",
     "name": "Dominican Republic",
     "native_name": "República Dominicana",
-    "phone_codes": [1809, 1829, 1849],
+    "phone_codes": [
+      1809,
+      1829,
+      1849
+    ],
     "continent": "NA",
     "capital": "Santo Domingo",
-    "currency_codes": ["DOP"],
-    "languages": ["es"],
+    "currency_codes": [
+      "DOP"
+    ],
+    "languages": [
+      "es"
+    ],
     "region": "Caribbean"
+  },
+  {
+    "code": "DZ",
+    "alpha3_code": "DZA",
+    "name": "Algeria",
+    "native_name": "الجزائر",
+    "phone_codes": [
+      213
+    ],
+    "continent": "AF",
+    "capital": "Algiers",
+    "currency_codes": [
+      "DZD"
+    ],
+    "languages": [
+      "ar"
+    ],
+    "region": "Northern Africa"
   },
   {
     "code": "EC",
     "alpha3_code": "ECU",
     "name": "Ecuador",
     "native_name": "Ecuador",
-    "phone_codes": [593],
+    "phone_codes": [
+      593
+    ],
     "continent": "SA",
     "capital": "Quito",
-    "currency_codes": ["USD"],
-    "languages": ["es"],
+    "currency_codes": [
+      "USD"
+    ],
+    "languages": [
+      "es"
+    ],
     "region": "South America"
-  },
-  {
-    "code": "EG",
-    "alpha3_code": "EGY",
-    "name": "Egypt",
-    "native_name": "مصر",
-    "phone_codes": [20],
-    "continent": "AF",
-    "capital": "Cairo",
-    "currency_codes": ["EGP"],
-    "languages": ["ar"],
-    "region": "Northern Africa"
-  },
-  {
-    "code": "SV",
-    "alpha3_code": "SLV",
-    "name": "El Salvador",
-    "native_name": "El Salvador",
-    "phone_codes": [503],
-    "continent": "NA",
-    "capital": "San Salvador",
-    "currency_codes": ["USD"],
-    "languages": ["es"],
-    "region": "Central America"
-  },
-  {
-    "code": "GQ",
-    "alpha3_code": "GNQ",
-    "name": "Equatorial Guinea",
-    "native_name": "Guinea Ecuatorial",
-    "phone_codes": [240],
-    "continent": "AF",
-    "capital": "Malabo",
-    "currency_codes": ["XAF"],
-    "languages": ["es", "fr", "pt"],
-    "region": "Middle Africa"
-  },
-  {
-    "code": "ER",
-    "alpha3_code": "ERI",
-    "name": "Eritrea",
-    "native_name": "ኤርትራ",
-    "phone_codes": [291],
-    "continent": "AF",
-    "capital": "Asmara",
-    "currency_codes": ["ERN"],
-    "languages": ["ti", "ar", "en"],
-    "region": "Eastern Africa"
   },
   {
     "code": "EE",
     "alpha3_code": "EST",
     "name": "Estonia",
     "native_name": "Eesti",
-    "phone_codes": [372],
+    "phone_codes": [
+      372
+    ],
     "continent": "EU",
     "capital": "Tallinn",
-    "currency_codes": ["EUR"],
-    "languages": ["et"],
+    "currency_codes": [
+      "EUR"
+    ],
+    "languages": [
+      "et"
+    ],
     "region": "Northern Europe"
   },
   {
-    "code": "SZ",
-    "alpha3_code": "SWZ",
-    "name": "Eswatini",
-    "native_name": "Eswatini",
-    "phone_codes": [268],
+    "code": "EG",
+    "alpha3_code": "EGY",
+    "name": "Egypt",
+    "native_name": "مصر",
+    "phone_codes": [
+      20
+    ],
     "continent": "AF",
-    "capital": "Mbabane",
-    "currency_codes": ["SZL"],
-    "languages": ["en", "ss"],
-    "region": "Southern Africa"
-  },
-  {
-    "code": "ET",
-    "alpha3_code": "ETH",
-    "name": "Ethiopia",
-    "native_name": "ኢትዮጵያ",
-    "phone_codes": [251],
-    "continent": "AF",
-    "capital": "Addis Ababa",
-    "currency_codes": ["ETB"],
-    "languages": ["am"],
-    "region": "Eastern Africa"
-  },
-  {
-    "code": "FJ",
-    "alpha3_code": "FJI",
-    "name": "Fiji",
-    "native_name": "Fiji",
-    "phone_codes": [679],
-    "continent": "OC",
-    "capital": "Suva",
-    "currency_codes": ["FJD"],
-    "languages": ["en", "fj", "hi"],
-    "region": "Melanesia"
-  },
-  {
-    "code": "FI",
-    "alpha3_code": "FIN",
-    "name": "Finland",
-    "native_name": "Suomi",
-    "phone_codes": [358],
-    "continent": "EU",
-    "capital": "Helsinki",
-    "currency_codes": ["EUR"],
-    "languages": ["fi", "sv"],
-    "region": "Northern Europe"
-  },
-  {
-    "code": "FR",
-    "alpha3_code": "FRA",
-    "name": "France",
-    "native_name": "France",
-    "phone_codes": [33],
-    "continent": "EU",
-    "capital": "Paris",
-    "currency_codes": ["EUR"],
-    "languages": ["fr"],
-    "region": "Western Europe"
-  },
-  {
-    "code": "GA",
-    "alpha3_code": "GAB",
-    "name": "Gabon",
-    "native_name": "Gabon",
-    "phone_codes": [241],
-    "continent": "AF",
-    "capital": "Libreville",
-    "currency_codes": ["XAF"],
-    "languages": ["fr"],
-    "region": "Middle Africa"
-  },
-  {
-    "code": "GM",
-    "alpha3_code": "GMB",
-    "name": "Gambia",
-    "native_name": "Gambia",
-    "phone_codes": [220],
-    "continent": "AF",
-    "capital": "Banjul",
-    "currency_codes": ["GMD"],
-    "languages": ["en"],
-    "region": "Western Africa"
-  },
-  {
-    "code": "GE",
-    "alpha3_code": "GEO",
-    "name": "Georgia",
-    "native_name": "საქართველო",
-    "phone_codes": [995],
-    "continent": "AS",
-    "capital": "Tbilisi",
-    "currency_codes": ["GEL"],
-    "languages": ["ka"],
-    "region": "Western Asia"
-  },
-  {
-    "code": "DE",
-    "alpha3_code": "DEU",
-    "name": "Germany",
-    "native_name": "Deutschland",
-    "phone_codes": [49],
-    "continent": "EU",
-    "capital": "Berlin",
-    "currency_codes": ["EUR"],
-    "languages": ["de"],
-    "region": "Western Europe"
-  },
-  {
-    "code": "GH",
-    "alpha3_code": "GHA",
-    "name": "Ghana",
-    "native_name": "Ghana",
-    "phone_codes": [233],
-    "continent": "AF",
-    "capital": "Accra",
-    "currency_codes": ["GHS"],
-    "languages": ["en"],
-    "region": "Western Africa"
-  },
-  {
-    "code": "GR",
-    "alpha3_code": "GRC",
-    "name": "Greece",
-    "native_name": "Ελλάδα",
-    "phone_codes": [30],
-    "continent": "EU",
-    "capital": "Athens",
-    "currency_codes": ["EUR"],
-    "languages": ["el"],
-    "region": "Southern Europe"
-  },
-  {
-    "code": "GD",
-    "alpha3_code": "GRD",
-    "name": "Grenada",
-    "native_name": "Grenada",
-    "phone_codes": [1473],
-    "continent": "NA",
-    "capital": "St. George's",
-    "currency_codes": ["XCD"],
-    "languages": ["en"],
-    "region": "Caribbean"
-  },
-  {
-    "code": "GT",
-    "alpha3_code": "GTM",
-    "name": "Guatemala",
-    "native_name": "Guatemala",
-    "phone_codes": [502],
-    "continent": "NA",
-    "capital": "Guatemala City",
-    "currency_codes": ["GTQ"],
-    "languages": ["es"],
-    "region": "Central America"
-  },
-  {
-    "code": "GN",
-    "alpha3_code": "GIN",
-    "name": "Guinea",
-    "native_name": "Guinée",
-    "phone_codes": [224],
-    "continent": "AF",
-    "capital": "Conakry",
-    "currency_codes": ["GNF"],
-    "languages": ["fr"],
-    "region": "Western Africa"
-  },
-  {
-    "code": "GW",
-    "alpha3_code": "GNB",
-    "name": "Guinea-Bissau",
-    "native_name": "Guiné-Bissau",
-    "phone_codes": [245],
-    "continent": "AF",
-    "capital": "Bissau",
-    "currency_codes": ["XOF"],
-    "languages": ["pt"],
-    "region": "Western Africa"
-  },
-  {
-    "code": "GY",
-    "alpha3_code": "GUY",
-    "name": "Guyana",
-    "native_name": "Guyana",
-    "phone_codes": [592],
-    "continent": "SA",
-    "capital": "Georgetown",
-    "currency_codes": ["GYD"],
-    "languages": ["en"],
-    "region": "South America"
-  },
-  {
-    "code": "HT",
-    "alpha3_code": "HTI",
-    "name": "Haiti",
-    "native_name": "Haïti",
-    "phone_codes": [509],
-    "continent": "NA",
-    "capital": "Port-au-Prince",
-    "currency_codes": ["HTG"],
-    "languages": ["fr", "ht"],
-    "region": "Caribbean"
-  },
-  {
-    "code": "HN",
-    "alpha3_code": "HND",
-    "name": "Honduras",
-    "native_name": "Honduras",
-    "phone_codes": [504],
-    "continent": "NA",
-    "capital": "Tegucigalpa",
-    "currency_codes": ["HNL"],
-    "languages": ["es"],
-    "region": "Central America"
-  },
-  {
-    "code": "HU",
-    "alpha3_code": "HUN",
-    "name": "Hungary",
-    "native_name": "Magyarország",
-    "phone_codes": [36],
-    "continent": "EU",
-    "capital": "Budapest",
-    "currency_codes": ["HUF"],
-    "languages": ["hu"],
-    "region": "Eastern Europe"
-  },
-  {
-    "code": "IS",
-    "alpha3_code": "ISL",
-    "name": "Iceland",
-    "native_name": "Ísland",
-    "phone_codes": [354],
-    "continent": "EU",
-    "capital": "Reykjavik",
-    "currency_codes": ["ISK"],
-    "languages": ["is"],
-    "region": "Northern Europe"
-  },
-  {
-    "code": "IN",
-    "alpha3_code": "IND",
-    "name": "India",
-    "native_name": "भारत",
-    "phone_codes": [91],
-    "continent": "AS",
-    "capital": "New Delhi",
-    "currency_codes": ["INR"],
-    "languages": ["hi", "en"],
-    "region": "Southern Asia"
-  },
-  {
-    "code": "ID",
-    "alpha3_code": "IDN",
-    "name": "Indonesia",
-    "native_name": "Indonesia",
-    "phone_codes": [62],
-    "continent": "AS",
-    "capital": "Jakarta",
-    "currency_codes": ["IDR"],
-    "languages": ["id"],
-    "region": "South-Eastern Asia"
-  },
-  {
-    "code": "IR",
-    "alpha3_code": "IRN",
-    "name": "Iran",
-    "native_name": "ایران",
-    "phone_codes": [98],
-    "continent": "AS",
-    "capital": "Tehran",
-    "currency_codes": ["IRR"],
-    "languages": ["fa"],
-    "region": "Southern Asia"
-  },
-  {
-    "code": "IQ",
-    "alpha3_code": "IRQ",
-    "name": "Iraq",
-    "native_name": "العراق",
-    "phone_codes": [964],
-    "continent": "AS",
-    "capital": "Baghdad",
-    "currency_codes": ["IQD"],
-    "languages": ["ar", "ku"],
-    "region": "Western Asia"
-  },
-  {
-    "code": "IE",
-    "alpha3_code": "IRL",
-    "name": "Ireland",
-    "native_name": "Éire",
-    "phone_codes": [353],
-    "continent": "EU",
-    "capital": "Dublin",
-    "currency_codes": ["EUR"],
-    "languages": ["ga", "en"],
-    "region": "Northern Europe"
-  },
-  {
-    "code": "IL",
-    "alpha3_code": "ISR",
-    "name": "Israel",
-    "native_name": "יִשְׂרָאֵל",
-    "phone_codes": [972],
-    "continent": "AS",
-    "capital": "Jerusalem",
-    "currency_codes": ["ILS"],
-    "languages": ["he", "ar"],
-    "region": "Western Asia"
-  },
-  {
-    "code": "IT",
-    "alpha3_code": "ITA",
-    "name": "Italy",
-    "native_name": "Italia",
-    "phone_codes": [39],
-    "continent": "EU",
-    "capital": "Rome",
-    "currency_codes": ["EUR"],
-    "languages": ["it"],
-    "region": "Southern Europe"
-  },
-  {
-    "code": "JM",
-    "alpha3_code": "JAM",
-    "name": "Jamaica",
-    "native_name": "Jamaica",
-    "phone_codes": [1876],
-    "continent": "NA",
-    "capital": "Kingston",
-    "currency_codes": ["JMD"],
-    "languages": ["en"],
-    "region": "Caribbean"
-  },
-  {
-    "code": "JP",
-    "alpha3_code": "JPN",
-    "name": "Japan",
-    "native_name": "日本",
-    "phone_codes": [81],
-    "continent": "AS",
-    "capital": "Tokyo",
-    "currency_codes": ["JPY"],
-    "languages": ["ja"],
-    "region": "Eastern Asia"
-  },
-  {
-    "code": "JO",
-    "alpha3_code": "JOR",
-    "name": "Jordan",
-    "native_name": "الأردن",
-    "phone_codes": [962],
-    "continent": "AS",
-    "capital": "Amman",
-    "currency_codes": ["JOD"],
-    "languages": ["ar"],
-    "region": "Western Asia"
-  },
-  {
-    "code": "KZ",
-    "alpha3_code": "KAZ",
-    "name": "Kazakhstan",
-    "native_name": "Қазақстан",
-    "phone_codes": [7],
-    "continent": "AS",
-    "capital": "Astana",
-    "currency_codes": ["KZT"],
-    "languages": ["kk", "ru"],
-    "region": "Central Asia"
-  },
-  {
-    "code": "KE",
-    "alpha3_code": "KEN",
-    "name": "Kenya",
-    "native_name": "Kenya",
-    "phone_codes": [254],
-    "continent": "AF",
-    "capital": "Nairobi",
-    "currency_codes": ["KES"],
-    "languages": ["en", "sw"],
-    "region": "Eastern Africa"
-  },
-  {
-    "code": "KI",
-    "alpha3_code": "KIR",
-    "name": "Kiribati",
-    "native_name": "Kiribati",
-    "phone_codes": [686],
-    "continent": "OC",
-    "capital": "Tarawa",
-    "currency_codes": ["AUD"],
-    "languages": ["en"],
-    "region": "Micronesia"
-  },
-  {
-    "code": "KP",
-    "alpha3_code": "PRK",
-    "name": "North Korea",
-    "native_name": "북한",
-    "phone_codes": [850],
-    "continent": "AS",
-    "capital": "Pyongyang",
-    "currency_codes": ["KPW"],
-    "languages": ["ko"],
-    "region": "Eastern Asia"
-  },
-  {
-    "code": "KR",
-    "alpha3_code": "KOR",
-    "name": "South Korea",
-    "native_name": "대한민국",
-    "phone_codes": [82],
-    "continent": "AS",
-    "capital": "Seoul",
-    "currency_codes": ["KRW"],
-    "languages": ["ko"],
-    "region": "Eastern Asia"
-  },
-  {
-    "code": "KW",
-    "alpha3_code": "KWT",
-    "name": "Kuwait",
-    "native_name": "الكويت",
-    "phone_codes": [965],
-    "continent": "AS",
-    "capital": "Kuwait City",
-    "currency_codes": ["KWD"],
-    "languages": ["ar"],
-    "region": "Western Asia"
-  },
-  {
-    "code": "KG",
-    "alpha3_code": "KGZ",
-    "name": "Kyrgyzstan",
-    "native_name": "Кыргызстан",
-    "phone_codes": [996],
-    "continent": "AS",
-    "capital": "Bishkek",
-    "currency_codes": ["KGS"],
-    "languages": ["ky", "ru"],
-    "region": "Central Asia"
-  },
-  {
-    "code": "LA",
-    "alpha3_code": "LAO",
-    "name": "Laos",
-    "native_name": "ລາວ",
-    "phone_codes": [856],
-    "continent": "AS",
-    "capital": "Vientiane",
-    "currency_codes": ["LAK"],
-    "languages": ["lo"],
-    "region": "South-Eastern Asia"
-  },
-  {
-    "code": "LV",
-    "alpha3_code": "LVA",
-    "name": "Latvia",
-    "native_name": "Latvija",
-    "phone_codes": [371],
-    "continent": "EU",
-    "capital": "Riga",
-    "currency_codes": ["EUR"],
-    "languages": ["lv"],
-    "region": "Northern Europe"
-  },
-  {
-    "code": "LB",
-    "alpha3_code": "LBN",
-    "name": "Lebanon",
-    "native_name": "لبنان",
-    "phone_codes": [961],
-    "continent": "AS",
-    "capital": "Beirut",
-    "currency_codes": ["LBP"],
-    "languages": ["ar", "fr"],
-    "region": "Western Asia"
-  },
-  {
-    "code": "LS",
-    "alpha3_code": "LSO",
-    "name": "Lesotho",
-    "native_name": "Lesotho",
-    "phone_codes": [266],
-    "continent": "AF",
-    "capital": "Maseru",
-    "currency_codes": ["LSL", "ZAR"],
-    "languages": ["en", "st"],
-    "region": "Southern Africa"
-  },
-  {
-    "code": "LR",
-    "alpha3_code": "LBR",
-    "name": "Liberia",
-    "native_name": "Liberia",
-    "phone_codes": [231],
-    "continent": "AF",
-    "capital": "Monrovia",
-    "currency_codes": ["LRD"],
-    "languages": ["en"],
-    "region": "Western Africa"
-  },
-  {
-    "code": "LY",
-    "alpha3_code": "LBY",
-    "name": "Libya",
-    "native_name": "ليبيا",
-    "phone_codes": [218],
-    "continent": "AF",
-    "capital": "Tripoli",
-    "currency_codes": ["LYD"],
-    "languages": ["ar"],
+    "capital": "Cairo",
+    "currency_codes": [
+      "EGP"
+    ],
+    "languages": [
+      "ar"
+    ],
     "region": "Northern Africa"
   },
   {
-    "code": "LI",
-    "alpha3_code": "LIE",
-    "name": "Liechtenstein",
-    "native_name": "Liechtenstein",
-    "phone_codes": [423],
-    "continent": "EU",
-    "capital": "Vaduz",
-    "currency_codes": ["CHF"],
-    "languages": ["de"],
-    "region": "Western Europe"
-  },
-  {
-    "code": "LT",
-    "alpha3_code": "LTU",
-    "name": "Lithuania",
-    "native_name": "Lietuva",
-    "phone_codes": [370],
-    "continent": "EU",
-    "capital": "Vilnius",
-    "currency_codes": ["EUR"],
-    "languages": ["lt"],
-    "region": "Northern Europe"
-  },
-  {
-    "code": "LU",
-    "alpha3_code": "LUX",
-    "name": "Luxembourg",
-    "native_name": "Luxembourg",
-    "phone_codes": [352],
-    "continent": "EU",
-    "capital": "Luxembourg",
-    "currency_codes": ["EUR"],
-    "languages": ["fr", "de", "lb"],
-    "region": "Western Europe"
-  },
-  {
-    "code": "MG",
-    "alpha3_code": "MDG",
-    "name": "Madagascar",
-    "native_name": "Madagasikara",
-    "phone_codes": [261],
+    "code": "EH",
+    "alpha3_code": "ESH",
+    "name": "Western Sahara",
+    "native_name": "Western Sahara",
+    "phone_codes": [
+      2125288,
+      2125289
+    ],
     "continent": "AF",
-    "capital": "Antananarivo",
-    "currency_codes": ["MGA"],
-    "languages": ["fr", "mg"],
-    "region": "Eastern Africa"
-  },
-  {
-    "code": "MW",
-    "alpha3_code": "MWI",
-    "name": "Malawi",
-    "native_name": "Malawi",
-    "phone_codes": [265],
-    "continent": "AF",
-    "capital": "Lilongwe",
-    "currency_codes": ["MWK"],
-    "languages": ["en", "ny"],
-    "region": "Eastern Africa"
-  },
-  {
-    "code": "MY",
-    "alpha3_code": "MYS",
-    "name": "Malaysia",
-    "native_name": "Malaysia",
-    "phone_codes": [60],
-    "continent": "AS",
-    "capital": "Kuala Lumpur",
-    "currency_codes": ["MYR"],
-    "languages": ["ms"],
-    "region": "South-Eastern Asia"
-  },
-  {
-    "code": "MV",
-    "alpha3_code": "MDV",
-    "name": "Maldives",
-    "native_name": "Maldives",
-    "phone_codes": [960],
-    "continent": "AS",
-    "capital": "Malé",
-    "currency_codes": ["MVR"],
-    "languages": ["dv"],
-    "region": "Southern Asia"
-  },
-  {
-    "code": "ML",
-    "alpha3_code": "MLI",
-    "name": "Mali",
-    "native_name": "Mali",
-    "phone_codes": [223],
-    "continent": "AF",
-    "capital": "Bamako",
-    "currency_codes": ["XOF"],
-    "languages": ["fr"],
-    "region": "Western Africa"
-  },
-  {
-    "code": "MT",
-    "alpha3_code": "MLT",
-    "name": "Malta",
-    "native_name": "Malta",
-    "phone_codes": [356],
-    "continent": "EU",
-    "capital": "Valletta",
-    "currency_codes": ["EUR"],
-    "languages": ["mt", "en"],
-    "region": "Southern Europe"
-  },
-  {
-    "code": "MH",
-    "alpha3_code": "MHL",
-    "name": "Marshall Islands",
-    "native_name": "Marshall Islands",
-    "phone_codes": [692],
-    "continent": "OC",
-    "capital": "Majuro",
-    "currency_codes": ["USD"],
-    "languages": ["en", "mh"],
-    "region": "Micronesia"
-  },
-  {
-    "code": "MR",
-    "alpha3_code": "MRT",
-    "name": "Mauritania",
-    "native_name": "موريتانيا",
-    "phone_codes": [222],
-    "continent": "AF",
-    "capital": "Nouakchott",
-    "currency_codes": ["MRU"],
-    "languages": ["ar"],
-    "region": "Western Africa"
-  },
-  {
-    "code": "MU",
-    "alpha3_code": "MUS",
-    "name": "Mauritius",
-    "native_name": "Maurice",
-    "phone_codes": [230],
-    "continent": "AF",
-    "capital": "Port Louis",
-    "currency_codes": ["MUR"],
-    "languages": ["en", "fr"],
-    "region": "Eastern Africa"
-  },
-  {
-    "code": "MX",
-    "alpha3_code": "MEX",
-    "name": "Mexico",
-    "native_name": "México",
-    "phone_codes": [52],
-    "continent": "NA",
-    "capital": "Mexico City",
-    "currency_codes": ["MXN"],
-    "languages": ["es"],
-    "region": "Central America"
-  },
-  {
-    "code": "FM",
-    "alpha3_code": "FSM",
-    "name": "Micronesia",
-    "native_name": "Micronesia",
-    "phone_codes": [691],
-    "continent": "OC",
-    "capital": "Palikir",
-    "currency_codes": ["USD"],
-    "languages": ["en"],
-    "region": "Micronesia"
-  },
-  {
-    "code": "MD",
-    "alpha3_code": "MDA",
-    "name": "Moldova",
-    "native_name": "Moldova",
-    "phone_codes": [373],
-    "continent": "EU",
-    "capital": "Chișinău",
-    "currency_codes": ["MDL"],
-    "languages": ["ro"],
-    "region": "Eastern Europe"
-  },
-  {
-    "code": "MC",
-    "alpha3_code": "MCO",
-    "name": "Monaco",
-    "native_name": "Monaco",
-    "phone_codes": [377],
-    "continent": "EU",
-    "capital": "Monaco",
-    "currency_codes": ["EUR"],
-    "languages": ["fr"],
-    "region": "Western Europe"
-  },
-  {
-    "code": "MN",
-    "alpha3_code": "MNG",
-    "name": "Mongolia",
-    "native_name": "Монгол улс",
-    "phone_codes": [976],
-    "continent": "AS",
-    "capital": "Ulaanbaatar",
-    "currency_codes": ["MNT"],
-    "languages": ["mn"],
-    "region": "Eastern Asia"
-  },
-  {
-    "code": "ME",
-    "alpha3_code": "MNE",
-    "name": "Montenegro",
-    "native_name": "Crna Gora",
-    "phone_codes": [382],
-    "continent": "EU",
-    "capital": "Podgorica",
-    "currency_codes": ["EUR"],
-    "languages": ["sr", "bs", "sq", "hr"],
-    "region": "Southern Europe"
-  },
-  {
-    "code": "MA",
-    "alpha3_code": "MAR",
-    "name": "Morocco",
-    "native_name": "المغرب",
-    "phone_codes": [212],
-    "continent": "AF",
-    "capital": "Rabat",
-    "currency_codes": ["MAD"],
-    "languages": ["ar"],
+    "capital": "El Aaiún",
+    "currency_codes": [
+      "DZD",
+      "MAD",
+      "MRU"
+    ],
+    "languages": [],
     "region": "Northern Africa"
   },
   {
-    "code": "MZ",
-    "alpha3_code": "MOZ",
-    "name": "Mozambique",
-    "native_name": "Moçambique",
-    "phone_codes": [258],
+    "code": "ER",
+    "alpha3_code": "ERI",
+    "name": "Eritrea",
+    "native_name": "ኤርትራ",
+    "phone_codes": [
+      291
+    ],
     "continent": "AF",
-    "capital": "Maputo",
-    "currency_codes": ["MZN"],
-    "languages": ["pt"],
-    "region": "Eastern Africa"
-  },
-  {
-    "code": "MM",
-    "alpha3_code": "MMR",
-    "name": "Myanmar",
-    "native_name": "မြန်မာ",
-    "phone_codes": [95],
-    "continent": "AS",
-    "capital": "Naypyidaw",
-    "currency_codes": ["MMK"],
-    "languages": ["my"],
-    "region": "South-Eastern Asia"
-  },
-  {
-    "code": "NA",
-    "alpha3_code": "NAM",
-    "name": "Namibia",
-    "native_name": "Namibia",
-    "phone_codes": [264],
-    "continent": "AF",
-    "capital": "Windhoek",
-    "currency_codes": ["NAD", "ZAR"],
-    "languages": ["en", "af"],
-    "region": "Southern Africa"
-  },
-  {
-    "code": "NR",
-    "alpha3_code": "NRU",
-    "name": "Nauru",
-    "native_name": "Nauru",
-    "phone_codes": [674],
-    "continent": "OC",
-    "capital": "Yaren",
-    "currency_codes": ["AUD"],
-    "languages": ["en", "na"],
-    "region": "Micronesia"
-  },
-  {
-    "code": "NP",
-    "alpha3_code": "NPL",
-    "name": "Nepal",
-    "native_name": "नेपाल",
-    "phone_codes": [977],
-    "continent": "AS",
-    "capital": "Kathmandu",
-    "currency_codes": ["NPR"],
-    "languages": ["ne"],
-    "region": "Southern Asia"
-  },
-  {
-    "code": "NL",
-    "alpha3_code": "NLD",
-    "name": "Netherlands",
-    "native_name": "Nederland",
-    "phone_codes": [31],
-    "continent": "EU",
-    "capital": "Amsterdam",
-    "currency_codes": ["EUR"],
-    "languages": ["nl"],
-    "region": "Western Europe"
-  },
-  {
-    "code": "NZ",
-    "alpha3_code": "NZL",
-    "name": "New Zealand",
-    "native_name": "New Zealand",
-    "phone_codes": [64],
-    "continent": "OC",
-    "capital": "Wellington",
-    "currency_codes": ["NZD"],
-    "languages": ["en", "mi"],
-    "region": "Australia and New Zealand"
-  },
-  {
-    "code": "NI",
-    "alpha3_code": "NIC",
-    "name": "Nicaragua",
-    "native_name": "Nicaragua",
-    "phone_codes": [505],
-    "continent": "NA",
-    "capital": "Managua",
-    "currency_codes": ["NIO"],
-    "languages": ["es"],
-    "region": "Central America"
-  },
-  {
-    "code": "NE",
-    "alpha3_code": "NER",
-    "name": "Niger",
-    "native_name": "Niger",
-    "phone_codes": [227],
-    "continent": "AF",
-    "capital": "Niamey",
-    "currency_codes": ["XOF"],
-    "languages": ["fr"],
-    "region": "Western Africa"
-  },
-  {
-    "code": "NG",
-    "alpha3_code": "NGA",
-    "name": "Nigeria",
-    "native_name": "Nigeria",
-    "phone_codes": [234],
-    "continent": "AF",
-    "capital": "Abuja",
-    "currency_codes": ["NGN"],
-    "languages": ["en"],
-    "region": "Western Africa"
-  },
-  {
-    "code": "MK",
-    "alpha3_code": "MKD",
-    "name": "North Macedonia",
-    "native_name": "Северна Македонија",
-    "phone_codes": [389],
-    "continent": "EU",
-    "capital": "Skopje",
-    "currency_codes": ["MKD"],
-    "languages": ["mk"],
-    "region": "Southern Europe"
-  },
-  {
-    "code": "NO",
-    "alpha3_code": "NOR",
-    "name": "Norway",
-    "native_name": "Norge",
-    "phone_codes": [47],
-    "continent": "EU",
-    "capital": "Oslo",
-    "currency_codes": ["NOK"],
-    "languages": ["no", "nb", "nn"],
-    "region": "Northern Europe"
-  },
-  {
-    "code": "OM",
-    "alpha3_code": "OMN",
-    "name": "Oman",
-    "native_name": "عمان",
-    "phone_codes": [968],
-    "continent": "AS",
-    "capital": "Muscat",
-    "currency_codes": ["OMR"],
-    "languages": ["ar"],
-    "region": "Western Asia"
-  },
-  {
-    "code": "PK",
-    "alpha3_code": "PAK",
-    "name": "Pakistan",
-    "native_name": "پاکستان",
-    "phone_codes": [92],
-    "continent": "AS",
-    "capital": "Islamabad",
-    "currency_codes": ["PKR"],
-    "languages": ["en", "ur"],
-    "region": "Southern Asia"
-  },
-  {
-    "code": "PW",
-    "alpha3_code": "PLW",
-    "name": "Palau",
-    "native_name": "Palau",
-    "phone_codes": [680],
-    "continent": "OC",
-    "capital": "Ngerulmud",
-    "currency_codes": ["USD"],
-    "languages": ["en"],
-    "region": "Micronesia"
-  },
-  {
-    "code": "PA",
-    "alpha3_code": "PAN",
-    "name": "Panama",
-    "native_name": "Panamá",
-    "phone_codes": [507],
-    "continent": "NA",
-    "capital": "Panama City",
-    "currency_codes": ["PAB", "USD"],
-    "languages": ["es"],
-    "region": "Central America"
-  },
-  {
-    "code": "PG",
-    "alpha3_code": "PNG",
-    "name": "Papua New Guinea",
-    "native_name": "Papua New Guinea",
-    "phone_codes": [675],
-    "continent": "OC",
-    "capital": "Port Moresby",
-    "currency_codes": ["PGK"],
-    "languages": ["en"],
-    "region": "Melanesia"
-  },
-  {
-    "code": "PY",
-    "alpha3_code": "PRY",
-    "name": "Paraguay",
-    "native_name": "Paraguay",
-    "phone_codes": [595],
-    "continent": "SA",
-    "capital": "Asunción",
-    "currency_codes": ["PYG"],
-    "languages": ["es", "gn"],
-    "region": "South America"
-  },
-  {
-    "code": "PE",
-    "alpha3_code": "PER",
-    "name": "Peru",
-    "native_name": "Perú",
-    "phone_codes": [51],
-    "continent": "SA",
-    "capital": "Lima",
-    "currency_codes": ["PEN"],
-    "languages": ["es"],
-    "region": "South America"
-  },
-  {
-    "code": "PH",
-    "alpha3_code": "PHL",
-    "name": "Philippines",
-    "native_name": "Pilipinas",
-    "phone_codes": [63],
-    "continent": "AS",
-    "capital": "Manila",
-    "currency_codes": ["PHP"],
-    "languages": ["en"],
-    "region": "South-Eastern Asia"
-  },
-  {
-    "code": "PL",
-    "alpha3_code": "POL",
-    "name": "Poland",
-    "native_name": "Polska",
-    "phone_codes": [48],
-    "continent": "EU",
-    "capital": "Warsaw",
-    "currency_codes": ["PLN"],
-    "languages": ["pl"],
-    "region": "Eastern Europe"
-  },
-  {
-    "code": "PT",
-    "alpha3_code": "PRT",
-    "name": "Portugal",
-    "native_name": "Portugal",
-    "phone_codes": [351],
-    "continent": "EU",
-    "capital": "Lisbon",
-    "currency_codes": ["EUR"],
-    "languages": ["pt"],
-    "region": "Southern Europe"
-  },
-  {
-    "code": "QA",
-    "alpha3_code": "QAT",
-    "name": "Qatar",
-    "native_name": "قطر",
-    "phone_codes": [974],
-    "continent": "AS",
-    "capital": "Doha",
-    "currency_codes": ["QAR"],
-    "languages": ["ar"],
-    "region": "Western Asia"
-  },
-  {
-    "code": "RO",
-    "alpha3_code": "ROU",
-    "name": "Romania",
-    "native_name": "România",
-    "phone_codes": [40],
-    "continent": "EU",
-    "capital": "Bucharest",
-    "currency_codes": ["RON"],
-    "languages": ["ro"],
-    "region": "Eastern Europe"
-  },
-  {
-    "code": "RU",
-    "alpha3_code": "RUS",
-    "name": "Russia",
-    "native_name": "Россия",
-    "phone_codes": [7],
-    "continent": "EU",
-    "capital": "Moscow",
-    "currency_codes": ["RUB"],
-    "languages": ["ru"],
-    "region": "Eastern Europe"
-  },
-  {
-    "code": "RW",
-    "alpha3_code": "RWA",
-    "name": "Rwanda",
-    "native_name": "Rwanda",
-    "phone_codes": [250],
-    "continent": "AF",
-    "capital": "Kigali",
-    "currency_codes": ["RWF"],
-    "languages": ["rw", "en", "fr"],
-    "region": "Eastern Africa"
-  },
-  {
-    "code": "KN",
-    "alpha3_code": "KNA",
-    "name": "Saint Kitts and Nevis",
-    "native_name": "Saint Kitts and Nevis",
-    "phone_codes": [1869],
-    "continent": "NA",
-    "capital": "Basseterre",
-    "currency_codes": ["XCD"],
-    "languages": ["en"],
-    "region": "Caribbean"
-  },
-  {
-    "code": "LC",
-    "alpha3_code": "LCA",
-    "name": "Saint Lucia",
-    "native_name": "Saint Lucia",
-    "phone_codes": [1758],
-    "continent": "NA",
-    "capital": "Castries",
-    "currency_codes": ["XCD"],
-    "languages": ["en"],
-    "region": "Caribbean"
-  },
-  {
-    "code": "VC",
-    "alpha3_code": "VCT",
-    "name": "Saint Vincent and the Grenadines",
-    "native_name": "Saint Vincent and the Grenadines",
-    "phone_codes": [1784],
-    "continent": "NA",
-    "capital": "Kingstown",
-    "currency_codes": ["XCD"],
-    "languages": ["en"],
-    "region": "Caribbean"
-  },
-  {
-    "code": "WS",
-    "alpha3_code": "WSM",
-    "name": "Samoa",
-    "native_name": "Samoa",
-    "phone_codes": [685],
-    "continent": "OC",
-    "capital": "Apia",
-    "currency_codes": ["WST"],
-    "languages": ["sm", "en"],
-    "region": "Polynesia"
-  },
-  {
-    "code": "SM",
-    "alpha3_code": "SMR",
-    "name": "San Marino",
-    "native_name": "San Marino",
-    "phone_codes": [378],
-    "continent": "EU",
-    "capital": "San Marino",
-    "currency_codes": ["EUR"],
-    "languages": ["it"],
-    "region": "Southern Europe"
-  },
-  {
-    "code": "ST",
-    "alpha3_code": "STP",
-    "name": "São Tomé and Príncipe",
-    "native_name": "São Tomé e Príncipe",
-    "phone_codes": [239],
-    "continent": "AF",
-    "capital": "São Tomé",
-    "currency_codes": ["STN"],
-    "languages": ["pt"],
-    "region": "Middle Africa"
-  },
-  {
-    "code": "SA",
-    "alpha3_code": "SAU",
-    "name": "Saudi Arabia",
-    "native_name": "العربية السعودية",
-    "phone_codes": [966],
-    "continent": "AS",
-    "capital": "Riyadh",
-    "currency_codes": ["SAR"],
-    "languages": ["ar"],
-    "region": "Western Asia"
-  },
-  {
-    "code": "SN",
-    "alpha3_code": "SEN",
-    "name": "Senegal",
-    "native_name": "Sénégal",
-    "phone_codes": [221],
-    "continent": "AF",
-    "capital": "Dakar",
-    "currency_codes": ["XOF"],
-    "languages": ["fr"],
-    "region": "Western Africa"
-  },
-  {
-    "code": "RS",
-    "alpha3_code": "SRB",
-    "name": "Serbia",
-    "native_name": "Србија",
-    "phone_codes": [381],
-    "continent": "EU",
-    "capital": "Belgrade",
-    "currency_codes": ["RSD"],
-    "languages": ["sr"],
-    "region": "Southern Europe"
-  },
-  {
-    "code": "SC",
-    "alpha3_code": "SYC",
-    "name": "Seychelles",
-    "native_name": "Seychelles",
-    "phone_codes": [248],
-    "continent": "AF",
-    "capital": "Victoria",
-    "currency_codes": ["SCR"],
-    "languages": ["fr", "en"],
-    "region": "Eastern Africa"
-  },
-  {
-    "code": "SL",
-    "alpha3_code": "SLE",
-    "name": "Sierra Leone",
-    "native_name": "Sierra Leone",
-    "phone_codes": [232],
-    "continent": "AF",
-    "capital": "Freetown",
-    "currency_codes": ["SLL"],
-    "languages": ["en"],
-    "region": "Western Africa"
-  },
-  {
-    "code": "SG",
-    "alpha3_code": "SGP",
-    "name": "Singapore",
-    "native_name": "Singapore",
-    "phone_codes": [65],
-    "continent": "AS",
-    "capital": "Singapore",
-    "currency_codes": ["SGD"],
-    "languages": ["en", "ms", "ta", "zh"],
-    "region": "South-Eastern Asia"
-  },
-  {
-    "code": "SK",
-    "alpha3_code": "SVK",
-    "name": "Slovakia",
-    "native_name": "Slovensko",
-    "phone_codes": [421],
-    "continent": "EU",
-    "capital": "Bratislava",
-    "currency_codes": ["EUR"],
-    "languages": ["sk"],
-    "region": "Eastern Europe"
-  },
-  {
-    "code": "SI",
-    "alpha3_code": "SVN",
-    "name": "Slovenia",
-    "native_name": "Slovenija",
-    "phone_codes": [386],
-    "continent": "EU",
-    "capital": "Ljubljana",
-    "currency_codes": ["EUR"],
-    "languages": ["sl"],
-    "region": "Southern Europe"
-  },
-  {
-    "code": "SB",
-    "alpha3_code": "SLB",
-    "name": "Solomon Islands",
-    "native_name": "Solomon Islands",
-    "phone_codes": [677],
-    "continent": "OC",
-    "capital": "Honiara",
-    "currency_codes": ["SBD"],
-    "languages": ["en"],
-    "region": "Melanesia"
-  },
-  {
-    "code": "SO",
-    "alpha3_code": "SOM",
-    "name": "Somalia",
-    "native_name": "Soomaaliya",
-    "phone_codes": [252],
-    "continent": "AF",
-    "capital": "Mogadishu",
-    "currency_codes": ["SOS"],
-    "languages": ["so", "ar"],
-    "region": "Eastern Africa"
-  },
-  {
-    "code": "ZA",
-    "alpha3_code": "ZAF",
-    "name": "South Africa",
-    "native_name": "South Africa",
-    "phone_codes": [27],
-    "continent": "AF",
-    "capital": "Pretoria",
-    "currency_codes": ["ZAR"],
-    "languages": ["af", "en", "nr", "st", "ss", "tn", "ts", "ve", "xh", "zu"],
-    "region": "Southern Africa"
-  },
-  {
-    "code": "SS",
-    "alpha3_code": "SSD",
-    "name": "South Sudan",
-    "native_name": "South Sudan",
-    "phone_codes": [211],
-    "continent": "AF",
-    "capital": "Juba",
-    "currency_codes": ["SSP"],
-    "languages": ["en"],
+    "capital": "Asmara",
+    "currency_codes": [
+      "ERN"
+    ],
+    "languages": [
+      "ti",
+      "ar",
+      "en"
+    ],
     "region": "Eastern Africa"
   },
   {
@@ -1948,239 +1209,2905 @@
     "alpha3_code": "ESP",
     "name": "Spain",
     "native_name": "España",
-    "phone_codes": [34],
+    "phone_codes": [
+      34
+    ],
     "continent": "EU",
     "capital": "Madrid",
-    "currency_codes": ["EUR"],
-    "languages": ["es"],
+    "currency_codes": [
+      "EUR"
+    ],
+    "languages": [
+      "es"
+    ],
     "region": "Southern Europe"
+  },
+  {
+    "code": "ET",
+    "alpha3_code": "ETH",
+    "name": "Ethiopia",
+    "native_name": "ኢትዮጵያ",
+    "phone_codes": [
+      251
+    ],
+    "continent": "AF",
+    "capital": "Addis Ababa",
+    "currency_codes": [
+      "ETB"
+    ],
+    "languages": [
+      "am"
+    ],
+    "region": "Eastern Africa"
+  },
+  {
+    "code": "FI",
+    "alpha3_code": "FIN",
+    "name": "Finland",
+    "native_name": "Suomi",
+    "phone_codes": [
+      358
+    ],
+    "continent": "EU",
+    "capital": "Helsinki",
+    "currency_codes": [
+      "EUR"
+    ],
+    "languages": [
+      "fi",
+      "sv"
+    ],
+    "region": "Northern Europe"
+  },
+  {
+    "code": "FJ",
+    "alpha3_code": "FJI",
+    "name": "Fiji",
+    "native_name": "Fiji",
+    "phone_codes": [
+      679
+    ],
+    "continent": "OC",
+    "capital": "Suva",
+    "currency_codes": [
+      "FJD"
+    ],
+    "languages": [
+      "en",
+      "fj",
+      "hi"
+    ],
+    "region": "Melanesia"
+  },
+  {
+    "code": "FK",
+    "alpha3_code": "FLK",
+    "name": "Falkland Islands (Malvinas)",
+    "native_name": "Falkland Islands",
+    "phone_codes": [
+      500
+    ],
+    "continent": "NA",
+    "capital": "Stanley",
+    "currency_codes": [
+      "FKP"
+    ],
+    "languages": [],
+    "region": "Latin America and the Caribbean"
+  },
+  {
+    "code": "FM",
+    "alpha3_code": "FSM",
+    "name": "Micronesia",
+    "native_name": "Micronesia",
+    "phone_codes": [
+      691
+    ],
+    "continent": "OC",
+    "capital": "Palikir",
+    "currency_codes": [
+      "USD"
+    ],
+    "languages": [
+      "en"
+    ],
+    "region": "Micronesia"
+  },
+  {
+    "code": "FO",
+    "alpha3_code": "FRO",
+    "name": "Faroe Islands",
+    "native_name": "Færøerne",
+    "phone_codes": [
+      298
+    ],
+    "continent": "EU",
+    "capital": "Tórshavn",
+    "currency_codes": [
+      "DKK",
+      "FOK"
+    ],
+    "languages": [],
+    "region": "Northern Europe"
+  },
+  {
+    "code": "FR",
+    "alpha3_code": "FRA",
+    "name": "France",
+    "native_name": "France",
+    "phone_codes": [
+      33
+    ],
+    "continent": "EU",
+    "capital": "Paris",
+    "currency_codes": [
+      "EUR"
+    ],
+    "languages": [
+      "fr"
+    ],
+    "region": "Western Europe"
+  },
+  {
+    "code": "GA",
+    "alpha3_code": "GAB",
+    "name": "Gabon",
+    "native_name": "Gabon",
+    "phone_codes": [
+      241
+    ],
+    "continent": "AF",
+    "capital": "Libreville",
+    "currency_codes": [
+      "XAF"
+    ],
+    "languages": [
+      "fr"
+    ],
+    "region": "Middle Africa"
+  },
+  {
+    "code": "GB",
+    "alpha3_code": "GBR",
+    "name": "United Kingdom",
+    "native_name": "United Kingdom",
+    "phone_codes": [
+      44
+    ],
+    "continent": "EU",
+    "capital": "London",
+    "currency_codes": [
+      "GBP"
+    ],
+    "languages": [
+      "en"
+    ],
+    "region": "Northern Europe"
+  },
+  {
+    "code": "GD",
+    "alpha3_code": "GRD",
+    "name": "Grenada",
+    "native_name": "Grenada",
+    "phone_codes": [
+      1473
+    ],
+    "continent": "NA",
+    "capital": "St. George's",
+    "currency_codes": [
+      "XCD"
+    ],
+    "languages": [
+      "en"
+    ],
+    "region": "Caribbean"
+  },
+  {
+    "code": "GE",
+    "alpha3_code": "GEO",
+    "name": "Georgia",
+    "native_name": "საქართველო",
+    "phone_codes": [
+      995
+    ],
+    "continent": "AS",
+    "capital": "Tbilisi",
+    "currency_codes": [
+      "GEL"
+    ],
+    "languages": [
+      "ka"
+    ],
+    "region": "Western Asia"
+  },
+  {
+    "code": "GF",
+    "alpha3_code": "GUF",
+    "name": "French Guiana",
+    "native_name": "Guyane française",
+    "phone_codes": [
+      594
+    ],
+    "continent": "NA",
+    "capital": "Cayenne",
+    "currency_codes": [
+      "EUR"
+    ],
+    "languages": [],
+    "region": "Latin America and the Caribbean"
+  },
+  {
+    "code": "GG",
+    "alpha3_code": "GGY",
+    "name": "Guernsey",
+    "native_name": "Guernsey",
+    "phone_codes": [
+      44
+    ],
+    "continent": "EU",
+    "capital": "St. Peter Port",
+    "currency_codes": [
+      "GBP",
+      "GGP"
+    ],
+    "languages": [],
+    "region": "Northern Europe"
+  },
+  {
+    "code": "GH",
+    "alpha3_code": "GHA",
+    "name": "Ghana",
+    "native_name": "Ghana",
+    "phone_codes": [
+      233
+    ],
+    "continent": "AF",
+    "capital": "Accra",
+    "currency_codes": [
+      "GHS"
+    ],
+    "languages": [
+      "en"
+    ],
+    "region": "Western Africa"
+  },
+  {
+    "code": "GI",
+    "alpha3_code": "GIB",
+    "name": "Gibraltar",
+    "native_name": "Gibraltar",
+    "phone_codes": [
+      350
+    ],
+    "continent": "EU",
+    "capital": "Gibraltar",
+    "currency_codes": [
+      "GIP"
+    ],
+    "languages": [],
+    "region": "Southern Europe"
+  },
+  {
+    "code": "GL",
+    "alpha3_code": "GRL",
+    "name": "Greenland",
+    "native_name": "Kalaallit Nunaat",
+    "phone_codes": [
+      299
+    ],
+    "continent": "NA",
+    "capital": "Nuuk",
+    "currency_codes": [
+      "DKK"
+    ],
+    "languages": [],
+    "region": "Northern America"
+  },
+  {
+    "code": "GM",
+    "alpha3_code": "GMB",
+    "name": "Gambia",
+    "native_name": "Gambia",
+    "phone_codes": [
+      220
+    ],
+    "continent": "AF",
+    "capital": "Banjul",
+    "currency_codes": [
+      "GMD"
+    ],
+    "languages": [
+      "en"
+    ],
+    "region": "Western Africa"
+  },
+  {
+    "code": "GN",
+    "alpha3_code": "GIN",
+    "name": "Guinea",
+    "native_name": "Guinée",
+    "phone_codes": [
+      224
+    ],
+    "continent": "AF",
+    "capital": "Conakry",
+    "currency_codes": [
+      "GNF"
+    ],
+    "languages": [
+      "fr"
+    ],
+    "region": "Western Africa"
+  },
+  {
+    "code": "GP",
+    "alpha3_code": "GLP",
+    "name": "Guadeloupe",
+    "native_name": "Guadeloupe",
+    "phone_codes": [
+      590
+    ],
+    "continent": "NA",
+    "capital": "Basse-Terre",
+    "currency_codes": [
+      "EUR"
+    ],
+    "languages": [],
+    "region": "Latin America and the Caribbean"
+  },
+  {
+    "code": "GQ",
+    "alpha3_code": "GNQ",
+    "name": "Equatorial Guinea",
+    "native_name": "Guinea Ecuatorial",
+    "phone_codes": [
+      240
+    ],
+    "continent": "AF",
+    "capital": "Malabo",
+    "currency_codes": [
+      "XAF"
+    ],
+    "languages": [
+      "es",
+      "fr",
+      "pt"
+    ],
+    "region": "Middle Africa"
+  },
+  {
+    "code": "GR",
+    "alpha3_code": "GRC",
+    "name": "Greece",
+    "native_name": "Ελλάδα",
+    "phone_codes": [
+      30
+    ],
+    "continent": "EU",
+    "capital": "Athens",
+    "currency_codes": [
+      "EUR"
+    ],
+    "languages": [
+      "el"
+    ],
+    "region": "Southern Europe"
+  },
+  {
+    "code": "GS",
+    "alpha3_code": "SGS",
+    "name": "South Georgia and the South Sandwich Islands",
+    "native_name": "South Georgia",
+    "phone_codes": [
+      500
+    ],
+    "continent": "NA",
+    "capital": "King Edward Point",
+    "currency_codes": [
+      "GBP"
+    ],
+    "languages": [],
+    "region": "Latin America and the Caribbean"
+  },
+  {
+    "code": "GT",
+    "alpha3_code": "GTM",
+    "name": "Guatemala",
+    "native_name": "Guatemala",
+    "phone_codes": [
+      502
+    ],
+    "continent": "NA",
+    "capital": "Guatemala City",
+    "currency_codes": [
+      "GTQ"
+    ],
+    "languages": [
+      "es"
+    ],
+    "region": "Central America"
+  },
+  {
+    "code": "GU",
+    "alpha3_code": "GUM",
+    "name": "Guam",
+    "native_name": "Guåhån",
+    "phone_codes": [
+      1671
+    ],
+    "continent": "OC",
+    "capital": "Hagåtña",
+    "currency_codes": [
+      "USD"
+    ],
+    "languages": [],
+    "region": "Micronesia"
+  },
+  {
+    "code": "GW",
+    "alpha3_code": "GNB",
+    "name": "Guinea-Bissau",
+    "native_name": "Guiné-Bissau",
+    "phone_codes": [
+      245
+    ],
+    "continent": "AF",
+    "capital": "Bissau",
+    "currency_codes": [
+      "XOF"
+    ],
+    "languages": [
+      "pt"
+    ],
+    "region": "Western Africa"
+  },
+  {
+    "code": "GY",
+    "alpha3_code": "GUY",
+    "name": "Guyana",
+    "native_name": "Guyana",
+    "phone_codes": [
+      592
+    ],
+    "continent": "SA",
+    "capital": "Georgetown",
+    "currency_codes": [
+      "GYD"
+    ],
+    "languages": [
+      "en"
+    ],
+    "region": "South America"
+  },
+  {
+    "code": "HK",
+    "alpha3_code": "HKG",
+    "name": "Hong Kong",
+    "native_name": "Hong Kong",
+    "phone_codes": [
+      852
+    ],
+    "continent": "AS",
+    "capital": "City of Victoria",
+    "currency_codes": [
+      "HKD"
+    ],
+    "languages": [],
+    "region": "Eastern Asia"
+  },
+  {
+    "code": "HM",
+    "alpha3_code": "HMD",
+    "name": "Heard Island and McDonald Islands",
+    "native_name": "Heard Island and McDonald Islands",
+    "phone_codes": [],
+    "continent": "OC",
+    "capital": "-",
+    "currency_codes": [
+      ""
+    ],
+    "languages": [],
+    "region": "Australia and New Zealand"
+  },
+  {
+    "code": "HN",
+    "alpha3_code": "HND",
+    "name": "Honduras",
+    "native_name": "Honduras",
+    "phone_codes": [
+      504
+    ],
+    "continent": "NA",
+    "capital": "Tegucigalpa",
+    "currency_codes": [
+      "HNL"
+    ],
+    "languages": [
+      "es"
+    ],
+    "region": "Central America"
+  },
+  {
+    "code": "HR",
+    "alpha3_code": "HRV",
+    "name": "Croatia",
+    "native_name": "Hrvatska",
+    "phone_codes": [
+      385
+    ],
+    "continent": "EU",
+    "capital": "Zagreb",
+    "currency_codes": [
+      "EUR"
+    ],
+    "languages": [
+      "hr"
+    ],
+    "region": "Southern Europe"
+  },
+  {
+    "code": "HT",
+    "alpha3_code": "HTI",
+    "name": "Haiti",
+    "native_name": "Haïti",
+    "phone_codes": [
+      509
+    ],
+    "continent": "NA",
+    "capital": "Port-au-Prince",
+    "currency_codes": [
+      "HTG"
+    ],
+    "languages": [
+      "fr",
+      "ht"
+    ],
+    "region": "Caribbean"
+  },
+  {
+    "code": "HU",
+    "alpha3_code": "HUN",
+    "name": "Hungary",
+    "native_name": "Magyarország",
+    "phone_codes": [
+      36
+    ],
+    "continent": "EU",
+    "capital": "Budapest",
+    "currency_codes": [
+      "HUF"
+    ],
+    "languages": [
+      "hu"
+    ],
+    "region": "Eastern Europe"
+  },
+  {
+    "code": "ID",
+    "alpha3_code": "IDN",
+    "name": "Indonesia",
+    "native_name": "Indonesia",
+    "phone_codes": [
+      62
+    ],
+    "continent": "AS",
+    "capital": "Jakarta",
+    "currency_codes": [
+      "IDR"
+    ],
+    "languages": [
+      "id"
+    ],
+    "region": "South-Eastern Asia"
+  },
+  {
+    "code": "IE",
+    "alpha3_code": "IRL",
+    "name": "Ireland",
+    "native_name": "Éire",
+    "phone_codes": [
+      353
+    ],
+    "continent": "EU",
+    "capital": "Dublin",
+    "currency_codes": [
+      "EUR"
+    ],
+    "languages": [
+      "ga",
+      "en"
+    ],
+    "region": "Northern Europe"
+  },
+  {
+    "code": "IL",
+    "alpha3_code": "ISR",
+    "name": "Israel",
+    "native_name": "יִשְׂרָאֵל",
+    "phone_codes": [
+      972
+    ],
+    "continent": "AS",
+    "capital": "Jerusalem",
+    "currency_codes": [
+      "ILS"
+    ],
+    "languages": [
+      "he",
+      "ar"
+    ],
+    "region": "Western Asia"
+  },
+  {
+    "code": "IM",
+    "alpha3_code": "IMN",
+    "name": "Isle of Man",
+    "native_name": "Isle of Man",
+    "phone_codes": [
+      44
+    ],
+    "continent": "EU",
+    "capital": "Douglas",
+    "currency_codes": [
+      "GBP",
+      "IMP"
+    ],
+    "languages": [],
+    "region": "Northern Europe"
+  },
+  {
+    "code": "IN",
+    "alpha3_code": "IND",
+    "name": "India",
+    "native_name": "भारत",
+    "phone_codes": [
+      91
+    ],
+    "continent": "AS",
+    "capital": "New Delhi",
+    "currency_codes": [
+      "INR"
+    ],
+    "languages": [
+      "hi",
+      "en"
+    ],
+    "region": "Southern Asia"
+  },
+  {
+    "code": "IO",
+    "alpha3_code": "IOT",
+    "name": "British Indian Ocean Territory",
+    "native_name": "British Indian Ocean Territory",
+    "phone_codes": [
+      246
+    ],
+    "continent": "AF",
+    "capital": "Diego Garcia",
+    "currency_codes": [
+      "USD"
+    ],
+    "languages": [],
+    "region": "Sub-Saharan Africa"
+  },
+  {
+    "code": "IQ",
+    "alpha3_code": "IRQ",
+    "name": "Iraq",
+    "native_name": "العراق",
+    "phone_codes": [
+      964
+    ],
+    "continent": "AS",
+    "capital": "Baghdad",
+    "currency_codes": [
+      "IQD"
+    ],
+    "languages": [
+      "ar",
+      "ku"
+    ],
+    "region": "Western Asia"
+  },
+  {
+    "code": "IR",
+    "alpha3_code": "IRN",
+    "name": "Iran",
+    "native_name": "ایران",
+    "phone_codes": [
+      98
+    ],
+    "continent": "AS",
+    "capital": "Tehran",
+    "currency_codes": [
+      "IRR"
+    ],
+    "languages": [
+      "fa"
+    ],
+    "region": "Southern Asia"
+  },
+  {
+    "code": "IS",
+    "alpha3_code": "ISL",
+    "name": "Iceland",
+    "native_name": "Ísland",
+    "phone_codes": [
+      354
+    ],
+    "continent": "EU",
+    "capital": "Reykjavik",
+    "currency_codes": [
+      "ISK"
+    ],
+    "languages": [
+      "is"
+    ],
+    "region": "Northern Europe"
+  },
+  {
+    "code": "IT",
+    "alpha3_code": "ITA",
+    "name": "Italy",
+    "native_name": "Italia",
+    "phone_codes": [
+      39
+    ],
+    "continent": "EU",
+    "capital": "Rome",
+    "currency_codes": [
+      "EUR"
+    ],
+    "languages": [
+      "it"
+    ],
+    "region": "Southern Europe"
+  },
+  {
+    "code": "JE",
+    "alpha3_code": "JEY",
+    "name": "Jersey",
+    "native_name": "Jersey",
+    "phone_codes": [
+      44
+    ],
+    "continent": "EU",
+    "capital": "Saint Helier",
+    "currency_codes": [
+      "GBP",
+      "JEP"
+    ],
+    "languages": [],
+    "region": "Northern Europe"
+  },
+  {
+    "code": "JM",
+    "alpha3_code": "JAM",
+    "name": "Jamaica",
+    "native_name": "Jamaica",
+    "phone_codes": [
+      1876
+    ],
+    "continent": "NA",
+    "capital": "Kingston",
+    "currency_codes": [
+      "JMD"
+    ],
+    "languages": [
+      "en"
+    ],
+    "region": "Caribbean"
+  },
+  {
+    "code": "JO",
+    "alpha3_code": "JOR",
+    "name": "Jordan",
+    "native_name": "الأردن",
+    "phone_codes": [
+      962
+    ],
+    "continent": "AS",
+    "capital": "Amman",
+    "currency_codes": [
+      "JOD"
+    ],
+    "languages": [
+      "ar"
+    ],
+    "region": "Western Asia"
+  },
+  {
+    "code": "JP",
+    "alpha3_code": "JPN",
+    "name": "Japan",
+    "native_name": "日本",
+    "phone_codes": [
+      81
+    ],
+    "continent": "AS",
+    "capital": "Tokyo",
+    "currency_codes": [
+      "JPY"
+    ],
+    "languages": [
+      "ja"
+    ],
+    "region": "Eastern Asia"
+  },
+  {
+    "code": "KE",
+    "alpha3_code": "KEN",
+    "name": "Kenya",
+    "native_name": "Kenya",
+    "phone_codes": [
+      254
+    ],
+    "continent": "AF",
+    "capital": "Nairobi",
+    "currency_codes": [
+      "KES"
+    ],
+    "languages": [
+      "en",
+      "sw"
+    ],
+    "region": "Eastern Africa"
+  },
+  {
+    "code": "KG",
+    "alpha3_code": "KGZ",
+    "name": "Kyrgyzstan",
+    "native_name": "Кыргызстан",
+    "phone_codes": [
+      996
+    ],
+    "continent": "AS",
+    "capital": "Bishkek",
+    "currency_codes": [
+      "KGS"
+    ],
+    "languages": [
+      "ky",
+      "ru"
+    ],
+    "region": "Central Asia"
+  },
+  {
+    "code": "KH",
+    "alpha3_code": "KHM",
+    "name": "Cambodia",
+    "native_name": "កម្ពុជា",
+    "phone_codes": [
+      855
+    ],
+    "continent": "AS",
+    "capital": "Phnom Penh",
+    "currency_codes": [
+      "KHR"
+    ],
+    "languages": [
+      "km"
+    ],
+    "region": "South-Eastern Asia"
+  },
+  {
+    "code": "KI",
+    "alpha3_code": "KIR",
+    "name": "Kiribati",
+    "native_name": "Kiribati",
+    "phone_codes": [
+      686
+    ],
+    "continent": "OC",
+    "capital": "Tarawa",
+    "currency_codes": [
+      "AUD"
+    ],
+    "languages": [
+      "en"
+    ],
+    "region": "Micronesia"
+  },
+  {
+    "code": "KM",
+    "alpha3_code": "COM",
+    "name": "Comoros",
+    "native_name": "Comores",
+    "phone_codes": [
+      269
+    ],
+    "continent": "AF",
+    "capital": "Moroni",
+    "currency_codes": [
+      "KMF"
+    ],
+    "languages": [
+      "ar",
+      "fr"
+    ],
+    "region": "Eastern Africa"
+  },
+  {
+    "code": "KN",
+    "alpha3_code": "KNA",
+    "name": "Saint Kitts and Nevis",
+    "native_name": "Saint Kitts and Nevis",
+    "phone_codes": [
+      1869
+    ],
+    "continent": "NA",
+    "capital": "Basseterre",
+    "currency_codes": [
+      "XCD"
+    ],
+    "languages": [
+      "en"
+    ],
+    "region": "Caribbean"
+  },
+  {
+    "code": "KP",
+    "alpha3_code": "PRK",
+    "name": "North Korea",
+    "native_name": "북한",
+    "phone_codes": [
+      850
+    ],
+    "continent": "AS",
+    "capital": "Pyongyang",
+    "currency_codes": [
+      "KPW"
+    ],
+    "languages": [
+      "ko"
+    ],
+    "region": "Eastern Asia"
+  },
+  {
+    "code": "KR",
+    "alpha3_code": "KOR",
+    "name": "South Korea",
+    "native_name": "대한민국",
+    "phone_codes": [
+      82
+    ],
+    "continent": "AS",
+    "capital": "Seoul",
+    "currency_codes": [
+      "KRW"
+    ],
+    "languages": [
+      "ko"
+    ],
+    "region": "Eastern Asia"
+  },
+  {
+    "code": "KW",
+    "alpha3_code": "KWT",
+    "name": "Kuwait",
+    "native_name": "الكويت",
+    "phone_codes": [
+      965
+    ],
+    "continent": "AS",
+    "capital": "Kuwait City",
+    "currency_codes": [
+      "KWD"
+    ],
+    "languages": [
+      "ar"
+    ],
+    "region": "Western Asia"
+  },
+  {
+    "code": "KY",
+    "alpha3_code": "CYM",
+    "name": "Cayman Islands",
+    "native_name": "Cayman Islands",
+    "phone_codes": [
+      1345
+    ],
+    "continent": "NA",
+    "capital": "George Town",
+    "currency_codes": [
+      "KYD"
+    ],
+    "languages": [
+      "en"
+    ],
+    "region": "Caribbean"
+  },
+  {
+    "code": "KZ",
+    "alpha3_code": "KAZ",
+    "name": "Kazakhstan",
+    "native_name": "Қазақстан",
+    "phone_codes": [
+      7
+    ],
+    "continent": "AS",
+    "capital": "Astana",
+    "currency_codes": [
+      "KZT"
+    ],
+    "languages": [
+      "kk",
+      "ru"
+    ],
+    "region": "Central Asia"
+  },
+  {
+    "code": "LA",
+    "alpha3_code": "LAO",
+    "name": "Laos",
+    "native_name": "ລາວ",
+    "phone_codes": [
+      856
+    ],
+    "continent": "AS",
+    "capital": "Vientiane",
+    "currency_codes": [
+      "LAK"
+    ],
+    "languages": [
+      "lo"
+    ],
+    "region": "South-Eastern Asia"
+  },
+  {
+    "code": "LB",
+    "alpha3_code": "LBN",
+    "name": "Lebanon",
+    "native_name": "لبنان",
+    "phone_codes": [
+      961
+    ],
+    "continent": "AS",
+    "capital": "Beirut",
+    "currency_codes": [
+      "LBP"
+    ],
+    "languages": [
+      "ar",
+      "fr"
+    ],
+    "region": "Western Asia"
+  },
+  {
+    "code": "LC",
+    "alpha3_code": "LCA",
+    "name": "Saint Lucia",
+    "native_name": "Saint Lucia",
+    "phone_codes": [
+      1758
+    ],
+    "continent": "NA",
+    "capital": "Castries",
+    "currency_codes": [
+      "XCD"
+    ],
+    "languages": [
+      "en"
+    ],
+    "region": "Caribbean"
+  },
+  {
+    "code": "LI",
+    "alpha3_code": "LIE",
+    "name": "Liechtenstein",
+    "native_name": "Liechtenstein",
+    "phone_codes": [
+      423
+    ],
+    "continent": "EU",
+    "capital": "Vaduz",
+    "currency_codes": [
+      "CHF"
+    ],
+    "languages": [
+      "de"
+    ],
+    "region": "Western Europe"
   },
   {
     "code": "LK",
     "alpha3_code": "LKA",
     "name": "Sri Lanka",
     "native_name": "śrī laṃkāva",
-    "phone_codes": [94],
+    "phone_codes": [
+      94
+    ],
     "continent": "AS",
     "capital": "Colombo",
-    "currency_codes": ["LKR"],
-    "languages": ["si", "ta"],
+    "currency_codes": [
+      "LKR"
+    ],
+    "languages": [
+      "si",
+      "ta"
+    ],
     "region": "Southern Asia"
+  },
+  {
+    "code": "LR",
+    "alpha3_code": "LBR",
+    "name": "Liberia",
+    "native_name": "Liberia",
+    "phone_codes": [
+      231
+    ],
+    "continent": "AF",
+    "capital": "Monrovia",
+    "currency_codes": [
+      "LRD"
+    ],
+    "languages": [
+      "en"
+    ],
+    "region": "Western Africa"
+  },
+  {
+    "code": "LS",
+    "alpha3_code": "LSO",
+    "name": "Lesotho",
+    "native_name": "Lesotho",
+    "phone_codes": [
+      266
+    ],
+    "continent": "AF",
+    "capital": "Maseru",
+    "currency_codes": [
+      "LSL",
+      "ZAR"
+    ],
+    "languages": [
+      "en",
+      "st"
+    ],
+    "region": "Southern Africa"
+  },
+  {
+    "code": "LT",
+    "alpha3_code": "LTU",
+    "name": "Lithuania",
+    "native_name": "Lietuva",
+    "phone_codes": [
+      370
+    ],
+    "continent": "EU",
+    "capital": "Vilnius",
+    "currency_codes": [
+      "EUR"
+    ],
+    "languages": [
+      "lt"
+    ],
+    "region": "Northern Europe"
+  },
+  {
+    "code": "LU",
+    "alpha3_code": "LUX",
+    "name": "Luxembourg",
+    "native_name": "Luxembourg",
+    "phone_codes": [
+      352
+    ],
+    "continent": "EU",
+    "capital": "Luxembourg",
+    "currency_codes": [
+      "EUR"
+    ],
+    "languages": [
+      "fr",
+      "de",
+      "lb"
+    ],
+    "region": "Western Europe"
+  },
+  {
+    "code": "LV",
+    "alpha3_code": "LVA",
+    "name": "Latvia",
+    "native_name": "Latvija",
+    "phone_codes": [
+      371
+    ],
+    "continent": "EU",
+    "capital": "Riga",
+    "currency_codes": [
+      "EUR"
+    ],
+    "languages": [
+      "lv"
+    ],
+    "region": "Northern Europe"
+  },
+  {
+    "code": "LY",
+    "alpha3_code": "LBY",
+    "name": "Libya",
+    "native_name": "ليبيا",
+    "phone_codes": [
+      218
+    ],
+    "continent": "AF",
+    "capital": "Tripoli",
+    "currency_codes": [
+      "LYD"
+    ],
+    "languages": [
+      "ar"
+    ],
+    "region": "Northern Africa"
+  },
+  {
+    "code": "MA",
+    "alpha3_code": "MAR",
+    "name": "Morocco",
+    "native_name": "المغرب",
+    "phone_codes": [
+      212
+    ],
+    "continent": "AF",
+    "capital": "Rabat",
+    "currency_codes": [
+      "MAD"
+    ],
+    "languages": [
+      "ar"
+    ],
+    "region": "Northern Africa"
+  },
+  {
+    "code": "MC",
+    "alpha3_code": "MCO",
+    "name": "Monaco",
+    "native_name": "Monaco",
+    "phone_codes": [
+      377
+    ],
+    "continent": "EU",
+    "capital": "Monaco",
+    "currency_codes": [
+      "EUR"
+    ],
+    "languages": [
+      "fr"
+    ],
+    "region": "Western Europe"
+  },
+  {
+    "code": "MD",
+    "alpha3_code": "MDA",
+    "name": "Moldova",
+    "native_name": "Moldova",
+    "phone_codes": [
+      373
+    ],
+    "continent": "EU",
+    "capital": "Chișinău",
+    "currency_codes": [
+      "MDL"
+    ],
+    "languages": [
+      "ro"
+    ],
+    "region": "Eastern Europe"
+  },
+  {
+    "code": "ME",
+    "alpha3_code": "MNE",
+    "name": "Montenegro",
+    "native_name": "Crna Gora",
+    "phone_codes": [
+      382
+    ],
+    "continent": "EU",
+    "capital": "Podgorica",
+    "currency_codes": [
+      "EUR"
+    ],
+    "languages": [
+      "sr",
+      "bs",
+      "sq",
+      "hr"
+    ],
+    "region": "Southern Europe"
+  },
+  {
+    "code": "MF",
+    "alpha3_code": "MAF",
+    "name": "Saint Martin (French part)",
+    "native_name": "Saint-Martin",
+    "phone_codes": [
+      590
+    ],
+    "continent": "NA",
+    "capital": "Marigot",
+    "currency_codes": [
+      "EUR"
+    ],
+    "languages": [],
+    "region": "Latin America and the Caribbean"
+  },
+  {
+    "code": "MG",
+    "alpha3_code": "MDG",
+    "name": "Madagascar",
+    "native_name": "Madagasikara",
+    "phone_codes": [
+      261
+    ],
+    "continent": "AF",
+    "capital": "Antananarivo",
+    "currency_codes": [
+      "MGA"
+    ],
+    "languages": [
+      "fr",
+      "mg"
+    ],
+    "region": "Eastern Africa"
+  },
+  {
+    "code": "MH",
+    "alpha3_code": "MHL",
+    "name": "Marshall Islands",
+    "native_name": "Marshall Islands",
+    "phone_codes": [
+      692
+    ],
+    "continent": "OC",
+    "capital": "Majuro",
+    "currency_codes": [
+      "USD"
+    ],
+    "languages": [
+      "en",
+      "mh"
+    ],
+    "region": "Micronesia"
+  },
+  {
+    "code": "MK",
+    "alpha3_code": "MKD",
+    "name": "North Macedonia",
+    "native_name": "Северна Македонија",
+    "phone_codes": [
+      389
+    ],
+    "continent": "EU",
+    "capital": "Skopje",
+    "currency_codes": [
+      "MKD"
+    ],
+    "languages": [
+      "mk"
+    ],
+    "region": "Southern Europe"
+  },
+  {
+    "code": "ML",
+    "alpha3_code": "MLI",
+    "name": "Mali",
+    "native_name": "Mali",
+    "phone_codes": [
+      223
+    ],
+    "continent": "AF",
+    "capital": "Bamako",
+    "currency_codes": [
+      "XOF"
+    ],
+    "languages": [
+      "fr"
+    ],
+    "region": "Western Africa"
+  },
+  {
+    "code": "MM",
+    "alpha3_code": "MMR",
+    "name": "Myanmar",
+    "native_name": "မြန်မာ",
+    "phone_codes": [
+      95
+    ],
+    "continent": "AS",
+    "capital": "Naypyidaw",
+    "currency_codes": [
+      "MMK"
+    ],
+    "languages": [
+      "my"
+    ],
+    "region": "South-Eastern Asia"
+  },
+  {
+    "code": "MN",
+    "alpha3_code": "MNG",
+    "name": "Mongolia",
+    "native_name": "Монгол улс",
+    "phone_codes": [
+      976
+    ],
+    "continent": "AS",
+    "capital": "Ulaanbaatar",
+    "currency_codes": [
+      "MNT"
+    ],
+    "languages": [
+      "mn"
+    ],
+    "region": "Eastern Asia"
+  },
+  {
+    "code": "MO",
+    "alpha3_code": "MAC",
+    "name": "Macao",
+    "native_name": "Macau",
+    "phone_codes": [
+      853
+    ],
+    "continent": "AS",
+    "capital": "-",
+    "currency_codes": [
+      "MOP"
+    ],
+    "languages": [],
+    "region": "Eastern Asia"
+  },
+  {
+    "code": "MP",
+    "alpha3_code": "MNP",
+    "name": "Northern Mariana Islands",
+    "native_name": "Northern Mariana Islands",
+    "phone_codes": [
+      1670
+    ],
+    "continent": "OC",
+    "capital": "Saipan",
+    "currency_codes": [
+      "USD"
+    ],
+    "languages": [],
+    "region": "Micronesia"
+  },
+  {
+    "code": "MQ",
+    "alpha3_code": "MTQ",
+    "name": "Martinique",
+    "native_name": "Martinique",
+    "phone_codes": [
+      596
+    ],
+    "continent": "NA",
+    "capital": "Fort-de-France",
+    "currency_codes": [
+      "EUR"
+    ],
+    "languages": [],
+    "region": "Latin America and the Caribbean"
+  },
+  {
+    "code": "MR",
+    "alpha3_code": "MRT",
+    "name": "Mauritania",
+    "native_name": "موريتانيا",
+    "phone_codes": [
+      222
+    ],
+    "continent": "AF",
+    "capital": "Nouakchott",
+    "currency_codes": [
+      "MRU"
+    ],
+    "languages": [
+      "ar"
+    ],
+    "region": "Western Africa"
+  },
+  {
+    "code": "MS",
+    "alpha3_code": "MSR",
+    "name": "Montserrat",
+    "native_name": "Montserrat",
+    "phone_codes": [
+      1664
+    ],
+    "continent": "NA",
+    "capital": "Plymouth",
+    "currency_codes": [
+      "XCD"
+    ],
+    "languages": [],
+    "region": "Latin America and the Caribbean"
+  },
+  {
+    "code": "MT",
+    "alpha3_code": "MLT",
+    "name": "Malta",
+    "native_name": "Malta",
+    "phone_codes": [
+      356
+    ],
+    "continent": "EU",
+    "capital": "Valletta",
+    "currency_codes": [
+      "EUR"
+    ],
+    "languages": [
+      "mt",
+      "en"
+    ],
+    "region": "Southern Europe"
+  },
+  {
+    "code": "MU",
+    "alpha3_code": "MUS",
+    "name": "Mauritius",
+    "native_name": "Maurice",
+    "phone_codes": [
+      230
+    ],
+    "continent": "AF",
+    "capital": "Port Louis",
+    "currency_codes": [
+      "MUR"
+    ],
+    "languages": [
+      "en",
+      "fr"
+    ],
+    "region": "Eastern Africa"
+  },
+  {
+    "code": "MV",
+    "alpha3_code": "MDV",
+    "name": "Maldives",
+    "native_name": "Maldives",
+    "phone_codes": [
+      960
+    ],
+    "continent": "AS",
+    "capital": "Malé",
+    "currency_codes": [
+      "MVR"
+    ],
+    "languages": [
+      "dv"
+    ],
+    "region": "Southern Asia"
+  },
+  {
+    "code": "MW",
+    "alpha3_code": "MWI",
+    "name": "Malawi",
+    "native_name": "Malawi",
+    "phone_codes": [
+      265
+    ],
+    "continent": "AF",
+    "capital": "Lilongwe",
+    "currency_codes": [
+      "MWK"
+    ],
+    "languages": [
+      "en",
+      "ny"
+    ],
+    "region": "Eastern Africa"
+  },
+  {
+    "code": "MX",
+    "alpha3_code": "MEX",
+    "name": "Mexico",
+    "native_name": "México",
+    "phone_codes": [
+      52
+    ],
+    "continent": "NA",
+    "capital": "Mexico City",
+    "currency_codes": [
+      "MXN"
+    ],
+    "languages": [
+      "es"
+    ],
+    "region": "Central America"
+  },
+  {
+    "code": "MY",
+    "alpha3_code": "MYS",
+    "name": "Malaysia",
+    "native_name": "Malaysia",
+    "phone_codes": [
+      60
+    ],
+    "continent": "AS",
+    "capital": "Kuala Lumpur",
+    "currency_codes": [
+      "MYR"
+    ],
+    "languages": [
+      "ms"
+    ],
+    "region": "South-Eastern Asia"
+  },
+  {
+    "code": "MZ",
+    "alpha3_code": "MOZ",
+    "name": "Mozambique",
+    "native_name": "Moçambique",
+    "phone_codes": [
+      258
+    ],
+    "continent": "AF",
+    "capital": "Maputo",
+    "currency_codes": [
+      "MZN"
+    ],
+    "languages": [
+      "pt"
+    ],
+    "region": "Eastern Africa"
+  },
+  {
+    "code": "NA",
+    "alpha3_code": "NAM",
+    "name": "Namibia",
+    "native_name": "Namibia",
+    "phone_codes": [
+      264
+    ],
+    "continent": "AF",
+    "capital": "Windhoek",
+    "currency_codes": [
+      "NAD",
+      "ZAR"
+    ],
+    "languages": [
+      "en",
+      "af"
+    ],
+    "region": "Southern Africa"
+  },
+  {
+    "code": "NC",
+    "alpha3_code": "NCL",
+    "name": "New Caledonia",
+    "native_name": "Nouvelle-Calédonie",
+    "phone_codes": [
+      687
+    ],
+    "continent": "OC",
+    "capital": "Nouméa",
+    "currency_codes": [
+      "XPF"
+    ],
+    "languages": [],
+    "region": "Melanesia"
+  },
+  {
+    "code": "NE",
+    "alpha3_code": "NER",
+    "name": "Niger",
+    "native_name": "Niger",
+    "phone_codes": [
+      227
+    ],
+    "continent": "AF",
+    "capital": "Niamey",
+    "currency_codes": [
+      "XOF"
+    ],
+    "languages": [
+      "fr"
+    ],
+    "region": "Western Africa"
+  },
+  {
+    "code": "NF",
+    "alpha3_code": "NFK",
+    "name": "Norfolk Island",
+    "native_name": "Norfolk Island",
+    "phone_codes": [
+      672
+    ],
+    "continent": "OC",
+    "capital": "Kingston",
+    "currency_codes": [
+      "AUD"
+    ],
+    "languages": [],
+    "region": "Australia and New Zealand"
+  },
+  {
+    "code": "NG",
+    "alpha3_code": "NGA",
+    "name": "Nigeria",
+    "native_name": "Nigeria",
+    "phone_codes": [
+      234
+    ],
+    "continent": "AF",
+    "capital": "Abuja",
+    "currency_codes": [
+      "NGN"
+    ],
+    "languages": [
+      "en"
+    ],
+    "region": "Western Africa"
+  },
+  {
+    "code": "NI",
+    "alpha3_code": "NIC",
+    "name": "Nicaragua",
+    "native_name": "Nicaragua",
+    "phone_codes": [
+      505
+    ],
+    "continent": "NA",
+    "capital": "Managua",
+    "currency_codes": [
+      "NIO"
+    ],
+    "languages": [
+      "es"
+    ],
+    "region": "Central America"
+  },
+  {
+    "code": "NL",
+    "alpha3_code": "NLD",
+    "name": "Netherlands",
+    "native_name": "Nederland",
+    "phone_codes": [
+      31
+    ],
+    "continent": "EU",
+    "capital": "Amsterdam",
+    "currency_codes": [
+      "EUR"
+    ],
+    "languages": [
+      "nl"
+    ],
+    "region": "Western Europe"
+  },
+  {
+    "code": "NO",
+    "alpha3_code": "NOR",
+    "name": "Norway",
+    "native_name": "Norge",
+    "phone_codes": [
+      47
+    ],
+    "continent": "EU",
+    "capital": "Oslo",
+    "currency_codes": [
+      "NOK"
+    ],
+    "languages": [
+      "no",
+      "nb",
+      "nn"
+    ],
+    "region": "Northern Europe"
+  },
+  {
+    "code": "NP",
+    "alpha3_code": "NPL",
+    "name": "Nepal",
+    "native_name": "नेपाल",
+    "phone_codes": [
+      977
+    ],
+    "continent": "AS",
+    "capital": "Kathmandu",
+    "currency_codes": [
+      "NPR"
+    ],
+    "languages": [
+      "ne"
+    ],
+    "region": "Southern Asia"
+  },
+  {
+    "code": "NR",
+    "alpha3_code": "NRU",
+    "name": "Nauru",
+    "native_name": "Nauru",
+    "phone_codes": [
+      674
+    ],
+    "continent": "OC",
+    "capital": "Yaren",
+    "currency_codes": [
+      "AUD"
+    ],
+    "languages": [
+      "en",
+      "na"
+    ],
+    "region": "Micronesia"
+  },
+  {
+    "code": "NU",
+    "alpha3_code": "NIU",
+    "name": "Niue",
+    "native_name": "Niue",
+    "phone_codes": [
+      683
+    ],
+    "continent": "OC",
+    "capital": "Alofi",
+    "currency_codes": [
+      "NZD"
+    ],
+    "languages": [],
+    "region": "Polynesia"
+  },
+  {
+    "code": "NZ",
+    "alpha3_code": "NZL",
+    "name": "New Zealand",
+    "native_name": "New Zealand",
+    "phone_codes": [
+      64
+    ],
+    "continent": "OC",
+    "capital": "Wellington",
+    "currency_codes": [
+      "NZD"
+    ],
+    "languages": [
+      "en",
+      "mi"
+    ],
+    "region": "Australia and New Zealand"
+  },
+  {
+    "code": "OM",
+    "alpha3_code": "OMN",
+    "name": "Oman",
+    "native_name": "عمان",
+    "phone_codes": [
+      968
+    ],
+    "continent": "AS",
+    "capital": "Muscat",
+    "currency_codes": [
+      "OMR"
+    ],
+    "languages": [
+      "ar"
+    ],
+    "region": "Western Asia"
+  },
+  {
+    "code": "PA",
+    "alpha3_code": "PAN",
+    "name": "Panama",
+    "native_name": "Panamá",
+    "phone_codes": [
+      507
+    ],
+    "continent": "NA",
+    "capital": "Panama City",
+    "currency_codes": [
+      "PAB",
+      "USD"
+    ],
+    "languages": [
+      "es"
+    ],
+    "region": "Central America"
+  },
+  {
+    "code": "PE",
+    "alpha3_code": "PER",
+    "name": "Peru",
+    "native_name": "Perú",
+    "phone_codes": [
+      51
+    ],
+    "continent": "SA",
+    "capital": "Lima",
+    "currency_codes": [
+      "PEN"
+    ],
+    "languages": [
+      "es"
+    ],
+    "region": "South America"
+  },
+  {
+    "code": "PF",
+    "alpha3_code": "PYF",
+    "name": "French Polynesia",
+    "native_name": "Polynésie française",
+    "phone_codes": [
+      689
+    ],
+    "continent": "OC",
+    "capital": "Papeetē",
+    "currency_codes": [
+      "XPF"
+    ],
+    "languages": [],
+    "region": "Polynesia"
+  },
+  {
+    "code": "PG",
+    "alpha3_code": "PNG",
+    "name": "Papua New Guinea",
+    "native_name": "Papua New Guinea",
+    "phone_codes": [
+      675
+    ],
+    "continent": "OC",
+    "capital": "Port Moresby",
+    "currency_codes": [
+      "PGK"
+    ],
+    "languages": [
+      "en"
+    ],
+    "region": "Melanesia"
+  },
+  {
+    "code": "PH",
+    "alpha3_code": "PHL",
+    "name": "Philippines",
+    "native_name": "Pilipinas",
+    "phone_codes": [
+      63
+    ],
+    "continent": "AS",
+    "capital": "Manila",
+    "currency_codes": [
+      "PHP"
+    ],
+    "languages": [
+      "en"
+    ],
+    "region": "South-Eastern Asia"
+  },
+  {
+    "code": "PK",
+    "alpha3_code": "PAK",
+    "name": "Pakistan",
+    "native_name": "پاکستان",
+    "phone_codes": [
+      92
+    ],
+    "continent": "AS",
+    "capital": "Islamabad",
+    "currency_codes": [
+      "PKR"
+    ],
+    "languages": [
+      "en",
+      "ur"
+    ],
+    "region": "Southern Asia"
+  },
+  {
+    "code": "PL",
+    "alpha3_code": "POL",
+    "name": "Poland",
+    "native_name": "Polska",
+    "phone_codes": [
+      48
+    ],
+    "continent": "EU",
+    "capital": "Warsaw",
+    "currency_codes": [
+      "PLN"
+    ],
+    "languages": [
+      "pl"
+    ],
+    "region": "Eastern Europe"
+  },
+  {
+    "code": "PM",
+    "alpha3_code": "SPM",
+    "name": "Saint Pierre and Miquelon",
+    "native_name": "Saint-Pierre-et-Miquelon",
+    "phone_codes": [
+      508
+    ],
+    "continent": "NA",
+    "capital": "Saint-Pierre",
+    "currency_codes": [
+      "EUR"
+    ],
+    "languages": [],
+    "region": "Northern America"
+  },
+  {
+    "code": "PN",
+    "alpha3_code": "PCN",
+    "name": "Pitcairn",
+    "native_name": "Pitcairn Islands",
+    "phone_codes": [
+      64
+    ],
+    "continent": "OC",
+    "capital": "Adamstown",
+    "currency_codes": [
+      "NZD"
+    ],
+    "languages": [],
+    "region": "Polynesia"
+  },
+  {
+    "code": "PR",
+    "alpha3_code": "PRI",
+    "name": "Puerto Rico",
+    "native_name": "Puerto Rico",
+    "phone_codes": [
+      1787,
+      1939
+    ],
+    "continent": "NA",
+    "capital": "San Juan",
+    "currency_codes": [
+      "USD"
+    ],
+    "languages": [],
+    "region": "Latin America and the Caribbean"
+  },
+  {
+    "code": "PS",
+    "alpha3_code": "PSE",
+    "name": "Palestine, State of",
+    "native_name": "فلسطين",
+    "phone_codes": [
+      970
+    ],
+    "continent": "AS",
+    "capital": "Ramallah",
+    "currency_codes": [
+      "EGP",
+      "ILS",
+      "JOD"
+    ],
+    "languages": [],
+    "region": "Western Asia"
+  },
+  {
+    "code": "PT",
+    "alpha3_code": "PRT",
+    "name": "Portugal",
+    "native_name": "Portugal",
+    "phone_codes": [
+      351
+    ],
+    "continent": "EU",
+    "capital": "Lisbon",
+    "currency_codes": [
+      "EUR"
+    ],
+    "languages": [
+      "pt"
+    ],
+    "region": "Southern Europe"
+  },
+  {
+    "code": "PW",
+    "alpha3_code": "PLW",
+    "name": "Palau",
+    "native_name": "Palau",
+    "phone_codes": [
+      680
+    ],
+    "continent": "OC",
+    "capital": "Ngerulmud",
+    "currency_codes": [
+      "USD"
+    ],
+    "languages": [
+      "en"
+    ],
+    "region": "Micronesia"
+  },
+  {
+    "code": "PY",
+    "alpha3_code": "PRY",
+    "name": "Paraguay",
+    "native_name": "Paraguay",
+    "phone_codes": [
+      595
+    ],
+    "continent": "SA",
+    "capital": "Asunción",
+    "currency_codes": [
+      "PYG"
+    ],
+    "languages": [
+      "es",
+      "gn"
+    ],
+    "region": "South America"
+  },
+  {
+    "code": "QA",
+    "alpha3_code": "QAT",
+    "name": "Qatar",
+    "native_name": "قطر",
+    "phone_codes": [
+      974
+    ],
+    "continent": "AS",
+    "capital": "Doha",
+    "currency_codes": [
+      "QAR"
+    ],
+    "languages": [
+      "ar"
+    ],
+    "region": "Western Asia"
+  },
+  {
+    "code": "RE",
+    "alpha3_code": "REU",
+    "name": "Réunion",
+    "native_name": "La Réunion",
+    "phone_codes": [
+      262
+    ],
+    "continent": "AF",
+    "capital": "Saint-Denis",
+    "currency_codes": [
+      "EUR"
+    ],
+    "languages": [],
+    "region": "Sub-Saharan Africa"
+  },
+  {
+    "code": "RO",
+    "alpha3_code": "ROU",
+    "name": "Romania",
+    "native_name": "România",
+    "phone_codes": [
+      40
+    ],
+    "continent": "EU",
+    "capital": "Bucharest",
+    "currency_codes": [
+      "RON"
+    ],
+    "languages": [
+      "ro"
+    ],
+    "region": "Eastern Europe"
+  },
+  {
+    "code": "RS",
+    "alpha3_code": "SRB",
+    "name": "Serbia",
+    "native_name": "Србија",
+    "phone_codes": [
+      381
+    ],
+    "continent": "EU",
+    "capital": "Belgrade",
+    "currency_codes": [
+      "RSD"
+    ],
+    "languages": [
+      "sr"
+    ],
+    "region": "Southern Europe"
+  },
+  {
+    "code": "RU",
+    "alpha3_code": "RUS",
+    "name": "Russia",
+    "native_name": "Россия",
+    "phone_codes": [
+      7
+    ],
+    "continent": "EU",
+    "capital": "Moscow",
+    "currency_codes": [
+      "RUB"
+    ],
+    "languages": [
+      "ru"
+    ],
+    "region": "Eastern Europe"
+  },
+  {
+    "code": "RW",
+    "alpha3_code": "RWA",
+    "name": "Rwanda",
+    "native_name": "Rwanda",
+    "phone_codes": [
+      250
+    ],
+    "continent": "AF",
+    "capital": "Kigali",
+    "currency_codes": [
+      "RWF"
+    ],
+    "languages": [
+      "rw",
+      "en",
+      "fr"
+    ],
+    "region": "Eastern Africa"
+  },
+  {
+    "code": "SA",
+    "alpha3_code": "SAU",
+    "name": "Saudi Arabia",
+    "native_name": "العربية السعودية",
+    "phone_codes": [
+      966
+    ],
+    "continent": "AS",
+    "capital": "Riyadh",
+    "currency_codes": [
+      "SAR"
+    ],
+    "languages": [
+      "ar"
+    ],
+    "region": "Western Asia"
+  },
+  {
+    "code": "SB",
+    "alpha3_code": "SLB",
+    "name": "Solomon Islands",
+    "native_name": "Solomon Islands",
+    "phone_codes": [
+      677
+    ],
+    "continent": "OC",
+    "capital": "Honiara",
+    "currency_codes": [
+      "SBD"
+    ],
+    "languages": [
+      "en"
+    ],
+    "region": "Melanesia"
+  },
+  {
+    "code": "SC",
+    "alpha3_code": "SYC",
+    "name": "Seychelles",
+    "native_name": "Seychelles",
+    "phone_codes": [
+      248
+    ],
+    "continent": "AF",
+    "capital": "Victoria",
+    "currency_codes": [
+      "SCR"
+    ],
+    "languages": [
+      "fr",
+      "en"
+    ],
+    "region": "Eastern Africa"
   },
   {
     "code": "SD",
     "alpha3_code": "SDN",
     "name": "Sudan",
     "native_name": "السودان",
-    "phone_codes": [249],
+    "phone_codes": [
+      249
+    ],
     "continent": "AF",
     "capital": "Khartoum",
-    "currency_codes": ["SDG"],
-    "languages": ["ar", "en"],
+    "currency_codes": [
+      "SDG"
+    ],
+    "languages": [
+      "ar",
+      "en"
+    ],
     "region": "Northern Africa"
-  },
-  {
-    "code": "SR",
-    "alpha3_code": "SUR",
-    "name": "Suriname",
-    "native_name": "Suriname",
-    "phone_codes": [597],
-    "continent": "SA",
-    "capital": "Paramaribo",
-    "currency_codes": ["SRD"],
-    "languages": ["nl"],
-    "region": "South America"
   },
   {
     "code": "SE",
     "alpha3_code": "SWE",
     "name": "Sweden",
     "native_name": "Sverige",
-    "phone_codes": [46],
+    "phone_codes": [
+      46
+    ],
     "continent": "EU",
     "capital": "Stockholm",
-    "currency_codes": ["SEK"],
-    "languages": ["sv"],
+    "currency_codes": [
+      "SEK"
+    ],
+    "languages": [
+      "sv"
+    ],
     "region": "Northern Europe"
   },
   {
-    "code": "CH",
-    "alpha3_code": "CHE",
-    "name": "Switzerland",
-    "native_name": "Schweiz",
-    "phone_codes": [41],
+    "code": "SG",
+    "alpha3_code": "SGP",
+    "name": "Singapore",
+    "native_name": "Singapore",
+    "phone_codes": [
+      65
+    ],
+    "continent": "AS",
+    "capital": "Singapore",
+    "currency_codes": [
+      "SGD"
+    ],
+    "languages": [
+      "en",
+      "ms",
+      "ta",
+      "zh"
+    ],
+    "region": "South-Eastern Asia"
+  },
+  {
+    "code": "SH",
+    "alpha3_code": "SHN",
+    "name": "Saint Helena, Ascension and Tristan da Cunha",
+    "native_name": "Saint Helena, Ascension and Tristan da Cunha",
+    "phone_codes": [
+      290,
+      247
+    ],
+    "continent": "AF",
+    "capital": "Jamestown",
+    "currency_codes": [
+      "GBP",
+      "SHP"
+    ],
+    "languages": [],
+    "region": "Sub-Saharan Africa"
+  },
+  {
+    "code": "SI",
+    "alpha3_code": "SVN",
+    "name": "Slovenia",
+    "native_name": "Slovenija",
+    "phone_codes": [
+      386
+    ],
     "continent": "EU",
-    "capital": "Bern",
-    "currency_codes": ["CHF"],
-    "languages": ["de", "fr", "it", "rm"],
-    "region": "Western Europe"
+    "capital": "Ljubljana",
+    "currency_codes": [
+      "EUR"
+    ],
+    "languages": [
+      "sl"
+    ],
+    "region": "Southern Europe"
+  },
+  {
+    "code": "SJ",
+    "alpha3_code": "SJM",
+    "name": "Svalbard and Jan Mayen",
+    "native_name": "Svalbard og Jan Mayen",
+    "phone_codes": [
+      4779
+    ],
+    "continent": "EU",
+    "capital": "Longyearbyen",
+    "currency_codes": [
+      "NOK"
+    ],
+    "languages": [],
+    "region": "Northern Europe"
+  },
+  {
+    "code": "SK",
+    "alpha3_code": "SVK",
+    "name": "Slovakia",
+    "native_name": "Slovensko",
+    "phone_codes": [
+      421
+    ],
+    "continent": "EU",
+    "capital": "Bratislava",
+    "currency_codes": [
+      "EUR"
+    ],
+    "languages": [
+      "sk"
+    ],
+    "region": "Eastern Europe"
+  },
+  {
+    "code": "SL",
+    "alpha3_code": "SLE",
+    "name": "Sierra Leone",
+    "native_name": "Sierra Leone",
+    "phone_codes": [
+      232
+    ],
+    "continent": "AF",
+    "capital": "Freetown",
+    "currency_codes": [
+      "SLL"
+    ],
+    "languages": [
+      "en"
+    ],
+    "region": "Western Africa"
+  },
+  {
+    "code": "SM",
+    "alpha3_code": "SMR",
+    "name": "San Marino",
+    "native_name": "San Marino",
+    "phone_codes": [
+      378
+    ],
+    "continent": "EU",
+    "capital": "San Marino",
+    "currency_codes": [
+      "EUR"
+    ],
+    "languages": [
+      "it"
+    ],
+    "region": "Southern Europe"
+  },
+  {
+    "code": "SN",
+    "alpha3_code": "SEN",
+    "name": "Senegal",
+    "native_name": "Sénégal",
+    "phone_codes": [
+      221
+    ],
+    "continent": "AF",
+    "capital": "Dakar",
+    "currency_codes": [
+      "XOF"
+    ],
+    "languages": [
+      "fr"
+    ],
+    "region": "Western Africa"
+  },
+  {
+    "code": "SO",
+    "alpha3_code": "SOM",
+    "name": "Somalia",
+    "native_name": "Soomaaliya",
+    "phone_codes": [
+      252
+    ],
+    "continent": "AF",
+    "capital": "Mogadishu",
+    "currency_codes": [
+      "SOS"
+    ],
+    "languages": [
+      "so",
+      "ar"
+    ],
+    "region": "Eastern Africa"
+  },
+  {
+    "code": "SR",
+    "alpha3_code": "SUR",
+    "name": "Suriname",
+    "native_name": "Suriname",
+    "phone_codes": [
+      597
+    ],
+    "continent": "SA",
+    "capital": "Paramaribo",
+    "currency_codes": [
+      "SRD"
+    ],
+    "languages": [
+      "nl"
+    ],
+    "region": "South America"
+  },
+  {
+    "code": "SS",
+    "alpha3_code": "SSD",
+    "name": "South Sudan",
+    "native_name": "South Sudan",
+    "phone_codes": [
+      211
+    ],
+    "continent": "AF",
+    "capital": "Juba",
+    "currency_codes": [
+      "SSP"
+    ],
+    "languages": [
+      "en"
+    ],
+    "region": "Eastern Africa"
+  },
+  {
+    "code": "ST",
+    "alpha3_code": "STP",
+    "name": "São Tomé and Príncipe",
+    "native_name": "São Tomé e Príncipe",
+    "phone_codes": [
+      239
+    ],
+    "continent": "AF",
+    "capital": "São Tomé",
+    "currency_codes": [
+      "STN"
+    ],
+    "languages": [
+      "pt"
+    ],
+    "region": "Middle Africa"
+  },
+  {
+    "code": "SV",
+    "alpha3_code": "SLV",
+    "name": "El Salvador",
+    "native_name": "El Salvador",
+    "phone_codes": [
+      503
+    ],
+    "continent": "NA",
+    "capital": "San Salvador",
+    "currency_codes": [
+      "USD"
+    ],
+    "languages": [
+      "es"
+    ],
+    "region": "Central America"
+  },
+  {
+    "code": "SX",
+    "alpha3_code": "SXM",
+    "name": "Sint Maarten (Dutch part)",
+    "native_name": "Sint Maarten",
+    "phone_codes": [
+      1721
+    ],
+    "continent": "NA",
+    "capital": "Philipsburg",
+    "currency_codes": [
+      "ANG"
+    ],
+    "languages": [],
+    "region": "Latin America and the Caribbean"
   },
   {
     "code": "SY",
     "alpha3_code": "SYR",
     "name": "Syria",
     "native_name": "سوريا",
-    "phone_codes": [963],
+    "phone_codes": [
+      963
+    ],
     "continent": "AS",
     "capital": "Damascus",
-    "currency_codes": ["SYP"],
-    "languages": ["ar"],
+    "currency_codes": [
+      "SYP"
+    ],
+    "languages": [
+      "ar"
+    ],
     "region": "Western Asia"
   },
   {
-    "code": "TW",
-    "alpha3_code": "TWN",
-    "name": "Taiwan",
-    "native_name": "臺灣",
-    "phone_codes": [886],
-    "continent": "AS",
-    "capital": "Taipei",
-    "currency_codes": ["TWD"],
-    "languages": ["zh"],
-    "region": "Eastern Asia"
-  },
-  {
-    "code": "TJ",
-    "alpha3_code": "TJK",
-    "name": "Tajikistan",
-    "native_name": "Тоҷикистон",
-    "phone_codes": [992],
-    "continent": "AS",
-    "capital": "Dushanbe",
-    "currency_codes": ["TJS"],
-    "languages": ["tg", "ru"],
-    "region": "Central Asia"
-  },
-  {
-    "code": "TZ",
-    "alpha3_code": "TZA",
-    "name": "Tanzania",
-    "native_name": "Tanzania",
-    "phone_codes": [255],
+    "code": "SZ",
+    "alpha3_code": "SWZ",
+    "name": "Eswatini",
+    "native_name": "Eswatini",
+    "phone_codes": [
+      268
+    ],
     "continent": "AF",
-    "capital": "Dodoma",
-    "currency_codes": ["TZS"],
-    "languages": ["sw", "en"],
-    "region": "Eastern Africa"
+    "capital": "Mbabane",
+    "currency_codes": [
+      "SZL"
+    ],
+    "languages": [
+      "en",
+      "ss"
+    ],
+    "region": "Southern Africa"
   },
   {
-    "code": "TH",
-    "alpha3_code": "THA",
-    "name": "Thailand",
-    "native_name": "ประเทศไทย",
-    "phone_codes": [66],
-    "continent": "AS",
-    "capital": "Bangkok",
-    "currency_codes": ["THB"],
-    "languages": ["th"],
-    "region": "South-Eastern Asia"
+    "code": "TC",
+    "alpha3_code": "TCA",
+    "name": "Turks and Caicos Islands",
+    "native_name": "Turks and Caicos Islands",
+    "phone_codes": [
+      1649
+    ],
+    "continent": "NA",
+    "capital": "Cockburn Town",
+    "currency_codes": [
+      "USD"
+    ],
+    "languages": [],
+    "region": "Latin America and the Caribbean"
   },
   {
-    "code": "TL",
-    "alpha3_code": "TLS",
-    "name": "Timor-Leste",
-    "native_name": "Timor-Leste",
-    "phone_codes": [670],
-    "continent": "AS",
-    "capital": "Dili",
-    "currency_codes": ["USD"],
-    "languages": ["pt"],
-    "region": "South-Eastern Asia"
+    "code": "TD",
+    "alpha3_code": "TCD",
+    "name": "Chad",
+    "native_name": "Tchad",
+    "phone_codes": [
+      235
+    ],
+    "continent": "AF",
+    "capital": "N'Djamena",
+    "currency_codes": [
+      "XAF"
+    ],
+    "languages": [
+      "fr",
+      "ar"
+    ],
+    "region": "Middle Africa"
+  },
+  {
+    "code": "TF",
+    "alpha3_code": "ATF",
+    "name": "French Southern Territories",
+    "native_name": "Terres australes et antarctiques françaises",
+    "phone_codes": [
+      262
+    ],
+    "continent": "AF",
+    "capital": "Port-aux-Français",
+    "currency_codes": [
+      "EUR"
+    ],
+    "languages": [],
+    "region": "Sub-Saharan Africa"
   },
   {
     "code": "TG",
     "alpha3_code": "TGO",
     "name": "Togo",
     "native_name": "Togo",
-    "phone_codes": [228],
+    "phone_codes": [
+      228
+    ],
     "continent": "AF",
     "capital": "Lomé",
-    "currency_codes": ["XOF"],
-    "languages": ["fr"],
+    "currency_codes": [
+      "XOF"
+    ],
+    "languages": [
+      "fr"
+    ],
     "region": "Western Africa"
   },
   {
-    "code": "TO",
-    "alpha3_code": "TON",
-    "name": "Tonga",
-    "native_name": "Tonga",
-    "phone_codes": [676],
+    "code": "TH",
+    "alpha3_code": "THA",
+    "name": "Thailand",
+    "native_name": "ประเทศไทย",
+    "phone_codes": [
+      66
+    ],
+    "continent": "AS",
+    "capital": "Bangkok",
+    "currency_codes": [
+      "THB"
+    ],
+    "languages": [
+      "th"
+    ],
+    "region": "South-Eastern Asia"
+  },
+  {
+    "code": "TJ",
+    "alpha3_code": "TJK",
+    "name": "Tajikistan",
+    "native_name": "Тоҷикистон",
+    "phone_codes": [
+      992
+    ],
+    "continent": "AS",
+    "capital": "Dushanbe",
+    "currency_codes": [
+      "TJS"
+    ],
+    "languages": [
+      "tg",
+      "ru"
+    ],
+    "region": "Central Asia"
+  },
+  {
+    "code": "TK",
+    "alpha3_code": "TKL",
+    "name": "Tokelau",
+    "native_name": "Tokelau",
+    "phone_codes": [
+      690
+    ],
     "continent": "OC",
-    "capital": "Nuku'alofa",
-    "currency_codes": ["TOP"],
-    "languages": ["en", "to"],
+    "capital": "Fakaofo",
+    "currency_codes": [
+      "NZD"
+    ],
+    "languages": [],
     "region": "Polynesia"
   },
   {
-    "code": "TT",
-    "alpha3_code": "TTO",
-    "name": "Trinidad and Tobago",
-    "native_name": "Trinidad and Tobago",
-    "phone_codes": [1868],
-    "continent": "NA",
-    "capital": "Port of Spain",
-    "currency_codes": ["TTD"],
-    "languages": ["en"],
-    "region": "Caribbean"
-  },
-  {
-    "code": "TN",
-    "alpha3_code": "TUN",
-    "name": "Tunisia",
-    "native_name": "تونس",
-    "phone_codes": [216],
-    "continent": "AF",
-    "capital": "Tunis",
-    "currency_codes": ["TND"],
-    "languages": ["ar"],
-    "region": "Northern Africa"
-  },
-  {
-    "code": "TR",
-    "alpha3_code": "TUR",
-    "name": "Turkey",
-    "native_name": "Türkiye",
-    "phone_codes": [90],
+    "code": "TL",
+    "alpha3_code": "TLS",
+    "name": "Timor-Leste",
+    "native_name": "Timor-Leste",
+    "phone_codes": [
+      670
+    ],
     "continent": "AS",
-    "capital": "Ankara",
-    "currency_codes": ["TRY"],
-    "languages": ["tr"],
-    "region": "Western Asia"
+    "capital": "Dili",
+    "currency_codes": [
+      "USD"
+    ],
+    "languages": [
+      "pt"
+    ],
+    "region": "South-Eastern Asia"
   },
   {
     "code": "TM",
     "alpha3_code": "TKM",
     "name": "Turkmenistan",
     "native_name": "Türkmenistan",
-    "phone_codes": [993],
+    "phone_codes": [
+      993
+    ],
     "continent": "AS",
     "capital": "Ashgabat",
-    "currency_codes": ["TMT"],
-    "languages": ["tk", "ru"],
+    "currency_codes": [
+      "TMT"
+    ],
+    "languages": [
+      "tk",
+      "ru"
+    ],
     "region": "Central Asia"
+  },
+  {
+    "code": "TN",
+    "alpha3_code": "TUN",
+    "name": "Tunisia",
+    "native_name": "تونس",
+    "phone_codes": [
+      216
+    ],
+    "continent": "AF",
+    "capital": "Tunis",
+    "currency_codes": [
+      "TND"
+    ],
+    "languages": [
+      "ar"
+    ],
+    "region": "Northern Africa"
+  },
+  {
+    "code": "TO",
+    "alpha3_code": "TON",
+    "name": "Tonga",
+    "native_name": "Tonga",
+    "phone_codes": [
+      676
+    ],
+    "continent": "OC",
+    "capital": "Nuku'alofa",
+    "currency_codes": [
+      "TOP"
+    ],
+    "languages": [
+      "en",
+      "to"
+    ],
+    "region": "Polynesia"
+  },
+  {
+    "code": "TR",
+    "alpha3_code": "TUR",
+    "name": "Turkey",
+    "native_name": "Türkiye",
+    "phone_codes": [
+      90
+    ],
+    "continent": "AS",
+    "capital": "Ankara",
+    "currency_codes": [
+      "TRY"
+    ],
+    "languages": [
+      "tr"
+    ],
+    "region": "Western Asia"
+  },
+  {
+    "code": "TT",
+    "alpha3_code": "TTO",
+    "name": "Trinidad and Tobago",
+    "native_name": "Trinidad and Tobago",
+    "phone_codes": [
+      1868
+    ],
+    "continent": "NA",
+    "capital": "Port of Spain",
+    "currency_codes": [
+      "TTD"
+    ],
+    "languages": [
+      "en"
+    ],
+    "region": "Caribbean"
   },
   {
     "code": "TV",
     "alpha3_code": "TUV",
     "name": "Tuvalu",
     "native_name": "Tuvalu",
-    "phone_codes": [688],
+    "phone_codes": [
+      688
+    ],
     "continent": "OC",
     "capital": "Funafuti",
-    "currency_codes": ["AUD"],
-    "languages": ["en"],
+    "currency_codes": [
+      "AUD"
+    ],
+    "languages": [
+      "en"
+    ],
     "region": "Polynesia"
   },
   {
-    "code": "UG",
-    "alpha3_code": "UGA",
-    "name": "Uganda",
-    "native_name": "Uganda",
-    "phone_codes": [256],
+    "code": "TW",
+    "alpha3_code": "TWN",
+    "name": "Taiwan",
+    "native_name": "臺灣",
+    "phone_codes": [
+      886
+    ],
+    "continent": "AS",
+    "capital": "Taipei",
+    "currency_codes": [
+      "TWD"
+    ],
+    "languages": [
+      "zh"
+    ],
+    "region": "Eastern Asia"
+  },
+  {
+    "code": "TZ",
+    "alpha3_code": "TZA",
+    "name": "Tanzania",
+    "native_name": "Tanzania",
+    "phone_codes": [
+      255
+    ],
     "continent": "AF",
-    "capital": "Kampala",
-    "currency_codes": ["UGX"],
-    "languages": ["en", "sw"],
+    "capital": "Dodoma",
+    "currency_codes": [
+      "TZS"
+    ],
+    "languages": [
+      "sw",
+      "en"
+    ],
     "region": "Eastern Africa"
   },
   {
@@ -2188,47 +4115,70 @@
     "alpha3_code": "UKR",
     "name": "Ukraine",
     "native_name": "Україна",
-    "phone_codes": [380],
+    "phone_codes": [
+      380
+    ],
     "continent": "EU",
     "capital": "Kyiv",
-    "currency_codes": ["UAH"],
-    "languages": ["uk"],
+    "currency_codes": [
+      "UAH"
+    ],
+    "languages": [
+      "uk"
+    ],
     "region": "Eastern Europe"
   },
   {
-    "code": "AE",
-    "alpha3_code": "ARE",
-    "name": "United Arab Emirates",
-    "native_name": "الإمارات العربية المتحدة",
-    "phone_codes": [971],
-    "continent": "AS",
-    "capital": "Abu Dhabi",
-    "currency_codes": ["AED"],
-    "languages": ["ar"],
-    "region": "Western Asia"
+    "code": "UG",
+    "alpha3_code": "UGA",
+    "name": "Uganda",
+    "native_name": "Uganda",
+    "phone_codes": [
+      256
+    ],
+    "continent": "AF",
+    "capital": "Kampala",
+    "currency_codes": [
+      "UGX"
+    ],
+    "languages": [
+      "en",
+      "sw"
+    ],
+    "region": "Eastern Africa"
   },
   {
-    "code": "GB",
-    "alpha3_code": "GBR",
-    "name": "United Kingdom",
-    "native_name": "United Kingdom",
-    "phone_codes": [44],
-    "continent": "EU",
-    "capital": "London",
-    "currency_codes": ["GBP"],
-    "languages": ["en"],
-    "region": "Northern Europe"
+    "code": "UM",
+    "alpha3_code": "UMI",
+    "name": "United States Minor Outlying Islands",
+    "native_name": "United States Minor Outlying Islands",
+    "phone_codes": [
+      268
+    ],
+    "continent": "OC",
+    "capital": "Washington DC",
+    "currency_codes": [
+      "USD"
+    ],
+    "languages": [],
+    "region": "Micronesia"
   },
   {
     "code": "US",
     "alpha3_code": "USA",
     "name": "United States",
     "native_name": "United States",
-    "phone_codes": [1],
+    "phone_codes": [
+      1
+    ],
     "continent": "NA",
     "capital": "Washington, D.C.",
-    "currency_codes": ["USD"],
-    "languages": ["en"],
+    "currency_codes": [
+      "USD"
+    ],
+    "languages": [
+      "en"
+    ],
     "region": "North America"
   },
   {
@@ -2236,11 +4186,17 @@
     "alpha3_code": "URY",
     "name": "Uruguay",
     "native_name": "Uruguay",
-    "phone_codes": [598],
+    "phone_codes": [
+      598
+    ],
     "continent": "SA",
     "capital": "Montevideo",
-    "currency_codes": ["UYU"],
-    "languages": ["es"],
+    "currency_codes": [
+      "UYU"
+    ],
+    "languages": [
+      "es"
+    ],
     "region": "South America"
   },
   {
@@ -2248,83 +4204,257 @@
     "alpha3_code": "UZB",
     "name": "Uzbekistan",
     "native_name": "Oʻzbekiston",
-    "phone_codes": [998],
+    "phone_codes": [
+      998
+    ],
     "continent": "AS",
     "capital": "Tashkent",
-    "currency_codes": ["UZS"],
-    "languages": ["uz", "ru"],
+    "currency_codes": [
+      "UZS"
+    ],
+    "languages": [
+      "uz",
+      "ru"
+    ],
     "region": "Central Asia"
-  },
-  {
-    "code": "VU",
-    "alpha3_code": "VUT",
-    "name": "Vanuatu",
-    "native_name": "Vanuatu",
-    "phone_codes": [678],
-    "continent": "OC",
-    "capital": "Port Vila",
-    "currency_codes": ["VUV"],
-    "languages": ["bi", "en", "fr"],
-    "region": "Melanesia"
   },
   {
     "code": "VA",
     "alpha3_code": "VAT",
     "name": "Vatican City",
     "native_name": "Vaticano",
-    "phone_codes": [379],
+    "phone_codes": [
+      379
+    ],
     "continent": "EU",
     "capital": "Vatican City",
-    "currency_codes": ["EUR"],
-    "languages": ["it", "la"],
+    "currency_codes": [
+      "EUR"
+    ],
+    "languages": [
+      "it",
+      "la"
+    ],
     "region": "Southern Europe"
+  },
+  {
+    "code": "VC",
+    "alpha3_code": "VCT",
+    "name": "Saint Vincent and the Grenadines",
+    "native_name": "Saint Vincent and the Grenadines",
+    "phone_codes": [
+      1784
+    ],
+    "continent": "NA",
+    "capital": "Kingstown",
+    "currency_codes": [
+      "XCD"
+    ],
+    "languages": [
+      "en"
+    ],
+    "region": "Caribbean"
   },
   {
     "code": "VE",
     "alpha3_code": "VEN",
     "name": "Venezuela",
     "native_name": "Venezuela",
-    "phone_codes": [58],
+    "phone_codes": [
+      58
+    ],
     "continent": "SA",
     "capital": "Caracas",
-    "currency_codes": ["VES"],
-    "languages": ["es"],
+    "currency_codes": [
+      "VES"
+    ],
+    "languages": [
+      "es"
+    ],
     "region": "South America"
+  },
+  {
+    "code": "VG",
+    "alpha3_code": "VGB",
+    "name": "Virgin Islands (British)",
+    "native_name": "British Virgin Islands",
+    "phone_codes": [
+      1284
+    ],
+    "continent": "NA",
+    "capital": "Road Town",
+    "currency_codes": [
+      "USD"
+    ],
+    "languages": [],
+    "region": "Latin America and the Caribbean"
+  },
+  {
+    "code": "VI",
+    "alpha3_code": "VIR",
+    "name": "Virgin Islands (U.S.)",
+    "native_name": "United States Virgin Islands",
+    "phone_codes": [
+      1340
+    ],
+    "continent": "NA",
+    "capital": "Charlotte Amalie",
+    "currency_codes": [
+      "USD"
+    ],
+    "languages": [],
+    "region": "Latin America and the Caribbean"
   },
   {
     "code": "VN",
     "alpha3_code": "VNM",
     "name": "Vietnam",
     "native_name": "Việt Nam",
-    "phone_codes": [84],
+    "phone_codes": [
+      84
+    ],
     "continent": "AS",
     "capital": "Hanoi",
-    "currency_codes": ["VND"],
-    "languages": ["vi"],
+    "currency_codes": [
+      "VND"
+    ],
+    "languages": [
+      "vi"
+    ],
     "region": "South-Eastern Asia"
+  },
+  {
+    "code": "VU",
+    "alpha3_code": "VUT",
+    "name": "Vanuatu",
+    "native_name": "Vanuatu",
+    "phone_codes": [
+      678
+    ],
+    "continent": "OC",
+    "capital": "Port Vila",
+    "currency_codes": [
+      "VUV"
+    ],
+    "languages": [
+      "bi",
+      "en",
+      "fr"
+    ],
+    "region": "Melanesia"
+  },
+  {
+    "code": "WF",
+    "alpha3_code": "WLF",
+    "name": "Wallis and Futuna",
+    "native_name": "Wallis et Futuna",
+    "phone_codes": [
+      681
+    ],
+    "continent": "OC",
+    "capital": "Mata-Utu",
+    "currency_codes": [
+      "XPF"
+    ],
+    "languages": [],
+    "region": "Polynesia"
+  },
+  {
+    "code": "WS",
+    "alpha3_code": "WSM",
+    "name": "Samoa",
+    "native_name": "Samoa",
+    "phone_codes": [
+      685
+    ],
+    "continent": "OC",
+    "capital": "Apia",
+    "currency_codes": [
+      "WST"
+    ],
+    "languages": [
+      "sm",
+      "en"
+    ],
+    "region": "Polynesia"
   },
   {
     "code": "YE",
     "alpha3_code": "YEM",
     "name": "Yemen",
     "native_name": "اليمن",
-    "phone_codes": [967],
+    "phone_codes": [
+      967
+    ],
     "continent": "AS",
     "capital": "Sana'a",
-    "currency_codes": ["YER"],
-    "languages": ["ar"],
+    "currency_codes": [
+      "YER"
+    ],
+    "languages": [
+      "ar"
+    ],
     "region": "Western Asia"
+  },
+  {
+    "code": "YT",
+    "alpha3_code": "MYT",
+    "name": "Mayotte",
+    "native_name": "Mayotte",
+    "phone_codes": [
+      262
+    ],
+    "continent": "AF",
+    "capital": "Mamoudzou",
+    "currency_codes": [
+      "EUR"
+    ],
+    "languages": [],
+    "region": "Sub-Saharan Africa"
+  },
+  {
+    "code": "ZA",
+    "alpha3_code": "ZAF",
+    "name": "South Africa",
+    "native_name": "South Africa",
+    "phone_codes": [
+      27
+    ],
+    "continent": "AF",
+    "capital": "Pretoria",
+    "currency_codes": [
+      "ZAR"
+    ],
+    "languages": [
+      "af",
+      "en",
+      "nr",
+      "st",
+      "ss",
+      "tn",
+      "ts",
+      "ve",
+      "xh",
+      "zu"
+    ],
+    "region": "Southern Africa"
   },
   {
     "code": "ZM",
     "alpha3_code": "ZMB",
     "name": "Zambia",
     "native_name": "Zambia",
-    "phone_codes": [260],
+    "phone_codes": [
+      260
+    ],
     "continent": "AF",
     "capital": "Lusaka",
-    "currency_codes": ["ZMW"],
-    "languages": ["en"],
+    "currency_codes": [
+      "ZMW"
+    ],
+    "languages": [
+      "en"
+    ],
     "region": "Eastern Africa"
   },
   {
@@ -2332,11 +4462,19 @@
     "alpha3_code": "ZWE",
     "name": "Zimbabwe",
     "native_name": "Zimbabwe",
-    "phone_codes": [263],
+    "phone_codes": [
+      263
+    ],
     "continent": "AF",
     "capital": "Harare",
-    "currency_codes": ["ZWL"],
-    "languages": ["en", "sn", "nd"],
+    "currency_codes": [
+      "ZWL"
+    ],
+    "languages": [
+      "en",
+      "sn",
+      "nd"
+    ],
     "region": "Eastern Africa"
   }
 ]

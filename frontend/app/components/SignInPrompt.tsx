@@ -4,9 +4,7 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
 /**
- * Renders a "Sign In" call-to-action on the landing page when the user is not
- * authenticated. Returns null once a token is detected so the prompt disappears
- * automatically after login without a page reload.
+ * Renders a "Sign In" call-to-action when the user is not authenticated.
  */
 export default function SignInPrompt() {
   const [mounted, setMounted] = useState(false)
