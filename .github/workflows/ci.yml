@@ -133,9 +133,9 @@ jobs:
             | sort -u)
 
           # Versions with an up but no matching down
-          missing_down=$(comm -23 <(printf '%s\n' "$up_versions") <(printf '%s\n' "$down_versions") || true)
+          missing_down=$(comm -23 <(printf '%s\n' "$up_versions") <(printf '%s\n' "$down_versions"))
           # Versions with a down but no matching up
-          missing_up=$(comm -13 <(printf '%s\n' "$up_versions") <(printf '%s\n' "$down_versions") || true)
+          missing_up=$(comm -13 <(printf '%s\n' "$up_versions") <(printf '%s\n' "$down_versions"))
 
           if [ -n "$missing_down" ] || [ -n "$missing_up" ]; then
             echo "Migration up/down mismatch detected:"
@@ -160,6 +160,9 @@ jobs:
 
       - name: Install migrate CLI
         run: go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.18.1
+
+      - name: Install postgresql-client
+        run: sudo apt-get install -y --no-install-recommends postgresql-client
 
       - name: Wait for Postgres to be ready
         shell: bash
