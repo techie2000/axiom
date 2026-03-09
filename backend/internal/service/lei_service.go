@@ -51,7 +51,7 @@ const (
 
 var leiCodePattern = regexp.MustCompile(`^[0-9A-Z]{18}[0-9]{2}$`)
 
-const distinctLookupCacheTTL = 24 * time.Hour
+const distinctLookupCacheTTL = 5 * time.Minute
 
 // GLEIFPublishesResponse represents the response from the GLEIF latest publishes endpoint
 type GLEIFPublishesResponse struct {
@@ -142,15 +142,11 @@ type leiService struct {
 
 // NewLEIService creates a new LEI service
 func NewLEIService(repo repository.LEIRepository, countryRepo repository.CountryRepository, dataDir string) LEIService {
-	service := &leiService{
+	return &leiService{
 		repo:        repo,
 		countryRepo: countryRepo,
 		dataDir:     dataDir,
 	}
-
-	go service.prewarmDistinctLookupCaches()
-
-	return service
 }
 
 func cloneStringSlice(values []string) []string {
@@ -160,41 +156,6 @@ func cloneStringSlice(values []string) []string {
 	cloned := make([]string, len(values))
 	copy(cloned, values)
 	return cloned
-}
-
-func (s *leiService) prewarmDistinctLookupCaches() {
-	if categories, err := s.repo.GetDistinctCategories(); err == nil {
-		s.lookupCacheMu.Lock()
-		s.distinctCategories = cloneStringSlice(categories)
-		s.distinctCategoriesCachedAt = time.Now()
-		s.lookupCacheMu.Unlock()
-	}
-
-	if regions, err := s.repo.GetDistinctRegions(); err == nil {
-		s.lookupCacheMu.Lock()
-		s.distinctRegions = cloneStringSlice(regions)
-		s.distinctRegionsCachedAt = time.Now()
-		s.lookupCacheMu.Unlock()
-	}
-
-	if legalForms, err := s.repo.GetDistinctLegalForms(); err == nil {
-		s.lookupCacheMu.Lock()
-		s.distinctLegalForms = cloneStringSlice(legalForms)
-		s.distinctLegalFormsCachedAt = time.Now()
-		s.lookupCacheMu.Unlock()
-	}
-}
-
-func (s *leiService) invalidateDistinctLookupCaches() {
-	s.lookupCacheMu.Lock()
-	defer s.lookupCacheMu.Unlock()
-
-	s.distinctCategories = nil
-	s.distinctCategoriesCachedAt = time.Time{}
-	s.distinctRegions = nil
-	s.distinctRegionsCachedAt = time.Time{}
-	s.distinctLegalForms = nil
-	s.distinctLegalFormsCachedAt = time.Time{}
 }
 
 // progressWriter wraps an io.Writer to log extraction progress periodically
@@ -540,8 +501,6 @@ func (s *leiService) ProcessSourceFileWithResume(sourceFileID uuid.UUID, resumeF
 		return fmt.Errorf("failed to update source file status: %w", err)
 	}
 
-	s.invalidateDistinctLookupCaches()
-
 	log.Info().
 		Str("source_file_id", sourceFileID.String()).
 		Int("total", sourceFile.TotalRecords).
@@ -855,10 +814,8 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 				Str("last_lei", batch[len(batch)-1].LEI).
 				Msg("CRITICAL: Failed to batch upsert LEI records")
 			jobType := normalizeProcessingJobType(sourceFile.JobType)
-			if len(batch) > 0 {
-				batchErr := fmt.Errorf("batch upsert of %d LEI records failed: %w", len(batch), err)
-				s.recordProcessingFailure(jobType, &sourceFile.ID, "UPSERT", "", nil, batchErr)
-			}
+			batchErr := fmt.Errorf("batch upsert of %d LEI records failed: %w", len(batch), err)
+			s.recordProcessingFailure(jobType, &sourceFile.ID, "UPSERT", "", nil, batchErr)
 			failedRecords += len(batch)
 			// Return error to stop processing
 			return fmt.Errorf("batch upsert failed: %w", err)
@@ -873,13 +830,15 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 			// Track records processed in this session (use batch size, not DB results)
 			processedRecords += len(batch)
 
-			// Update source file with cumulative progress (checkpointed to reduce DB write pressure)
+			// Always keep LastProcessedLEI in sync so the mandatory final UpdateSourceFile
+			// call reflects the actual last record, even for batches that do not hit a
+			// checkpoint boundary (e.g. files smaller than sourceFileProgressCheckpointInterval).
 			cumulativeProcessed = capProcessedRecords(progressTotalRecords, checkpointProcessed+processedRecords)
+			sourceFile.LastProcessedLEI = normalizeLEICodePointer(lastProcessedLEI)
 			if processedRecords%sourceFileProgressCheckpointInterval == 0 {
 				sourceFile.TotalRecords = progressTotalRecords
 				sourceFile.ProcessedRecords = cumulativeProcessed
 				sourceFile.FailedRecords = failedRecords
-				sourceFile.LastProcessedLEI = normalizeLEICodePointer(lastProcessedLEI)
 				if err := s.repo.UpdateSourceFile(sourceFile); err != nil {
 					log.Error().Err(err).Msg("Failed to update source file progress checkpoint")
 				}
@@ -1034,6 +993,22 @@ func capProcessedRecords(totalRecords int, processedRecords int) int {
 	return processedRecords
 }
 
+func sanitizeSourceFileProgress(sourceFile *domain.SourceFile) {
+	if sourceFile == nil {
+		return
+	}
+
+	sourceFile.ProcessedRecords = capProcessedRecords(sourceFile.TotalRecords, sourceFile.ProcessedRecords)
+
+	if sourceFile.FailedRecords < 0 {
+		sourceFile.FailedRecords = 0
+	}
+
+	if sourceFile.FailedRecords > sourceFile.ProcessedRecords {
+		sourceFile.FailedRecords = sourceFile.ProcessedRecords
+	}
+}
+
 func (s *leiService) recordProcessingFailure(
 	jobType string,
 	sourceFileID *uuid.UUID,
@@ -1051,45 +1026,6 @@ func (s *leiService) recordProcessingFailure(
 		rawRecord,
 		cause,
 	)
-}
-
-// batchResolveOpenProcessingFailures resolves open processing failures for a set of natural keys
-// in a single UPDATE … WHERE natural_key IN (…) query, avoiding N round-trips per batch.
-func (s *leiService) batchResolveOpenProcessingFailures(jobType string, naturalKeys []string, sourceFileID *uuid.UUID) {
-	if len(naturalKeys) == 0 {
-		return
-	}
-	normalized := make([]string, 0, len(naturalKeys))
-	for _, k := range naturalKeys {
-		if v := normalizeLEICodeValue(k); v != "" {
-			normalized = append(normalized, v)
-		}
-	}
-	if len(normalized) == 0 {
-		return
-	}
-	if err := s.repo.BatchResolveOpenProcessingFailures(normalizeProcessingJobType(jobType), normalized, sourceFileID, "Resolved by subsequent successful upsert"); err != nil {
-		log.Warn().Err(err).
-			Str("job_type", jobType).
-			Int("key_count", len(normalized)).
-			Msg("Failed to batch-resolve Level 1 processing failure lifecycle rows")
-	}
-}
-
-func sanitizeSourceFileProgress(sourceFile *domain.SourceFile) {
-	if sourceFile == nil {
-		return
-	}
-
-	sourceFile.ProcessedRecords = capProcessedRecords(sourceFile.TotalRecords, sourceFile.ProcessedRecords)
-
-	if sourceFile.FailedRecords < 0 {
-		sourceFile.FailedRecords = 0
-	}
-
-	if sourceFile.FailedRecords > sourceFile.ProcessedRecords {
-		sourceFile.FailedRecords = sourceFile.ProcessedRecords
-	}
 }
 
 func normalizeLEICodeValue(value string) string {
@@ -1445,7 +1381,7 @@ func (s *leiService) GetDistinctCategories() ([]string, error) {
 	now := time.Now()
 
 	s.lookupCacheMu.RLock()
-	if len(s.distinctCategories) > 0 && now.Sub(s.distinctCategoriesCachedAt) < distinctLookupCacheTTL {
+	if !s.distinctCategoriesCachedAt.IsZero() && now.Sub(s.distinctCategoriesCachedAt) < distinctLookupCacheTTL {
 		cached := cloneStringSlice(s.distinctCategories)
 		s.lookupCacheMu.RUnlock()
 		return cached, nil
@@ -1470,7 +1406,7 @@ func (s *leiService) GetDistinctRegions() ([]string, error) {
 	now := time.Now()
 
 	s.lookupCacheMu.RLock()
-	if len(s.distinctRegions) > 0 && now.Sub(s.distinctRegionsCachedAt) < distinctLookupCacheTTL {
+	if !s.distinctRegionsCachedAt.IsZero() && now.Sub(s.distinctRegionsCachedAt) < distinctLookupCacheTTL {
 		cached := cloneStringSlice(s.distinctRegions)
 		s.lookupCacheMu.RUnlock()
 		return cached, nil
@@ -1495,7 +1431,7 @@ func (s *leiService) GetDistinctLegalForms() ([]string, error) {
 	now := time.Now()
 
 	s.lookupCacheMu.RLock()
-	if len(s.distinctLegalForms) > 0 && now.Sub(s.distinctLegalFormsCachedAt) < distinctLookupCacheTTL {
+	if !s.distinctLegalFormsCachedAt.IsZero() && now.Sub(s.distinctLegalFormsCachedAt) < distinctLookupCacheTTL {
 		cached := cloneStringSlice(s.distinctLegalForms)
 		s.lookupCacheMu.RUnlock()
 		return cached, nil
@@ -1532,74 +1468,11 @@ func (s *leiService) GetProcessingStatus(jobType string) (*domain.FileProcessing
 		return nil, err
 	}
 
-	if status != nil && status.CurrentSourceFile == nil {
-		for _, fileType := range fallbackSourceFileTypesForJob(status.JobType) {
-			latest, findErr := s.repo.FindLatestSourceFile(fileType)
-			if findErr != nil || latest == nil {
-				continue
-			}
-
-			mappedJobType := domain.JobTypeFromFileType(latest.FileType)
-			if mappedJobType != "" && !sameProcessingJobType(mappedJobType, status.JobType) {
-				continue
-			}
-
-			status.CurrentSourceFile = latest
-			latestID := latest.ID
-			status.CurrentSourceFileID = &latestID
-			break
-		}
-	}
-
 	if status != nil && status.CurrentSourceFile != nil {
 		sanitizeSourceFileProgress(status.CurrentSourceFile)
 	}
 
 	return status, nil
-}
-
-func fallbackSourceFileTypesForJob(jobType string) []string {
-	switch normalizeProcessingJobType(jobType) {
-	case "LEVEL1_FULL":
-		return []string{"FULL"}
-	case "LEVEL1_DELTA":
-		return []string{"DELTA"}
-	case "LEVEL2_RR":
-		return []string{"RR_FULL", "RR"}
-	case "LEVEL2_REPEX":
-		return []string{"REPEX_FULL", "REPEX"}
-	default:
-		return nil
-	}
-}
-
-// normalizeProcessingJobType maps aliases and known types to their canonical storage names.
-// For unknown or pass-through types (e.g. LEVEL2_RR, LEVEL2_REPEX) it returns the value
-// unchanged, delegating to NormalizeProcessingJobType for known aliases.
-func normalizeProcessingJobType(jobType string) string {
-	if normalized := NormalizeProcessingJobType(jobType); normalized != "" {
-		return normalized
-	}
-	return jobType
-}
-
-// NormalizeProcessingJobType maps user-facing or legacy job type aliases to their canonical storage
-// names. Returns an empty string for unknown or invalid job types so callers can detect them.
-func NormalizeProcessingJobType(jobType string) string {
-	switch jobType {
-	case "DAILY_FULL", "LEVEL1_FULL":
-		return "LEVEL1_FULL"
-	case "DAILY_DELTA", "LEVEL1_DELTA":
-		return "LEVEL1_DELTA"
-	case "LEVEL2_RR", "LEVEL2_REPEX":
-		return jobType
-	default:
-		return ""
-	}
-}
-
-func sameProcessingJobType(lhs string, rhs string) bool {
-	return normalizeProcessingJobType(lhs) == normalizeProcessingJobType(rhs)
 }
 
 // UpdateProcessingStatus updates processing status

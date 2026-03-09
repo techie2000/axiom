@@ -13,7 +13,7 @@ Runs markdown linting on all staged `.md` files before allowing a commit.
 - Line length (max 120 characters) - MD013
 - Fenced code blocks have language specifiers - MD040
 - Table column formatting - MD060
-- All other rules in `.markdownlint.json`
+- All other rules in `.markdownlint.yaml`
 
 ## Installation
 

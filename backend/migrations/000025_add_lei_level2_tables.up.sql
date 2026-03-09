@@ -6,25 +6,25 @@
 -- the start_node_lei and end_node_lei columns reference LEI codes in that table.
 
 CREATE TABLE IF NOT EXISTS lei_raw.lei_relationship_records (
-    id                          UUID        NOT NULL DEFAULT GEN_RANDOM_UUID(),
-    start_node_lei              VARCHAR(20) NOT NULL,
-    end_node_lei                VARCHAR(20) NOT NULL,
-    relationship_type           VARCHAR(100) NOT NULL,
-    relationship_status         VARCHAR(50)  NOT NULL,
-    relationship_periods        JSONB,
-    relationship_qualifiers     JSONB,
-    relationship_quantifiers    JSONB,
-    registration_status         VARCHAR(50),
-    initial_registration_date   TIMESTAMPTZ,
-    last_update_date            TIMESTAMPTZ,
-    next_renewal_date           TIMESTAMPTZ,
-    managing_lou                VARCHAR(20),
-    validation_sources          VARCHAR(100),
-    validation_documents        VARCHAR(100),
-    validation_reference        VARCHAR(500),
-    source_file_id              UUID,
-    created_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    id UUID NOT NULL DEFAULT GEN_RANDOM_UUID(),
+    start_node_lei VARCHAR(20) NOT NULL,
+    end_node_lei VARCHAR(20) NOT NULL,
+    relationship_type VARCHAR(100) NOT NULL,
+    relationship_status VARCHAR(50) NOT NULL,
+    relationship_periods JSONB,
+    relationship_qualifiers JSONB,
+    relationship_quantifiers JSONB,
+    registration_status VARCHAR(50),
+    initial_registration_date TIMESTAMPTZ,
+    last_update_date TIMESTAMPTZ,
+    next_renewal_date TIMESTAMPTZ,
+    managing_lou VARCHAR(20),
+    validation_sources VARCHAR(100),
+    validation_documents VARCHAR(100),
+    validation_reference VARCHAR(500),
+    source_file_id UUID,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT pk_lei_relationship_records PRIMARY KEY (id)
 );
 
@@ -116,14 +116,14 @@ ON lei_raw.lei_relationship_records (source_file_id);
 -- ---------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS lei_raw.lei_reporting_exceptions (
-    id                      UUID        NOT NULL DEFAULT GEN_RANDOM_UUID(),
-    lei                     VARCHAR(20) NOT NULL,
-    exception_category      VARCHAR(100) NOT NULL,
-    exception_reason        VARCHAR(100) NOT NULL,
-    exception_reference     VARCHAR(500),
-    source_file_id          UUID,
-    created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    id UUID NOT NULL DEFAULT GEN_RANDOM_UUID(),
+    lei VARCHAR(20) NOT NULL,
+    exception_category VARCHAR(100) NOT NULL,
+    exception_reason VARCHAR(100) NOT NULL,
+    exception_reference VARCHAR(500),
+    source_file_id UUID,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT pk_lei_reporting_exceptions PRIMARY KEY (id)
 );
 

@@ -49,6 +49,7 @@ func JWTAuth(cfg *config.Config) gin.HandlerFunc {
 		if claims, ok := token.Claims.(jwt.MapClaims); ok {
 			c.Set("user_id", claims["user_id"])
 			c.Set("email", claims["email"])
+			c.Set("role", claims["role"])
 		}
 
 		c.Next()
@@ -104,6 +105,20 @@ func Logger() gin.HandlerFunc {
 			"/api/v1/lei/status/DAILY_DELTA",
 		},
 	})
+}
+
+// AdminRequired is middleware that requires the user to have the admin role.
+// Must be used after JWTAuth middleware.
+func AdminRequired() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		role, _ := c.Get("role")
+		if role != "admin" {
+			c.JSON(http.StatusForbidden, gin.H{"error": "admin access required"})
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
 }
 
 // RateLimit middleware (simplified version)

@@ -151,6 +151,41 @@ make docker-prod-up
 make docker-all-up
 ```
 
+### Safe Main-Branch Testing (No Volume Collisions)
+
+When testing PRs/worktrees against the `main` compose file, avoid reusing `.env.main` across multiple folders.
+Use an isolated env file per test stack so each run gets its own container/volume names and host ports.
+
+```bash
+# Create an isolated env (example: pr107)
+./scripts/new-main-test-env.ps1 -Name pr107
+
+# Start isolated main-like stack
+docker compose --env-file .env.main.pr107 -f docker-compose.main.yml up -d --build
+
+# Stop isolated stack (non-destructive)
+docker compose --env-file .env.main.pr107 -f docker-compose.main.yml down
+```
+
+Important:
+
+- Avoid `down -v` on shared/long-lived stacks unless you intentionally want to remove data.
+- Keep `.env.main` for your primary main environment; use `.env.main.<suffix>` for temporary test stacks.
+
+### Main PostgreSQL Backup Script
+
+Create a timestamped backup from the running main Postgres container before risky operations:
+
+```bash
+# Custom format backup (recommended)
+./scripts/backup-main-postgres.ps1
+
+# Plain SQL backup
+./scripts/backup-main-postgres.ps1 -Format plain
+```
+
+Backups are saved under `backups/main/postgres/` by default.
+
 #### Stopping Environments
 
 ```bash

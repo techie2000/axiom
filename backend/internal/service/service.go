@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/techie2000/axiom/internal/domain"
 	"github.com/techie2000/axiom/internal/repository"
@@ -10,6 +11,7 @@ import (
 
 // Services holds all service interfaces
 type Services struct {
+	Auth        AuthService
 	Country     CountryService
 	Currency    CurrencyService
 	Language    LanguageService
@@ -24,8 +26,9 @@ type Services struct {
 }
 
 // NewServices creates a new services instance
-func NewServices(repos *repository.Repositories, db *gorm.DB, leiDataDir string, masterDataDir string) *Services {
+func NewServices(repos *repository.Repositories, db *gorm.DB, leiDataDir string, masterDataDir string, jwtSecret string, jwtExpiry time.Duration) *Services {
 	return &Services{
+		Auth:        NewAuthService(repos.User, jwtSecret, jwtExpiry),
 		Country:     NewCountryService(repos.Country),
 		Currency:    NewCurrencyService(repos.Currency),
 		Language:    NewLanguageService(repos.Language),

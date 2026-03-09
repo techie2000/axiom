@@ -1,8 +1,11 @@
 package service
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -468,5 +471,117 @@ func TestBatchResolveOpenProcessingFailures_Service_RepoErrorIsLogged(t *testing
 
 	if stub.callCount != 1 {
 		t.Fatalf("expected 1 repo call even when it fails, got %d", stub.callCount)
+	}
+}
+
+type processRecordsRepoStub struct {
+	repository.LEIRepository
+	updateCalls           int
+	updateSnapshots       []domain.SourceFile
+	batchUpsertCallCount  int
+	batchResolveCallCount int
+}
+
+func (s *processRecordsRepoStub) BatchUpsertLEIRecords(records []*domain.LEIRecord) (int, int, error) {
+	s.batchUpsertCallCount++
+	return len(records), 0, nil
+}
+
+func (s *processRecordsRepoStub) BatchResolveOpenProcessingFailures(jobType string, naturalKeys []string, resolvedSourceFileID *uuid.UUID, resolvedNote string) error {
+	s.batchResolveCallCount++
+	return nil
+}
+
+func (s *processRecordsRepoStub) UpdateSourceFile(file *domain.SourceFile) error {
+	s.updateCalls++
+	copy := *file
+	if file.LastProcessedLEI != nil {
+		last := *file.LastProcessedLEI
+		copy.LastProcessedLEI = &last
+	}
+	s.updateSnapshots = append(s.updateSnapshots, copy)
+	return nil
+}
+
+func (s *processRecordsRepoStub) CreateProcessingFailure(failure *domain.LEILevel2ProcessingFailure) error {
+	return nil
+}
+
+func testLEICodeForIndex(index int) string {
+	return fmt.Sprintf("%020d", index)
+}
+
+func buildRecordsArrayJSON(recordCount int) string {
+	var builder strings.Builder
+	builder.WriteString("[")
+	for i := 0; i < recordCount; i++ {
+		if i > 0 {
+			builder.WriteString(",")
+		}
+		builder.WriteString(`{"LEI":{"$":"`)
+		builder.WriteString(testLEICodeForIndex(i))
+		builder.WriteString(`"},"Entity":{"LegalName":{"$":"Entity`)
+		builder.WriteString(fmt.Sprintf("%d", i))
+		builder.WriteString(`"}}}`)
+	}
+	builder.WriteString("]")
+	return builder.String()
+}
+
+func TestProcessRecordsArray_CheckpointUpdatesAtConfiguredInterval(t *testing.T) {
+	const recordCount = 10001
+	repoStub := &processRecordsRepoStub{}
+	svc := &leiService{repo: repoStub}
+
+	decoder := json.NewDecoder(strings.NewReader(buildRecordsArrayJSON(recordCount)))
+	sourceFile := &domain.SourceFile{TotalRecords: recordCount}
+
+	if err := svc.processRecordsArray(decoder, sourceFile, ""); err != nil {
+		t.Fatalf("processRecordsArray returned error: %v", err)
+	}
+
+	if repoStub.updateCalls != 3 {
+		t.Fatalf("expected 3 UpdateSourceFile calls (5000, 10000, final), got %d", repoStub.updateCalls)
+	}
+
+	if repoStub.batchUpsertCallCount != 11 {
+		t.Fatalf("expected 11 batch upsert calls for 10001 records at batchSize=1000, got %d", repoStub.batchUpsertCallCount)
+	}
+
+	finalSnapshot := repoStub.updateSnapshots[len(repoStub.updateSnapshots)-1]
+	if finalSnapshot.LastProcessedLEI == nil {
+		t.Fatalf("expected final LastProcessedLEI to be persisted")
+	}
+
+	wantLastLEI := testLEICodeForIndex(recordCount - 1)
+	if *finalSnapshot.LastProcessedLEI != wantLastLEI {
+		t.Fatalf("expected final LastProcessedLEI %q, got %q", wantLastLEI, *finalSnapshot.LastProcessedLEI)
+	}
+}
+
+func TestProcessRecordsArray_FinalUpdatePersistsLastProcessedLEIForSmallFiles(t *testing.T) {
+	const recordCount = 3
+	repoStub := &processRecordsRepoStub{}
+	svc := &leiService{repo: repoStub}
+
+	decoder := json.NewDecoder(strings.NewReader(buildRecordsArrayJSON(recordCount)))
+	sourceFile := &domain.SourceFile{TotalRecords: recordCount}
+
+	if err := svc.processRecordsArray(decoder, sourceFile, ""); err != nil {
+		t.Fatalf("processRecordsArray returned error: %v", err)
+	}
+
+	if repoStub.updateCalls != 1 {
+		t.Fatalf("expected exactly 1 final UpdateSourceFile call for small file, got %d", repoStub.updateCalls)
+	}
+
+	finalSnapshot := repoStub.updateSnapshots[0]
+	if finalSnapshot.LastProcessedLEI == nil {
+		t.Fatalf("expected LastProcessedLEI in final update")
+	}
+
+	wantLastLEI := testLEICodeForIndex(recordCount - 1)
+	if *finalSnapshot.LastProcessedLEI != wantLastLEI {
+		t.Fatalf("expected LastProcessedLEI %q, got %q", wantLastLEI, *finalSnapshot.LastProcessedLEI)
 	}
 }

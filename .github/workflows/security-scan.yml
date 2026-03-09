@@ -105,6 +105,7 @@ jobs:
 
       - name: Parse Trivy results and create issues (Backend)
         if: always()
+        continue-on-error: true
         uses: actions/github-script@v7
         with:
           script: |
@@ -257,6 +258,7 @@ jobs:
 
       - name: Parse Trivy results and create issues (Frontend)
         if: always()
+        continue-on-error: true
         uses: actions/github-script@v7
         with:
           script: |

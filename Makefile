@@ -248,7 +248,7 @@ lint: ## Run linter
 lint-docs: ## Lint markdown documentation
 	@echo "Linting markdown files..."
 	@if command -v markdownlint > /dev/null 2>&1; then \
-		markdownlint --config .markdownlint.json '**/*.md' --ignore node_modules; \
+		markdownlint --config .markdownlint.yaml '**/*.md' --ignore node_modules; \
 	else \
 		echo "❌ markdownlint-cli not installed. Run: make install-tools"; \
 		exit 1; \
@@ -257,7 +257,7 @@ lint-docs: ## Lint markdown documentation
 lint-docs-fix: ## Auto-fix markdown linting issues
 	@echo "Auto-fixing markdown files..."
 	@if command -v markdownlint > /dev/null 2>&1; then \
-		markdownlint --config .markdownlint.json '**/*.md' --ignore node_modules --fix; \
+		markdownlint --config .markdownlint.yaml '**/*.md' --ignore node_modules --fix; \
 		echo "✅ Markdown auto-fix complete"; \
 	else \
 		echo "❌ markdownlint-cli not installed. Run: make install-tools"; \

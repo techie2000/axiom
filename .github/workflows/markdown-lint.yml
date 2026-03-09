@@ -27,7 +27,7 @@ jobs:
             !**/node_modules/**
             !**/vendor/**
             !**/.git/**
-          config: '.markdownlint.json'
+          config: '.markdownlint.yaml'
           fix: false
 
       - name: Markdown lint report
