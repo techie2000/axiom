@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Branding-first entry flow for frontend routes**:
+  - `/` now serves as a branding-only entry page
+  - `/home` now serves as the public reference data hub
+  - Sign-in success redirects non-bootstrap users to `/home`
+
+- **Branding asset pipeline and alternate theme-ready assets**:
+  - Canonical source asset documentation added at [docs/assets/branding/README.md](docs/assets/branding/README.md)
+  - Source files now include primary and alternate black/white variants in `docs/assets/branding/`
+  - Runtime branding outputs include active assets in `frontend/public/branding/` and prepared alternate assets in
+    `frontend/public/branding/alt-bw/`
+
 - **CI/CD automation for environment branches** — addresses IMP-003 and NEG-002 from
   [ADR-0009](docs/adr/adr-0009-git-branching-strategy.md):
   - [`.github/workflows/ci.yml`](.github/workflows/ci.yml) — unified CI pipeline that runs on
@@ -61,6 +72,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `IDLE` so the recovery logic can distinguish an interrupted run from a clean stop
 
 ### Fixed
+
+- `frontend/app/lei/page.tsx` — LEI sync trigger now reliably sends the stored JWT with normalized Bearer handling,
+  preflight token validation, and clearer unauthorized-session handling
+- `backend/internal/service/masterdata_service.go` — master data update checks now use real content fingerprinting
+  instead of a no-op/stub result
+- `docker-compose.main.yml` — backend service now bind-mounts `backend/data/masterdata` to ensure host-side master
+  data changes are visible inside the running container
+- `backend/internal/service/lei_level2_service_test.go` — added targeted checkpoint persistence unit tests for interval
+  boundaries and forced progress updates to prevent regressions in SourceFile progress writes
+- `backend/internal/service/masterdata_service_test.go` — added fingerprint stability and update detection tests covering
+  unchanged content, modified files, and missing file errors
+- `frontend/app/components/SortableHeaderCell.tsx` — sortable header button now sets `type="button"` and exposes
+  sort state via `aria-sort` on the header cell for screen-reader compatibility
+- `frontend/app/layout.tsx` and `frontend/app/page.tsx` — branding assets now resolve at runtime via committed
+  `frontend/public/branding/*` SVG files, preventing favicon and logo 404s
+- `frontend/app/home/page.tsx` — restored public `/home` route so landing-page navigation and post-login non-bootstrap
+  redirects do not lead to 404
 
 - `.github/workflows/lint.yml` — branch filter corrected from non-existent `develop` to `dev`,
   and extended to also run on `uat` and `prod` pushes and pull requests

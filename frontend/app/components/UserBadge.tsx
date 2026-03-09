@@ -33,7 +33,7 @@ export default function UserBadge() {
     localStorage.removeItem('axiom_user')
     // Clear in-memory preference cache so the next login starts fresh.
     resetPreferencesCache()
-    router.push('/login')
+    router.replace('/')
   }
 
   if (!mounted || !user) return null

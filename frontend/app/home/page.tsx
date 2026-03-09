@@ -15,7 +15,7 @@ export default function PublicDataHomePage() {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div className="flex items-center gap-4 md:gap-5">
               <Image
-                src="/branding/logo.png"
+                src="/branding/logo.svg"
                 alt="Axiom brand"
                 width={88}
                 height={88}

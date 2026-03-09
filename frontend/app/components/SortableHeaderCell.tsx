@@ -20,6 +20,7 @@ export default function SortableHeaderCell({
   sortDirection = 'asc',
 }: SortableHeaderCellProps) {
   const alignClass = align === 'center' ? 'text-center' : 'text-left'
+  const ariaSort = isActiveSort ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'
 
   if (!sortable || !onSort) {
     return (
@@ -30,8 +31,9 @@ export default function SortableHeaderCell({
   }
 
   return (
-    <th className={`${alignClass} ${className}`}>
+    <th className={`${alignClass} ${className}`} aria-sort={ariaSort}>
       <button
+        type="button"
         onClick={onSort}
         className={`group flex items-center gap-1 cursor-pointer whitespace-nowrap hover:text-gray-700 dark:hover:text-gray-200 transition-colors ${align === 'center' ? 'w-full justify-center' : ''}`}
       >

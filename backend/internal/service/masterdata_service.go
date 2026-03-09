@@ -1,10 +1,15 @@
 package service
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -25,8 +30,10 @@ type MasterDataService interface {
 }
 
 type masterDataService struct {
-	db      *gorm.DB
-	dataDir string
+	db                       *gorm.DB
+	dataDir                  string
+	fingerprintMu            sync.Mutex
+	lastKnownDataFingerprint string
 }
 
 // NewMasterDataService creates a new master data service
@@ -109,6 +116,10 @@ func (s *masterDataService) LoadAllMasterData() error {
 
 	if err := s.LoadCodeMappings(); err != nil {
 		return fmt.Errorf("failed to load code mappings: %w", err)
+	}
+
+	if err := s.captureCurrentFingerprint(); err != nil {
+		log.Warn().Err(err).Msg("Failed to capture master data fingerprint after load")
 	}
 
 	log.Info().Msg("Master data loaded successfully")
@@ -391,7 +402,79 @@ func (s *masterDataService) LoadCodeMappings() error {
 
 // CheckForUpdates checks if master data files have been updated
 func (s *masterDataService) CheckForUpdates() (bool, error) {
-	// This will be implemented in the scheduler service
-	// For now, return false to indicate no updates
+	currentFingerprint, err := s.computeDataFingerprint()
+	if err != nil {
+		return false, err
+	}
+
+	s.fingerprintMu.Lock()
+	defer s.fingerprintMu.Unlock()
+
+	if s.lastKnownDataFingerprint == "" {
+		s.lastKnownDataFingerprint = currentFingerprint
+		log.Info().
+			Str("fingerprint", currentFingerprint).
+			Msg("Master data fingerprint initialized")
+		return false, nil
+	}
+
+	if currentFingerprint != s.lastKnownDataFingerprint {
+		oldFingerprint := s.lastKnownDataFingerprint
+		s.lastKnownDataFingerprint = currentFingerprint
+		log.Info().
+			Str("previous_fingerprint", oldFingerprint).
+			Str("current_fingerprint", currentFingerprint).
+			Msg("Master data update detected via fingerprint change")
+		return true, nil
+	}
+
 	return false, nil
+}
+
+func (s *masterDataService) captureCurrentFingerprint() error {
+	fingerprint, err := s.computeDataFingerprint()
+	if err != nil {
+		return err
+	}
+
+	s.fingerprintMu.Lock()
+	defer s.fingerprintMu.Unlock()
+	s.lastKnownDataFingerprint = fingerprint
+	return nil
+}
+
+func (s *masterDataService) computeDataFingerprint() (string, error) {
+	masterDataFiles := []string{
+		"continents.json",
+		"languages.json",
+		"currencies.json",
+		"countries.json",
+		"alert_country_codes.json",
+	}
+	sort.Strings(masterDataFiles)
+
+	hasher := sha256.New()
+	for _, fileName := range masterDataFiles {
+		filePath := filepath.Join(s.dataDir, fileName)
+		content, err := os.ReadFile(filePath)
+		if err != nil {
+			return "", fmt.Errorf("failed to read %s: %w", fileName, err)
+		}
+
+		fileHash := sha256.Sum256(content)
+		if _, err := hasher.Write([]byte(fileName)); err != nil {
+			return "", fmt.Errorf("failed to hash file name %s: %w", fileName, err)
+		}
+		if _, err := hasher.Write([]byte(":")); err != nil {
+			return "", fmt.Errorf("failed to hash separator for %s: %w", fileName, err)
+		}
+		if _, err := hasher.Write([]byte(hex.EncodeToString(fileHash[:]))); err != nil {
+			return "", fmt.Errorf("failed to hash digest for %s: %w", fileName, err)
+		}
+		if _, err := hasher.Write([]byte(";")); err != nil {
+			return "", fmt.Errorf("failed to hash entry separator for %s: %w", fileName, err)
+		}
+	}
+
+	return strings.ToLower(hex.EncodeToString(hasher.Sum(nil))), nil
 }

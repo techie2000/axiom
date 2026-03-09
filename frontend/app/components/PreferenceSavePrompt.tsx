@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 
 interface Props {
   /** When true the prompt is shown. */
@@ -28,7 +28,6 @@ interface Props {
  * The prompt auto-dismisses after 8 seconds if the user does not interact.
  */
 export default function PreferenceSavePrompt({ visible, resetKey, onSave, onDismiss, label }: Props) {
-  const [show, setShow] = useState(false)
   // Use refs to always call the latest callbacks, avoiding stale closure issues.
   const onDismissRef = useRef(onDismiss)
   const onSaveRef = useRef(onSave)
@@ -37,26 +36,20 @@ export default function PreferenceSavePrompt({ visible, resetKey, onSave, onDism
 
   useEffect(() => {
     if (visible) {
-      setShow(true)
       const timer = setTimeout(() => {
-        setShow(false)
         onDismissRef.current()
       }, 8000)
       return () => clearTimeout(timer)
-    } else {
-      setShow(false)
     }
   }, [visible, resetKey])
 
-  if (!show) return null
+  if (!visible) return null
 
   const handleSave = () => {
-    setShow(false)
     onSaveRef.current()
   }
 
   const handleDismiss = () => {
-    setShow(false)
     onDismissRef.current()
   }
 
