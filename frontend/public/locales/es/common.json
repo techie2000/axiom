@@ -1,0 +1,121 @@
+{
+  "nav": {
+    "backToHome": "← Volver al inicio",
+    "backToLogin": "← Volver al inicio de sesión",
+    "signIn": "Iniciar sesión",
+    "requestAccess": "Solicitar acceso"
+  },
+  "login": {
+    "title": "Iniciar sesión",
+    "subtitle": "Inicie sesión para acceder a las funciones protegidas de Axiom",
+    "emailLabel": "Dirección de correo electrónico",
+    "emailPlaceholder": "usted@ejemplo.com",
+    "passwordLabel": "Contraseña",
+    "passwordPlaceholder": "••••••••",
+    "submitButton": "Iniciar sesión",
+    "submittingButton": "Iniciando sesión…",
+    "noAccount": "¿No tiene una cuenta?",
+    "requestAccessLink": "Solicitar acceso",
+    "errorGeneric": "Error de inicio de sesión",
+    "errorNetwork": "Error de red – por favor, inténtelo de nuevo"
+  },
+  "register": {
+    "title": "Solicitar acceso",
+    "subtitle": "Envíe una solicitud para obtener una cuenta de Axiom. Un administrador la revisará y aprobará.",
+    "fullNameLabel": "Nombre completo",
+    "fullNamePlaceholder": "Ana García",
+    "emailLabel": "Dirección de correo electrónico",
+    "emailPlaceholder": "ana@ejemplo.com",
+    "usernameLabel": "Nombre de usuario",
+    "usernamePlaceholder": "agarcia",
+    "passwordLabel": "Contraseña",
+    "passwordPlaceholder": "Al menos 8 caracteres",
+    "confirmPasswordLabel": "Confirmar contraseña",
+    "confirmPasswordPlaceholder": "Repita la contraseña",
+    "submitButton": "Enviar solicitud",
+    "submittingButton": "Enviando…",
+    "alreadyHaveAccount": "¿Ya tiene una cuenta?",
+    "signInLink": "Iniciar sesión",
+    "errorPasswordMatch": "Las contraseñas no coinciden",
+    "errorPasswordLength": "La contraseña debe tener al menos 8 caracteres",
+    "errorGeneric": "Error de registro",
+    "errorNetwork": "Error de red – por favor, inténtelo de nuevo",
+    "required": "*"
+  },
+  "register_success": {
+    "title": "Solicitud enviada",
+    "message": "Su solicitud de cuenta se ha enviado con éxito. Un administrador revisará y aprobará su cuenta. Podrá iniciar sesión una vez que su cuenta sea aprobada.",
+    "backToLogin": "Volver al inicio de sesión"
+  },
+  "language": {
+    "selectLanguage": "Seleccionar idioma",
+    "currentLanguage": "Idioma",
+    "english": "Inglés",
+    "french": "Francés",
+    "spanish": "Español",
+    "german": "Alemán",
+    "japanese": "Japonés",
+    "arabic": "Árabe"
+  },
+  "theme": {
+    "toggle": "Cambiar tema"
+  },
+  "common": {
+    "loading": "Cargando…",
+    "error": "Error",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "close": "Cerrar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "add": "Agregar",
+    "search": "Buscar",
+    "filter": "Filtrar",
+    "clear": "Limpiar",
+    "clearFilters": "Limpiar filtros",
+    "noResults": "No se encontraron resultados",
+    "required": "Requerido"
+  },
+  "admin": {
+    "translations": {
+      "title": "Traducciones",
+      "subtitle": "Gestione las cadenas de traducción de la interfaz de usuario en todos los idiomas compatibles",
+      "addTranslation": "Agregar traducción",
+      "searchPlaceholder": "Buscar por clave o valor…",
+      "filterByLanguage": "Filtrar por idioma",
+      "filterByStatus": "Filtrar por estado",
+      "allLanguages": "Todos los idiomas",
+      "allStatuses": "Todos los estados",
+      "keyColumn": "Clave",
+      "languageColumn": "Idioma",
+      "valueColumn": "Valor",
+      "statusColumn": "Estado",
+      "actionsColumn": "Acciones",
+      "statusPending": "Pendiente de revisión",
+      "statusApproved": "Aprobado",
+      "statusRejected": "Rechazado",
+      "approve": "Aprobar",
+      "reject": "Rechazar",
+      "noTranslations": "No se encontraron traducciones",
+      "editTranslation": "Editar traducción",
+      "newTranslation": "Nueva traducción",
+      "keyLabel": "Clave de traducción",
+      "keyPlaceholder": "ej. login.titulo",
+      "languageLabel": "Idioma",
+      "valueLabel": "Valor traducido",
+      "valuePlaceholder": "Ingrese la traducción…",
+      "notesLabel": "Notas (opcional)",
+      "notesPlaceholder": "Contexto o notas para los revisores…",
+      "submitForReview": "Enviar para revisión",
+      "saveApproved": "Guardar y aprobar",
+      "deleteConfirm": "¿Está seguro de que desea eliminar esta traducción?",
+      "saveSuccess": "Traducción guardada con éxito",
+      "deleteSuccess": "Traducción eliminada",
+      "approveSuccess": "Traducción aprobada",
+      "rejectSuccess": "Traducción rechazada"
+    }
+  },
+  "footer": {
+    "copyright": "Axiom – Datos estáticos de servicios financieros"
+  }
+}

@@ -3,7 +3,10 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useTranslation } from 'react-i18next'
+import '../lib/i18n'
 import ThemeToggle from '../components/ThemeToggle'
+import LanguageSelector from '../components/LanguageSelector'
 
 const API_BASE_URL =
   typeof window !== 'undefined'
@@ -12,6 +15,7 @@ const API_BASE_URL =
 
 export default function LoginPage() {
   const router = useRouter()
+  const { t } = useTranslation('common')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -32,7 +36,7 @@ export default function LoginPage() {
       const data = await res.json()
 
       if (!res.ok) {
-        setError(data.error || 'Login failed')
+        setError(data.error || t('login.errorGeneric'))
         return
       }
 
@@ -47,7 +51,7 @@ export default function LoginPage() {
         router.push('/home')
       }
     } catch {
-      setError('Network error – please try again')
+      setError(t('login.errorNetwork'))
     } finally {
       setLoading(false)
     }
@@ -58,16 +62,19 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         <div className="flex justify-between items-center mb-8">
           <Link href="/" className="text-blue-400 hover:text-blue-300 text-sm">
-            ← Back to Home
+            {t('nav.backToHome')}
           </Link>
-          <ThemeToggle />
+          <div className="flex items-center gap-2">
+            <LanguageSelector compact />
+            <ThemeToggle />
+          </div>
         </div>
 
         <div className="bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm rounded-lg shadow-lg p-8">
           <div className="text-center mb-6">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Sign In</h1>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{t('login.title')}</h1>
             <p className="text-gray-500 dark:text-gray-400 text-sm">
-              Sign in to access protected Axiom features
+              {t('login.subtitle')}
             </p>
           </div>
 
@@ -83,7 +90,7 @@ export default function LoginPage() {
                 htmlFor="email"
                 className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
               >
-                Email address
+                {t('login.emailLabel')}
               </label>
               <input
                 id="email"
@@ -93,7 +100,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-white/20 rounded-md bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="you@example.com"
+                placeholder={t('login.emailPlaceholder')}
               />
             </div>
 
@@ -102,7 +109,7 @@ export default function LoginPage() {
                 htmlFor="password"
                 className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
               >
-                Password
+                {t('login.passwordLabel')}
               </label>
               <input
                 id="password"
@@ -112,7 +119,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-white/20 rounded-md bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="••••••••"
+                placeholder={t('login.passwordPlaceholder')}
               />
             </div>
 
@@ -121,17 +128,17 @@ export default function LoginPage() {
               disabled={loading}
               className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             >
-              {loading ? 'Signing in…' : 'Sign in'}
+              {loading ? t('login.submittingButton') : t('login.submitButton')}
             </button>
           </form>
 
           <div className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
-            Don&apos;t have an account?{' '}
+            {t('login.noAccount')}{' '}
             <Link
               href="/register"
               className="text-blue-500 hover:text-blue-400 font-medium"
             >
-              Request access
+              {t('login.requestAccessLink')}
             </Link>
           </div>
         </div>
@@ -139,3 +146,4 @@ export default function LoginPage() {
     </main>
   )
 }
+

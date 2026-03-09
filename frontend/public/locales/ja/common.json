@@ -1,0 +1,121 @@
+{
+  "nav": {
+    "backToHome": "← ホームへ戻る",
+    "backToLogin": "← ログインへ戻る",
+    "signIn": "サインイン",
+    "requestAccess": "アクセスを申請"
+  },
+  "login": {
+    "title": "サインイン",
+    "subtitle": "Axiomの保護された機能にアクセスするにはサインインしてください",
+    "emailLabel": "メールアドレス",
+    "emailPlaceholder": "you@example.com",
+    "passwordLabel": "パスワード",
+    "passwordPlaceholder": "••••••••",
+    "submitButton": "サインイン",
+    "submittingButton": "サインイン中…",
+    "noAccount": "アカウントをお持ちでない方は",
+    "requestAccessLink": "アクセスを申請",
+    "errorGeneric": "ログインに失敗しました",
+    "errorNetwork": "ネットワークエラー – もう一度お試しください"
+  },
+  "register": {
+    "title": "アクセスを申請",
+    "subtitle": "Axiomアカウントの申請を送信してください。管理者が審査・承認します。",
+    "fullNameLabel": "氏名",
+    "fullNamePlaceholder": "田中 太郎",
+    "emailLabel": "メールアドレス",
+    "emailPlaceholder": "taro@example.com",
+    "usernameLabel": "ユーザー名",
+    "usernamePlaceholder": "tanaka",
+    "passwordLabel": "パスワード",
+    "passwordPlaceholder": "8文字以上",
+    "confirmPasswordLabel": "パスワードの確認",
+    "confirmPasswordPlaceholder": "パスワードを再入力",
+    "submitButton": "申請を送信",
+    "submittingButton": "送信中…",
+    "alreadyHaveAccount": "すでにアカウントをお持ちの方は",
+    "signInLink": "サインイン",
+    "errorPasswordMatch": "パスワードが一致しません",
+    "errorPasswordLength": "パスワードは8文字以上で入力してください",
+    "errorGeneric": "登録に失敗しました",
+    "errorNetwork": "ネットワークエラー – もう一度お試しください",
+    "required": "*"
+  },
+  "register_success": {
+    "title": "申請が送信されました",
+    "message": "アカウントの申請が正常に送信されました。管理者がアカウントを審査・承認します。承認後にログインできるようになります。",
+    "backToLogin": "ログインへ戻る"
+  },
+  "language": {
+    "selectLanguage": "言語を選択",
+    "currentLanguage": "言語",
+    "english": "英語",
+    "french": "フランス語",
+    "spanish": "スペイン語",
+    "german": "ドイツ語",
+    "japanese": "日本語",
+    "arabic": "アラビア語"
+  },
+  "theme": {
+    "toggle": "テーマを切り替える"
+  },
+  "common": {
+    "loading": "読み込み中…",
+    "error": "エラー",
+    "save": "保存",
+    "cancel": "キャンセル",
+    "close": "閉じる",
+    "delete": "削除",
+    "edit": "編集",
+    "add": "追加",
+    "search": "検索",
+    "filter": "フィルター",
+    "clear": "クリア",
+    "clearFilters": "フィルターをクリア",
+    "noResults": "結果が見つかりません",
+    "required": "必須"
+  },
+  "admin": {
+    "translations": {
+      "title": "翻訳",
+      "subtitle": "サポートされているすべての言語でUIの翻訳文字列を管理する",
+      "addTranslation": "翻訳を追加",
+      "searchPlaceholder": "キーまたは値で検索…",
+      "filterByLanguage": "言語でフィルター",
+      "filterByStatus": "ステータスでフィルター",
+      "allLanguages": "すべての言語",
+      "allStatuses": "すべてのステータス",
+      "keyColumn": "キー",
+      "languageColumn": "言語",
+      "valueColumn": "値",
+      "statusColumn": "ステータス",
+      "actionsColumn": "アクション",
+      "statusPending": "レビュー待ち",
+      "statusApproved": "承認済み",
+      "statusRejected": "却下",
+      "approve": "承認",
+      "reject": "却下",
+      "noTranslations": "翻訳が見つかりません",
+      "editTranslation": "翻訳を編集",
+      "newTranslation": "新しい翻訳",
+      "keyLabel": "翻訳キー",
+      "keyPlaceholder": "例: login.title",
+      "languageLabel": "言語",
+      "valueLabel": "翻訳された値",
+      "valuePlaceholder": "翻訳を入力…",
+      "notesLabel": "メモ（任意）",
+      "notesPlaceholder": "レビュアーへのコンテキストやメモ…",
+      "submitForReview": "レビューに送信",
+      "saveApproved": "保存して承認",
+      "deleteConfirm": "この翻訳を削除してもよろしいですか？",
+      "saveSuccess": "翻訳が正常に保存されました",
+      "deleteSuccess": "翻訳が削除されました",
+      "approveSuccess": "翻訳が承認されました",
+      "rejectSuccess": "翻訳が却下されました"
+    }
+  },
+  "footer": {
+    "copyright": "Axiom – 金融サービス静的データ"
+  }
+}

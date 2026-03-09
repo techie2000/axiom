@@ -1,0 +1,121 @@
+{
+  "nav": {
+    "backToHome": "← Back to Home",
+    "backToLogin": "← Back to Login",
+    "signIn": "Sign In",
+    "requestAccess": "Request Access"
+  },
+  "login": {
+    "title": "Sign In",
+    "subtitle": "Sign in to access protected Axiom features",
+    "emailLabel": "Email address",
+    "emailPlaceholder": "you@example.com",
+    "passwordLabel": "Password",
+    "passwordPlaceholder": "••••••••",
+    "submitButton": "Sign in",
+    "submittingButton": "Signing in…",
+    "noAccount": "Don't have an account?",
+    "requestAccessLink": "Request access",
+    "errorGeneric": "Login failed",
+    "errorNetwork": "Network error – please try again"
+  },
+  "register": {
+    "title": "Request Access",
+    "subtitle": "Submit a request for an Axiom account. An administrator will review and approve it.",
+    "fullNameLabel": "Full name",
+    "fullNamePlaceholder": "Jane Smith",
+    "emailLabel": "Email address",
+    "emailPlaceholder": "jane@example.com",
+    "usernameLabel": "Username",
+    "usernamePlaceholder": "jsmith",
+    "passwordLabel": "Password",
+    "passwordPlaceholder": "At least 8 characters",
+    "confirmPasswordLabel": "Confirm password",
+    "confirmPasswordPlaceholder": "Repeat password",
+    "submitButton": "Submit request",
+    "submittingButton": "Submitting…",
+    "alreadyHaveAccount": "Already have an account?",
+    "signInLink": "Sign in",
+    "errorPasswordMatch": "Passwords do not match",
+    "errorPasswordLength": "Password must be at least 8 characters",
+    "errorGeneric": "Registration failed",
+    "errorNetwork": "Network error – please try again",
+    "required": "*"
+  },
+  "register_success": {
+    "title": "Request Submitted",
+    "message": "Your account request has been submitted successfully. An administrator will review and approve your account. You will be able to log in once your account is approved.",
+    "backToLogin": "Back to Login"
+  },
+  "language": {
+    "selectLanguage": "Select language",
+    "currentLanguage": "Language",
+    "english": "English",
+    "french": "French",
+    "spanish": "Spanish",
+    "german": "German",
+    "japanese": "Japanese",
+    "arabic": "Arabic"
+  },
+  "theme": {
+    "toggle": "Toggle theme"
+  },
+  "common": {
+    "loading": "Loading…",
+    "error": "Error",
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "search": "Search",
+    "filter": "Filter",
+    "clear": "Clear",
+    "clearFilters": "Clear Filters",
+    "noResults": "No results found",
+    "required": "Required"
+  },
+  "admin": {
+    "translations": {
+      "title": "Translations",
+      "subtitle": "Manage UI translation strings across all supported languages",
+      "addTranslation": "Add Translation",
+      "searchPlaceholder": "Search by key or value…",
+      "filterByLanguage": "Filter by language",
+      "filterByStatus": "Filter by status",
+      "allLanguages": "All Languages",
+      "allStatuses": "All Statuses",
+      "keyColumn": "Key",
+      "languageColumn": "Language",
+      "valueColumn": "Value",
+      "statusColumn": "Status",
+      "actionsColumn": "Actions",
+      "statusPending": "Pending Review",
+      "statusApproved": "Approved",
+      "statusRejected": "Rejected",
+      "approve": "Approve",
+      "reject": "Reject",
+      "noTranslations": "No translations found",
+      "editTranslation": "Edit Translation",
+      "newTranslation": "New Translation",
+      "keyLabel": "Translation Key",
+      "keyPlaceholder": "e.g. login.title",
+      "languageLabel": "Language",
+      "valueLabel": "Translated Value",
+      "valuePlaceholder": "Enter translation…",
+      "notesLabel": "Notes (optional)",
+      "notesPlaceholder": "Context or notes for reviewers…",
+      "submitForReview": "Submit for Review",
+      "saveApproved": "Save & Approve",
+      "deleteConfirm": "Are you sure you want to delete this translation?",
+      "saveSuccess": "Translation saved successfully",
+      "deleteSuccess": "Translation deleted",
+      "approveSuccess": "Translation approved",
+      "rejectSuccess": "Translation rejected"
+    }
+  },
+  "footer": {
+    "copyright": "Axiom – Financial Services Static Data"
+  }
+}

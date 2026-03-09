@@ -13,18 +13,19 @@ import (
 
 // Handlers holds all handler groups
 type Handlers struct {
-	Auth           *AuthHandler
-	Country        *CountryHandler
-	Currency       *CurrencyHandler
-	Language       *LanguageHandler
-	Entity         *EntityHandler
-	Instrument     *InstrumentHandler
-	Account        *AccountHandler
-	SSI            *SSIHandler
-	LEI            *LEIHandler
+	Auth            *AuthHandler
+	Country         *CountryHandler
+	Currency        *CurrencyHandler
+	Language        *LanguageHandler
+	Entity          *EntityHandler
+	Instrument      *InstrumentHandler
+	Account         *AccountHandler
+	SSI             *SSIHandler
+	LEI             *LEIHandler
 	DataAcquisition *DataAcquisitionHandler
-	CodeMapping    *CodeMappingHandler
-	UserPreference *UserPreferenceHandler
+	CodeMapping     *CodeMappingHandler
+	UserPreference  *UserPreferenceHandler
+	UITranslation   *UITranslationHandler
 }
 
 // NewHandlers creates a new handlers instance
@@ -42,6 +43,7 @@ func NewHandlers(services *service.Services, schedulerService service.SchedulerS
 		DataAcquisition: NewDataAcquisitionHandler(),
 		CodeMapping:     NewCodeMappingHandler(services.CodeMapping),
 		UserPreference:  NewUserPreferenceHandler(services.UserPreference),
+		UITranslation:   NewUITranslationHandler(services.UITranslation),
 	}
 }
 
@@ -1282,5 +1284,146 @@ func (h *UserPreferenceHandler) DeletePreference(c *gin.Context) {
 		return
 	}
 
+	c.Status(http.StatusNoContent)
+}
+
+// UITranslationHandler handles translation management endpoints.
+type UITranslationHandler struct {
+	svc service.UITranslationService
+}
+
+// NewUITranslationHandler creates a new UITranslationHandler.
+func NewUITranslationHandler(svc service.UITranslationService) *UITranslationHandler {
+	return &UITranslationHandler{svc: svc}
+}
+
+// translationListResponse wraps a paginated list of translations.
+type translationListResponse struct {
+	Total   int64                   `json:"total"`
+	Records []*domain.UITranslation `json:"records"`
+}
+
+// submitTranslationRequest is the request body for POST /translations.
+type submitTranslationRequest struct {
+	TranslationKey   string `json:"translation_key" binding:"required"`
+	LanguageCode     string `json:"language_code" binding:"required"`
+	TranslationValue string `json:"translation_value" binding:"required"`
+	Notes            string `json:"notes"`
+}
+
+// ListTranslations godoc
+// @Summary List UI translations
+// @Description Return a paginated list of translation strings, optionally filtered by language, status, or search text
+// @Tags translations
+// @Produce json
+// @Param language query string false "Filter by ISO 639-1 language code (e.g. fr, es)"
+// @Param status    query string false "Filter by status (pending, approved, rejected)"
+// @Param search    query string false "Search by key or value substring"
+// @Param limit     query int    false "Maximum records to return (default 50)"
+// @Param offset    query int    false "Offset for pagination (default 0)"
+// @Success 200 {object} translationListResponse
+// @Router /translations [get]
+func (h *UITranslationHandler) ListTranslations(c *gin.Context) {
+	lang := c.Query("language")
+	status := c.Query("status")
+	search := c.Query("search")
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
+	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	if limit <= 0 || limit > 200 {
+		limit = 50
+	}
+
+	records, total, err := h.svc.List(lang, status, search, limit, offset)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list translations"})
+		return
+	}
+	c.JSON(http.StatusOK, translationListResponse{Total: total, Records: records})
+}
+
+// SubmitTranslation godoc
+// @Summary Submit a translation for review
+// @Description Create or update a translation string and mark it as pending review
+// @Tags translations
+// @Accept json
+// @Produce json
+// @Param translation body submitTranslationRequest true "Translation details"
+// @Success 201 {object} domain.UITranslation
+// @Security BearerAuth
+// @Router /translations [post]
+func (h *UITranslationHandler) SubmitTranslation(c *gin.Context) {
+	var req submitTranslationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	userID := extractUserID(c)
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		return
+	}
+
+	t, err := h.svc.Submit(req.TranslationKey, req.LanguageCode, req.TranslationValue, req.Notes, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to submit translation"})
+		return
+	}
+	c.JSON(http.StatusCreated, t)
+}
+
+// ApproveTranslation godoc
+// @Summary Approve a translation
+// @Description Mark a pending translation as approved (admin only)
+// @Tags translations
+// @Produce json
+// @Param id path string true "Translation UUID"
+// @Success 204
+// @Security BearerAuth
+// @Router /translations/{id}/approve [post]
+func (h *UITranslationHandler) ApproveTranslation(c *gin.Context) {
+	id := c.Param("id")
+	userID := extractUserID(c)
+	if err := h.svc.Approve(id, userID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to approve translation"})
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+// RejectTranslation godoc
+// @Summary Reject a translation
+// @Description Mark a pending translation as rejected (admin only)
+// @Tags translations
+// @Produce json
+// @Param id path string true "Translation UUID"
+// @Success 204
+// @Security BearerAuth
+// @Router /translations/{id}/reject [post]
+func (h *UITranslationHandler) RejectTranslation(c *gin.Context) {
+	id := c.Param("id")
+	userID := extractUserID(c)
+	if err := h.svc.Reject(id, userID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to reject translation"})
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+// DeleteTranslation godoc
+// @Summary Delete a translation
+// @Description Remove a translation by its UUID (admin only)
+// @Tags translations
+// @Produce json
+// @Param id path string true "Translation UUID"
+// @Success 204
+// @Security BearerAuth
+// @Router /translations/{id} [delete]
+func (h *UITranslationHandler) DeleteTranslation(c *gin.Context) {
+	id := c.Param("id")
+	if err := h.svc.Delete(id); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete translation"})
+		return
+	}
 	c.Status(http.StatusNoContent)
 }

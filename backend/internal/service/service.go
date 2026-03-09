@@ -24,6 +24,7 @@ type Services struct {
 	MasterData     MasterDataService
 	CodeMapping    CodeMappingService
 	UserPreference UserPreferenceService
+	UITranslation  UITranslationService
 }
 
 // NewServices creates a new services instance
@@ -42,6 +43,7 @@ func NewServices(repos *repository.Repositories, db *gorm.DB, leiDataDir string,
 		MasterData:     NewMasterDataService(db, masterDataDir),
 		CodeMapping:    NewCodeMappingService(repos.CodeMapping),
 		UserPreference: NewUserPreferenceService(repos.UserPreference),
+		UITranslation:  NewUITranslationService(repos.UITranslation),
 	}
 }
 

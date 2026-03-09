@@ -1,0 +1,121 @@
+{
+  "nav": {
+    "backToHome": "→ العودة إلى الرئيسية",
+    "backToLogin": "→ العودة إلى تسجيل الدخول",
+    "signIn": "تسجيل الدخول",
+    "requestAccess": "طلب الوصول"
+  },
+  "login": {
+    "title": "تسجيل الدخول",
+    "subtitle": "سجّل دخولك للوصول إلى ميزات Axiom المحمية",
+    "emailLabel": "عنوان البريد الإلكتروني",
+    "emailPlaceholder": "you@example.com",
+    "passwordLabel": "كلمة المرور",
+    "passwordPlaceholder": "••••••••",
+    "submitButton": "تسجيل الدخول",
+    "submittingButton": "جارٍ تسجيل الدخول…",
+    "noAccount": "ليس لديك حساب؟",
+    "requestAccessLink": "طلب الوصول",
+    "errorGeneric": "فشل تسجيل الدخول",
+    "errorNetwork": "خطأ في الشبكة – يرجى المحاولة مرة أخرى"
+  },
+  "register": {
+    "title": "طلب الوصول",
+    "subtitle": "أرسل طلباً للحصول على حساب Axiom. سيقوم المسؤول بمراجعته والموافقة عليه.",
+    "fullNameLabel": "الاسم الكامل",
+    "fullNamePlaceholder": "محمد علي",
+    "emailLabel": "عنوان البريد الإلكتروني",
+    "emailPlaceholder": "mohammed@example.com",
+    "usernameLabel": "اسم المستخدم",
+    "usernamePlaceholder": "mali",
+    "passwordLabel": "كلمة المرور",
+    "passwordPlaceholder": "8 أحرف على الأقل",
+    "confirmPasswordLabel": "تأكيد كلمة المرور",
+    "confirmPasswordPlaceholder": "أعد إدخال كلمة المرور",
+    "submitButton": "إرسال الطلب",
+    "submittingButton": "جارٍ الإرسال…",
+    "alreadyHaveAccount": "هل لديك حساب بالفعل؟",
+    "signInLink": "تسجيل الدخول",
+    "errorPasswordMatch": "كلمتا المرور غير متطابقتين",
+    "errorPasswordLength": "يجب أن تكون كلمة المرور 8 أحرف على الأقل",
+    "errorGeneric": "فشل التسجيل",
+    "errorNetwork": "خطأ في الشبكة – يرجى المحاولة مرة أخرى",
+    "required": "*"
+  },
+  "register_success": {
+    "title": "تم إرسال الطلب",
+    "message": "تم إرسال طلب الحساب بنجاح. سيقوم المسؤول بمراجعة حسابك والموافقة عليه. ستتمكن من تسجيل الدخول بعد الموافقة على حسابك.",
+    "backToLogin": "العودة إلى تسجيل الدخول"
+  },
+  "language": {
+    "selectLanguage": "اختر اللغة",
+    "currentLanguage": "اللغة",
+    "english": "الإنجليزية",
+    "french": "الفرنسية",
+    "spanish": "الإسبانية",
+    "german": "الألمانية",
+    "japanese": "اليابانية",
+    "arabic": "العربية"
+  },
+  "theme": {
+    "toggle": "تبديل السمة"
+  },
+  "common": {
+    "loading": "جارٍ التحميل…",
+    "error": "خطأ",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "close": "إغلاق",
+    "delete": "حذف",
+    "edit": "تعديل",
+    "add": "إضافة",
+    "search": "بحث",
+    "filter": "تصفية",
+    "clear": "مسح",
+    "clearFilters": "مسح الفلاتر",
+    "noResults": "لم يتم العثور على نتائج",
+    "required": "مطلوب"
+  },
+  "admin": {
+    "translations": {
+      "title": "الترجمات",
+      "subtitle": "إدارة سلاسل ترجمة واجهة المستخدم عبر جميع اللغات المدعومة",
+      "addTranslation": "إضافة ترجمة",
+      "searchPlaceholder": "البحث بالمفتاح أو القيمة…",
+      "filterByLanguage": "التصفية حسب اللغة",
+      "filterByStatus": "التصفية حسب الحالة",
+      "allLanguages": "جميع اللغات",
+      "allStatuses": "جميع الحالات",
+      "keyColumn": "المفتاح",
+      "languageColumn": "اللغة",
+      "valueColumn": "القيمة",
+      "statusColumn": "الحالة",
+      "actionsColumn": "الإجراءات",
+      "statusPending": "قيد المراجعة",
+      "statusApproved": "تمت الموافقة",
+      "statusRejected": "مرفوض",
+      "approve": "موافقة",
+      "reject": "رفض",
+      "noTranslations": "لم يتم العثور على ترجمات",
+      "editTranslation": "تعديل الترجمة",
+      "newTranslation": "ترجمة جديدة",
+      "keyLabel": "مفتاح الترجمة",
+      "keyPlaceholder": "مثال: login.title",
+      "languageLabel": "اللغة",
+      "valueLabel": "القيمة المترجمة",
+      "valuePlaceholder": "أدخل الترجمة…",
+      "notesLabel": "ملاحظات (اختياري)",
+      "notesPlaceholder": "سياق أو ملاحظات للمراجعين…",
+      "submitForReview": "إرسال للمراجعة",
+      "saveApproved": "حفظ والموافقة",
+      "deleteConfirm": "هل أنت متأكد أنك تريد حذف هذه الترجمة؟",
+      "saveSuccess": "تم حفظ الترجمة بنجاح",
+      "deleteSuccess": "تم حذف الترجمة",
+      "approveSuccess": "تمت الموافقة على الترجمة",
+      "rejectSuccess": "تم رفض الترجمة"
+    }
+  },
+  "footer": {
+    "copyright": "Axiom – البيانات الثابتة للخدمات المالية"
+  }
+}

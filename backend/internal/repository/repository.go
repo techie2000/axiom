@@ -19,6 +19,7 @@ type Repositories struct {
 	CodeMapping    CodeMappingRepository
 	User           UserRepository
 	UserPreference UserPreferenceRepository
+	UITranslation  UITranslationRepository
 }
 
 // NewRepositories creates a new repositories instance
@@ -36,6 +37,7 @@ func NewRepositories(db *gorm.DB) *Repositories {
 		CodeMapping:    NewCodeMappingRepository(db),
 		User:           NewUserRepository(db),
 		UserPreference: NewUserPreferenceRepository(db),
+		UITranslation:  NewUITranslationRepository(db),
 	}
 }
 
@@ -535,4 +537,86 @@ func (r *userPreferenceRepository) Delete(userID, pageKey, preferenceKey string)
 	return r.db.
 		Where("user_id = ? AND page_key = ? AND preference_key = ?", userID, pageKey, preferenceKey).
 		Delete(&domain.UserPreference{}).Error
+}
+
+// UITranslationRepository interface
+type UITranslationRepository interface {
+	// List returns translations filtered by optional language and status.
+	List(languageCode, status, search string, limit, offset int) ([]*domain.UITranslation, int64, error)
+	// FindByID returns a single translation by primary key.
+	FindByID(id string) (*domain.UITranslation, error)
+	// Upsert creates or updates a translation by (translation_key, language_code).
+	Upsert(t *domain.UITranslation) error
+	// UpdateStatus changes the review status and records the reviewer.
+	UpdateStatus(id string, status domain.TranslationStatus, reviewerID string) error
+	// Delete removes a translation by primary key.
+	Delete(id string) error
+}
+
+type uiTranslationRepository struct {
+	db *gorm.DB
+}
+
+// NewUITranslationRepository creates a new UITranslationRepository.
+func NewUITranslationRepository(db *gorm.DB) UITranslationRepository {
+	return &uiTranslationRepository{db: db}
+}
+
+func (r *uiTranslationRepository) List(languageCode, status, search string, limit, offset int) ([]*domain.UITranslation, int64, error) {
+	q := r.db.Model(&domain.UITranslation{})
+	if languageCode != "" {
+		q = q.Where("language_code = ?", languageCode)
+	}
+	if status != "" {
+		q = q.Where("status = ?", status)
+	}
+	if search != "" {
+		like := "%" + search + "%"
+		q = q.Where("translation_key ILIKE ? OR translation_value ILIKE ?", like, like)
+	}
+	var total int64
+	if err := q.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	var results []*domain.UITranslation
+	if err := q.Order("translation_key, language_code").Limit(limit).Offset(offset).Find(&results).Error; err != nil {
+		return nil, 0, err
+	}
+	return results, total, nil
+}
+
+func (r *uiTranslationRepository) FindByID(id string) (*domain.UITranslation, error) {
+	var t domain.UITranslation
+	if err := r.db.First(&t, "id = ?", id).Error; err != nil {
+		return nil, err
+	}
+	return &t, nil
+}
+
+func (r *uiTranslationRepository) Upsert(t *domain.UITranslation) error {
+	return r.db.
+		Where(domain.UITranslation{TranslationKey: t.TranslationKey, LanguageCode: t.LanguageCode}).
+		Assign(domain.UITranslation{
+			TranslationValue: t.TranslationValue,
+			Status:           t.Status,
+			Notes:            t.Notes,
+			SubmittedBy:      t.SubmittedBy,
+		}).
+		FirstOrCreate(t).Error
+}
+
+func (r *uiTranslationRepository) UpdateStatus(id string, status domain.TranslationStatus, reviewerID string) error {
+	updates := map[string]interface{}{
+		"status":      status,
+		"updated_at":  gorm.Expr("NOW()"),
+		"reviewed_at": gorm.Expr("NOW()"),
+	}
+	if reviewerID != "" {
+		updates["reviewed_by"] = reviewerID
+	}
+	return r.db.Model(&domain.UITranslation{}).Where("id = ?", id).Updates(updates).Error
+}
+
+func (r *uiTranslationRepository) Delete(id string) error {
+	return r.db.Delete(&domain.UITranslation{}, "id = ?", id).Error
 }

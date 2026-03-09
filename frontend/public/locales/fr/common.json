@@ -1,0 +1,121 @@
+{
+  "nav": {
+    "backToHome": "← Retour à l'accueil",
+    "backToLogin": "← Retour à la connexion",
+    "signIn": "Connexion",
+    "requestAccess": "Demander l'accès"
+  },
+  "login": {
+    "title": "Connexion",
+    "subtitle": "Connectez-vous pour accéder aux fonctionnalités protégées d'Axiom",
+    "emailLabel": "Adresse e-mail",
+    "emailPlaceholder": "vous@exemple.com",
+    "passwordLabel": "Mot de passe",
+    "passwordPlaceholder": "••••••••",
+    "submitButton": "Se connecter",
+    "submittingButton": "Connexion en cours…",
+    "noAccount": "Vous n'avez pas de compte ?",
+    "requestAccessLink": "Demander l'accès",
+    "errorGeneric": "Échec de la connexion",
+    "errorNetwork": "Erreur réseau – veuillez réessayer"
+  },
+  "register": {
+    "title": "Demander l'accès",
+    "subtitle": "Soumettez une demande de compte Axiom. Un administrateur l'examinera et l'approuvera.",
+    "fullNameLabel": "Nom complet",
+    "fullNamePlaceholder": "Jane Dupont",
+    "emailLabel": "Adresse e-mail",
+    "emailPlaceholder": "jane@exemple.com",
+    "usernameLabel": "Nom d'utilisateur",
+    "usernamePlaceholder": "jdupont",
+    "passwordLabel": "Mot de passe",
+    "passwordPlaceholder": "Au moins 8 caractères",
+    "confirmPasswordLabel": "Confirmer le mot de passe",
+    "confirmPasswordPlaceholder": "Répéter le mot de passe",
+    "submitButton": "Soumettre la demande",
+    "submittingButton": "Envoi en cours…",
+    "alreadyHaveAccount": "Vous avez déjà un compte ?",
+    "signInLink": "Se connecter",
+    "errorPasswordMatch": "Les mots de passe ne correspondent pas",
+    "errorPasswordLength": "Le mot de passe doit comporter au moins 8 caractères",
+    "errorGeneric": "Échec de l'inscription",
+    "errorNetwork": "Erreur réseau – veuillez réessayer",
+    "required": "*"
+  },
+  "register_success": {
+    "title": "Demande soumise",
+    "message": "Votre demande de compte a été soumise avec succès. Un administrateur l'examinera et approuvera votre compte. Vous pourrez vous connecter une fois votre compte approuvé.",
+    "backToLogin": "Retour à la connexion"
+  },
+  "language": {
+    "selectLanguage": "Choisir la langue",
+    "currentLanguage": "Langue",
+    "english": "Anglais",
+    "french": "Français",
+    "spanish": "Espagnol",
+    "german": "Allemand",
+    "japanese": "Japonais",
+    "arabic": "Arabe"
+  },
+  "theme": {
+    "toggle": "Changer le thème"
+  },
+  "common": {
+    "loading": "Chargement…",
+    "error": "Erreur",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "close": "Fermer",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "add": "Ajouter",
+    "search": "Rechercher",
+    "filter": "Filtrer",
+    "clear": "Effacer",
+    "clearFilters": "Effacer les filtres",
+    "noResults": "Aucun résultat trouvé",
+    "required": "Requis"
+  },
+  "admin": {
+    "translations": {
+      "title": "Traductions",
+      "subtitle": "Gérez les chaînes de traduction de l'interface utilisateur dans toutes les langues prises en charge",
+      "addTranslation": "Ajouter une traduction",
+      "searchPlaceholder": "Rechercher par clé ou valeur…",
+      "filterByLanguage": "Filtrer par langue",
+      "filterByStatus": "Filtrer par statut",
+      "allLanguages": "Toutes les langues",
+      "allStatuses": "Tous les statuts",
+      "keyColumn": "Clé",
+      "languageColumn": "Langue",
+      "valueColumn": "Valeur",
+      "statusColumn": "Statut",
+      "actionsColumn": "Actions",
+      "statusPending": "En attente de révision",
+      "statusApproved": "Approuvé",
+      "statusRejected": "Rejeté",
+      "approve": "Approuver",
+      "reject": "Rejeter",
+      "noTranslations": "Aucune traduction trouvée",
+      "editTranslation": "Modifier la traduction",
+      "newTranslation": "Nouvelle traduction",
+      "keyLabel": "Clé de traduction",
+      "keyPlaceholder": "ex. login.titre",
+      "languageLabel": "Langue",
+      "valueLabel": "Valeur traduite",
+      "valuePlaceholder": "Saisir la traduction…",
+      "notesLabel": "Notes (facultatif)",
+      "notesPlaceholder": "Contexte ou notes pour les réviseurs…",
+      "submitForReview": "Soumettre pour révision",
+      "saveApproved": "Enregistrer et approuver",
+      "deleteConfirm": "Êtes-vous sûr de vouloir supprimer cette traduction ?",
+      "saveSuccess": "Traduction enregistrée avec succès",
+      "deleteSuccess": "Traduction supprimée",
+      "approveSuccess": "Traduction approuvée",
+      "rejectSuccess": "Traduction rejetée"
+    }
+  },
+  "footer": {
+    "copyright": "Axiom – Données statiques des services financiers"
+  }
+}
