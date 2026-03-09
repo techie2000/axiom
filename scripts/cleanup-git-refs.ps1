@@ -158,9 +158,12 @@ function Remove-EmptyDirectoryWithRetry {
                 }
             }
 
-            if ($PSCmdlet.ShouldProcess($Path, 'Remove empty directory')) {
-                Remove-Item -LiteralPath $Path -Force -ErrorAction Stop
+            if ($WhatIfPreference) {
+                Write-Host "What if: remove empty directory '$Path'" -ForegroundColor DarkGray
+                return 'WHATIF'
             }
+
+            Remove-Item -LiteralPath $Path -Force -ErrorAction Stop
 
             Start-Sleep -Milliseconds 120
 
