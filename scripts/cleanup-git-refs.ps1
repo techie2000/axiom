@@ -76,9 +76,10 @@ function Test-SafeRelativePath {
     if ([string]::IsNullOrWhiteSpace($RelPath)) { return $false }
     if ($RelPath -match '^[A-Za-z]:') { return $false }
     if ([System.IO.Path]::IsPathRooted($RelPath)) { return $false }
-    # Normalize separators and reject any path segment that is exactly '..'
+    # Normalize separators and reject any path segment that is exactly '.' or '..'
     $segments = ($RelPath -replace '\\', '/') -split '/' | Where-Object { $_ -ne '' }
     if ($segments -contains '..') { return $false }
+    if ($segments -contains '.') { return $false }
     return $true
 }
 
