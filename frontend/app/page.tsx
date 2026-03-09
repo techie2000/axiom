@@ -1,7 +1,59 @@
+'use client'
+
 import Link from 'next/link'
 import Image from 'next/image'
+import { useEffect, useState } from 'react'
 
 export default function Home() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [signedInAs, setSignedInAs] = useState<string | null>(null)
+
+  useEffect(() => {
+    const rawToken = localStorage.getItem('axiom_token')
+    const normalizedToken = rawToken?.replace(/^Bearer\s+/i, '').trim() ?? ''
+    const hasValidToken = normalizedToken !== '' && normalizedToken !== 'undefined' && normalizedToken !== 'null'
+    setIsAuthenticated(hasValidToken)
+
+    if (!hasValidToken) {
+      setSignedInAs(null)
+      return
+    }
+
+    const rawUser = localStorage.getItem('axiom_user')
+    if (!rawUser) {
+      setSignedInAs(null)
+      return
+    }
+
+    try {
+      const parsedUser = JSON.parse(rawUser) as {
+        full_name?: string
+        name?: string
+        username?: string
+        email?: string
+      }
+      const displayName =
+        (parsedUser.full_name || '').trim() ||
+        (parsedUser.name || '').trim() ||
+        (parsedUser.username || '').trim() ||
+        (parsedUser.email || '').trim()
+      const email = (parsedUser.email || '').trim()
+
+      if (!displayName) {
+        setSignedInAs(null)
+        return
+      }
+
+      const identity =
+        email && displayName.toLowerCase() !== email.toLowerCase()
+          ? `${displayName} (${email})`
+          : displayName
+      setSignedInAs(identity)
+    } catch {
+      setSignedInAs(null)
+    }
+  }, [])
+
   return (
     <main className="min-h-screen p-8">
       <div className="max-w-5xl mx-auto">
@@ -36,18 +88,28 @@ export default function Home() {
                 Welcome to Axiom
               </h2>
               <p className="text-gray-700 dark:text-gray-200 mb-6">
-                Choose where you want to go: sign in for protected features, or browse public
-                reference data.
+                {isAuthenticated
+                  ? 'Welcome back. Continue to your modules or browse public reference data.'
+                  : 'Choose where you want to go: sign in for protected features, or browse public reference data.'}
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Link
-                href="/login"
-                className="inline-flex items-center justify-center rounded-md bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 font-semibold transition-colors"
-              >
-                Sign In →
-              </Link>
+              {isAuthenticated ? (
+                <Link
+                  href="/dashboard"
+                  className="inline-flex items-center justify-center rounded-md bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 font-semibold transition-colors"
+                >
+                  Return to Dashboard →
+                </Link>
+              ) : (
+                <Link
+                  href="/login"
+                  className="inline-flex items-center justify-center rounded-md bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 font-semibold transition-colors"
+                >
+                  Sign In →
+                </Link>
+              )}
               <Link
                 href="/home"
                 className="inline-flex items-center justify-center rounded-md border-2 border-blue-500 text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 px-6 py-3 font-semibold transition-colors"
@@ -56,18 +118,10 @@ export default function Home() {
               </Link>
             </div>
             <div className="mt-6 text-sm text-gray-500 dark:text-gray-400">
-              Protected modules are available after sign-in.
+              {isAuthenticated
+                ? `You are signed in${signedInAs ? ` as ${signedInAs}` : ''}.`
+                : 'Protected modules are available after sign-in.'}
             </div>
-          </div>
-        </section>
-
-        <section>
-          <div className="text-sm text-gray-500 dark:text-gray-400">
-            Looking for public ISO and LEI reference datasets? Continue to{' '}
-            <Link href="/home" className="text-blue-500 hover:text-blue-400">
-              Public Reference Data
-            </Link>
-            .
           </div>
         </section>
       </div>
