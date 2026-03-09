@@ -1,5 +1,7 @@
 'use client'
 
+/* eslint-disable react-hooks/exhaustive-deps */
+
 import { useEffect, useState } from 'react'
 import Alert from '../components/Alert'
 import Badge from '../components/Badge'
@@ -32,6 +34,7 @@ export default function CodeMappingsPage() {
     ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080')
     : 'http://backend:8080'
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (typeof window !== 'undefined') {
       fetchMappings()
@@ -91,6 +94,8 @@ export default function CodeMappingsPage() {
         <PageHeader
           title="Code Mappings"
           subtitle="Cross-system code translation — map external codes (e.g., ALERT) to internal AXIOM identifiers"
+          backHref="/dashboard"
+          backLabel="← Back to Dashboard"
         />
 
         {/* Info box explaining the feature */}
@@ -169,25 +174,25 @@ export default function CodeMappingsPage() {
                 {filteredMappings.length > 0 ? (
                   filteredMappings.map((mapping) => (
                     <tr key={mapping.id} className="hover:bg-blue-50 dark:hover:bg-white/10 transition-colors">
-                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white text-center">
                         <Badge variant="orange" mono>{mapping.from_system}</Badge>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 font-mono text-xs">
                         {mapping.from_code_type}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-center">
                         <Badge variant="red" mono>{mapping.from_code}</Badge>
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white text-center">
                         <Badge variant="blue" mono>{mapping.to_system}</Badge>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 font-mono text-xs">
                         {mapping.to_code_type}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-center">
                         <Badge variant="green" mono>{mapping.to_code}</Badge>
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
                         <Badge variant={mapping.active ? 'green' : 'gray'}>
                           {mapping.active ? 'Active' : 'Inactive'}
                         </Badge>

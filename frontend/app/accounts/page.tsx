@@ -10,6 +10,8 @@ export default function AccountsPage() {
         <PageHeader
           title="Accounts"
           subtitle="Trading accounts and settlement instructions"
+          backHref="/dashboard"
+          backLabel="← Back to Dashboard"
         />
 
         {/* Coming Soon Card */}

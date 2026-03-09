@@ -34,6 +34,12 @@ Located in [contributing/](./contributing/):
 
 - [**UI Patterns Guide**](./ui-patterns.md) - Reusable frontend patterns and component templates ⭐ **For UI development**
 
+### 🖼️ Branding Assets
+
+Located in [assets/branding/](./assets/branding/):
+
+- [**Branding Assets README**](./assets/branding/README.md) - Source logo files and generated favicon/logo outputs
+
 ### 💳 SSI (Standard Settlement Instructions)
 
 Located in [ssi/](./ssi/):
@@ -171,4 +177,4 @@ When adding new documentation:
 
 ## Last Updated
 
-February 25, 2026
+March 6, 2026
