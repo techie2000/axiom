@@ -180,6 +180,17 @@ $normalizedGitRoot = [System.IO.Path]::GetFullPath($gitRoot).TrimEnd(
 ) + [System.IO.Path]::DirectorySeparatorChar
 
 foreach ($namespace in $Namespaces) {
+    # Guard against null/empty elements in the Namespaces array. Under Set-StrictMode -Version Latest,
+    # calling .Trim() on $null throws; treat such entries as unsafe and skip them.
+    if ([string]::IsNullOrWhiteSpace($namespace)) {
+        Write-Warning "[cleanup-git-refs] Skipping null/empty namespace entry."
+        $results += [pscustomobject]@{
+            Namespace = ''
+            Result    = 'SKIPPED_UNSAFE'
+        }
+        continue
+    }
+
     $normalized = $namespace.Trim('/')
 
     # Validate that the namespace is a safe relative path: reject '..' segments, rooted paths,
