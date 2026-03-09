@@ -743,7 +743,8 @@ export default function LEIRecordsPage() {
   // Fetch successor LEI name when modal opens
   useEffect(() => {
     const fetchSuccessorLeiName = async () => {
-      if (!selectedRecord?.successor_lei) {
+      const successorLeiCode = normalizeLeiCode(selectedRecord?.successor_lei || '')
+      if (!successorLeiCode) {
         setSuccessorLeiName(null)
         setSuccessorLeiNameLoading(false)
         return
@@ -753,7 +754,7 @@ export default function LEIRecordsPage() {
       setSuccessorLeiName(null)
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/v1/lei/${selectedRecord.successor_lei}`)
+        const response = await fetch(`${API_BASE_URL}/api/v1/lei/${successorLeiCode}`)
         if (response.ok) {
           const data = await response.json()
           setSuccessorLeiName(data.legal_name || null)
@@ -881,8 +882,8 @@ export default function LEIRecordsPage() {
       const uniqueSuccessorLeiCodes = Array.from(
         new Set(
           records
-            .filter((r) => r.successor_lei && r.successor_lei.trim() !== '')
-            .map((r) => r.successor_lei)
+            .map((r) => normalizeLeiCode(r.successor_lei || ''))
+            .filter((code) => code !== '')
         )
       )
 
@@ -922,6 +923,10 @@ export default function LEIRecordsPage() {
 
   const formatCellValue = (value: any, key: keyof LEIRecord): string => {
     return formatLEICellValue(value, key)
+  }
+
+  const normalizeLeiCode = (value: string): string => {
+    return (value || '').trim().toUpperCase()
   }
 
   const isVirtualColumnKey = (key: keyof LEIRecord): boolean => {
@@ -1662,6 +1667,10 @@ export default function LEIRecordsPage() {
                                 </div>
                               ) : isSuccessorLei ? (
                                 <div>
+                                  {(() => {
+                                    const normalizedSuccessorLei = normalizeLeiCode(String(value || ''))
+                                    return (
+                                      <>
                                   <button
                                     type="button"
                                     onClick={(event) => handleLinkedLeiClick(event, String(value || ''))}
@@ -1669,11 +1678,14 @@ export default function LEIRecordsPage() {
                                   >
                                     {formatCellValue(value, column.key)}
                                   </button>
-                                  {value && successorLeiNames.has(String(value)) && (
+                                  {normalizedSuccessorLei && successorLeiNames.has(normalizedSuccessorLei) && (
                                     <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                      {successorLeiNames.get(String(value))}
+                                      {successorLeiNames.get(normalizedSuccessorLei)}
                                     </div>
                                   )}
+                                      </>
+                                    )
+                                  })()}
                                 </div>
                               ) : isLegalName ? (
                                 <div>

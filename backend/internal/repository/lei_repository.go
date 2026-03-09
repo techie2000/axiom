@@ -121,7 +121,6 @@ func (r *leiRepository) FindPredecessorLEIsBySuccessor(lei string) ([]*domain.LE
 	if err := r.db.
 		Where("successor_lei = ?", strings.TrimSpace(lei)).
 		Order("updated_at desc").
-		Preload("SourceFile").
 		Find(&records).Error; err != nil {
 		return nil, err
 	}
