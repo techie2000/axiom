@@ -104,14 +104,47 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          duplicates=$(find backend/migrations -maxdepth 1 -name "*.up.sql" -type f \
-            | sed -E 's#.*/([0-9]+)_.*#\1#' \
-            | sort \
-            | uniq -d)
 
-          if [ -n "$duplicates" ]; then
-            echo "Duplicate migration version(s) found:"
-            echo "$duplicates"
+          # Check for duplicate version numbers within up migrations
+          up_versions_all=$(find backend/migrations -maxdepth 1 -name "*.up.sql" -type f \
+            | sed -E 's#.*/([0-9]+)_.*#\1#' \
+            | sort)
+
+          # Check for duplicate version numbers within down migrations
+          down_versions_all=$(find backend/migrations -maxdepth 1 -name "*.down.sql" -type f \
+            | sed -E 's#.*/([0-9]+)_.*#\1#' \
+            | sort)
+
+          up_duplicates=$(printf '%s\n' "$up_versions_all" | uniq -d)
+          down_duplicates=$(printf '%s\n' "$down_versions_all" | uniq -d)
+
+          if [ -n "$up_duplicates" ] || [ -n "$down_duplicates" ]; then
+            echo "Duplicate migration version numbers detected:"
+            [ -n "$up_duplicates" ] && echo "  Duplicate .up.sql versions: $up_duplicates"
+            [ -n "$down_duplicates" ] && echo "  Duplicate .down.sql versions: $down_duplicates"
+            exit 1
+          fi
+
+          # Ensure every version has exactly one up and one down migration
+          # sort -u ensures the inputs to comm are sorted unique lists
+          up_versions=$(printf '%s\n' "$up_versions_all" | sort -u)
+          down_versions=$(printf '%s\n' "$down_versions_all" | sort -u)
+
+          # Versions with an up but no matching down
+          missing_down=$(comm -23 <(printf '%s\n' "$up_versions") <(printf '%s\n' "$down_versions"))
+          # Versions with a down but no matching up
+          missing_up=$(comm -13 <(printf '%s\n' "$up_versions") <(printf '%s\n' "$down_versions"))
+
+          if [ -n "$missing_down" ] || [ -n "$missing_up" ]; then
+            echo "Migration up/down mismatch detected:"
+            if [ -n "$missing_down" ]; then
+              echo "  Versions with .up.sql but missing .down.sql:"
+              echo "$missing_down"
+            fi
+            if [ -n "$missing_up" ]; then
+              echo "  Versions with .down.sql but missing .up.sql:"
+              echo "$missing_up"
+            fi
             exit 1
           fi
 
