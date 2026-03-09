@@ -119,6 +119,7 @@ function Resolve-RepoRoot {
 }
 
 function Remove-EmptyDirectoryWithRetry {
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Medium')]
     param(
         [string]$Path,
         [int]$Retries,
@@ -158,9 +159,11 @@ function Remove-EmptyDirectoryWithRetry {
                 }
             }
 
-            if ($PSCmdlet.ShouldProcess($Path, 'Remove empty directory')) {
-                Remove-Item -LiteralPath $Path -Force -ErrorAction Stop
+            if (-not $PSCmdlet.ShouldProcess($Path, 'Remove empty directory')) {
+                return 'SKIPPED'
             }
+
+            Remove-Item -LiteralPath $Path -Force -ErrorAction Stop
 
             Start-Sleep -Milliseconds 120
 
@@ -299,7 +302,7 @@ foreach ($workspaceDir in $WorkspaceDirs) {
         continue
     }
 
-    $normalizedWorkspaceDir = $workspaceDir.Trim('/', '\\')
+    $normalizedWorkspaceDir = $workspaceDir.Trim([char]'/', [char]'\')
 
     $hasUnsafeWorkspaceChars = $normalizedWorkspaceDir -match '[\\]' -or ($IsWindows -and $normalizedWorkspaceDir -match ':')
     if ($normalizedWorkspaceDir -match '(^|/)\.\.(/|$)' -or
