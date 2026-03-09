@@ -44,6 +44,8 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
   promotion gates
 - [ADR-0010: User Auth and Registration](docs/adr/adr-0010-user-auth-registration-system.md): Self-registration,
   admin approval workflow, JWT issuance, and bootstrap admin strategy
+- [ADR-0011: User Preferences](docs/adr/adr-0011-user-preferences.md): Per-user UI preferences persisted to the
+  database (theme, column visibility, page width) with `useUserPreference` hook and `PreferenceSavePrompt` toast
 
 ## Deployment and Infrastructure
 
@@ -78,7 +80,8 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
 
 ## Optional
 
-- [UI Patterns Guide](docs/ui-patterns.md): Reusable frontend components and patterns (Badge, Alert, LoadingSpinner, StatCard, PageHeader, Sticky Headers)
+- [UI Patterns Guide](docs/ui-patterns.md): Reusable frontend components and patterns (Badge, Alert, LoadingSpinner,
+  StatCard, PageHeader, Sticky Headers, User Preferences)
 - [Makefile](Makefile): Build automation, testing, linting, and development commands
 - [API Smoke Script](scripts/smoke-api.ps1): Environment-aware API smoke tests for health/auth checks with startup readiness wait
 - [SSI Smoke Script](scripts/smoke-ssi.ps1): Verifies `/api/v1/ssis` contract fields, optional temporary seed rows, and BGC-free payload checks

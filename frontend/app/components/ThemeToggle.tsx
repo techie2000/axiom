@@ -1,30 +1,34 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import { useUserPreference } from '../lib/useUserPreference'
 
 export default function ThemeToggle() {
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark')
+  const [storedTheme, setStoredTheme] = useUserPreference('global', 'theme', 'dark')
   const [mounted, setMounted] = useState(false)
+
+  const theme = storedTheme as 'light' | 'dark'
 
   useEffect(() => {
     setMounted(true)
-    // Check localStorage first, then system preference
-    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null
-    if (savedTheme) {
-      setTheme(savedTheme)
-      document.documentElement.classList.toggle('dark', savedTheme === 'dark')
-    } else {
-      const systemPreference = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-      setTheme(systemPreference)
-      document.documentElement.classList.toggle('dark', systemPreference === 'dark')
-    }
+    // Apply the stored / system preference on first render.
+    const resolved = storedTheme || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+    document.documentElement.classList.toggle('dark', resolved === 'dark')
+    // Keep legacy localStorage key in sync so existing code still works.
+    localStorage.setItem('theme', resolved)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  useEffect(() => {
+    if (!mounted) return
+    document.documentElement.classList.toggle('dark', theme === 'dark')
+    localStorage.setItem('theme', theme)
+  }, [theme, mounted])
+
   const toggleTheme = () => {
-    const newTheme = theme === 'dark' ? 'light' : 'dark'
-    setTheme(newTheme)
-    localStorage.setItem('theme', newTheme)
-    document.documentElement.classList.toggle('dark', newTheme === 'dark')
+    const newTheme: 'light' | 'dark' = theme === 'dark' ? 'light' : 'dark'
+    // setStoredTheme persists to server (when logged in) and localStorage automatically.
+    setStoredTheme(newTheme)
   }
 
   // Avoid hydration mismatch

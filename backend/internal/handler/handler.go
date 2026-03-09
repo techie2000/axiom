@@ -13,17 +13,18 @@ import (
 
 // Handlers holds all handler groups
 type Handlers struct {
-	Auth            *AuthHandler
-	Country         *CountryHandler
-	Currency        *CurrencyHandler
-	Language        *LanguageHandler
-	Entity          *EntityHandler
-	Instrument      *InstrumentHandler
-	Account         *AccountHandler
-	SSI             *SSIHandler
-	LEI             *LEIHandler
+	Auth           *AuthHandler
+	Country        *CountryHandler
+	Currency       *CurrencyHandler
+	Language       *LanguageHandler
+	Entity         *EntityHandler
+	Instrument     *InstrumentHandler
+	Account        *AccountHandler
+	SSI            *SSIHandler
+	LEI            *LEIHandler
 	DataAcquisition *DataAcquisitionHandler
-	CodeMapping     *CodeMappingHandler
+	CodeMapping    *CodeMappingHandler
+	UserPreference *UserPreferenceHandler
 }
 
 // NewHandlers creates a new handlers instance
@@ -40,6 +41,7 @@ func NewHandlers(services *service.Services, schedulerService service.SchedulerS
 		LEI:             NewLEIHandlerWithLevel2(services.LEI, services.LEILevel2, schedulerService),
 		DataAcquisition: NewDataAcquisitionHandler(),
 		CodeMapping:     NewCodeMappingHandler(services.CodeMapping),
+		UserPreference:  NewUserPreferenceHandler(services.UserPreference),
 	}
 }
 
@@ -1162,4 +1164,123 @@ func (h *CodeMappingHandler) Translate(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"to_code": toCode})
+}
+
+// UserPreferenceHandler handles user preference endpoints.
+type UserPreferenceHandler struct {
+	svc service.UserPreferenceService
+}
+
+// NewUserPreferenceHandler creates a new UserPreferenceHandler.
+func NewUserPreferenceHandler(svc service.UserPreferenceService) *UserPreferenceHandler {
+	return &UserPreferenceHandler{svc: svc}
+}
+
+// preferenceResponse is the API shape for a single preference.
+type preferenceResponse struct {
+	PageKey         string `json:"page_key"`
+	PreferenceKey   string `json:"preference_key"`
+	PreferenceValue string `json:"preference_value"`
+}
+
+// setPreferenceRequest is the expected body for PUT /preferences.
+type setPreferenceRequest struct {
+	PageKey         string `json:"page_key" binding:"required"`
+	PreferenceKey   string `json:"preference_key" binding:"required"`
+	PreferenceValue string `json:"preference_value" binding:"required"`
+}
+
+// GetPreferences godoc
+// @Summary Get user preferences
+// @Description Return all stored preferences for the authenticated user, optionally filtered by page_key
+// @Tags preferences
+// @Produce json
+// @Param page_key query string false "Filter by page key (e.g. 'lei-records', 'global')"
+// @Success 200 {array} preferenceResponse
+// @Security BearerAuth
+// @Router /preferences [get]
+func (h *UserPreferenceHandler) GetPreferences(c *gin.Context) {
+	userID := extractUserID(c)
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		return
+	}
+
+	pageKey := c.Query("page_key")
+	var result []*domain.UserPreference
+	var err error
+	if pageKey != "" {
+		result, err = h.svc.GetByPage(userID, pageKey)
+	} else {
+		result, err = h.svc.GetAll(userID)
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load preferences"})
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
+}
+
+// SetPreference godoc
+// @Summary Set a user preference
+// @Description Create or update a single preference for the authenticated user
+// @Tags preferences
+// @Accept json
+// @Produce json
+// @Param preference body setPreferenceRequest true "Preference to set"
+// @Success 200 {object} preferenceResponse
+// @Security BearerAuth
+// @Router /preferences [put]
+func (h *UserPreferenceHandler) SetPreference(c *gin.Context) {
+	userID := extractUserID(c)
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		return
+	}
+
+	var req setPreferenceRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.svc.Set(userID, req.PageKey, req.PreferenceKey, req.PreferenceValue); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save preference"})
+		return
+	}
+
+	c.JSON(http.StatusOK, preferenceResponse(req))
+}
+
+// DeletePreference godoc
+// @Summary Delete a user preference
+// @Description Remove a specific preference for the authenticated user
+// @Tags preferences
+// @Produce json
+// @Param page_key query string true "Page key"
+// @Param preference_key query string true "Preference key"
+// @Success 204
+// @Security BearerAuth
+// @Router /preferences [delete]
+func (h *UserPreferenceHandler) DeletePreference(c *gin.Context) {
+	userID := extractUserID(c)
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		return
+	}
+
+	pageKey := c.Query("page_key")
+	prefKey := c.Query("preference_key")
+	if pageKey == "" || prefKey == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "page_key and preference_key are required"})
+		return
+	}
+
+	if err := h.svc.Delete(userID, pageKey, prefKey); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete preference"})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
 }

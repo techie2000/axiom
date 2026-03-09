@@ -32,26 +32,74 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-function Resolve-RepoRoot {
+function Resolve-GitDir {
+    # Returns the *actual* git directory (the directory that contains refs/ and logs/).
+    # For standard repos this is <root>/.git; for worktrees/submodules it is the real
+    # git dir that the .git file points at, e.g. <root>/.git/worktrees/<name>.
     param([string]$Path)
 
-    # Normalize to a full path first
-    $resolvedPath = (Resolve-Path -LiteralPath $Path).Path
+    $resolvedPathObj = Resolve-Path -LiteralPath $Path -ErrorAction SilentlyContinue
+    if (-not $resolvedPathObj) {
+        throw "Path not found: $Path"
+    }
+    $resolvedPath = $resolvedPathObj.Path
 
-    # Prefer git for repo root detection (handles subfolders and worktrees)
-    if (Get-Command git -ErrorAction SilentlyContinue) {
-        try {
-            $gitTopLevel = & git -C $resolvedPath rev-parse --show-toplevel 2>$null
-            if ($LASTEXITCODE -eq 0 -and $gitTopLevel) {
-                return (Resolve-Path -LiteralPath $gitTopLevel.Trim()).Path
-            }
+    # Prefer git itself — handles all repo shapes (standard, worktree, submodule) correctly.
+    try {
+        $gitCmd = Get-Command git -ErrorAction Stop
+        $absoluteGitDir = & $gitCmd.Path -C $resolvedPath rev-parse --absolute-git-dir 2>$null
+        if ($LASTEXITCODE -eq 0 -and $absoluteGitDir) {
+            return (Resolve-Path -LiteralPath $absoluteGitDir.Trim()).Path
         }
-        catch {
-            # Fall back to walking up the directory tree below
+    }
+    catch {
+        # git not available — fall back to filesystem checks below.
+    }
+
+    $gitPath = Join-Path $resolvedPath '.git'
+
+    # Standard case: .git is a directory that already contains refs/ and logs/.
+    if (Test-Path -LiteralPath $gitPath -PathType Container) {
+        return (Resolve-Path -LiteralPath $gitPath).Path
+    }
+
+    # Worktree/submodule case: .git is a file with a gitdir: pointer to the real git directory.
+    if (Test-Path -LiteralPath $gitPath -PathType Leaf) {
+        $firstLine = Get-Content -LiteralPath $gitPath -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($firstLine -and $firstLine -match '^\s*gitdir:\s*(.+)\s*$') {
+            $gitDir = $Matches[1].Trim()
+            if (-not [System.IO.Path]::IsPathRooted($gitDir)) {
+                $gitDir = Join-Path $resolvedPath $gitDir
+            }
+            if (Test-Path -LiteralPath $gitDir -PathType Container) {
+                return (Resolve-Path -LiteralPath $gitDir).Path
+            }
         }
     }
 
-    # Fallback: walk up parent directories looking for a .git entry (directory or file)
+    throw "No .git directory or gitdir file found under: $Path"
+}
+
+function Resolve-RepoRoot {
+    param([string]$Path)
+
+    $resolvedPathObj = Resolve-Path -LiteralPath $Path -ErrorAction SilentlyContinue
+    if (-not $resolvedPathObj) {
+        throw "Path not found: $Path"
+    }
+    $resolvedPath = $resolvedPathObj.Path
+
+    try {
+        $gitCmd = Get-Command git -ErrorAction Stop
+        $repoRoot = & $gitCmd.Path -C $resolvedPath rev-parse --show-toplevel 2>$null
+        if ($LASTEXITCODE -eq 0 -and $repoRoot) {
+            return (Resolve-Path -LiteralPath $repoRoot.Trim()).Path
+        }
+    }
+    catch {
+        # git not available — fall back to parent traversal below.
+    }
+
     $current = $resolvedPath
     while ($current -and (Test-Path -LiteralPath $current)) {
         $gitPath = Join-Path $current '.git'
@@ -70,21 +118,7 @@ function Resolve-RepoRoot {
     throw "No .git directory found under: $Path or its parent directories."
 }
 
-function Test-SafeRelativePath {
-    param([string]$RelPath)
-    # Reject empty strings, rooted paths, or Windows drive letters.
-    if ([string]::IsNullOrWhiteSpace($RelPath)) { return $false }
-    if ($RelPath -match '^[A-Za-z]:') { return $false }
-    if ([System.IO.Path]::IsPathRooted($RelPath)) { return $false }
-    # Normalize separators and reject any path segment that is exactly '.' or '..'
-    $segments = ($RelPath -replace '\\', '/') -split '/' | Where-Object { $_ -ne '' }
-    if ($segments -contains '..') { return $false }
-    if ($segments -contains '.') { return $false }
-    return $true
-}
-
 function Remove-EmptyDirectoryWithRetry {
-    [CmdletBinding(SupportsShouldProcess = $true)]
     param(
         [string]$Path,
         [int]$Retries,
@@ -95,11 +129,6 @@ function Remove-EmptyDirectoryWithRetry {
         return 'MISSING'
     }
 
-    # When -WhatIf is active ShouldProcess() returns $false; treat as a non-error skip.
-    if (-not $PSCmdlet.ShouldProcess($Path, 'Remove empty directory')) {
-        return 'SKIPPED'
-    }
-
     for ($attempt = 1; $attempt -le $Retries; $attempt++) {
         try {
             $childCount = (Get-ChildItem -LiteralPath $Path -Force -ErrorAction SilentlyContinue | Measure-Object).Count
@@ -107,12 +136,31 @@ function Remove-EmptyDirectoryWithRetry {
                 return "NOT_EMPTY:$childCount"
             }
 
-            # Reset file attributes only on Windows where attrib.exe is available.
-            if ($IsWindows -and (Get-Command attrib -ErrorAction SilentlyContinue)) {
+            if ($IsWindows) {
                 attrib -R -S -H "$Path" /S /D 2>$null | Out-Null
             }
+            else {
+                # On non-Windows platforms, clear ReadOnly, System, and Hidden attributes via
+                # PowerShell-native attribute manipulation to mirror what attrib -R -S -H does on Windows.
+                try {
+                    $item = Get-Item -LiteralPath $Path -Force -ErrorAction SilentlyContinue
+                    if ($item) {
+                        $attrsToRemove = [System.IO.FileAttributes]::ReadOnly -bor
+                                         [System.IO.FileAttributes]::System -bor
+                                         [System.IO.FileAttributes]::Hidden
+                        if ($item.Attributes -band $attrsToRemove) {
+                            $item.Attributes = $item.Attributes -band (-bnot $attrsToRemove)
+                        }
+                    }
+                }
+                catch {
+                    # Attribute clearing is best-effort; ignore errors and attempt removal.
+                }
+            }
 
-            Remove-Item -LiteralPath $Path -Force -ErrorAction Stop
+            if ($PSCmdlet.ShouldProcess($Path, 'Remove empty directory')) {
+                Remove-Item -LiteralPath $Path -Force -ErrorAction Stop
+            }
 
             Start-Sleep -Milliseconds 120
 
@@ -134,7 +182,7 @@ function Remove-EmptyDirectoryWithRetry {
 
 function Remove-ParentDirectoriesIfEmpty {
     param(
-        [string]$RepoRoot,
+        [string]$GitRoot,
         [string]$RelativePath,
         [int]$Retries,
         [int]$DelayMs
@@ -147,7 +195,7 @@ function Remove-ParentDirectoriesIfEmpty {
 
     for ($i = $segments.Count - 1; $i -ge 1; $i--) {
         $parentRel = ($segments[0..($i - 1)] -join '/')
-        $parentAbs = Join-Path (Join-Path $RepoRoot '.git') $parentRel
+        $parentAbs = Join-Path $GitRoot $parentRel
 
         if (-not (Test-Path -LiteralPath $parentAbs)) {
             continue
@@ -161,33 +209,72 @@ function Remove-ParentDirectoriesIfEmpty {
 }
 
 $repoRoot = Resolve-RepoRoot -Path $RepoPath
-$gitRoot = Join-Path $repoRoot '.git'
+$gitRoot = Resolve-GitDir -Path $RepoPath
 
-Write-Host "[cleanup-git-refs] Repo: $repoRoot" -ForegroundColor Cyan
+Write-Host "[cleanup-git-refs] Git dir: $gitRoot" -ForegroundColor Cyan
+Write-Host "[cleanup-git-refs] Repo root: $repoRoot" -ForegroundColor Cyan
 Write-Host "[cleanup-git-refs] Namespaces: $($Namespaces.Count)" -ForegroundColor Cyan
 Write-Host "[cleanup-git-refs] WorkspaceDirs: $($WorkspaceDirs.Count)" -ForegroundColor Cyan
 
 $results = @()
 
-$resolvedGitRoot = [System.IO.Path]::GetFullPath($gitRoot)
-$resolvedRepoRoot = [System.IO.Path]::GetFullPath($repoRoot)
+# Normalize the git root once with a trailing separator for containment checks.
+$normalizedGitRoot = [System.IO.Path]::GetFullPath($gitRoot).TrimEnd(
+    [System.IO.Path]::DirectorySeparatorChar,
+    [System.IO.Path]::AltDirectorySeparatorChar
+) + [System.IO.Path]::DirectorySeparatorChar
 
 foreach ($namespace in $Namespaces) {
+    # Guard against null/empty elements in the Namespaces array. Under Set-StrictMode -Version Latest,
+    # calling .Trim() on $null throws; treat such entries as unsafe and skip them.
+    if ([string]::IsNullOrWhiteSpace($namespace)) {
+        Write-Warning "[cleanup-git-refs] Skipping null/empty namespace entry."
+        $results += [pscustomobject]@{
+            Namespace = ''
+            Result    = 'SKIPPED_UNSAFE'
+        }
+        continue
+    }
+
     $normalized = $namespace.Trim('/')
 
-    if (-not (Test-SafeRelativePath -RelPath $normalized)) {
-        Write-Warning "[cleanup-git-refs] Skipping unsafe namespace: '$namespace'"
-        $results += [pscustomobject]@{ Namespace = $normalized; Result = 'SKIPPED_UNSAFE' }
+    # Validate that the namespace is a safe relative path: reject '..' segments, rooted paths,
+    # and backslashes. Colons are only rejected on Windows (drive-letter paths).
+    $hasUnsafeChars = $normalized -match '[\\]' -or ($IsWindows -and $normalized -match ':')
+    if ($normalized -match '(^|/)\.\.(/|$)' -or
+        [System.IO.Path]::IsPathRooted($normalized) -or
+        $hasUnsafeChars) {
+        Write-Warning "[cleanup-git-refs] Skipping unsafe namespace: $namespace"
+        $results += [pscustomobject]@{
+            Namespace = $normalized
+            Result    = 'SKIPPED_UNSAFE'
+        }
         continue
     }
 
     $target = Join-Path $gitRoot $normalized
-    $resolvedTarget = [System.IO.Path]::GetFullPath($target)
 
-    if (-not ($resolvedTarget.Equals($resolvedGitRoot, [System.StringComparison]::OrdinalIgnoreCase) -or
-            $resolvedTarget.StartsWith($resolvedGitRoot + [System.IO.Path]::DirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase))) {
-        Write-Warning "[cleanup-git-refs] Skipping namespace outside git root: '$namespace'"
-        $results += [pscustomobject]@{ Namespace = $normalized; Result = 'SKIPPED_UNSAFE' }
+    # Verify the resolved target path is actually inside the git directory to prevent escapes.
+    # Use Ordinal (case-sensitive) on non-Windows filesystems; OrdinalIgnoreCase on Windows.
+    $resolvedTargetObj = Resolve-Path -LiteralPath $target -ErrorAction SilentlyContinue
+    if ($resolvedTargetObj) {
+        $resolvedTarget = $resolvedTargetObj.Path
+    }
+    else {
+        # Path doesn't exist yet; build the canonical form without resolving.
+        $resolvedTarget = [System.IO.Path]::GetFullPath($target)
+    }
+    $normalizedTarget = $resolvedTarget.TrimEnd(
+        [System.IO.Path]::DirectorySeparatorChar,
+        [System.IO.Path]::AltDirectorySeparatorChar
+    ) + [System.IO.Path]::DirectorySeparatorChar
+    $comparison = if ($IsWindows) { [System.StringComparison]::OrdinalIgnoreCase } else { [System.StringComparison]::Ordinal }
+    if (-not $normalizedTarget.StartsWith($normalizedGitRoot, $comparison)) {
+        Write-Warning "[cleanup-git-refs] Skipping namespace that escapes git root: $namespace"
+        $results += [pscustomobject]@{
+            Namespace = $normalized
+            Result    = 'SKIPPED_UNSAFE'
+        }
         continue
     }
 
@@ -199,7 +286,7 @@ foreach ($namespace in $Namespaces) {
     }
 
     if ($PruneEmptyParents -and ($result -eq 'REMOVED' -or $result -eq 'MISSING')) {
-        Remove-ParentDirectoriesIfEmpty -RepoRoot $repoRoot -RelativePath $normalized -Retries $MaxRetries -DelayMs $RetryDelayMs
+        Remove-ParentDirectoriesIfEmpty -GitRoot $gitRoot -RelativePath $normalized -Retries $MaxRetries -DelayMs $RetryDelayMs
     }
 }
 
@@ -208,32 +295,58 @@ $results | Sort-Object Namespace | Format-Table -AutoSize
 $workspaceResults = @()
 
 foreach ($workspaceDir in $WorkspaceDirs) {
-    $normalizedWorkspaceDir = $workspaceDir.Trim('/', '\')
-    if ([string]::IsNullOrWhiteSpace($normalizedWorkspaceDir)) {
+    if ([string]::IsNullOrWhiteSpace($workspaceDir)) {
         continue
     }
 
-    if (-not (Test-SafeRelativePath -RelPath $normalizedWorkspaceDir)) {
-        Write-Warning "[cleanup-git-refs] Skipping unsafe workspace dir: '$workspaceDir'"
-        $workspaceResults += [pscustomobject]@{ Directory = $normalizedWorkspaceDir; Result = 'SKIPPED_UNSAFE' }
+    $normalizedWorkspaceDir = $workspaceDir.Trim('/', '\\')
+
+    $hasUnsafeWorkspaceChars = $normalizedWorkspaceDir -match '[\\]' -or ($IsWindows -and $normalizedWorkspaceDir -match ':')
+    if ($normalizedWorkspaceDir -match '(^|/)\.\.(/|$)' -or
+        [System.IO.Path]::IsPathRooted($normalizedWorkspaceDir) -or
+        $hasUnsafeWorkspaceChars) {
+        Write-Warning "[cleanup-git-refs] Skipping unsafe workspace dir: $workspaceDir"
+        $workspaceResults += [pscustomobject]@{
+            Directory = $normalizedWorkspaceDir
+            Result    = 'SKIPPED_UNSAFE'
+        }
         continue
     }
 
     $workspacePath = Join-Path $repoRoot $normalizedWorkspaceDir
-    $resolvedWorkspacePath = [System.IO.Path]::GetFullPath($workspacePath)
 
-    if (-not ($resolvedWorkspacePath.Equals($resolvedRepoRoot, [System.StringComparison]::OrdinalIgnoreCase) -or
-            $resolvedWorkspacePath.StartsWith($resolvedRepoRoot + [System.IO.Path]::DirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase))) {
-        Write-Warning "[cleanup-git-refs] Skipping workspace dir outside repo root: '$workspaceDir'"
-        $workspaceResults += [pscustomobject]@{ Directory = $normalizedWorkspaceDir; Result = 'SKIPPED_UNSAFE' }
+    $resolvedWorkspaceObj = Resolve-Path -LiteralPath $workspacePath -ErrorAction SilentlyContinue
+    if ($resolvedWorkspaceObj) {
+        $resolvedWorkspacePath = $resolvedWorkspaceObj.Path
+    }
+    else {
+        $resolvedWorkspacePath = [System.IO.Path]::GetFullPath($workspacePath)
+    }
+
+    $normalizedRepoRoot = [System.IO.Path]::GetFullPath($repoRoot).TrimEnd(
+        [System.IO.Path]::DirectorySeparatorChar,
+        [System.IO.Path]::AltDirectorySeparatorChar
+    ) + [System.IO.Path]::DirectorySeparatorChar
+    $normalizedWorkspace = $resolvedWorkspacePath.TrimEnd(
+        [System.IO.Path]::DirectorySeparatorChar,
+        [System.IO.Path]::AltDirectorySeparatorChar
+    ) + [System.IO.Path]::DirectorySeparatorChar
+    $workspaceComparison = if ($IsWindows) { [System.StringComparison]::OrdinalIgnoreCase } else { [System.StringComparison]::Ordinal }
+
+    if (-not $normalizedWorkspace.StartsWith($normalizedRepoRoot, $workspaceComparison)) {
+        Write-Warning "[cleanup-git-refs] Skipping workspace dir outside repo root: $workspaceDir"
+        $workspaceResults += [pscustomobject]@{
+            Directory = $normalizedWorkspaceDir
+            Result    = 'SKIPPED_UNSAFE'
+        }
         continue
     }
 
-    $result = Remove-EmptyDirectoryWithRetry -Path $workspacePath -Retries $MaxRetries -DelayMs $RetryDelayMs
+    $workspaceResult = Remove-EmptyDirectoryWithRetry -Path $workspacePath -Retries $MaxRetries -DelayMs $RetryDelayMs
 
     $workspaceResults += [pscustomobject]@{
         Directory = $normalizedWorkspaceDir
-        Result = $result
+        Result    = $workspaceResult
     }
 }
 

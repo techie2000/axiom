@@ -352,6 +352,22 @@ func (User) TableName() string {
 	return "users"
 }
 
+// UserPreference stores a single UI preference for a user on a specific page.
+// page_key="global" is used for cross-page preferences (e.g. theme).
+type UserPreference struct {
+	ID              uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+	UserID          uuid.UUID `gorm:"type:uuid;not null;index" json:"user_id"`
+	PageKey         string    `gorm:"size:100;not null" json:"page_key"`
+	PreferenceKey   string    `gorm:"size:100;not null" json:"preference_key"`
+	PreferenceValue string    `gorm:"type:text;not null" json:"preference_value"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
+}
+
+func (UserPreference) TableName() string {
+	return "user_preferences"
+}
+
 // CodeMappingAudit represents the complete audit history of code mapping changes
 type CodeMappingAudit struct {
 	ID             uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`

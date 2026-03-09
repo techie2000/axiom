@@ -1,13 +1,15 @@
 'use client'
 
-import { useEffect, useMemo, useState, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import Alert from '../components/Alert'
 import CountryFlag from '../components/CountryFlag'
 import PageHeader from '../components/PageHeader'
+import PreferenceSavePrompt from '../components/PreferenceSavePrompt'
 import SearchInputWithOverflowTooltip from '../components/SearchInputWithOverflowTooltip'
 import StatCard from '../components/StatCard'
 import SyncedWideTable from '../components/SyncedWideTable'
+import { useUserPreference } from '../lib/useUserPreference'
 import { formatEnumDisplayValue, formatLEICellValue, getStatusBadgePresentation, normalizeRecordNullLikeValues } from './null-utils'
 
 interface LEIRecord {
@@ -124,10 +126,13 @@ const AVAILABLE_COLUMNS: ColumnConfig[] = [
   // Associated Entities
   { key: 'managing_lou', label: 'Managing LOU', group: 'Associated', defaultVisible: false, width: 'w-40' },
   { key: 'successor_lei', label: 'Successor LEI', group: 'Associated', defaultVisible: false, width: 'w-44' },
-  
+
   // Validation
   { key: 'validation_authority', label: 'Validation Authority', group: 'Validation', defaultVisible: false, width: 'w-40' },
 ]
+
+// Pre-computed default visible column keys for use as preference default value.
+const DEFAULT_VISIBLE_KEYS = AVAILABLE_COLUMNS.filter(col => col.defaultVisible).map(col => col.key).join(',')
 
 export default function LEIRecordsPage() {
   const [records, setRecords] = useState<LEIRecord[]>([])
@@ -154,12 +159,75 @@ export default function LEIRecordsPage() {
   const countryDropdownRef = useRef<HTMLDivElement>(null)
   const filterBarRef = useRef<HTMLDivElement>(null)
   const [stickyColumnWidths, setStickyColumnWidths] = useState<number[]>([])
-  
+
+  // Preference-backed column visibility – serialised as a comma-separated list in the store.
+  const [storedColumns, setStoredColumns] = useUserPreference('lei-records', 'visible_columns', DEFAULT_VISIBLE_KEYS)
+  const [storedExpanded, setStoredExpanded] = useUserPreference('lei-records', 'expanded_width', 'false')
+
+  const visibleColumns = useMemo<Set<keyof LEIRecord>>(() => {
+    if (!storedColumns) return new Set(AVAILABLE_COLUMNS.filter(col => col.defaultVisible).map(col => col.key))
+    return new Set(storedColumns.split(',').filter(Boolean) as Array<keyof LEIRecord>)
+  }, [storedColumns])
+
+  const expandedWidth = storedExpanded === 'true'
+
+  // Prompt to save preference when user changes columns or width.
+  const [showColumnSavePrompt, setShowColumnSavePrompt] = useState(false)
+  const [showWidthSavePrompt, setShowWidthSavePrompt] = useState(false)
+  // Incrementing these counters resets the 8-second auto-dismiss timer in
+  // PreferenceSavePrompt so users always get 8 s from their *last* change.
+  const [columnSaveVersion, setColumnSaveVersion] = useState(0)
+  // Track whether the current value differs from the stored preference.
+  const pendingColumns = useRef<Set<keyof LEIRecord> | null>(null)
+  const pendingExpanded = useRef<boolean | null>(null)
+
+  // Apply pending column changes immediately (local state) even before saving.
+  const [localColumns, setLocalColumns] = useState<Set<keyof LEIRecord> | null>(null)
+  const [localExpanded, setLocalExpanded] = useState<boolean | null>(null)
+
+  const effectiveVisibleColumns = localColumns ?? visibleColumns
+  const effectiveExpandedWidth = localExpanded ?? expandedWidth
+
+  const handleSetVisibleColumns = useCallback((newCols: Set<keyof LEIRecord>) => {
+    setLocalColumns(newCols)
+    pendingColumns.current = newCols
+    setShowColumnSavePrompt(true)
+    setColumnSaveVersion(v => v + 1)
+  }, [])
+
+  const handleSetExpandedWidth = useCallback((value: boolean) => {
+    setLocalExpanded(value)
+    pendingExpanded.current = value
+    setShowWidthSavePrompt(true)
+  }, [])
+
+  const handleSaveColumns = useCallback(() => {
+    if (pendingColumns.current) {
+      setStoredColumns(Array.from(pendingColumns.current).join(','))
+      setLocalColumns(null)
+      pendingColumns.current = null
+    }
+    setShowColumnSavePrompt(false)
+  }, [setStoredColumns])
+
+  const handleDismissColumns = useCallback(() => {
+    setShowColumnSavePrompt(false)
+  }, [])
+
+  const handleSaveWidth = useCallback(() => {
+    if (pendingExpanded.current !== null) {
+      setStoredExpanded(String(pendingExpanded.current))
+      setLocalExpanded(null)
+      pendingExpanded.current = null
+    }
+    setShowWidthSavePrompt(false)
+  }, [setStoredExpanded])
+
+  const handleDismissWidth = useCallback(() => {
+    setShowWidthSavePrompt(false)
+  }, [])
+
   // New features
-  const [visibleColumns, setVisibleColumns] = useState<Set<keyof LEIRecord>>(
-    new Set(AVAILABLE_COLUMNS.filter(col => col.defaultVisible).map(col => col.key))
-  )
-  const [expandedWidth, setExpandedWidth] = useState(false)
   const [selectedRecord, setSelectedRecord] = useState<LEIRecord | null>(null)
   const [showColumnSelector, setShowColumnSelector] = useState(false)
   const [managingLouName, setManagingLouName] = useState<string | null>(null)
@@ -356,7 +424,7 @@ export default function LEIRecordsPage() {
     if (typeof window !== 'undefined') {
       fetchRecords()
     }
-  }, [currentPage, debouncedSearch, statusFilter, categoryFilter, countryFilter, itemsPerPage, sortField, sortDirection, visibleColumns])
+  }, [currentPage, debouncedSearch, statusFilter, categoryFilter, countryFilter, itemsPerPage, sortField, sortDirection, effectiveVisibleColumns])
 
   const fetchRecords = async () => {
     try {
@@ -379,8 +447,8 @@ export default function LEIRecordsPage() {
       // Send visible columns for dynamic SELECT optimization
       // Backend will fetch only the columns requested
       // Always include other_names for search result display (shown inline with legal_name)
-      const columnsToFetch = Array.from(visibleColumns).filter(key => !isVirtualColumnKey(key))
-      const dependentColumns = getDependentColumnsForVisibleColumns(visibleColumns)
+      const columnsToFetch = Array.from(effectiveVisibleColumns).filter(key => !isVirtualColumnKey(key))
+      const dependentColumns = getDependentColumnsForVisibleColumns(effectiveVisibleColumns)
       dependentColumns.forEach((column) => {
         if (!columnsToFetch.includes(column)) {
           columnsToFetch.push(column)
@@ -451,13 +519,13 @@ export default function LEIRecordsPage() {
   }
 
   const toggleColumn = (columnKey: keyof LEIRecord) => {
-    const newColumns = new Set(visibleColumns)
+    const newColumns = new Set(effectiveVisibleColumns)
     if (newColumns.has(columnKey)) {
       newColumns.delete(columnKey)
     } else {
       newColumns.add(columnKey)
     }
-    setVisibleColumns(newColumns)
+    handleSetVisibleColumns(newColumns)
   }
 
   // Calculate relative time from a date
@@ -782,9 +850,9 @@ export default function LEIRecordsPage() {
 
   const toggleGroupColumns = (group: string) => {
     const groupColumns = AVAILABLE_COLUMNS.filter(col => col.group === group)
-    const allGroupColumnsVisible = groupColumns.every(col => visibleColumns.has(col.key))
-    
-    const newVisibleColumns = new Set(visibleColumns)
+    const allGroupColumnsVisible = groupColumns.every(col => effectiveVisibleColumns.has(col.key))
+
+    const newVisibleColumns = new Set(effectiveVisibleColumns)
     if (allGroupColumnsVisible) {
       // If all are visible, hide them all
       groupColumns.forEach(col => newVisibleColumns.delete(col.key))
@@ -792,23 +860,23 @@ export default function LEIRecordsPage() {
       // If some or none are visible, show them all
       groupColumns.forEach(col => newVisibleColumns.add(col.key))
     }
-    setVisibleColumns(newVisibleColumns)
+    handleSetVisibleColumns(newVisibleColumns)
   }
 
   const isGroupFullySelected = (group: string) => {
     const groupColumns = AVAILABLE_COLUMNS.filter(col => col.group === group)
-    return groupColumns.every(col => visibleColumns.has(col.key))
+    return groupColumns.every(col => effectiveVisibleColumns.has(col.key))
   }
 
   const isGroupPartiallySelected = (group: string) => {
     const groupColumns = AVAILABLE_COLUMNS.filter(col => col.group === group)
-    const visibleCount = groupColumns.filter(col => visibleColumns.has(col.key)).length
+    const visibleCount = groupColumns.filter(col => effectiveVisibleColumns.has(col.key)).length
     return visibleCount > 0 && visibleCount < groupColumns.length
   }
 
   const totalPages = Math.ceil(totalRecords / itemsPerPage)
   const hasActiveFilters = debouncedSearch || statusFilter || categoryFilter || countryFilter
-  const visibleColumnsInOrder = AVAILABLE_COLUMNS.filter((col) => visibleColumns.has(col.key))
+  const visibleColumnsInOrder = AVAILABLE_COLUMNS.filter((col) => effectiveVisibleColumns.has(col.key))
   const LEI_COLUMN_WIDTH_PX = 184
   const LEGAL_NAME_COLUMN_WIDTH_PX = 320
   const leiColumnIndex = visibleColumnsInOrder.findIndex((column) => column.key === 'lei')
@@ -882,18 +950,18 @@ export default function LEIRecordsPage() {
 
   return (
     <div className="min-h-screen p-8">
-      <div className={`${expandedWidth ? 'max-w-full' : 'max-w-7xl'} mx-auto transition-all duration-300`}>
+      <div className={`${effectiveExpandedWidth ? 'max-w-full' : 'max-w-7xl'} mx-auto transition-all duration-300`}>
         <PageHeader
           title="LEI Records"
           subtitle="GLEIF Legal Entity Identifiers (ISO 17442)"
           actions={
             <>
               <button
-                onClick={() => setExpandedWidth(!expandedWidth)}
+                onClick={() => handleSetExpandedWidth(!effectiveExpandedWidth)}
                 className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 transition-colors text-white text-sm font-medium flex items-center gap-2"
-                title={expandedWidth ? 'Normal Width' : 'Expanded Width'}
+                title={effectiveExpandedWidth ? 'Normal Width' : 'Expanded Width'}
               >
-                {expandedWidth ? '⬅️ Normal' : '↔️ Expand'}
+                {effectiveExpandedWidth ? '⬅️ Normal' : '↔️ Expand'}
               </button>
 
               <div className="relative">
@@ -901,7 +969,7 @@ export default function LEIRecordsPage() {
                   onClick={() => setShowColumnSelector(!showColumnSelector)}
                   className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 transition-colors text-white text-sm font-medium flex items-center gap-2"
                 >
-                  ⚙️ Columns ({visibleColumns.size})
+                  ⚙️ Columns ({effectiveVisibleColumns.size})
                 </button>
 
                 {showColumnSelector && (
@@ -918,13 +986,13 @@ export default function LEIRecordsPage() {
                       </div>
                       <div className="flex gap-2 text-xs">
                         <button
-                          onClick={() => setVisibleColumns(new Set(AVAILABLE_COLUMNS.map(c => c.key)))}
+                          onClick={() => handleSetVisibleColumns(new Set(AVAILABLE_COLUMNS.map(c => c.key)))}
                           className="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded hover:bg-blue-200 dark:hover:bg-blue-800"
                         >
                           Select All
                         </button>
                         <button
-                          onClick={() => setVisibleColumns(new Set(AVAILABLE_COLUMNS.filter(c => c.defaultVisible).map(c => c.key)))}
+                          onClick={() => handleSetVisibleColumns(new Set(AVAILABLE_COLUMNS.filter(c => c.defaultVisible).map(c => c.key)))}
                           className="px-2 py-1 bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
                         >
                           Reset to Default
@@ -946,7 +1014,7 @@ export default function LEIRecordsPage() {
                             <span>{group}</span>
                           </span>
                           <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">
-                            {columns.filter(c => visibleColumns.has(c.key)).length}/{columns.length}
+                            {columns.filter(c => effectiveVisibleColumns.has(c.key)).length}/{columns.length}
                           </span>
                         </div>
                         <div className="p-2">
@@ -957,7 +1025,7 @@ export default function LEIRecordsPage() {
                             >
                               <input
                                 type="checkbox"
-                                checked={visibleColumns.has(column.key)}
+                                checked={effectiveVisibleColumns.has(column.key)}
                                 onChange={() => toggleColumn(column.key)}
                                 className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                               />
@@ -1225,7 +1293,7 @@ export default function LEIRecordsPage() {
 
             <SyncedWideTable
               stickyTopOffset={hasActiveFilters ? filterBarHeight : 0}
-              dependencyKey={`${expandedWidth}-${showLocationCodes}-${visibleColumnsInOrder.map((column) => column.key).join('|')}-${records.length}-${currentPage}-${loading}`}
+              dependencyKey={`${effectiveExpandedWidth}-${showLocationCodes}-${visibleColumnsInOrder.map((column) => column.key).join('|')}-${records.length}-${currentPage}-${loading}`}
               tableClassName="w-full"
               tableStyle={{ tableLayout: 'auto', borderCollapse: 'collapse' }}
               stickyHeaderClassName="bg-gray-100 dark:bg-gray-800"
@@ -1909,6 +1977,21 @@ export default function LEIRecordsPage() {
           </div>
         </div>
       )}
+
+      {/* Unobtrusive prompts to save changed preferences */}
+      <PreferenceSavePrompt
+        visible={showColumnSavePrompt}
+        resetKey={columnSaveVersion}
+        label="Save column selection as your default?"
+        onSave={handleSaveColumns}
+        onDismiss={handleDismissColumns}
+      />
+      <PreferenceSavePrompt
+        visible={showWidthSavePrompt}
+        label="Save page width as your default?"
+        onSave={handleSaveWidth}
+        onDismiss={handleDismissWidth}
+      />
     </div>
   )
 }

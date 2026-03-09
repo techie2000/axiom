@@ -309,6 +309,14 @@ func setupRouter(cfg *config.Config, h *handler.Handlers) *gin.Engine {
 				adminAuth.PUT("/users/:id/role", h.Auth.UpdateUserRole)
 			}
 
+			// User preference routes (any authenticated user)
+			prefs := protected.Group("/preferences")
+			{
+				prefs.GET("", h.UserPreference.GetPreferences)
+				prefs.PUT("", h.UserPreference.SetPreference)
+				prefs.DELETE("", h.UserPreference.DeletePreference)
+			}
+
 			// Protected write operations for countries and currencies
 			protected.POST("/countries", h.Country.Create)
 			protected.PUT("/countries/:id", h.Country.Update)
