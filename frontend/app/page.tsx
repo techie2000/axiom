@@ -89,7 +89,9 @@ export default function Home() {
                 Welcome to Axiom
               </h2>
               <p className="text-gray-700 dark:text-gray-200 mb-6">
-                {mounted && isAuthenticated
+                {!mounted
+                  ? 'Loading your experience...'
+                  : isAuthenticated
                   ? 'Welcome back. Continue to your modules or browse public reference data.'
                   : 'Choose where you want to go: sign in for protected features, or browse public reference data.'}
               </p>
