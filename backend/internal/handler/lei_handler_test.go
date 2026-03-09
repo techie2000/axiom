@@ -16,8 +16,17 @@ import (
 
 type leiServiceStub struct {
 	service.LEIService
-	statuses map[string]*domain.FileProcessingStatus
-	errs     map[string]error
+	statuses       map[string]*domain.FileProcessingStatus
+	errs           map[string]error
+	predecessors   []*domain.LEIRecord
+	predecessorErr error
+}
+
+func (s *leiServiceStub) GetPredecessorLEIs(_ string) ([]*domain.LEIRecord, error) {
+	if s.predecessorErr != nil {
+		return nil, s.predecessorErr
+	}
+	return s.predecessors, nil
 }
 
 func (s *leiServiceStub) GetProcessingStatus(jobType string) (*domain.FileProcessingStatus, error) {
@@ -329,6 +338,33 @@ func TestGetLevel2ProcessingFailures_DeprecationHeaders(t *testing.T) {
 	if got := resp.Header().Get("Warning"); !strings.Contains(got, "Deprecated API") {
 		t.Fatalf("expected Warning header to mention deprecation, got %q", got)
 	}
+}
+
+func TestGetPredecessorLEIs(t *testing.T) {
+	t.Run("returns predecessor records", func(t *testing.T) {
+		h := NewLEIHandler(&leiServiceStub{
+			predecessors: []*domain.LEIRecord{
+				{LEI: "AAA11111111111111111", LegalName: "Predecessor One", SuccessorLEI: "BBB22222222222222222"},
+			},
+		}, &schedulerServiceStub{})
+
+		resp := executeGET("/lei/:lei/predecessors", "/lei/BBB22222222222222222/predecessors", h.GetPredecessorLEIs)
+		if resp.Code != http.StatusOK {
+			t.Fatalf("expected status %d, got %d", http.StatusOK, resp.Code)
+		}
+		if !strings.Contains(resp.Body.String(), "Predecessor One") {
+			t.Fatalf("expected predecessor payload, got %s", resp.Body.String())
+		}
+	})
+
+	t.Run("returns internal server error on service failure", func(t *testing.T) {
+		h := NewLEIHandler(&leiServiceStub{predecessorErr: errors.New("db failure")}, &schedulerServiceStub{})
+
+		resp := executeGET("/lei/:lei/predecessors", "/lei/BBB22222222222222222/predecessors", h.GetPredecessorLEIs)
+		if resp.Code != http.StatusInternalServerError {
+			t.Fatalf("expected status %d, got %d", http.StatusInternalServerError, resp.Code)
+		}
+	})
 }
 
 func TestTriggerLevel2SubJobs_ConflictPaths(t *testing.T) {

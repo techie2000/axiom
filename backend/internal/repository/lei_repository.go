@@ -21,6 +21,7 @@ type LEIRepository interface {
 	FindLEIByLEI(lei string) (*domain.LEIRecord, error)
 	FindLEIByID(id string) (*domain.LEIRecord, error)
 	FindAllLEI(limit, offset int) ([]*domain.LEIRecord, error)
+	FindPredecessorLEIsBySuccessor(lei string) ([]*domain.LEIRecord, error)
 	FindAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string) ([]*domain.LEIRecord, error)
 	CountLEIRecords() (int64, error)
 	GetDistinctCountries() ([]string, error)
@@ -111,6 +112,20 @@ func (r *leiRepository) FindAllLEI(limit, offset int) ([]*domain.LEIRecord, erro
 	if err := r.db.Limit(limit).Offset(offset).Preload("SourceFile").Find(&records).Error; err != nil {
 		return nil, err
 	}
+	return records, nil
+}
+
+// FindPredecessorLEIsBySuccessor retrieves LEI records that point to the provided LEI as successor.
+func (r *leiRepository) FindPredecessorLEIsBySuccessor(lei string) ([]*domain.LEIRecord, error) {
+	var records []*domain.LEIRecord
+	if err := r.db.
+		Where("successor_lei = ?", strings.TrimSpace(lei)).
+		Order("updated_at desc").
+		Preload("SourceFile").
+		Find(&records).Error; err != nil {
+		return nil, err
+	}
+
 	return records, nil
 }
 
@@ -1053,18 +1068,18 @@ func (r *leiRepository) UpdateProcessingStatus(status *domain.FileProcessingStat
 	}
 
 	updates := map[string]interface{}{
-		"job_type":                status.JobType,
-		"job_label":               status.JobLabel,
-		"status":                  status.Status,
-		"last_run_at":             status.LastRunAt,
-		"next_run_at":             status.NextRunAt,
-		"last_success_at":         status.LastSuccessAt,
-		"depends_on_job_label":    status.DependsOnJobLabel,
-		"current_source_file_id":  status.CurrentSourceFileID,
-		"depends_on_job_type":     status.DependsOnJobType,
-		"error_message":           status.ErrorMessage,
-		"progress_message":        status.ProgressMessage,
-		"updated_at":              gorm.Expr("NOW()"),
+		"job_type":               status.JobType,
+		"job_label":              status.JobLabel,
+		"status":                 status.Status,
+		"last_run_at":            status.LastRunAt,
+		"next_run_at":            status.NextRunAt,
+		"last_success_at":        status.LastSuccessAt,
+		"depends_on_job_label":   status.DependsOnJobLabel,
+		"current_source_file_id": status.CurrentSourceFileID,
+		"depends_on_job_type":    status.DependsOnJobType,
+		"error_message":          status.ErrorMessage,
+		"progress_message":       status.ProgressMessage,
+		"updated_at":             gorm.Expr("NOW()"),
 	}
 
 	return r.db.Model(&domain.FileProcessingStatus{}).
@@ -1146,6 +1161,7 @@ func (r *leiRepository) BatchResolveOpenProcessingFailures(jobType string, natur
 		Where("job_type = ? AND natural_key IN ? AND resolved = FALSE", jobType, filtered).
 		Updates(updates).Error
 }
+
 // detectChanges compares two LEI records and returns a map of changed fields
 func (r *leiRepository) detectChanges(old, new *domain.LEIRecord) map[string]domain.LEIChangeDetection {
 	changes := make(map[string]domain.LEIChangeDetection)

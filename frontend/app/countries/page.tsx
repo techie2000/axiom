@@ -39,17 +39,17 @@ interface ColumnConfig {
 
 const AVAILABLE_COLUMNS: ColumnConfig[] = [
   { key: 'flag', label: 'Flag', defaultVisible: true, width: 'w-20' },
-  { key: 'name', label: 'Name', defaultVisible: true, width: 'min-w-56' },
-  { key: 'native_name', label: 'Native Name', defaultVisible: false, width: 'min-w-56' },
+  { key: 'name', label: 'Name', defaultVisible: true, width: 'w-56' },
+  { key: 'native_name', label: 'Native Name', defaultVisible: false, width: 'w-56' },
   { key: 'alpha2', label: 'Alpha-2 (Primary)', defaultVisible: true, width: 'w-32' },
   { key: 'alpha3', label: 'Alpha-3 (Secondary)', defaultVisible: true, width: 'w-36' },
   { key: 'numeric_code', label: 'Numeric', defaultVisible: false, width: 'w-28' },
   { key: 'capital', label: 'Capital', defaultVisible: false, width: 'w-40' },
   { key: 'continent', label: 'Continent', defaultVisible: true, width: 'w-36' },
   { key: 'region', label: 'Region', defaultVisible: true, width: 'w-44' },
-  { key: 'languages', label: 'Languages', defaultVisible: false, width: 'min-w-36' },
-  { key: 'currency_codes', label: 'Currency Codes', defaultVisible: false, width: 'min-w-36' },
-  { key: 'phone_codes', label: 'Phone Codes', defaultVisible: false, width: 'min-w-40' },
+  { key: 'languages', label: 'Languages', defaultVisible: false, width: 'w-72' },
+  { key: 'currency_codes', label: 'Currency Codes', defaultVisible: false, width: 'w-72' },
+  { key: 'phone_codes', label: 'Phone Codes', defaultVisible: false, width: 'w-56' },
   { key: 'active', label: 'Active', defaultVisible: false, width: 'w-24' },
 ]
 
@@ -814,36 +814,58 @@ export default function CountriesPage() {
                           case 'currency_codes':
                             return (
                               <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                                <ReferenceDetailList
-                                  values={country.currency_codes}
-                                  normalizeValue={(value) => String(value || '').trim().toUpperCase()}
-                                  getDisplayValue={(normalizedValue) => (showReferenceCodes ? normalizedValue : getCurrencyName(normalizedValue))}
-                                  getDetails={(normalizedValue) => currenciesByCode.get(normalizedValue)}
-                                  preferredOrder={[
-                                    'code',
-                                    'name',
-                                    'symbol',
-                                    'symbol_native',
-                                    'decimal_digits',
-                                    'rounding',
-                                    'name_plural',
-                                    'active',
-                                    'is_alert_cls_allowed',
-                                    'is_ofac_sanctioned',
-                                  ]}
-                                />
+                                <div
+                                  className="max-w-[18rem] overflow-hidden whitespace-nowrap text-ellipsis"
+                                  title={
+                                    country.currency_codes
+                                      .map((value) => String(value || '').trim().toUpperCase())
+                                      .filter(Boolean)
+                                      .map((code) => (showReferenceCodes ? code : getCurrencyName(code)))
+                                      .join(', ')
+                                  }
+                                >
+                                  <ReferenceDetailList
+                                    values={country.currency_codes}
+                                    normalizeValue={(value) => String(value || '').trim().toUpperCase()}
+                                    getDisplayValue={(normalizedValue) => (showReferenceCodes ? normalizedValue : getCurrencyName(normalizedValue))}
+                                    getDetails={(normalizedValue) => currenciesByCode.get(normalizedValue)}
+                                    preferredOrder={[
+                                      'code',
+                                      'name',
+                                      'symbol',
+                                      'symbol_native',
+                                      'decimal_digits',
+                                      'rounding',
+                                      'name_plural',
+                                      'active',
+                                      'is_alert_cls_allowed',
+                                      'is_ofac_sanctioned',
+                                    ]}
+                                  />
+                                </div>
                               </td>
                             )
                           case 'languages':
                             return (
                               <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                                <ReferenceDetailList
-                                  values={country.languages}
-                                  normalizeValue={(value) => String(value || '').trim().toLowerCase()}
-                                  getDisplayValue={(normalizedValue) => (showReferenceCodes ? normalizedValue : getLanguageName(normalizedValue))}
-                                  getDetails={(normalizedValue) => languagesByCode.get(normalizedValue)}
-                                  preferredOrder={['code', 'name', 'native', 'rtl']}
-                                />
+                                <div
+                                  className="max-w-[18rem] overflow-hidden whitespace-nowrap text-ellipsis"
+                                  title={
+                                    country.languages
+                                      .map((value) => String(value || '').trim().toLowerCase())
+                                      .filter(Boolean)
+                                      .map((code) => (showReferenceCodes ? code : getLanguageName(code)))
+                                      .join(', ')
+                                  }
+                                >
+                                  <ReferenceDetailList
+                                    values={country.languages}
+                                    normalizeValue={(value) => String(value || '').trim().toLowerCase()}
+                                    getDisplayValue={(normalizedValue) => (showReferenceCodes ? normalizedValue : getLanguageName(normalizedValue))}
+                                    getDetails={(normalizedValue) => languagesByCode.get(normalizedValue)}
+                                    preferredOrder={['code', 'name', 'native', 'rtl']}
+                                  />
+                                </div>
                               </td>
                             )
                           case 'active':

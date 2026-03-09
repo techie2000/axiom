@@ -292,6 +292,7 @@ func setupRouter(cfg *config.Config, h *handler.Handlers) *gin.Engine {
 		v1.GET("/lei-regions", h.LEI.GetDistinctRegions)
 		v1.GET("/lei-legal-forms", h.LEI.GetDistinctLegalForms)
 		v1.GET("/lei/record/:id", h.LEI.GetLEIByID)
+		v1.GET("/lei/:lei/predecessors", h.LEI.GetPredecessorLEIs)
 		v1.GET("/lei/:lei/audit", h.LEI.GetAuditHistory)
 		v1.GET("/lei/:lei", h.LEI.GetLEIByCode)
 

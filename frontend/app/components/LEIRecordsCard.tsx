@@ -48,7 +48,7 @@ export default function LEIRecordsCard() {
             LEI Records →
           </h3>
           <p className="text-gray-600 dark:text-gray-300 flex-1 mb-4">
-            Browse GLEIF Legal Entity Identifiers
+            Browse ISO 17442 GLEIF Legal Entity Identifiers
           </p>
 
           {loading ? (

@@ -106,6 +106,7 @@ type LEIService interface {
 	// Record management
 	CreateLEIRecord(record *domain.LEIRecord) error
 	GetLEIByCode(lei string) (*domain.LEIRecord, error)
+	GetPredecessorLEIs(lei string) ([]*domain.LEIRecord, error)
 	GetLEIByID(id string) (*domain.LEIRecord, error)
 	GetAllLEI(limit, offset int) ([]*domain.LEIRecord, error)
 	GetAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string) ([]*domain.LEIRecord, error)
@@ -1371,6 +1372,20 @@ func (s *leiService) GetLEIByCode(lei string) (*domain.LEIRecord, error) {
 	normalizeLEIRecordNullLikeFields(record)
 
 	return record, nil
+}
+
+// GetPredecessorLEIs retrieves LEI records that reference the provided LEI as successor.
+func (s *leiService) GetPredecessorLEIs(lei string) ([]*domain.LEIRecord, error) {
+	records, err := s.repo.FindPredecessorLEIsBySuccessor(lei)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, record := range records {
+		normalizeLEIRecordNullLikeFields(record)
+	}
+
+	return records, nil
 }
 
 // GetLEIByID retrieves an LEI record by ID

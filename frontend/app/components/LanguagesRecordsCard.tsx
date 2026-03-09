@@ -41,7 +41,7 @@ export default function LanguagesRecordsCard() {
             Languages →
           </h3>
           <p className="text-gray-600 dark:text-gray-300 flex-1 mb-4">
-            Browse language codes, names, and writing direction
+            Browse ISO 639 language codes, names, and writing direction
           </p>
 
           {loading ? (
@@ -54,7 +54,7 @@ export default function LanguagesRecordsCard() {
           )}
 
           <div className="flex gap-2 mt-auto">
-            <span className="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs rounded">ISO</span>
+            <span className="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs rounded">ISO 639</span>
             <span className="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs rounded">Public</span>
           </div>
         </div>

@@ -1,9 +1,10 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { MouseEvent as ReactMouseEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import Alert from '../components/Alert'
 import CountryFlag from '../components/CountryFlag'
+import LEIOtherNamesList from '../components/LEIOtherNamesList'
 import PageHeader from '../components/PageHeader'
 import PreferenceSavePrompt from '../components/PreferenceSavePrompt'
 import ReferenceDetailList from '../components/ReferenceDetailList'
@@ -66,12 +67,23 @@ interface LEIRecord {
   validation_authority: string
 }
 
+interface RelatedLEIReference {
+  lei: string
+  legal_name: string
+}
+
 interface Country {
   code: string
   name: string
   alpha3_code?: string
   region?: string
   active: boolean
+  [key: string]: unknown
+}
+
+interface LanguageOption {
+  code: string
+  name: string
   [key: string]: unknown
 }
 
@@ -90,7 +102,7 @@ const VIRTUAL_COLUMN_DEPENDENCIES: Partial<Record<keyof LEIRecord, Array<keyof L
 const AVAILABLE_COLUMNS: ColumnConfig[] = [
   // Core fields
   { key: 'lei', label: 'LEI', group: 'Core', defaultVisible: true, width: 'w-44' },
-  { key: 'legal_name', label: 'Legal Name', group: 'Core', defaultVisible: true, width: 'min-w-64' },
+  { key: 'legal_name', label: 'Legal Name', group: 'Core', defaultVisible: true, width: 'min-w-96' },
   { key: 'entity_status', label: 'Status', group: 'Core', defaultVisible: true, width: 'w-32' },
   { key: 'entity_category', label: 'Category', group: 'Core', defaultVisible: true, width: 'w-40' },
   { key: 'country_flag', label: 'Country Flag', group: 'Core', defaultVisible: false, width: 'w-20' },
@@ -154,6 +166,7 @@ export default function LEIRecordsPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [totalRecords, setTotalRecords] = useState(0)
   const [countryOptions, setCountryOptions] = useState<Country[]>([])
+  const [languagesByCode, setLanguagesByCode] = useState<Map<string, LanguageOption>>(new Map())
   const [categoryOptionsFromAPI, setCategoryOptionsFromAPI] = useState<string[]>([])
   const [regionNameByCode, setRegionNameByCode] = useState<Map<string, string>>(new Map())
   const [legalFormNameByCode, setLegalFormNameByCode] = useState<Map<string, string>>(new Map())
@@ -164,7 +177,6 @@ export default function LEIRecordsPage() {
   const [filterBarHeight, setFilterBarHeight] = useState(0)
   const countryDropdownRef = useRef<HTMLDivElement>(null)
   const filterBarRef = useRef<HTMLDivElement>(null)
-  const [stickyColumnWidths, setStickyColumnWidths] = useState<number[]>([])
 
   // Preference-backed column visibility – serialised as a comma-separated list in the store.
   const [storedColumns, setStoredColumns] = useUserPreference('lei-records', 'visible_columns', DEFAULT_VISIBLE_KEYS)
@@ -226,6 +238,11 @@ export default function LEIRecordsPage() {
   const [showColumnSelector, setShowColumnSelector] = useState(false)
   const [managingLouName, setManagingLouName] = useState<string | null>(null)
   const [managingLouNames, setManagingLouNames] = useState<Map<string, string>>(new Map())
+  const [successorLeiName, setSuccessorLeiName] = useState<string | null>(null)
+  const [successorLeiNames, setSuccessorLeiNames] = useState<Map<string, string>>(new Map())
+  const [predecessorLeiReferences, setPredecessorLeiReferences] = useState<RelatedLEIReference[]>([])
+  const [predecessorLeiCache, setPredecessorLeiCache] = useState<Map<string, RelatedLEIReference[]>>(new Map())
+  const [predecessorLeiLoading, setPredecessorLeiLoading] = useState(false)
   const [dateDisplayMode, setDateDisplayMode] = useState<'relative' | 'absolute'>('relative')
 
   const API_BASE_URL = typeof window !== 'undefined' 
@@ -296,30 +313,61 @@ export default function LEIRecordsPage() {
   useEffect(() => {
     const fetchFilterOptions = async () => {
       try {
-        const [countriesResponse, categoriesResponse] = await Promise.all([
+        const [countriesResult, categoriesResult] = await Promise.allSettled([
           fetch(`${API_BASE_URL}/api/v1/lei-countries`),
           fetch(`${API_BASE_URL}/api/v1/lei-categories`),
         ])
 
-        if (countriesResponse.ok) {
-          const data: Country[] = await countriesResponse.json()
+        if (countriesResult.status === 'fulfilled' && countriesResult.value.ok) {
+          const data: Country[] = await countriesResult.value.json()
           // Sort by country name
           const sortedCountries = (data || []).sort((a, b) => a.name.localeCompare(b.name))
           setCountryOptions(sortedCountries)
         }
 
-        if (categoriesResponse.ok) {
-          const data: string[] = await categoriesResponse.json()
+        if (categoriesResult.status === 'fulfilled' && categoriesResult.value.ok) {
+          const data: string[] = await categoriesResult.value.json()
           const sanitized = (data || [])
             .map((category) => (category || '').trim())
             .filter((category) => category !== '' && category.toUpperCase() !== 'NULL')
           setCategoryOptionsFromAPI(sanitized)
         }
-      } catch (err) {
-        console.error('Failed to fetch LEI filter options:', err)
+      } catch {
+        // Optional filter metadata should not block page rendering.
       }
     }
     fetchFilterOptions()
+  }, [API_BASE_URL])
+
+  // Fetch language metadata for rendering other_names.language values.
+  useEffect(() => {
+    const fetchLanguages = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/v1/languages?limit=500&offset=0`, {
+          headers: {
+            Accept: 'application/json',
+          },
+        })
+
+        if (!response.ok) {
+          return
+        }
+
+        const data = await response.json()
+        const map = new Map<string, LanguageOption>()
+        ;(Array.isArray(data) ? data : []).forEach((language: LanguageOption) => {
+          const code = String(language?.code || '').trim().toLowerCase()
+          if (code) {
+            map.set(code, language)
+          }
+        })
+        setLanguagesByCode(map)
+      } catch {
+        // Non-blocking: other_names can still render language codes.
+      }
+    }
+
+    fetchLanguages()
   }, [API_BASE_URL])
 
   // Fetch total records count from API
@@ -349,13 +397,13 @@ export default function LEIRecordsPage() {
   useEffect(() => {
     const fetchDisplayResolvers = async () => {
       try {
-        const [regionsResponse, legalFormsResponse] = await Promise.all([
+        const [regionsResult, legalFormsResult] = await Promise.allSettled([
           fetch(`${API_BASE_URL}/api/v1/lei-regions`),
           fetch(`${API_BASE_URL}/api/v1/lei-legal-forms`),
         ])
 
-        if (regionsResponse.ok) {
-          const regionsData: string[] = await regionsResponse.json()
+        if (regionsResult.status === 'fulfilled' && regionsResult.value.ok) {
+          const regionsData: string[] = await regionsResult.value.json()
           const nextRegionMap = new Map<string, string>()
 
           ;(regionsData || []).forEach((region) => {
@@ -371,8 +419,8 @@ export default function LEIRecordsPage() {
           setRegionNameByCode(nextRegionMap)
         }
 
-        if (legalFormsResponse.ok) {
-          const legalFormsData: string[] = await legalFormsResponse.json()
+        if (legalFormsResult.status === 'fulfilled' && legalFormsResult.value.ok) {
+          const legalFormsData: string[] = await legalFormsResult.value.json()
           const nextLegalFormMap = new Map<string, string>()
 
           ;(legalFormsData || []).forEach((legalForm) => {
@@ -387,8 +435,8 @@ export default function LEIRecordsPage() {
 
           setLegalFormNameByCode(nextLegalFormMap)
         }
-      } catch (err) {
-        console.error('Failed to fetch display resolver metadata:', err)
+      } catch {
+        // Optional display metadata should not block page rendering.
       }
     }
 
@@ -637,6 +685,24 @@ export default function LEIRecordsPage() {
     }
   }
 
+  const handleLinkedLeiClick = async (event: ReactMouseEvent, leiCode: string) => {
+    event.stopPropagation()
+    const normalizedLeiCode = (leiCode || '').trim()
+    if (!normalizedLeiCode) {
+      return
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/lei/${normalizedLeiCode}`)
+      if (response.ok) {
+        const fullRecord = await response.json()
+        setSelectedRecord(normalizeRecordNullLikeValues(fullRecord))
+      }
+    } catch {
+      // Best-effort navigation to related LEI detail.
+    }
+  }
+
   // Fetch managing LOU name when modal opens
   useEffect(() => {
     const fetchManagingLouName = async () => {
@@ -661,6 +727,90 @@ export default function LEIRecordsPage() {
     
     fetchManagingLouName()
   }, [selectedRecord, API_BASE_URL])
+
+  // Fetch successor LEI name when modal opens
+  useEffect(() => {
+    const fetchSuccessorLeiName = async () => {
+      if (!selectedRecord?.successor_lei) {
+        setSuccessorLeiName(null)
+        return
+      }
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/v1/lei/${selectedRecord.successor_lei}`)
+        if (response.ok) {
+          const data = await response.json()
+          setSuccessorLeiName(data.legal_name || null)
+        } else {
+          setSuccessorLeiName(null)
+        }
+      } catch {
+        setSuccessorLeiName(null)
+      }
+    }
+
+    fetchSuccessorLeiName()
+  }, [selectedRecord, API_BASE_URL])
+
+  // Fetch predecessor LEI references that point to the selected LEI as successor.
+  useEffect(() => {
+    const fetchPredecessorLeiReferences = async () => {
+      if (!selectedRecord?.lei) {
+        setPredecessorLeiReferences([])
+        setPredecessorLeiLoading(false)
+        return
+      }
+
+      const selectedLei = selectedRecord.lei.trim()
+      const cachedReferences = predecessorLeiCache.get(selectedLei)
+      if (cachedReferences) {
+        setPredecessorLeiReferences(cachedReferences)
+        setPredecessorLeiLoading(false)
+        return
+      }
+
+      setPredecessorLeiLoading(true)
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/v1/lei/${selectedLei}/predecessors`)
+        if (!response.ok) {
+          setPredecessorLeiReferences([])
+          setPredecessorLeiCache((previous) => {
+            const next = new Map(previous)
+            next.set(selectedLei, [])
+            return next
+          })
+          return
+        }
+
+        const data: LEIRecord[] = await response.json()
+        const references = (data || [])
+          .filter((record) => (record?.lei || '').trim() !== '')
+          .map((record) => ({
+            lei: String(record.lei || '').trim(),
+            legal_name: String(record.legal_name || '').trim(),
+          }))
+
+        setPredecessorLeiReferences(references)
+        setPredecessorLeiCache((previous) => {
+          const next = new Map(previous)
+          next.set(selectedLei, references)
+          return next
+        })
+      } catch {
+        setPredecessorLeiReferences([])
+        setPredecessorLeiCache((previous) => {
+          const next = new Map(previous)
+          next.set(selectedLei, [])
+          return next
+        })
+      } finally {
+        setPredecessorLeiLoading(false)
+      }
+    }
+
+    fetchPredecessorLeiReferences()
+  }, [selectedRecord?.lei, API_BASE_URL, predecessorLeiCache])
 
   // Fetch managing LOU names for all records in table
   useEffect(() => {
@@ -706,40 +856,46 @@ export default function LEIRecordsPage() {
     }
   }, [records, managingLouNames, API_BASE_URL])
 
-  // Parse other_names JSONB field
-  interface OtherName {
-    name: string
-    type: string
-    language?: string
-  }
+  // Fetch successor LEI names for all records in table
+  useEffect(() => {
+    const fetchSuccessorLeiNamesForTable = async () => {
+      const uniqueSuccessorLeiCodes = Array.from(
+        new Set(
+          records
+            .filter((r) => r.successor_lei && r.successor_lei.trim() !== '')
+            .map((r) => r.successor_lei)
+        )
+      )
 
-  const parseOtherNames = (otherNamesData: any): OtherName[] => {
-    // Handle null/undefined
-    if (!otherNamesData) return []
-    
-    // If it's already an array (fetch() auto-parsed JSON), use it directly
-    if (Array.isArray(otherNamesData)) {
-      return otherNamesData
+      if (uniqueSuccessorLeiCodes.length === 0) return
+
+      const codesToFetch = uniqueSuccessorLeiCodes.filter((code) => !successorLeiNames.has(code))
+      if (codesToFetch.length === 0) return
+
+      const newNames = new Map(successorLeiNames)
+      await Promise.all(
+        codesToFetch.map(async (code) => {
+          try {
+            const response = await fetch(`${API_BASE_URL}/api/v1/lei/${code}`)
+            if (response.ok) {
+              const data = await response.json()
+              if (data.legal_name) {
+                newNames.set(code, data.legal_name)
+              }
+            }
+          } catch {
+            // Best-effort enrichment only.
+          }
+        })
+      )
+
+      setSuccessorLeiNames(newNames)
     }
-    
-    // If it's a string, try to parse it
-    if (typeof otherNamesData === 'string') {
-      if (otherNamesData === '[]' || otherNamesData === 'null' || otherNamesData === '') return []
-      if (otherNamesData.startsWith('Array(')) return [] // Handle "Array(0)" etc
-      
-      try {
-        const parsed = JSON.parse(otherNamesData)
-        return Array.isArray(parsed) ? parsed : []
-      } catch (e) {
-        console.error('Failed to parse other_names string:', otherNamesData, e)
-        return []
-      }
+
+    if (records.length > 0) {
+      fetchSuccessorLeiNamesForTable()
     }
-    
-    // Unknown type
-    console.error('Unexpected other_names type:', typeof otherNamesData, otherNamesData)
-    return []
-  }
+  }, [records, successorLeiNames, API_BASE_URL])
 
   const formatCellValue = (value: any, key: keyof LEIRecord): string => {
     return formatLEICellValue(value, key)
@@ -911,29 +1067,11 @@ export default function LEIRecordsPage() {
   const hasActiveFilters = debouncedSearch || statusFilter || categoryFilter || countryFilter
   const visibleColumnsInOrder = AVAILABLE_COLUMNS.filter((col) => effectiveVisibleColumns.has(col.key))
   const LEI_COLUMN_WIDTH_PX = 184
-  const LEGAL_NAME_COLUMN_WIDTH_PX = 320
-  const leiColumnIndex = visibleColumnsInOrder.findIndex((column) => column.key === 'lei')
-  const legalNameColumnIndex = visibleColumnsInOrder.findIndex((column) => column.key === 'legal_name')
 
-  const getMeasuredColumnWidth = (columnIndex: number, fallbackWidth: number): number => {
-    if (columnIndex < 0) {
-      return fallbackWidth
-    }
-
-    const measuredWidth = stickyColumnWidths[columnIndex]
-    if (typeof measuredWidth === 'number' && measuredWidth > 0) {
-      return measuredWidth
-    }
-
-    return fallbackWidth
-  }
-
-  const leiColumnWidth = getMeasuredColumnWidth(leiColumnIndex, LEI_COLUMN_WIDTH_PX)
-  const legalNameColumnWidth = getMeasuredColumnWidth(legalNameColumnIndex, LEGAL_NAME_COLUMN_WIDTH_PX)
+  const leiColumnWidth = LEI_COLUMN_WIDTH_PX
 
   const getPinnedColumnWidth = (columnKey: keyof LEIRecord): number | null => {
     if (columnKey === 'lei') return leiColumnWidth
-    if (columnKey === 'legal_name') return legalNameColumnWidth
     return null
   }
 
@@ -1329,7 +1467,7 @@ export default function LEIRecordsPage() {
             <SyncedWideTable
               stickyTopOffset={hasActiveFilters ? filterBarHeight : 0}
               dependencyKey={`${effectiveExpandedWidth}-${showLocationCodes}-${visibleColumnsInOrder.map((column) => column.key).join('|')}-${records.length}-${currentPage}-${loading}`}
-              tableClassName="w-full"
+              tableClassName="min-w-full"
               tableStyle={{ tableLayout: 'auto', borderCollapse: 'collapse' }}
               stickyHeaderClassName="bg-gray-100 dark:bg-gray-800"
               mainHeaderClassName="bg-gray-100 dark:bg-gray-800"
@@ -1344,21 +1482,9 @@ export default function LEIRecordsPage() {
                 borderBottomRightRadius: '0.5rem',
                 borderTop: hasActiveFilters ? 'none' : undefined,
               }}
-              onMainHeaderWidthsChange={(measuredWidths) => {
-                setStickyColumnWidths((previousWidths) => {
-                  if (
-                    previousWidths.length === measuredWidths.length &&
-                    previousWidths.every((width, index) => Math.abs(width - measuredWidths[index]) < 0.5)
-                  ) {
-                    return previousWidths
-                  }
-
-                  return measuredWidths
-                })
-              }}
               headerRow={(
                 <tr>
-                  {visibleColumnsInOrder.map((column, columnIndex) => (
+                  {visibleColumnsInOrder.map((column) => (
                     <th
                       key={String(column.key)}
                       onClick={() => handleSort(column.key)}
@@ -1373,15 +1499,6 @@ export default function LEIRecordsPage() {
                             width: `${pinnedWidth}px`,
                             minWidth: `${pinnedWidth}px`,
                             maxWidth: `${pinnedWidth}px`,
-                          }
-                        }
-
-                        if (stickyColumnWidths[columnIndex]) {
-                          return {
-                            ...getPinnedColumnStyle(column.key, true),
-                            width: `${stickyColumnWidths[columnIndex]}px`,
-                            minWidth: `${stickyColumnWidths[columnIndex]}px`,
-                            maxWidth: `${stickyColumnWidths[columnIndex]}px`,
                           }
                         }
 
@@ -1413,9 +1530,11 @@ export default function LEIRecordsPage() {
                         {visibleColumnsInOrder.map((column) => {
                           const value = record[column.key]
                           const isStatus = column.key === 'entity_status'
+                          const isLeiColumn = column.key === 'lei'
                           const isLegalName = column.key === 'legal_name'
                           const isLegalFormColumn = column.key === 'entity_legal_form'
                           const isManagingLou = column.key === 'managing_lou'
+                          const isSuccessorLei = column.key === 'successor_lei'
                           const isCountryFlagColumn = column.key === 'country_flag'
                           const isRegionColumn = column.key === 'legal_address_region' || column.key === 'hq_address_region'
                           const isCountryColumn = column.key === 'legal_address_country' || column.key === 'hq_address_country'
@@ -1442,7 +1561,11 @@ export default function LEIRecordsPage() {
                                 return getPinnedColumnStyle(column.key, false)
                               })()}
                             >
-                              {isStatus ? (
+                              {isLeiColumn ? (
+                                <div>
+                                  <div className="font-mono">{formatCellValue(value, column.key)}</div>
+                                </div>
+                              ) : isStatus ? (
                                 (() => {
                                   const statusPresentation = getStatusBadgePresentation(value)
                                   return (
@@ -1457,35 +1580,42 @@ export default function LEIRecordsPage() {
                                 })()
                               ) : isManagingLou ? (
                                 <div>
-                                  <div className="font-mono">{formatCellValue(value, column.key)}</div>
+                                  <button
+                                    type="button"
+                                    onClick={(event) => handleLinkedLeiClick(event, String(value || ''))}
+                                    className="font-mono text-left text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+                                  >
+                                    {formatCellValue(value, column.key)}
+                                  </button>
                                   {value && managingLouNames.has(String(value)) && (
                                     <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                                       {managingLouNames.get(String(value))}
                                     </div>
                                   )}
                                 </div>
+                              ) : isSuccessorLei ? (
+                                <div>
+                                  <button
+                                    type="button"
+                                    onClick={(event) => handleLinkedLeiClick(event, String(value || ''))}
+                                    className="font-mono text-left text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+                                  >
+                                    {formatCellValue(value, column.key)}
+                                  </button>
+                                  {value && successorLeiNames.has(String(value)) && (
+                                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                      {successorLeiNames.get(String(value))}
+                                    </div>
+                                  )}
+                                </div>
                               ) : isLegalName ? (
                                 <div>
                                   <div>{formatCellValue(value, column.key)}</div>
-                                  {(() => {
-                                    const otherNames = parseOtherNames(record.other_names)
-                                    if (otherNames.length === 0) return null
-                                    return (
-                                      <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                        <div>Other names:</div>
-                                        {otherNames.map((n, i) => (
-                                          <div key={i} className="ml-2">
-                                            {n.name}
-                                            {n.type && (
-                                              <span className="ml-1 text-gray-400 dark:text-gray-500">
-                                                ({n.type.replace(/_/g, ' ')})
-                                              </span>
-                                            )}
-                                          </div>
-                                        ))}
-                                      </div>
-                                    )
-                                  })()}
+                                  <LEIOtherNamesList
+                                    otherNamesData={record.other_names}
+                                    showCodes={showLocationCodes}
+                                    languagesByCode={languagesByCode}
+                                  />
                                 </div>
                               ) : isCountryColumn ? (
                                 <ReferenceDetailList
@@ -1671,27 +1801,18 @@ export default function LEIRecordsPage() {
                     </div>
                   )}
                 </div>
-                {(() => {
-                  const otherNames = parseOtherNames(selectedRecord.other_names)
-                  if (otherNames.length === 0) return null
-                  return (
-                    <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/10">
-                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Other Names</label>
-                      <div className="mt-2 space-y-1">
-                        {otherNames.map((n, i) => (
-                          <div key={i} className="text-sm text-gray-900 dark:text-white">
-                            {n.name}
-                            {n.type && (
-                              <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
-                                ({n.type.replace(/_/g, ' ')})
-                              </span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )
-                })()}
+                <LEIOtherNamesList
+                  otherNamesData={selectedRecord.other_names}
+                  showCodes={showLocationCodes}
+                  languagesByCode={languagesByCode}
+                  className="mt-4 pt-4 border-t border-gray-200 dark:border-white/10"
+                  showLabel={true}
+                  label="Other Names"
+                  labelClassName="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase"
+                  listClassName="mt-2 space-y-1"
+                  itemClassName="text-sm text-gray-900 dark:text-white"
+                  languageClassName="ml-2 text-xs text-gray-500 dark:text-gray-400"
+                />
               </section>
 
               {/* Addresses - Side by Side with Aligned Fields */}
@@ -1990,28 +2111,77 @@ export default function LEIRecordsPage() {
               </section>
 
               {/* Associated Entities */}
-              {(selectedRecord.managing_lou || selectedRecord.successor_lei) && (
+              {(selectedRecord.managing_lou || selectedRecord.successor_lei || predecessorLeiLoading || predecessorLeiReferences.length > 0) && (
                 <section className="bg-white dark:bg-gray-900 p-6 pb-0">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 pb-2 border-b border-gray-200 dark:border-white/10">
                     Associated Entities
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white dark:bg-gray-900">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white dark:bg-gray-900">
+                    <div>
+                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Predecessor LEI</label>
+                      <div className="mt-1 space-y-2">
+                        {predecessorLeiLoading && (
+                          <p className="text-xs text-gray-400 dark:text-gray-500 italic">Checking predecessor links...</p>
+                        )}
+                        {!predecessorLeiLoading && predecessorLeiReferences.length === 0 && (
+                          <p className="text-xs text-gray-400 dark:text-gray-500 italic">No predecessor links found.</p>
+                        )}
+                        {!predecessorLeiLoading && predecessorLeiReferences.map((reference) => (
+                          <div key={reference.lei}>
+                            <button
+                              type="button"
+                              onClick={(event) => handleLinkedLeiClick(event, reference.lei)}
+                              className="block font-mono text-sm text-left text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+                            >
+                              {reference.lei}
+                            </button>
+                            {reference.legal_name && (
+                              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{reference.legal_name}</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Successor LEI</label>
+                      {selectedRecord.successor_lei ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={(event) => handleLinkedLeiClick(event, selectedRecord.successor_lei)}
+                            className="mt-1 block font-mono text-sm text-left text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+                          >
+                            {selectedRecord.successor_lei}
+                          </button>
+                          {successorLeiName && (
+                            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{successorLeiName}</p>
+                          )}
+                          {successorLeiName === null && selectedRecord.successor_lei && (
+                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 italic">Loading name...</p>
+                          )}
+                        </>
+                      ) : (
+                        <p className="mt-1 text-xs text-gray-400 dark:text-gray-500 italic">No successor link found.</p>
+                      )}
+                    </div>
+
                     {selectedRecord.managing_lou && (
-                      <div>
+                      <div className="md:col-span-2 border-t border-gray-200 pt-4 dark:border-white/10">
                         <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Managing LOU</label>
-                        <p className="text-sm text-gray-900 dark:text-white mt-1 font-mono">{selectedRecord.managing_lou}</p>
+                        <button
+                          type="button"
+                          onClick={(event) => handleLinkedLeiClick(event, selectedRecord.managing_lou)}
+                          className="mt-1 block font-mono text-sm text-left text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+                        >
+                          {selectedRecord.managing_lou}
+                        </button>
                         {managingLouName && (
                           <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{managingLouName}</p>
                         )}
                         {managingLouName === null && selectedRecord.managing_lou && (
                           <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 italic">Loading name...</p>
                         )}
-                      </div>
-                    )}
-                    {selectedRecord.successor_lei && (
-                      <div>
-                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Successor LEI</label>
-                        <p className="text-sm font-mono text-gray-900 dark:text-white mt-1">{selectedRecord.successor_lei}</p>
                       </div>
                     )}
                   </div>
