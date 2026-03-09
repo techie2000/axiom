@@ -219,13 +219,9 @@ export default function LEIRecordsPage() {
     setShowColumnSavePrompt(false)
   }, [])
 
-  // Saves the current effective column selection immediately as the stored default,
-  // without requiring a new toast cycle. Used by the "Save as my default" button
-  // inside the column selector panel.
-  // Saves the current effective column selection immediately as the stored default,
-  // without requiring a new toast cycle. Column preferences cannot reuse the
-  // hook's saveCurrentValue because they are Set-based (serialised as a
-  // comma-separated string), not a simple boolean managed by the hook.
+  // Save the current effective column selection as the stored default without a new toast cycle.
+  // Column preferences cannot reuse the hook's saveCurrentValue because they are Set-based
+  // (serialised as a comma-separated string), not a simple boolean.
   const handleSaveColumnsNow = useCallback(() => {
     setStoredColumns(Array.from(effectiveVisibleColumns).join(','))
     setLocalColumns(null)
