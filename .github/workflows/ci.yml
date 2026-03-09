@@ -79,6 +79,91 @@ jobs:
           docker run --rm -i hadolint/hadolint < ./docker/Dockerfile.backend
           docker run --rm -i hadolint/hadolint < ./docker/Dockerfile.frontend
 
+  validate-migrations:
+    name: Validate DB Migrations
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: axiom_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d axiom_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate migration version uniqueness
+        shell: bash
+        run: |
+          set -euo pipefail
+          duplicates=$(find backend/migrations -maxdepth 1 -name "*.up.sql" -type f \
+            | sed -E 's#.*/([0-9]+)_.*#\1#' \
+            | sort \
+            | uniq -d)
+
+          if [ -n "$duplicates" ]; then
+            echo "Duplicate migration version(s) found:"
+            echo "$duplicates"
+            exit 1
+          fi
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'backend/go.mod'
+          cache: true
+          cache-dependency-path: 'backend/go.sum'
+
+      - name: Install migrate CLI
+        run: go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.18.1
+
+      - name: Run migration smoke test
+        shell: bash
+        run: |
+          set -euo pipefail
+          for i in {1..20}; do
+            if $HOME/go/bin/migrate -path backend/migrations -database "postgres://postgres:postgres@localhost:5432/axiom_ci?sslmode=disable" version >/dev/null 2>&1; then
+              break
+            fi
+            sleep 2
+          done
+          $HOME/go/bin/migrate -path backend/migrations -database "postgres://postgres:postgres@localhost:5432/axiom_ci?sslmode=disable" up
+
+  build-frontend:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci --legacy-peer-deps
+          else
+            npm install --legacy-peer-deps
+          fi
+        working-directory: ./frontend
+
+      - name: Build frontend
+        run: npm run build
+        working-directory: ./frontend
+
   build-go:
     name: Build Go Backend
     runs-on: ubuntu-latest
@@ -118,7 +203,7 @@ jobs:
   ci-summary:
     name: CI Summary (${{ needs.detect-environment.outputs.environment || 'none' }})
     runs-on: ubuntu-latest
-    needs: [detect-environment, lint-go, lint-docker, build-go, test-go]
+    needs: [detect-environment, lint-go, lint-docker, validate-migrations, build-go, test-go, build-frontend]
     if: always()
     steps:
       - name: Report CI result
@@ -126,19 +211,25 @@ jobs:
           ENV="${{ needs.detect-environment.outputs.environment }}"
           LINT_GO="${{ needs.lint-go.result }}"
           LINT_DOCKER="${{ needs.lint-docker.result }}"
+          MIGRATIONS="${{ needs.validate-migrations.result }}"
           BUILD="${{ needs.build-go.result }}"
           TEST="${{ needs.test-go.result }}"
+          BUILD_FRONTEND="${{ needs.build-frontend.result }}"
 
           echo "Environment : $ENV"
           echo "Go Lint     : $LINT_GO"
           echo "Docker Lint : $LINT_DOCKER"
+          echo "Migrations  : $MIGRATIONS"
           echo "Build       : $BUILD"
           echo "Tests       : $TEST"
+          echo "Frontend    : $BUILD_FRONTEND"
 
           if [ "$LINT_GO" != "success" ] || \
              [ "$LINT_DOCKER" != "success" ] || \
+             [ "$MIGRATIONS" != "success" ] || \
              [ "$BUILD" != "success" ] || \
-             [ "$TEST" != "success" ]; then
+             [ "$TEST" != "success" ] || \
+             [ "$BUILD_FRONTEND" != "success" ]; then
             echo "❌ CI failed — see individual job logs above."
             exit 1
           fi
