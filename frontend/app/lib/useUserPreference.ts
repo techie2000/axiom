@@ -63,9 +63,7 @@ async function savePreferenceToServer(
   preferenceValue: string,
 ): Promise<void> {
   const token = getToken()
-  if (!token) {
-    throw new PreferenceSaveError('missing auth token', 401)
-  }
+  if (!token) return
   const response = await fetch(`${API_BASE_URL}/api/v1/preferences`, {
     method: 'PUT',
     headers: {
