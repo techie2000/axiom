@@ -359,27 +359,16 @@ export default function CountriesPage() {
           }
           case 'region':
             return country.region || ''
-          case 'phone_codes':
-            return country.phone_codes.map((value) => String(value || '').trim()).filter(Boolean).map((value) => (value.startsWith('+') ? value : `+${value}`)).join(', ')
-          case 'currency_codes': {
-            const normalizedValues = normalizeCodeList(country.currency_codes)
-            if (showReferenceCodes) {
-              return normalizedValues.join(', ')
-            }
-            return normalizedValues.map((code) => getCurrencyName(code)).join(', ')
-          }
-          case 'languages': {
-            const normalizedValues = country.languages.map((value) => String(value || '').trim().toLowerCase()).filter(Boolean)
-            if (showReferenceCodes) {
-              return normalizedValues.join(', ')
-            }
-            return normalizedValues.map((code) => getLanguageName(code)).join(', ')
-          }
-          case 'active':
-            return Number(country.active)
-          case 'flag':
-          default:
-            return country.name || ''
+                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 align-top whitespace-normal break-words">
+                                <div className="leading-relaxed">
+                                  <ReferenceDetailList
+                                    values={country.languages}
+                                    normalizeValue={(value) => String(value || '').trim().toLowerCase()}
+                                    getDisplayValue={(normalizedValue) => (showReferenceCodes ? normalizedValue : getLanguageName(normalizedValue))}
+                                    getDetails={(normalizedValue) => languagesByCode.get(normalizedValue)}
+                                    preferredOrder={['code', 'name', 'native', 'rtl']}
+                                  />
+                                </div>
         }
       }
 
@@ -836,6 +825,7 @@ export default function CountriesPage() {
                             )
                           case 'languages':
                             return (
+<<<<<<< HEAD
                               <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 whitespace-normal break-words">
                                 <ReferenceDetailList
                                   values={country.languages}
@@ -844,6 +834,18 @@ export default function CountriesPage() {
                                   getDetails={(normalizedValue) => languagesByCode.get(normalizedValue)}
                                   preferredOrder={['code', 'name', 'native', 'rtl']}
                                 />
+=======
+                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 align-top">
+                                <div className="whitespace-normal break-words leading-relaxed">
+                                  <ReferenceDetailList
+                                    values={country.languages}
+                                    normalizeValue={(value) => String(value || '').trim().toLowerCase()}
+                                    getDisplayValue={(normalizedValue) => (showReferenceCodes ? normalizedValue : getLanguageName(normalizedValue))}
+                                    getDetails={(normalizedValue) => languagesByCode.get(normalizedValue)}
+                                    preferredOrder={['code', 'name', 'native', 'rtl']}
+                                  />
+                                </div>
+>>>>>>> 2258374 (fix: replace truncation with wrapping for languages column in countries table)
                               </td>
                             )
                           case 'active':
