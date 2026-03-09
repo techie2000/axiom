@@ -131,6 +131,28 @@ func (h *LEIHandler) GetLEIByCode(c *gin.Context) {
 	c.JSON(http.StatusOK, record)
 }
 
+// GetPredecessorLEIs retrieves LEI records that point to this LEI as successor
+// @Summary Get predecessor LEI records
+// @Description Get LEI records whose successor_lei equals the provided LEI
+// @Tags LEI
+// @Accept json
+// @Produce json
+// @Param lei path string true "LEI code"
+// @Success 200 {array} domain.LEIRecord
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/lei/{lei}/predecessors [get]
+func (h *LEIHandler) GetPredecessorLEIs(c *gin.Context) {
+	lei := c.Param("lei")
+
+	records, err := h.leiService.GetPredecessorLEIs(lei)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve predecessor LEI records"})
+		return
+	}
+
+	c.JSON(http.StatusOK, records)
+}
+
 // GetLEIByID retrieves an LEI record by ID
 // @Summary Get LEI record by ID
 // @Description Get a specific LEI record by its database ID
