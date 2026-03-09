@@ -11,6 +11,8 @@ export default function SSIPage() {
         <PageHeader
           title="Standard Settlement Instructions (SSI)"
           subtitle="Manage settlement instructions for securities trading counterparties"
+          backHref="/dashboard"
+          backLabel="← Back to Dashboard"
         />
 
         {/* Coming Soon Notice */}
@@ -80,10 +82,10 @@ export default function SSIPage() {
         {/* Back Button */}
         <div className="mt-8">
           <Link
-            href="/"
+            href="/dashboard"
             className="inline-block bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 px-6 py-3 rounded-lg transition-colors border-2 border-purple-500/30"
           >
-            ← Back to Home
+            ← Back to Dashboard
           </Link>
         </div>
       </div>

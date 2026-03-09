@@ -10,6 +10,8 @@ export default function InstrumentsPage() {
         <PageHeader
           title="Instruments"
           subtitle="Financial instruments and securities reference data"
+          backHref="/dashboard"
+          backLabel="← Back to Dashboard"
         />
 
         {/* Coming Soon Card */}
