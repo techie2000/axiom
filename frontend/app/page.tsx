@@ -10,7 +10,7 @@ export default function Home() {
             <div className="flex items-center gap-4 md:gap-6 mb-7">
               <div className="flex items-center gap-4 md:gap-6">
                 <Image
-                  src="/branding/logo.png"
+                  src="/branding/logo.svg"
                   alt="Axiom brand"
                   width={96}
                   height={96}

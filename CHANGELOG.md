@@ -79,6 +79,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   instead of a no-op/stub result
 - `docker-compose.main.yml` — backend service now bind-mounts `backend/data/masterdata` to ensure host-side master
   data changes are visible inside the running container
+- `backend/internal/service/lei_level2_service_test.go` — added targeted checkpoint persistence unit tests for interval
+  boundaries and forced progress updates to prevent regressions in SourceFile progress writes
+- `backend/internal/service/masterdata_service_test.go` — added fingerprint stability and update detection tests covering
+  unchanged content, modified files, and missing file errors
+- `frontend/app/components/SortableHeaderCell.tsx` — sortable header button now sets `type="button"` and exposes
+  sort state via `aria-sort` on the header cell for screen-reader compatibility
+- `frontend/app/layout.tsx` and `frontend/app/page.tsx` — branding assets now resolve at runtime via committed
+  `frontend/public/branding/*` SVG files, preventing favicon and logo 404s
+- `frontend/app/home/page.tsx` — restored public `/home` route so landing-page navigation and post-login non-bootstrap
+  redirects do not lead to 404
 
 - `.github/workflows/lint.yml` — branch filter corrected from non-existent `develop` to `dev`,
   and extended to also run on `uat` and `prod` pushes and pull requests

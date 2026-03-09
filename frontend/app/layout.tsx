@@ -7,12 +7,7 @@ export const metadata: Metadata = {
   title: 'Axiom - Financial Services Static Data',
   description: 'Financial Services Static Data Management System',
   icons: {
-    icon: [
-      { url: '/branding/favicon.ico' },
-      { url: '/branding/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
-      { url: '/branding/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
-    ],
-    apple: '/branding/apple-touch-icon.png',
+    icon: [{ url: '/branding/favicon.svg', type: 'image/svg+xml' }],
   },
 }
 
