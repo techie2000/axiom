@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -219,6 +220,45 @@ func (h *LEIHandler) ListLEI(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, records)
+}
+
+// GetLegalNamesByLEICodes retrieves legal names for a batch of LEI codes in a single round-trip.
+// @Summary Batch-fetch legal names for a set of LEI codes
+// @Description Returns a map of LEI code to legal name. Codes not found are absent from the response.
+// @Tags LEI
+// @Produce json
+// @Param codes query string true "Comma-separated list of LEI codes (max 500)"
+// @Success 200 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/lei/names [get]
+func (h *LEIHandler) GetLegalNamesByLEICodes(c *gin.Context) {
+	rawCodes := c.Query("codes")
+	if rawCodes == "" {
+		c.JSON(http.StatusOK, map[string]string{})
+		return
+	}
+
+	codes := strings.Split(rawCodes, ",")
+	const maxCodes = 500
+	if len(codes) > maxCodes {
+		codes = codes[:maxCodes]
+	}
+
+	filtered := codes[:0]
+	for _, code := range codes {
+		if trimmed := strings.TrimSpace(code); trimmed != "" {
+			filtered = append(filtered, trimmed)
+		}
+	}
+	codes = filtered
+
+	names, err := h.leiService.GetLegalNamesByLEICodes(codes)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve LEI names"})
+		return
+	}
+
+	c.JSON(http.StatusOK, names)
 }
 
 // GetAuditHistory retrieves audit history for an LEI

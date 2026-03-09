@@ -820,54 +820,55 @@ export default function LEIRecordsPage() {
     fetchPredecessorLeiReferences()
   }, [selectedRecord?.lei, API_BASE_URL, predecessorLeiCache])
 
-  // Fetch managing LOU names for all records in table
+  // Shared helper: batch-fetch legal names for a set of LEI codes using a single HTTP request.
+  // Returns a map of LEI code → legal name for codes found in the database.
+  const fetchLegalNamesBatch = useCallback(async (codes: string[]): Promise<Map<string, string>> => {
+    if (codes.length === 0) return new Map()
+    const params = new URLSearchParams({ codes: codes.join(',') })
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/lei/names?${params}`)
+      if (!response.ok) return new Map()
+      const data: Record<string, string> = await response.json()
+      return new Map(Object.entries(data))
+    } catch {
+      return new Map()
+    }
+  }, [API_BASE_URL])
+
+  // Fetch managing LOU names for all records in table (single batch request).
   useEffect(() => {
     const fetchManagingLouNamesForTable = async () => {
-      // Get unique managing LOU codes from current records
       const uniqueLouCodes = Array.from(
         new Set(
           records
-            .filter(r => r.managing_lou && r.managing_lou.trim() !== '')
-            .map(r => r.managing_lou)
+            .filter((r) => r.managing_lou && r.managing_lou.trim() !== '')
+            .map((r) => r.managing_lou)
         )
       )
-      
+
       if (uniqueLouCodes.length === 0) return
-      
-      // Only fetch codes we don't have yet
-      const codesToFetch = uniqueLouCodes.filter(code => !managingLouNames.has(code))
+
+      const codesToFetch = uniqueLouCodes.filter((code) => !managingLouNames.has(code))
       if (codesToFetch.length === 0) return
-      
-      // Fetch names for missing codes
-      const newNames = new Map(managingLouNames)
-      await Promise.all(
-        codesToFetch.map(async (code) => {
-          try {
-            const response = await fetch(`${API_BASE_URL}/api/v1/lei/${code}`)
-            if (response.ok) {
-              const data = await response.json()
-              if (data.legal_name) {
-                newNames.set(code, data.legal_name)
-              }
-            }
-          } catch (err) {
-            console.error(`Failed to fetch LOU name for ${code}:`, err)
-          }
-        })
-      )
-      
-      setManagingLouNames(newNames)
+
+      const fetched = await fetchLegalNamesBatch(codesToFetch)
+      if (fetched.size === 0) return
+
+      setManagingLouNames((prev) => {
+        const next = new Map(prev)
+        fetched.forEach((name, code) => next.set(code, name))
+        return next
+      })
     }
-    
+
     if (records.length > 0) {
       fetchManagingLouNamesForTable()
     }
-  }, [records, managingLouNames, API_BASE_URL])
+  }, [records, managingLouNames, API_BASE_URL, fetchLegalNamesBatch])
 
-  // Fetch successor LEI names for all records in table
+  // Fetch successor LEI names for all records in table (single batch request).
   useEffect(() => {
     const fetchSuccessorLeiNamesForTable = async () => {
-      const MAX_CONCURRENT_REQUESTS = 8
       const uniqueSuccessorLeiCodes = Array.from(
         new Set(
           records
@@ -881,34 +882,21 @@ export default function LEIRecordsPage() {
       const codesToFetch = uniqueSuccessorLeiCodes.filter((code) => !successorLeiNames.has(code))
       if (codesToFetch.length === 0) return
 
-      const newNames = new Map(successorLeiNames)
+      const fetched = await fetchLegalNamesBatch(codesToFetch)
+      if (fetched.size === 0) return
 
-      for (let i = 0; i < codesToFetch.length; i += MAX_CONCURRENT_REQUESTS) {
-        const batch = codesToFetch.slice(i, i + MAX_CONCURRENT_REQUESTS)
-        await Promise.all(
-          batch.map(async (code) => {
-            try {
-              const response = await fetch(`${API_BASE_URL}/api/v1/lei/${code}`)
-              if (response.ok) {
-                const data = await response.json()
-                if (data.legal_name) {
-                  newNames.set(code, data.legal_name)
-                }
-              }
-            } catch {
-              // Best-effort enrichment only.
-            }
-          })
-        )
-      }
-
-      setSuccessorLeiNames(newNames)
+      setSuccessorLeiNames((prev) => {
+        const next = new Map(prev)
+        fetched.forEach((name, code) => next.set(code, name))
+        return next
+      })
     }
 
     if (records.length > 0) {
       fetchSuccessorLeiNamesForTable()
     }
-  }, [records, successorLeiNames, API_BASE_URL])
+  }, [records, successorLeiNames, API_BASE_URL, fetchLegalNamesBatch])
+
 
   const formatCellValue = (value: any, key: keyof LEIRecord): string => {
     return formatLEICellValue(value, key)
