@@ -9,7 +9,6 @@ import LEIRecordsCard from '../components/LEIRecordsCard'
 import CountriesRecordsCard from '../components/CountriesRecordsCard'
 import CurrenciesRecordsCard from '../components/CurrenciesRecordsCard'
 import LanguagesRecordsCard from '../components/LanguagesRecordsCard'
-import PageHeader from '../components/PageHeader'
 import ProtectedLandingCard from '../components/ProtectedLandingCard'
 import AdminSection from '../components/AdminSection'
 
@@ -18,10 +17,21 @@ export default function DashboardPage() {
   const [mounted, setMounted] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
 
+  const getAuthToken = (): string | null => {
+    const rawToken = localStorage.getItem('axiom_token')
+    if (!rawToken) return null
+
+    const normalizedToken = rawToken.replace(/^Bearer\s+/i, '').trim()
+    if (!normalizedToken || normalizedToken === 'undefined' || normalizedToken === 'null') {
+      return null
+    }
+
+    return normalizedToken
+  }
+
   useEffect(() => {
     setMounted(true)
-    const token = localStorage.getItem('axiom_token')
-    const loggedIn = !!token
+    const loggedIn = getAuthToken() !== null
     setIsLoggedIn(loggedIn)
 
     if (!loggedIn) {
@@ -77,7 +87,10 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        <PageHeader title="Module Catalog" subtitle="Choose the area you want to manage" showBackLink={false} />
+        <section className="mb-8">
+          <h2 className="text-3xl font-bold mb-2 text-gray-900 dark:text-white">Module Catalog</h2>
+          <p className="text-gray-600 dark:text-gray-300">Choose the area you want to manage</p>
+        </section>
 
         <section className="mb-12">
           <div className="flex items-center mb-6">

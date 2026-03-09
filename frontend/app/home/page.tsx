@@ -4,7 +4,6 @@ import CountriesRecordsCard from '../components/CountriesRecordsCard'
 import CurrenciesRecordsCard from '../components/CurrenciesRecordsCard'
 import LanguagesRecordsCard from '../components/LanguagesRecordsCard'
 import LEIRecordsCard from '../components/LEIRecordsCard'
-import PageHeader from '../components/PageHeader'
 import SignInPrompt from '../components/SignInPrompt'
 import AllModulesButton from '../components/AllModulesButton'
 
@@ -42,7 +41,10 @@ export default function PublicDataHomePage() {
           </div>
         </section>
 
-        <PageHeader title="Data Catalog" subtitle="Browse available public datasets" showBackLink={false} />
+        <section className="mb-8">
+          <h2 className="text-3xl font-bold mb-2 text-gray-900 dark:text-white">Data Catalog</h2>
+          <p className="text-gray-600 dark:text-gray-300">Browse available public datasets</p>
+        </section>
 
         <SignInPrompt />
 
