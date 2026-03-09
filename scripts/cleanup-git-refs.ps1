@@ -299,7 +299,7 @@ foreach ($workspaceDir in $WorkspaceDirs) {
         continue
     }
 
-    $normalizedWorkspaceDir = $workspaceDir.Trim('/', '\\')
+    $normalizedWorkspaceDir = $workspaceDir.Trim([char]'/', [char]'\')
 
     $hasUnsafeWorkspaceChars = $normalizedWorkspaceDir -match '[\\]' -or ($IsWindows -and $normalizedWorkspaceDir -match ':')
     if ($normalizedWorkspaceDir -match '(^|/)\.\.(/|$)' -or
