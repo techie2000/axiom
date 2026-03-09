@@ -164,8 +164,11 @@ export default function LEIStatusPage() {
     if (parts.length !== 3) return true
 
     try {
-      const payloadBase64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')
-      const payloadJson = atob(payloadBase64)
+      const payloadBase64Url = parts[1]
+      const payloadBase64 = payloadBase64Url.replace(/-/g, '+').replace(/_/g, '/')
+      const paddingLength = (4 - (payloadBase64.length % 4)) % 4
+      const paddedPayloadBase64 = payloadBase64 + '='.repeat(paddingLength)
+      const payloadJson = atob(paddedPayloadBase64)
       const payload = JSON.parse(payloadJson) as { exp?: number }
 
       if (typeof payload.exp !== 'number') return false
