@@ -178,7 +178,7 @@ function AdminUsersContent() {
         <PageHeader
           title="User Management"
           subtitle="Review and approve user account requests"
-          backHref="/"
+          backHref="/dashboard"
         />
 
         {isBootstrap && (
@@ -325,8 +325,8 @@ function AdminUsersContent() {
         )}
 
         <div className="mt-6 text-center">
-          <Link href="/" className="text-blue-500 hover:text-blue-400 text-sm">
-            ← Back to Home
+          <Link href="/dashboard" className="text-blue-500 hover:text-blue-400 text-sm">
+            ← Back to Dashboard
           </Link>
         </div>
       </div>

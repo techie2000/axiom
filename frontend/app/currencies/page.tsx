@@ -1,14 +1,18 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+/* eslint-disable react-hooks/exhaustive-deps */
+
+import { useEffect, useRef, useState } from 'react'
 import Alert from '../components/Alert'
+import ActionableStatCard from '../components/ActionableStatCard'
 import Badge from '../components/Badge'
 import LoadingSpinner from '../components/LoadingSpinner'
 import PageHeader from '../components/PageHeader'
 import PreferenceSavePrompt from '../components/PreferenceSavePrompt'
+import SortableHeaderCell from '../components/SortableHeaderCell'
 import StatCard from '../components/StatCard'
 import SyncedWideTable from '../components/SyncedWideTable'
-import { useUserPreference } from '../lib/useUserPreference'
+import { useDeferredBooleanPreference } from '../lib/useDeferredBooleanPreference'
 
 interface Currency {
   id: string
@@ -25,6 +29,7 @@ interface Currency {
 }
 
 type ComplianceFilter = 'all' | 'alert_cls' | 'ofac'
+type CurrencySortField = 'code' | 'name' | 'symbol' | 'decimal_digits' | 'is_alert_cls_allowed' | 'is_ofac_sanctioned'
 
 export default function CurrenciesPage() {
   const filterBarRef = useRef<HTMLDivElement>(null)
@@ -34,43 +39,35 @@ export default function CurrenciesPage() {
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [complianceFilter, setComplianceFilter] = useState<ComplianceFilter>('all')
-  const [showReferenceCodes, setShowReferenceCodes] = useState(false)
+  const [sortField, setSortField] = useState<CurrencySortField | null>(null)
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const [filterBarHeight, setFilterBarHeight] = useState(0)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
 
   // Preference-backed expanded width
-  const [storedExpanded, setStoredExpanded] = useUserPreference('currencies', 'expanded_width', 'true')
-  const expandedWidth = storedExpanded === 'true'
-  const [localExpanded, setLocalExpanded] = useState<boolean | null>(null)
-  const [showWidthPrompt, setShowWidthPrompt] = useState(false)
-  const pendingExpanded = useRef<boolean | null>(null)
+  const expandedWidthPreference = useDeferredBooleanPreference({
+    pageKey: 'currencies',
+    preferenceKey: 'expanded_width',
+    defaultValue: true,
+  })
 
-  const effectiveExpandedWidth = localExpanded ?? expandedWidth
-
-  const handleSetExpandedWidth = useCallback((value: boolean) => {
-    setLocalExpanded(value)
-    pendingExpanded.current = value
-    setShowWidthPrompt(true)
-  }, [])
-
-  const handleSaveWidth = useCallback(() => {
-    if (pendingExpanded.current !== null) {
-      setStoredExpanded(String(pendingExpanded.current))
-      setLocalExpanded(null)
-      pendingExpanded.current = null
-    }
-    setShowWidthPrompt(false)
-  }, [setStoredExpanded])
-
-  const handleDismissWidth = useCallback(() => { setShowWidthPrompt(false) }, [])
+  const effectiveExpandedWidth = expandedWidthPreference.value
 
   const API_BASE_URL = typeof window !== 'undefined'
     ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080')
     : 'http://backend:8080'
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (typeof window !== 'undefined') {
       fetchCurrencies()
     }
+  }, [])
+
+  useEffect(() => {
+    const rawToken = localStorage.getItem('axiom_token')
+    const normalizedToken = rawToken?.replace(/^Bearer\s+/i, '').trim() ?? ''
+    setIsLoggedIn(normalizedToken !== '' && normalizedToken !== 'undefined' && normalizedToken !== 'null')
   }, [])
 
   const fetchCurrencies = async () => {
@@ -103,6 +100,22 @@ export default function CurrenciesPage() {
   const alertClsCount = currencies.filter(c => c.is_alert_cls_allowed).length
   const ofacCount = currencies.filter(c => c.is_ofac_sanctioned).length
 
+  const handleSort = (field: CurrencySortField) => {
+    if (sortField !== field) {
+      setSortField(field)
+      setSortDirection('asc')
+      return
+    }
+
+    if (sortDirection === 'asc') {
+      setSortDirection('desc')
+      return
+    }
+
+    setSortField(null)
+    setSortDirection('asc')
+  }
+
   const filteredCurrencies = currencies
     .filter(currency => {
       const matchesSearch =
@@ -118,15 +131,55 @@ export default function CurrenciesPage() {
       return matchesSearch && matchesCompliance
     })
     .sort((left, right) => {
-      const nameCompare = left.name.localeCompare(right.name, undefined, { sensitivity: 'base' })
-      if (nameCompare !== 0) {
-        return nameCompare
+      if (!sortField) {
+        const defaultNameCompare = left.name.localeCompare(right.name, undefined, { sensitivity: 'base' })
+        if (defaultNameCompare !== 0) {
+          return defaultNameCompare
+        }
+
+        return left.code.localeCompare(right.code, undefined, { sensitivity: 'base' })
       }
 
-      return left.code.localeCompare(right.code, undefined, { sensitivity: 'base' })
+      let comparison = 0
+
+      switch (sortField) {
+        case 'decimal_digits':
+          comparison = left.decimal_digits - right.decimal_digits
+          break
+        case 'is_alert_cls_allowed':
+          comparison = Number(left.is_alert_cls_allowed) - Number(right.is_alert_cls_allowed)
+          break
+        case 'is_ofac_sanctioned':
+          comparison = Number(left.is_ofac_sanctioned) - Number(right.is_ofac_sanctioned)
+          break
+        case 'code':
+          comparison = left.code.localeCompare(right.code, undefined, { sensitivity: 'base' })
+          break
+        case 'symbol':
+          comparison = left.symbol.localeCompare(right.symbol, undefined, { sensitivity: 'base' })
+          break
+        case 'name':
+        default:
+          comparison = left.name.localeCompare(right.name, undefined, { sensitivity: 'base' })
+          break
+      }
+
+      if (comparison === 0) {
+        comparison = left.name.localeCompare(right.name, undefined, { sensitivity: 'base' })
+      }
+
+      if (comparison === 0) {
+        comparison = left.code.localeCompare(right.code, undefined, { sensitivity: 'base' })
+      }
+
+      return sortDirection === 'asc' ? comparison : -comparison
     })
 
   const hasActiveFilters = searchTerm || complianceFilter !== 'all'
+
+  const applyComplianceCardFilter = (filter: ComplianceFilter) => {
+    setComplianceFilter((previousFilter) => (previousFilter === filter ? 'all' : filter))
+  }
 
   const clearFilters = () => {
     setSearchTerm('')
@@ -146,6 +199,9 @@ export default function CurrenciesPage() {
     return <LoadingSpinner message="Loading currencies..." />
   }
 
+  const backHref = isLoggedIn ? '/dashboard' : '/home'
+  const backLabel = isLoggedIn ? '← Back to Dashboard' : '← Back to Home'
+
   return (
     <div className="min-h-screen p-8">
       <div className={`${effectiveExpandedWidth ? 'max-w-full' : 'max-w-7xl'} mx-auto transition-all duration-300`}>
@@ -153,23 +209,16 @@ export default function CurrenciesPage() {
         <PageHeader
           title="Currencies"
           subtitle="Browse ISO 4217 currency codes and compliance reference data"
+          backHref={backHref}
+          backLabel={backLabel}
           actions={
-            <>
-              <button
-                onClick={() => handleSetExpandedWidth(!effectiveExpandedWidth)}
-                className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 transition-colors text-white text-sm font-medium"
-                title={effectiveExpandedWidth ? 'Normal Width' : 'Expanded Width'}
-              >
-                {effectiveExpandedWidth ? '⬅️ Normal' : '↔️ Expand'}
-              </button>
-              <button
-                onClick={() => setShowReferenceCodes(!showReferenceCodes)}
-                className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 transition-colors text-white text-sm font-medium"
-                title={showReferenceCodes ? 'Display mode: codes' : 'Display mode: names'}
-              >
-                {showReferenceCodes ? '🏷️ Display: Codes' : '🏷️ Display: Names'}
-              </button>
-            </>
+            <button
+              onClick={expandedWidthPreference.toggle}
+              className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 transition-colors text-white text-sm font-medium"
+              title={effectiveExpandedWidth ? 'Normal Width' : 'Expanded Width'}
+            >
+              {effectiveExpandedWidth ? '⬅️ Normal' : '↔️ Expand'}
+            </button>
           }
         />
 
@@ -193,8 +242,22 @@ export default function CurrenciesPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <StatCard title="Total Currencies" value={currencies.length} />
           <StatCard title="Filtered Results" value={filteredCurrencies.length} />
-          <StatCard title="ALERT CLS Allowed" value={alertClsCount} accent="green" />
-          <StatCard title="OFAC Sanctioned" value={ofacCount} accent="red" />
+          <ActionableStatCard
+            title="ALERT CLS Allowed"
+            value={alertClsCount}
+            accent="green"
+            isActive={complianceFilter === 'alert_cls'}
+            onClick={() => applyComplianceCardFilter('alert_cls')}
+            ariaLabel="Filter by ALERT CLS allowed currencies"
+          />
+          <ActionableStatCard
+            title="OFAC Sanctioned"
+            value={ofacCount}
+            accent="red"
+            isActive={complianceFilter === 'ofac'}
+            onClick={() => applyComplianceCardFilter('ofac')}
+            ariaLabel="Filter by OFAC sanctioned currencies"
+          />
         </div>
 
         {/* Search and compliance filter */}
@@ -268,27 +331,55 @@ export default function CurrenciesPage() {
         <div className="bg-white dark:bg-white/5 rounded-lg shadow border-2 border-gray-200 dark:border-white/10">
           <SyncedWideTable
             stickyTopOffset={hasActiveFilters ? filterBarHeight : 0}
-            dependencyKey={`${effectiveExpandedWidth}-${showReferenceCodes}-${filteredCurrencies.length}-${complianceFilter}-${searchTerm}`}
+            dependencyKey={`${effectiveExpandedWidth}-${filteredCurrencies.length}-${complianceFilter}-${searchTerm}`}
             headerRow={(
               <tr>
-                <th className="w-64 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  {showReferenceCodes ? 'Code' : 'Name'}
-                </th>
-                <th className="w-24 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  {showReferenceCodes ? 'Name' : 'Code'}
-                </th>
-                <th className="w-44 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Symbol
-                </th>
-                <th className="w-28 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Decimals
-                </th>
-                <th className="w-36 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  ALERT CLS
-                </th>
-                <th className="w-40 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  OFAC
-                </th>
+                <SortableHeaderCell
+                  className="w-20 px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  align="center"
+                  label="Code"
+                  onSort={() => handleSort('code')}
+                  isActiveSort={sortField === 'code'}
+                  sortDirection={sortDirection}
+                />
+                <SortableHeaderCell
+                  className="w-80 px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  label="Name"
+                  onSort={() => handleSort('name')}
+                  isActiveSort={sortField === 'name'}
+                  sortDirection={sortDirection}
+                />
+                <SortableHeaderCell
+                  className="w-40 px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  label="Symbol"
+                  onSort={() => handleSort('symbol')}
+                  isActiveSort={sortField === 'symbol'}
+                  sortDirection={sortDirection}
+                />
+                <SortableHeaderCell
+                  className="w-24 px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  align="center"
+                  label="Decimals"
+                  onSort={() => handleSort('decimal_digits')}
+                  isActiveSort={sortField === 'decimal_digits'}
+                  sortDirection={sortDirection}
+                />
+                <SortableHeaderCell
+                  className="w-32 px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  align="center"
+                  label="ALERT CLS"
+                  onSort={() => handleSort('is_alert_cls_allowed')}
+                  isActiveSort={sortField === 'is_alert_cls_allowed'}
+                  sortDirection={sortDirection}
+                />
+                <SortableHeaderCell
+                  className="w-36 px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  align="center"
+                  label="OFAC"
+                  onSort={() => handleSort('is_ofac_sanctioned')}
+                  isActiveSort={sortField === 'is_ofac_sanctioned'}
+                  sortDirection={sortDirection}
+                />
               </tr>
             )}
             bodyRows={(
@@ -296,51 +387,34 @@ export default function CurrenciesPage() {
                 {filteredCurrencies.length > 0 ? (
                   filteredCurrencies.map((currency) => (
                     <tr key={currency.id} className="hover:bg-blue-50 dark:hover:bg-white/10 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                        {showReferenceCodes ? (
-                          <Badge variant="blue" mono>{currency.code}</Badge>
-                        ) : (
-                          <>
-                            {currency.name}
-                            {currency.name_plural && currency.name_plural !== currency.name && (
-                              <span className="ml-1 text-xs text-gray-400 dark:text-gray-500">
-                                ({currency.name_plural})
-                              </span>
-                            )}
-                          </>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white text-center">
+                        <Badge variant="blue" mono>{currency.code}</Badge>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        <span className="text-gray-900 dark:text-white">{currency.name}</span>
+                        {currency.name_plural && currency.name_plural !== currency.name && (
+                          <span className="ml-1 text-xs text-gray-400 dark:text-gray-500">
+                            ({currency.name_plural})
+                          </span>
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {showReferenceCodes ? (
-                          <>
-                            <span className="text-gray-900 dark:text-white">{currency.name}</span>
-                            {currency.name_plural && currency.name_plural !== currency.name && (
-                              <span className="ml-1 text-xs text-gray-400 dark:text-gray-500">
-                                ({currency.name_plural})
-                              </span>
-                            )}
-                          </>
-                        ) : (
-                          <Badge variant="blue" mono>{currency.code}</Badge>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                         <span className="text-lg">{currency.symbol}</span>
                         {currency.symbol_native && currency.symbol_native !== currency.symbol && (
                           <span className="ml-2 text-xs text-gray-400 dark:text-gray-500">{currency.symbol_native}</span>
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 font-mono text-center">
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 font-mono text-center">
                         {currency.decimal_digits}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-center">
                         {currency.is_alert_cls_allowed ? (
                           <Badge variant="green" shape="pill">✓ Allowed</Badge>
                         ) : (
                           <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-center">
                         {currency.is_ofac_sanctioned ? (
                           <Badge variant="red" shape="pill">⚠ Sanctioned</Badge>
                         ) : (
@@ -368,9 +442,10 @@ export default function CurrenciesPage() {
       </div>
 
       <PreferenceSavePrompt
-        visible={showWidthPrompt}
-        onSave={handleSaveWidth}
-        onDismiss={handleDismissWidth}
+        visible={expandedWidthPreference.showPrompt}
+        resetKey={expandedWidthPreference.promptResetKey}
+        onSave={expandedWidthPreference.save}
+        onDismiss={expandedWidthPreference.dismiss}
         label="Save page width as your default?"
       />
     </div>

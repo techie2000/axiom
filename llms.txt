@@ -82,6 +82,8 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
 
 - [UI Patterns Guide](docs/ui-patterns.md): Reusable frontend components and patterns (Badge, Alert, LoadingSpinner,
   StatCard, PageHeader, Sticky Headers, User Preferences)
+- [Branding Assets Guide](docs/assets/branding/README.md): Canonical source logos and generated runtime favicon/logo
+  outputs for active and alternate themes
 - [Makefile](Makefile): Build automation, testing, linting, and development commands
 - [API Smoke Script](scripts/smoke-api.ps1): Environment-aware API smoke tests for health/auth checks with startup readiness wait
 - [SSI Smoke Script](scripts/smoke-ssi.ps1): Verifies `/api/v1/ssis` contract fields, optional temporary seed rows, and BGC-free payload checks
