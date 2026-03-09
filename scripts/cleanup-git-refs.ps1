@@ -22,7 +22,11 @@ param(
 
     [int]$RetryDelayMs = 250,
 
-    [switch]$PruneEmptyParents
+    [switch]$PruneEmptyParents,
+
+    [string[]]$WorkspaceDirs = @(
+        'backups'
+    )
 )
 
 Set-StrictMode -Version Latest
@@ -74,6 +78,44 @@ function Resolve-GitDir {
     }
 
     throw "No .git directory or gitdir file found under: $Path"
+}
+
+function Resolve-RepoRoot {
+    param([string]$Path)
+
+    $resolvedPathObj = Resolve-Path -LiteralPath $Path -ErrorAction SilentlyContinue
+    if (-not $resolvedPathObj) {
+        throw "Path not found: $Path"
+    }
+    $resolvedPath = $resolvedPathObj.Path
+
+    try {
+        $gitCmd = Get-Command git -ErrorAction Stop
+        $repoRoot = & $gitCmd.Path -C $resolvedPath rev-parse --show-toplevel 2>$null
+        if ($LASTEXITCODE -eq 0 -and $repoRoot) {
+            return (Resolve-Path -LiteralPath $repoRoot.Trim()).Path
+        }
+    }
+    catch {
+        # git not available — fall back to parent traversal below.
+    }
+
+    $current = $resolvedPath
+    while ($current -and (Test-Path -LiteralPath $current)) {
+        $gitPath = Join-Path $current '.git'
+        if (Test-Path -LiteralPath $gitPath) {
+            return (Resolve-Path -LiteralPath $current).Path
+        }
+
+        $parent = Split-Path -Path $current -Parent
+        if (-not $parent -or $parent -eq $current) {
+            break
+        }
+
+        $current = $parent
+    }
+
+    throw "No .git directory found under: $Path or its parent directories."
 }
 
 function Remove-EmptyDirectoryWithRetry {
@@ -166,10 +208,13 @@ function Remove-ParentDirectoriesIfEmpty {
     }
 }
 
+$repoRoot = Resolve-RepoRoot -Path $RepoPath
 $gitRoot = Resolve-GitDir -Path $RepoPath
 
 Write-Host "[cleanup-git-refs] Git dir: $gitRoot" -ForegroundColor Cyan
+Write-Host "[cleanup-git-refs] Repo root: $repoRoot" -ForegroundColor Cyan
 Write-Host "[cleanup-git-refs] Namespaces: $($Namespaces.Count)" -ForegroundColor Cyan
+Write-Host "[cleanup-git-refs] WorkspaceDirs: $($WorkspaceDirs.Count)" -ForegroundColor Cyan
 
 $results = @()
 
@@ -247,11 +292,78 @@ foreach ($namespace in $Namespaces) {
 
 $results | Sort-Object Namespace | Format-Table -AutoSize
 
+$workspaceResults = @()
+
+foreach ($workspaceDir in $WorkspaceDirs) {
+    if ([string]::IsNullOrWhiteSpace($workspaceDir)) {
+        continue
+    }
+
+    $normalizedWorkspaceDir = $workspaceDir.Trim('/', '\\')
+
+    $hasUnsafeWorkspaceChars = $normalizedWorkspaceDir -match '[\\]' -or ($IsWindows -and $normalizedWorkspaceDir -match ':')
+    if ($normalizedWorkspaceDir -match '(^|/)\.\.(/|$)' -or
+        [System.IO.Path]::IsPathRooted($normalizedWorkspaceDir) -or
+        $hasUnsafeWorkspaceChars) {
+        Write-Warning "[cleanup-git-refs] Skipping unsafe workspace dir: $workspaceDir"
+        $workspaceResults += [pscustomobject]@{
+            Directory = $normalizedWorkspaceDir
+            Result    = 'SKIPPED_UNSAFE'
+        }
+        continue
+    }
+
+    $workspacePath = Join-Path $repoRoot $normalizedWorkspaceDir
+
+    $resolvedWorkspaceObj = Resolve-Path -LiteralPath $workspacePath -ErrorAction SilentlyContinue
+    if ($resolvedWorkspaceObj) {
+        $resolvedWorkspacePath = $resolvedWorkspaceObj.Path
+    }
+    else {
+        $resolvedWorkspacePath = [System.IO.Path]::GetFullPath($workspacePath)
+    }
+
+    $normalizedRepoRoot = [System.IO.Path]::GetFullPath($repoRoot).TrimEnd(
+        [System.IO.Path]::DirectorySeparatorChar,
+        [System.IO.Path]::AltDirectorySeparatorChar
+    ) + [System.IO.Path]::DirectorySeparatorChar
+    $normalizedWorkspace = $resolvedWorkspacePath.TrimEnd(
+        [System.IO.Path]::DirectorySeparatorChar,
+        [System.IO.Path]::AltDirectorySeparatorChar
+    ) + [System.IO.Path]::DirectorySeparatorChar
+    $workspaceComparison = if ($IsWindows) { [System.StringComparison]::OrdinalIgnoreCase } else { [System.StringComparison]::Ordinal }
+
+    if (-not $normalizedWorkspace.StartsWith($normalizedRepoRoot, $workspaceComparison)) {
+        Write-Warning "[cleanup-git-refs] Skipping workspace dir outside repo root: $workspaceDir"
+        $workspaceResults += [pscustomobject]@{
+            Directory = $normalizedWorkspaceDir
+            Result    = 'SKIPPED_UNSAFE'
+        }
+        continue
+    }
+
+    $workspaceResult = Remove-EmptyDirectoryWithRetry -Path $workspacePath -Retries $MaxRetries -DelayMs $RetryDelayMs
+
+    $workspaceResults += [pscustomobject]@{
+        Directory = $normalizedWorkspaceDir
+        Result    = $workspaceResult
+    }
+}
+
+if ($workspaceResults.Count -gt 0) {
+    Write-Host "[cleanup-git-refs] Workspace directory cleanup:" -ForegroundColor Cyan
+    $workspaceResults | Sort-Object Directory | Format-Table -AutoSize
+}
+
 $stillPresent = @(
     $results | Where-Object { $_.Result -eq 'STILL_PRESENT' }
 )
 
-if ($stillPresent.Count -gt 0) {
+$workspaceStillPresent = @(
+    $workspaceResults | Where-Object { $_.Result -eq 'STILL_PRESENT' }
+)
+
+if ($stillPresent.Count -gt 0 -or $workspaceStillPresent.Count -gt 0) {
     Write-Host "[cleanup-git-refs] WARNING: Some namespaces are still present (likely locked by sync/indexing)." -ForegroundColor Yellow
     exit 1
 }

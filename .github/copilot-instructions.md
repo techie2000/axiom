@@ -570,15 +570,21 @@ When posting PR/issue comments, checklists, or review summaries via CLI/API:
 
 When terminal output shows repeated prompts like:
 
-- `Deletion of directory '.git/...' failed. Should I try again? (y/n)`
+```text
+Deletion of directory '.git/refs/heads/feat' failed. Should I try again? (y/n)
+Deletion of directory 'backups' failed. Should I try again? (y/n)
+```
 
-then the agent must proactively run:
+the agent must proactively run:
 
-- `pwsh ./scripts/cleanup-git-refs.ps1 -RepoPath <repo-root> -PruneEmptyParents`
+```powershell
+pwsh ./scripts/cleanup-git-refs.ps1 -RepoPath <repo-root> -PruneEmptyParents
+```
 
-before retrying branch/ref deletion, `pack-refs`, or `git gc` operations.
+before retrying branch/ref deletion, `pack-refs`, `git gc`, or branch switching.
 
 Notes:
+
 - Do not wait for the user to interrupt and ask.
 - Prefer this script-based cleanup flow over repeated interactive prompt retries.
-- If the script reports `NOT_EMPTY:*`, preserve those refs and continue with non-destructive operations.
+- If the script reports `NOT_EMPTY:*`, preserve those folders and continue with non-destructive operations.
