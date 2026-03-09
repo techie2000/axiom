@@ -239,10 +239,12 @@ export default function LEIRecordsPage() {
   const [managingLouName, setManagingLouName] = useState<string | null>(null)
   const [managingLouNames, setManagingLouNames] = useState<Map<string, string>>(new Map())
   const [successorLeiName, setSuccessorLeiName] = useState<string | null>(null)
+  const [successorLeiNameLoading, setSuccessorLeiNameLoading] = useState(false)
   const [successorLeiNames, setSuccessorLeiNames] = useState<Map<string, string>>(new Map())
   const [predecessorLeiReferences, setPredecessorLeiReferences] = useState<RelatedLEIReference[]>([])
   const [predecessorLeiCache, setPredecessorLeiCache] = useState<Map<string, RelatedLEIReference[]>>(new Map())
   const [predecessorLeiLoading, setPredecessorLeiLoading] = useState(false)
+  const [stickyColumnWidths, setStickyColumnWidths] = useState<number[]>([])
   const [dateDisplayMode, setDateDisplayMode] = useState<'relative' | 'absolute'>('relative')
 
   const API_BASE_URL = typeof window !== 'undefined' 
@@ -733,8 +735,12 @@ export default function LEIRecordsPage() {
     const fetchSuccessorLeiName = async () => {
       if (!selectedRecord?.successor_lei) {
         setSuccessorLeiName(null)
+        setSuccessorLeiNameLoading(false)
         return
       }
+
+      setSuccessorLeiNameLoading(true)
+      setSuccessorLeiName(null)
 
       try {
         const response = await fetch(`${API_BASE_URL}/api/v1/lei/${selectedRecord.successor_lei}`)
@@ -746,6 +752,8 @@ export default function LEIRecordsPage() {
         }
       } catch {
         setSuccessorLeiName(null)
+      } finally {
+        setSuccessorLeiNameLoading(false)
       }
     }
 
@@ -859,6 +867,7 @@ export default function LEIRecordsPage() {
   // Fetch successor LEI names for all records in table
   useEffect(() => {
     const fetchSuccessorLeiNamesForTable = async () => {
+      const MAX_CONCURRENT_REQUESTS = 8
       const uniqueSuccessorLeiCodes = Array.from(
         new Set(
           records
@@ -873,21 +882,25 @@ export default function LEIRecordsPage() {
       if (codesToFetch.length === 0) return
 
       const newNames = new Map(successorLeiNames)
-      await Promise.all(
-        codesToFetch.map(async (code) => {
-          try {
-            const response = await fetch(`${API_BASE_URL}/api/v1/lei/${code}`)
-            if (response.ok) {
-              const data = await response.json()
-              if (data.legal_name) {
-                newNames.set(code, data.legal_name)
+
+      for (let i = 0; i < codesToFetch.length; i += MAX_CONCURRENT_REQUESTS) {
+        const batch = codesToFetch.slice(i, i + MAX_CONCURRENT_REQUESTS)
+        await Promise.all(
+          batch.map(async (code) => {
+            try {
+              const response = await fetch(`${API_BASE_URL}/api/v1/lei/${code}`)
+              if (response.ok) {
+                const data = await response.json()
+                if (data.legal_name) {
+                  newNames.set(code, data.legal_name)
+                }
               }
+            } catch {
+              // Best-effort enrichment only.
             }
-          } catch {
-            // Best-effort enrichment only.
-          }
-        })
-      )
+          })
+        )
+      }
 
       setSuccessorLeiNames(newNames)
     }
@@ -1067,8 +1080,22 @@ export default function LEIRecordsPage() {
   const hasActiveFilters = debouncedSearch || statusFilter || categoryFilter || countryFilter
   const visibleColumnsInOrder = AVAILABLE_COLUMNS.filter((col) => effectiveVisibleColumns.has(col.key))
   const LEI_COLUMN_WIDTH_PX = 184
+  const leiColumnIndex = visibleColumnsInOrder.findIndex((column) => column.key === 'lei')
 
-  const leiColumnWidth = LEI_COLUMN_WIDTH_PX
+  const getMeasuredColumnWidth = (columnIndex: number, fallbackWidth: number): number => {
+    if (columnIndex < 0) {
+      return fallbackWidth
+    }
+
+    const measuredWidth = stickyColumnWidths[columnIndex]
+    if (typeof measuredWidth === 'number' && measuredWidth > 0) {
+      return measuredWidth
+    }
+
+    return fallbackWidth
+  }
+
+  const leiColumnWidth = getMeasuredColumnWidth(leiColumnIndex, LEI_COLUMN_WIDTH_PX)
 
   const getPinnedColumnWidth = (columnKey: keyof LEIRecord): number | null => {
     if (columnKey === 'lei') return leiColumnWidth
@@ -1481,6 +1508,18 @@ export default function LEIRecordsPage() {
                 borderBottomLeftRadius: '0.5rem',
                 borderBottomRightRadius: '0.5rem',
                 borderTop: hasActiveFilters ? 'none' : undefined,
+              }}
+              onMainHeaderWidthsChange={(measuredWidths) => {
+                setStickyColumnWidths((previousWidths) => {
+                  if (
+                    previousWidths.length === measuredWidths.length &&
+                    previousWidths.every((width, index) => Math.abs(width - measuredWidths[index]) < 0.5)
+                  ) {
+                    return previousWidths
+                  }
+
+                  return measuredWidths
+                })
               }}
               headerRow={(
                 <tr>
@@ -2157,8 +2196,11 @@ export default function LEIRecordsPage() {
                           {successorLeiName && (
                             <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{successorLeiName}</p>
                           )}
-                          {successorLeiName === null && selectedRecord.successor_lei && (
+                          {successorLeiNameLoading && (
                             <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 italic">Loading name...</p>
+                          )}
+                          {!successorLeiNameLoading && !successorLeiName && (
+                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 italic">Name unavailable.</p>
                           )}
                         </>
                       ) : (
