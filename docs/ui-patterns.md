@@ -6,6 +6,7 @@ optimized for performance, accessibility, and user experience.
 ## Table of Contents
 
 - [User Preferences](#user-preferences)
+- [Internationalisation](#internationalisation)
 - [Reusable Components](#reusable-components)
 - [Sticky Headers with Smooth Transitions](#sticky-headers-with-smooth-transitions)
 - [Frozen Columns Checklist](#frozen-columns-checklist)
@@ -293,6 +294,87 @@ localStorage.removeItem('axiom_token')
 localStorage.removeItem('axiom_user')
 router.push('/login')
 ```
+
+---
+
+## Internationalisation
+
+Axiom's UI strings are fully internationalised using **i18next** and **react-i18next**. Every
+user-facing string must be accessed via the `t()` function rather than being hardcoded in JSX.
+
+See the [full Internationalisation Guide](./i18n/INTERNATIONALISATION.md) for complete coverage.
+This section is a quick reference.
+
+### Supported Languages
+
+| Code | Native Name | RTL |
+| ---- | ----------- | --- |
+| `en` | English | No |
+| `fr` | Français | No |
+| `es` | Español | No |
+| `de` | Deutsch | No |
+| `ja` | 日本語 | No |
+| `ar` | العربية | Yes |
+
+### Adding a translation key (quick start)
+
+1. Add the key to `frontend/public/locales/en/common.json` (English is the source of truth).
+2. Add the same key to all other locale files (`fr/`, `es/`, `de/`, `ja/`, `ar/`).
+3. Use the key in the component:
+
+```tsx
+'use client'
+import '../../lib/i18n'
+import { useTranslation } from 'react-i18next'
+
+export default function MyComponent() {
+  const { t } = useTranslation()
+  return <button>{t('common.save')}</button>
+}
+```
+
+### LanguageSelector
+
+Drop the shared component into any page header to let users switch language without a page
+reload:
+
+```tsx
+import LanguageSelector from '../components/LanguageSelector'
+
+// Standard – flag + native name dropdown
+<LanguageSelector />
+
+// Compact – flag + language code only
+<LanguageSelector compact />
+```
+
+Language is persisted via `useUserPreference('global', 'language', 'en')` so it roams across
+devices when the user is authenticated.
+
+### RTL support
+
+The `I18nProvider` (added to `layout.tsx`) sets `document.documentElement.dir` to `'rtl'` or
+`'ltr'` automatically when the language changes. Use Tailwind's `rtl:` variant for mirrored
+layouts:
+
+```tsx
+<div className="pl-4 rtl:pl-0 rtl:pr-4">…</div>
+```
+
+### Community translation review workflow
+
+Any authenticated user can submit a translation via `POST /api/v1/translations` (status:
+`pending`). Admins approve or reject in the **Admin → Translations** page
+(`/admin/translations`). Only `approved` translations are exported to locale JSON by the nightly
+CI seed job.
+
+### `page_key` registry update
+
+The language preference uses the `global` page key:
+
+| Value | Preference key | Description |
+| ----- | -------------- | ----------- |
+| `global` | `language` | Active UI language (`en`, `fr`, `es`, `de`, `ja`, `ar`) |
 
 ---
 
@@ -964,5 +1046,7 @@ When adding a new UI pattern to this guide:
 - [ADR-0006: Next.js and Tailwind CSS](./adr/adr-0006-nextjs-tailwind-frontend.md)
 - [ADR-0008: Sticky Headers with Smooth Transitions](./adr/adr-0008-sticky-headers-with-smooth-transitions.md)
 - [ADR-0011: User Preferences](./adr/adr-0011-user-preferences.md)
+- [ADR-0012: Internationalisation](./adr/adr-0012-internationalisation.md)
+- [Internationalisation Guide](./i18n/INTERNATIONALISATION.md)
 - [Frontend UI Guidelines](.github/instructions/frontend-ui.instructions.md)
 - [Performance Optimization](.github/instructions/performance-optimization.instructions.md)
