@@ -192,7 +192,6 @@ export default function LanguagesPage() {
   }
 
   const backHref = isLoggedIn ? '/dashboard' : '/home'
-  const backLabel = isLoggedIn ? '← Back to Dashboard' : '← Back to Home'
 
   return (
     <div className="min-h-screen p-8">
@@ -201,7 +200,6 @@ export default function LanguagesPage() {
           title="Languages"
           subtitle="Browse language reference data and writing direction"
           backHref={backHref}
-          backLabel={backLabel}
           actions={
             <>
               <button

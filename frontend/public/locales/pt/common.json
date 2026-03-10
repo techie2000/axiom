@@ -1,6 +1,7 @@
 {
   "nav": {
     "backToHome": "← Voltar ao início",
+    "backToDashboard": "← Voltar ao painel",
     "backToLogin": "← Voltar ao login",
     "signIn": "Entrar",
     "requestAccess": "Solicitar acesso"

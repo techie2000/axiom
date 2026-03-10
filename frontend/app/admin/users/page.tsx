@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useTranslation } from 'react-i18next'
 import PageHeader from '../../components/PageHeader'
 import Alert from '../../components/Alert'
 import LoadingSpinner from '../../components/LoadingSpinner'
@@ -55,6 +56,7 @@ function roleBadge(role: string) {
 }
 
 function AdminUsersContent() {
+  const { t } = useTranslation('common')
   const router = useRouter()
   const searchParams = useSearchParams()
   const isBootstrap = searchParams.get('bootstrap') === 'true'
@@ -326,7 +328,7 @@ function AdminUsersContent() {
 
         <div className="mt-6 text-center">
           <Link href="/dashboard" className="text-blue-500 hover:text-blue-400 text-sm">
-            ← Back to Dashboard
+            {t('nav.backToDashboard')}
           </Link>
         </div>
       </div>

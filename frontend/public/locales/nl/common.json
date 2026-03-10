@@ -1,6 +1,7 @@
 {
   "nav": {
     "backToHome": "← Terug naar home",
+    "backToDashboard": "← Terug naar dashboard",
     "backToLogin": "← Terug naar login",
     "signIn": "Inloggen",
     "requestAccess": "Toegang aanvragen"

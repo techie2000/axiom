@@ -197,7 +197,6 @@ export default function CurrenciesPage() {
   }
 
   const backHref = isLoggedIn ? '/dashboard' : '/home'
-  const backLabel = isLoggedIn ? '← Back to Dashboard' : '← Back to Home'
 
   return (
     <div className="min-h-screen p-8">
@@ -207,7 +206,6 @@ export default function CurrenciesPage() {
           title="Currencies"
           subtitle="Browse ISO 4217 currency codes and compliance reference data"
           backHref={backHref}
-          backLabel={backLabel}
           actions={
             <button
               onClick={expandedWidthPreference.toggle}

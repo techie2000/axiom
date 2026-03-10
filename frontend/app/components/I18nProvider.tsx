@@ -18,6 +18,88 @@ interface I18nProviderProps {
 }
 
 export default function I18nProvider({ children }: I18nProviderProps) {
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080'
+    let cancelled = false
+
+    const setNestedValue = (target: Record<string, unknown>, dottedKey: string, value: string) => {
+      const parts = dottedKey.split('.').filter(Boolean)
+      if (parts.length === 0) return
+
+      let current: Record<string, unknown> = target
+      for (let i = 0; i < parts.length - 1; i += 1) {
+        const part = parts[i]
+        if (part === '__proto__' || part === 'prototype' || part === 'constructor') {
+          return
+        }
+        const existing = current[part]
+        if (!existing || typeof existing !== 'object' || Array.isArray(existing)) {
+          current[part] = {}
+        }
+        current = current[part] as Record<string, unknown>
+      }
+
+      const lastPart = parts[parts.length - 1]
+      if (lastPart === '__proto__' || lastPart === 'prototype' || lastPart === 'constructor') {
+        return
+      }
+      current[lastPart] = value
+    }
+
+    const loadApprovedTranslations = async (languageCode: string) => {
+      if (!languageCode || languageCode === 'en') return
+
+      try {
+        let offset = 0
+        const limit = 200
+        const overrides: Record<string, unknown> = {}
+
+        while (true) {
+          const params = new URLSearchParams({
+            language: languageCode,
+            status: 'approved',
+            limit: String(limit),
+            offset: String(offset),
+          })
+
+          const res = await fetch(`${API_BASE_URL}/api/v1/translations?${params}`)
+          if (!res.ok) return
+
+          const payload = (await res.json()) as {
+            records?: Array<{ translation_key?: string; translation_value?: string }>
+          }
+
+          const records = payload.records ?? []
+          for (const record of records) {
+            const key = record.translation_key?.trim()
+            const value = record.translation_value ?? ''
+            if (!key) continue
+            setNestedValue(overrides, key, value)
+          }
+
+          if (records.length < limit) break
+          offset += records.length
+        }
+
+        if (cancelled || Object.keys(overrides).length === 0) return
+
+        i18n.addResourceBundle(languageCode, 'common', overrides, true, true)
+      } catch {
+        // Keep static locale fallback when remote translation overlays are unavailable.
+      }
+    }
+
+    loadApprovedTranslations(i18n.language)
+    i18n.on('languageChanged', loadApprovedTranslations)
+
+    return () => {
+      cancelled = true
+      i18n.off('languageChanged', loadApprovedTranslations)
+    }
+  }, [])
+
   // Sync the <html dir="…"> attribute whenever the language changes.
   useEffect(() => {
     const applyDir = (lng: string) => {

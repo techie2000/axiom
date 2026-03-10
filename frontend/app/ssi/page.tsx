@@ -2,8 +2,11 @@
 
 import Link from 'next/link'
 import PageHeader from '../components/PageHeader'
+import { useTranslation } from 'react-i18next'
 
 export default function SSIPage() {
+  const { t } = useTranslation('common')
+
   return (
     <div className="min-h-screen p-8">
       <div className="max-w-7xl mx-auto">
@@ -12,7 +15,6 @@ export default function SSIPage() {
           title="Standard Settlement Instructions (SSI)"
           subtitle="Manage settlement instructions for securities trading counterparties"
           backHref="/dashboard"
-          backLabel="← Back to Dashboard"
         />
 
         {/* Coming Soon Notice */}
@@ -85,7 +87,7 @@ export default function SSIPage() {
             href="/dashboard"
             className="inline-block bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 px-6 py-3 rounded-lg transition-colors border-2 border-purple-500/30"
           >
-            ← Back to Dashboard
+            {t('nav.backToDashboard')}
           </Link>
         </div>
       </div>

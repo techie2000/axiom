@@ -1,6 +1,7 @@
 {
   "nav": {
     "backToHome": "← 返回首页",
+    "backToDashboard": "← 返回仪表板",
     "backToLogin": "← 返回登录",
     "signIn": "登录",
     "requestAccess": "申请访问"

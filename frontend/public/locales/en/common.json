@@ -1,6 +1,7 @@
 {
   "nav": {
     "backToHome": "← Back to Home",
+    "backToDashboard": "← Back to Dashboard",
     "backToLogin": "← Back to Login",
     "signIn": "Sign In",
     "requestAccess": "Request Access"

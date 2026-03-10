@@ -1,6 +1,7 @@
 {
   "nav": {
     "backToHome": "← Zur Startseite",
+    "backToDashboard": "← Zurück zum Dashboard",
     "backToLogin": "← Zurück zur Anmeldung",
     "signIn": "Anmelden",
     "requestAccess": "Zugang beantragen"

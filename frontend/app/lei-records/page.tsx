@@ -13,6 +13,7 @@ import SyncedWideTable from '../components/SyncedWideTable'
 import { useDeferredBooleanPreference } from '../lib/useDeferredBooleanPreference'
 import { useUserPreference } from '../lib/useUserPreference'
 import { formatEnumDisplayValue, formatLEICellValue, getStatusBadgePresentation, normalizeRecordNullLikeValues } from './null-utils'
+import { useTranslation } from 'react-i18next'
 
 interface LEIRecord {
   id: string
@@ -140,6 +141,7 @@ const DEFAULT_VISIBLE_KEYS = AVAILABLE_COLUMNS.filter(col => col.defaultVisible)
 const COUNTRY_DETAIL_ORDER = ['code', 'name', 'alpha3_code', 'region', 'active']
 
 export default function LEIRecordsPage() {
+  const { t } = useTranslation('common')
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [records, setRecords] = useState<LEIRecord[]>([])
   const [loading, setLoading] = useState(true)
@@ -242,7 +244,6 @@ export default function LEIRecordsPage() {
   }, [])
 
   const backHref = isLoggedIn ? '/dashboard' : '/home'
-  const backLabel = isLoggedIn ? '← Back to Dashboard' : '← Back to Home'
 
   const isNotSetStatusFilterValue = useCallback((value: string): boolean => {
     const normalized = value.trim().replaceAll(' ', '_').toUpperCase()
@@ -988,7 +989,6 @@ export default function LEIRecordsPage() {
           title="LEI Records"
           subtitle="GLEIF Legal Entity Identifiers (ISO 17442)"
           backHref={backHref}
-          backLabel={backLabel}
           actions={
             <>
               <button
@@ -1237,7 +1237,7 @@ export default function LEIRecordsPage() {
                 onClick={clearFilters}
                 className="px-6 py-2 rounded-lg bg-white hover:bg-gray-100 dark:bg-gray-600 dark:hover:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-transparent transition-colors font-medium shadow-sm"
               >
-                ✕ Clear Filters
+                ✕ {t('common.clearFilters')}
               </button>
             )}
           </div>
@@ -1308,7 +1308,7 @@ export default function LEIRecordsPage() {
                 onClick={clearFilters}
                 className="px-3 py-1 text-xs rounded-lg bg-white hover:bg-gray-100 dark:bg-blue-600 dark:hover:bg-blue-700 text-blue-900 dark:text-white border border-blue-300 dark:border-transparent transition-colors font-medium shadow-sm"
               >
-                ✕ Clear All
+                ✕ {t('common.clearFilters')}
               </button>
             </div>
           </div>

@@ -1,6 +1,7 @@
 {
   "nav": {
     "backToHome": "← ホームへ戻る",
+    "backToDashboard": "← ダッシュボードへ戻る",
     "backToLogin": "← ログインへ戻る",
     "signIn": "サインイン",
     "requestAccess": "アクセスを申請"

@@ -92,7 +92,6 @@ export default function CodeMappingsPage() {
           title="Code Mappings"
           subtitle="Cross-system code translation — map external codes (e.g., ALERT) to internal AXIOM identifiers"
           backHref="/dashboard"
-          backLabel="← Back to Dashboard"
         />
 
         {/* Info box explaining the feature */}
