@@ -432,6 +432,66 @@ func TestGetLegalNamesByLEICodes(t *testing.T) {
 		}
 	})
 
+	t.Run("filters empty entries and preserves valid trimmed codes", func(t *testing.T) {
+		stub := &leiServiceStub{
+			legalNames: map[string]string{
+				"AAA11111111111111111": "Entity A",
+				"BBB22222222222222222": "Entity B",
+				"CCC33333333333333333": "Entity C",
+			},
+		}
+		h := NewLEIHandler(stub, &schedulerServiceStub{})
+
+		resp := executeGET(
+			"/lei/names",
+			"/lei/names?codes=,%20AAA11111111111111111,%20,%20BBB22222222222222222,,%20CCC33333333333333333,%20",
+			h.GetLegalNamesByLEICodes,
+		)
+		if resp.Code != http.StatusOK {
+			t.Fatalf("expected status %d, got %d", http.StatusOK, resp.Code)
+		}
+
+		if len(stub.receivedCodes) != 3 {
+			t.Fatalf("expected 3 filtered codes, got %d (%v)", len(stub.receivedCodes), stub.receivedCodes)
+		}
+
+		expected := []string{"AAA11111111111111111", "BBB22222222222222222", "CCC33333333333333333"}
+		for i := range expected {
+			if stub.receivedCodes[i] != expected[i] {
+				t.Fatalf("expected code %q at index %d, got %q", expected[i], i, stub.receivedCodes[i])
+			}
+		}
+	})
+
+	t.Run("caps requested codes at 500 before service call", func(t *testing.T) {
+		allCodes := make([]string, 0, 505)
+		for i := 1; i <= 505; i++ {
+			allCodes = append(allCodes, fmt.Sprintf("L%020d", i))
+		}
+
+		stub := &leiServiceStub{legalNames: map[string]string{}}
+		h := NewLEIHandler(stub, &schedulerServiceStub{})
+
+		resp := executeGET(
+			"/lei/names",
+			"/lei/names?codes="+strings.Join(allCodes, ","),
+			h.GetLegalNamesByLEICodes,
+		)
+		if resp.Code != http.StatusOK {
+			t.Fatalf("expected status %d, got %d", http.StatusOK, resp.Code)
+		}
+
+		if len(stub.receivedCodes) != 500 {
+			t.Fatalf("expected 500 capped codes, got %d", len(stub.receivedCodes))
+		}
+		if stub.receivedCodes[0] != "L00000000000000000001" {
+			t.Fatalf("unexpected first code after cap: %q", stub.receivedCodes[0])
+		}
+		if stub.receivedCodes[499] != "L00000000000000000500" {
+			t.Fatalf("unexpected last code after cap: %q", stub.receivedCodes[499])
+		}
+	})
+
 	t.Run("returns internal server error on service failure", func(t *testing.T) {
 		h := NewLEIHandler(&leiServiceStub{legalNamesErr: errors.New("db failure")}, &schedulerServiceStub{})
 
