@@ -39,17 +39,17 @@ interface ColumnConfig {
 
 const AVAILABLE_COLUMNS: ColumnConfig[] = [
   { key: 'flag', label: 'Flag', defaultVisible: true, width: 'w-20' },
-  { key: 'name', label: 'Name', defaultVisible: true, width: 'min-w-56' },
-  { key: 'native_name', label: 'Native Name', defaultVisible: false, width: 'min-w-56' },
+  { key: 'name', label: 'Name', defaultVisible: true, width: 'w-56' },
+  { key: 'native_name', label: 'Native Name', defaultVisible: false, width: 'w-56' },
   { key: 'alpha2', label: 'Alpha-2 (Primary)', defaultVisible: true, width: 'w-32' },
   { key: 'alpha3', label: 'Alpha-3 (Secondary)', defaultVisible: true, width: 'w-36' },
   { key: 'numeric_code', label: 'Numeric', defaultVisible: false, width: 'w-28' },
   { key: 'capital', label: 'Capital', defaultVisible: false, width: 'w-40' },
   { key: 'continent', label: 'Continent', defaultVisible: true, width: 'w-36' },
   { key: 'region', label: 'Region', defaultVisible: true, width: 'w-44' },
-  { key: 'languages', label: 'Languages', defaultVisible: false, width: 'min-w-36' },
-  { key: 'currency_codes', label: 'Currency Codes', defaultVisible: false, width: 'min-w-36' },
-  { key: 'phone_codes', label: 'Phone Codes', defaultVisible: false, width: 'min-w-40' },
+  { key: 'languages', label: 'Languages', defaultVisible: false, width: 'w-72' },
+  { key: 'currency_codes', label: 'Currency Codes', defaultVisible: false, width: 'w-72' },
+  { key: 'phone_codes', label: 'Phone Codes', defaultVisible: false, width: 'w-56' },
   { key: 'active', label: 'Active', defaultVisible: false, width: 'w-24' },
 ]
 
@@ -778,7 +778,7 @@ export default function CountriesPage() {
                         switch (column.key) {
                           case 'flag':
                             return (
-                              <td key={column.key} className="px-6 py-4 whitespace-nowrap" title={country.name}>
+                              <td key={column.key} className="px-6 py-4 whitespace-nowrap align-top" title={country.name}>
                                 <CountryFlag
                                   countryCode={country.alpha2 || country.code}
                                   title={country.name}
@@ -788,61 +788,61 @@ export default function CountriesPage() {
                             )
                           case 'name':
                             return (
-                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white align-top">
                                 {country.name}
                               </td>
                             )
                           case 'alpha2':
                             return (
-                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-center">
+                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-center align-top">
                                 <Badge variant="blue" mono>{country.alpha2 || '-'}</Badge>
                               </td>
                             )
                           case 'alpha3':
                             return (
-                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-center">
+                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-center align-top">
                                 <Badge variant="green" mono>{country.alpha3 || '-'}</Badge>
                               </td>
                             )
                           case 'numeric_code':
                             return (
-                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 font-mono">
+                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 font-mono align-top">
                                 {country.numeric_code || '-'}
                               </td>
                             )
                           case 'native_name':
                             return (
-                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 align-top">
                                 {country.native_name || '-'}
                               </td>
                             )
                           case 'capital':
                             return (
-                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 align-top">
                                 {country.capital || '-'}
                               </td>
                             )
                           case 'continent':
                             return (
-                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 align-top">
                                 {getContinentDisplay(country.continent)}
                               </td>
                             )
                           case 'region':
                             return (
-                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 align-top">
                                 {country.region || '-'}
                               </td>
                             )
                           case 'phone_codes':
                             return (
-                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 align-top">
                                 {formatPhoneCodeListValue(country.phone_codes)}
                               </td>
                             )
                           case 'currency_codes':
                             return (
-                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 whitespace-normal break-words align-top">
                                 <ReferenceDetailList
                                   values={country.currency_codes}
                                   normalizeValue={(value) => String(value || '').trim().toUpperCase()}
@@ -865,7 +865,7 @@ export default function CountriesPage() {
                             )
                           case 'languages':
                             return (
-                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 whitespace-normal break-words align-top">
                                 <ReferenceDetailList
                                   values={country.languages}
                                   normalizeValue={(value) => String(value || '').trim().toLowerCase()}
@@ -877,13 +877,13 @@ export default function CountriesPage() {
                             )
                           case 'active':
                             return (
-                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-center">
+                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-center align-top">
                                 {country.active ? <Badge variant="green" shape="pill">Active</Badge> : <Badge variant="gray" shape="pill">Inactive</Badge>}
                               </td>
                             )
                           default:
                             return (
-                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">-
+                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 align-top">-
                               </td>
                             )
                         }

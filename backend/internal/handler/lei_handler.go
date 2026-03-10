@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -190,6 +191,7 @@ func (h *LEIHandler) GetLEIByID(c *gin.Context) {
 // @Param country query string false "Country code filter (e.g., US, GB)"
 // @Param sortBy query string false "Sort field (lei, legal_name, entity_status, entity_category, legal_address_country, last_update_date)"
 // @Param sortOrder query string false "Sort order (asc, desc)" default(asc)
+// @Param includeLinkedNames query boolean false "Include successor/managing LOU legal names in list response"
 // @Success 200 {array} domain.LEIRecord
 // @Failure 500 {object} map[string]string
 // @Router /api/v1/lei [get]
@@ -200,6 +202,7 @@ func (h *LEIHandler) ListLEI(c *gin.Context) {
 	status := c.Query("status")
 	category := c.Query("category")
 	country := c.Query("country")
+	includeLinkedNames := strings.EqualFold(c.DefaultQuery("includeLinkedNames", "false"), "true")
 	sortBy := c.Query("sortBy")       // Empty if not provided - repository will use Hybrid Approach
 	sortOrder := c.Query("sortOrder") // Empty if not provided - repository will choose based on context
 
@@ -212,13 +215,80 @@ func (h *LEIHandler) ListLEI(c *gin.Context) {
 		limit = 501
 	}
 
-	records, err := h.leiService.GetAllLEIWithFilters(limit, offset, search, status, category, country, sortBy, sortOrder, columns)
+	records, err := h.leiService.GetAllLEIWithFilters(limit, offset, search, status, category, country, sortBy, sortOrder, columns, includeLinkedNames)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve LEI records"})
 		return
 	}
 
 	c.JSON(http.StatusOK, records)
+}
+
+// GetLegalNamesByLEICodes retrieves legal names for a batch of LEI codes in a single round-trip.
+// @Summary Batch-fetch legal names for a set of LEI codes
+// @Description Returns a map of LEI code to legal name. Input codes are trimmed, normalized, deduplicated, and validated (20-char uppercase alphanumeric). Codes not found are absent from the response.
+// @Tags LEI
+// @Produce json
+// @Param codes query string true "Comma-separated list of LEI codes (max 500)"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/lei/names [get]
+func (h *LEIHandler) GetLegalNamesByLEICodes(c *gin.Context) {
+	rawCodes := c.Query("codes")
+	if rawCodes == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "codes query parameter is required"})
+		return
+	}
+
+	codes := strings.Split(rawCodes, ",")
+	const maxCodes = 500
+	if len(codes) > maxCodes {
+		codes = codes[:maxCodes]
+	}
+
+	filtered := make([]string, 0, len(codes))
+	seen := make(map[string]struct{}, len(codes))
+	for _, code := range codes {
+		normalized := strings.ToUpper(strings.TrimSpace(code))
+		if !isValidLEICode(normalized) {
+			continue
+		}
+		if _, exists := seen[normalized]; exists {
+			continue
+		}
+		seen[normalized] = struct{}{}
+		filtered = append(filtered, normalized)
+	}
+	codes = filtered
+
+	if len(codes) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "at least one valid LEI code is required"})
+		return
+	}
+
+	names, err := h.leiService.GetLegalNamesByLEICodes(codes)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve LEI names"})
+		return
+	}
+
+	c.JSON(http.StatusOK, names)
+}
+
+func isValidLEICode(code string) bool {
+	if len(code) != 20 {
+		return false
+	}
+	for i := range len(code) {
+		ch := code[i]
+		isUpperLetter := ch >= 'A' && ch <= 'Z'
+		isDigit := ch >= '0' && ch <= '9'
+		if !isUpperLetter && !isDigit {
+			return false
+		}
+	}
+	return true
 }
 
 // GetAuditHistory retrieves audit history for an LEI

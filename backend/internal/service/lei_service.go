@@ -109,12 +109,13 @@ type LEIService interface {
 	GetPredecessorLEIs(lei string) ([]*domain.LEIRecord, error)
 	GetLEIByID(id string) (*domain.LEIRecord, error)
 	GetAllLEI(limit, offset int) ([]*domain.LEIRecord, error)
-	GetAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string) ([]*domain.LEIRecord, error)
+	GetAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string, includeLinkedNames bool) ([]*domain.LEIRecord, error)
 	CountLEIRecords() (int64, error)
 	GetDistinctCountries() ([]domain.Country, error)
 	GetDistinctCategories() ([]string, error)
 	GetDistinctRegions() ([]string, error)
 	GetDistinctLegalForms() ([]string, error)
+	GetLegalNamesByLEICodes(codes []string) (map[string]string, error)
 	UpdateLEIRecord(record *domain.LEIRecord) error
 
 	// Audit and history
@@ -1415,8 +1416,8 @@ func (s *leiService) GetAllLEI(limit, offset int) ([]*domain.LEIRecord, error) {
 }
 
 // GetAllLEIWithFilters retrieves LEI records with search and filters
-func (s *leiService) GetAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string) ([]*domain.LEIRecord, error) {
-	records, err := s.repo.FindAllLEIWithFilters(limit, offset, search, status, category, country, sortBy, sortOrder, columns)
+func (s *leiService) GetAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string, includeLinkedNames bool) ([]*domain.LEIRecord, error) {
+	records, err := s.repo.FindAllLEIWithFilters(limit, offset, search, status, category, country, sortBy, sortOrder, columns, includeLinkedNames)
 	if err != nil {
 		return nil, err
 	}
@@ -1431,6 +1432,12 @@ func (s *leiService) GetAllLEIWithFilters(limit, offset int, search, status, cat
 // CountLEIRecords returns the total count of LEI records
 func (s *leiService) CountLEIRecords() (int64, error) {
 	return s.repo.CountLEIRecords()
+}
+
+// GetLegalNamesByLEICodes returns a map of LEI code → legal name for a batch of codes.
+// Codes not found in the database are simply absent from the returned map.
+func (s *leiService) GetLegalNamesByLEICodes(codes []string) (map[string]string, error) {
+	return s.repo.FindLegalNamesByLEICodes(codes)
 }
 
 // GetDistinctCountries returns a sorted list of active countries from the countries reference table

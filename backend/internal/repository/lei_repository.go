@@ -22,8 +22,9 @@ type LEIRepository interface {
 	FindLEIByID(id string) (*domain.LEIRecord, error)
 	FindAllLEI(limit, offset int) ([]*domain.LEIRecord, error)
 	FindPredecessorLEIsBySuccessor(lei string) ([]*domain.LEIRecord, error)
-	FindAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string) ([]*domain.LEIRecord, error)
+	FindAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string, includeLinkedNames bool) ([]*domain.LEIRecord, error)
 	CountLEIRecords() (int64, error)
+	FindLegalNamesByLEICodes(codes []string) (map[string]string, error)
 	GetDistinctCountries() ([]string, error)
 	GetDistinctCategories() ([]string, error)
 	GetDistinctRegions() ([]string, error)
@@ -113,6 +114,34 @@ func (r *leiRepository) FindAllLEI(limit, offset int) ([]*domain.LEIRecord, erro
 		return nil, err
 	}
 	return records, nil
+}
+
+// FindLegalNamesByLEICodes retrieves legal names for a batch of LEI codes in a single query.
+// Returns a map of LEI code → legal name for codes that exist in the database.
+func (r *leiRepository) FindLegalNamesByLEICodes(codes []string) (map[string]string, error) {
+	if len(codes) == 0 {
+		return map[string]string{}, nil
+	}
+
+	type row struct {
+		LEI       string
+		LegalName string
+	}
+
+	var rows []row
+	if err := r.db.Model(&domain.LEIRecord{}).
+		Select("lei, legal_name").
+		Where("lei IN ?", codes).
+		Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+
+	names := make(map[string]string, len(rows))
+	for _, row := range rows {
+		names[row.LEI] = row.LegalName
+	}
+
+	return names, nil
 }
 
 // FindPredecessorLEIsBySuccessor retrieves LEI records that point to the provided LEI as successor.
@@ -219,7 +248,7 @@ func validateColumns(columns string) string {
 
 // FindAllLEIWithFilters retrieves LEI records with search and filters
 // Uses dynamic SELECT based on requested columns for performance optimization
-func (r *leiRepository) FindAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string) ([]*domain.LEIRecord, error) {
+func (r *leiRepository) FindAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string, includeLinkedNames bool) ([]*domain.LEIRecord, error) {
 	var records []*domain.LEIRecord
 	buildQuery := func(useSearchVector bool) *gorm.DB {
 		query := r.db.Limit(limit).Offset(offset)
@@ -227,6 +256,11 @@ func (r *leiRepository) FindAllLEIWithFilters(limit, offset int, search, status,
 		// Dynamic SELECT optimization: only fetch requested columns
 		// Validates columns against whitelist to prevent SQL injection
 		validatedColumns := validateColumns(columns)
+		if includeLinkedNames {
+			validatedColumns = validatedColumns +
+				", (SELECT ref.legal_name FROM lei_raw.lei_records ref WHERE BTRIM(ref.lei) = BTRIM(lei_raw.lei_records.managing_lou) LIMIT 1) AS managing_lou_legal_name" +
+				", (SELECT ref.legal_name FROM lei_raw.lei_records ref WHERE BTRIM(ref.lei) = BTRIM(lei_raw.lei_records.successor_lei) LIMIT 1) AS successor_lei_legal_name"
+		}
 		query = query.Select(validatedColumns)
 
 		// Remove Preload for list view - only needed for detail view

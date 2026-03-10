@@ -55,6 +55,8 @@ interface LEIRecord {
   // Associated Entities
   managing_lou: string
   successor_lei: string
+  managing_lou_legal_name?: string
+  successor_lei_legal_name?: string
   
   // Dates
   registration_date: string
@@ -231,26 +233,17 @@ export default function LEIRecordsPage() {
     setShowColumnSavePrompt(false)
   }, [])
 
-  // Save the current effective column selection as the stored default without a new toast cycle.
-  // Column preferences cannot reuse the hook's saveCurrentValue because they are Set-based
-  // (serialised as a comma-separated string), not a simple boolean.
-  const handleSaveColumnsNow = useCallback(() => {
-    setStoredColumns(Array.from(effectiveVisibleColumns).join(','))
-    setLocalColumns(null)
-    pendingColumns.current = null
-    setShowColumnSavePrompt(false)
-  }, [effectiveVisibleColumns, setStoredColumns])
-
   const toggleLocationDisplayMode = locationDisplayPreference.toggle
 
   // New features
   const [selectedRecord, setSelectedRecord] = useState<LEIRecord | null>(null)
   const [showColumnSelector, setShowColumnSelector] = useState(false)
   const [managingLouName, setManagingLouName] = useState<string | null>(null)
-  const [managingLouNames, setManagingLouNames] = useState<Map<string, string>>(new Map())
+  const [managingLouNameLoading, setManagingLouNameLoading] = useState(false)
+  const [managingLouNames, setManagingLouNames] = useState<Map<string, string | null>>(new Map())
   const [successorLeiName, setSuccessorLeiName] = useState<string | null>(null)
   const [successorLeiNameLoading, setSuccessorLeiNameLoading] = useState(false)
-  const [successorLeiNames, setSuccessorLeiNames] = useState<Map<string, string>>(new Map())
+  const [successorLeiNames, setSuccessorLeiNames] = useState<Map<string, string | null>>(new Map())
   const [predecessorLeiReferences, setPredecessorLeiReferences] = useState<RelatedLEIReference[]>([])
   const [predecessorLeiCache, setPredecessorLeiCache] = useState<Map<string, RelatedLEIReference[]>>(new Map())
   const [predecessorLeiLoading, setPredecessorLeiLoading] = useState(false)
@@ -260,6 +253,10 @@ export default function LEIRecordsPage() {
   const API_BASE_URL = typeof window !== 'undefined' 
     ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080')
     : 'http://backend:8080'
+
+  const normalizeLeiCode = useCallback((value: string | null | undefined): string => {
+    return String(value || '').trim().toUpperCase()
+  }, [])
 
   const statusOptions = ['ACTIVE', 'INACTIVE', 'LAPSED', 'MERGED', 'RETIRED', 'NULL']
 
@@ -527,6 +524,11 @@ export default function LEIRecordsPage() {
       const columnsParam = columnsToFetch.join(',')
       if (columnsParam) params.append('columns', columnsParam)
 
+      const includeLinkedNames = effectiveVisibleColumns.has('managing_lou') || effectiveVisibleColumns.has('successor_lei')
+      if (includeLinkedNames) {
+        params.append('includeLinkedNames', 'true')
+      }
+
       const response = await fetch(
         `${API_BASE_URL}/api/v1/lei?${params.toString()}`,
         {
@@ -542,6 +544,42 @@ export default function LEIRecordsPage() {
         const hasMorePages = data && data.length > itemsPerPage
         const displayData = hasMorePages ? data.slice(0, itemsPerPage) : (data || [])
         const normalizedDisplayData = displayData.map((record: LEIRecord) => normalizeRecordNullLikeValues(record))
+
+        if (includeLinkedNames) {
+          setManagingLouNames((prev) => {
+            const next = new Map(prev)
+            normalizedDisplayData.forEach((record: LEIRecord) => {
+              const code = normalizeLeiCode(record.managing_lou)
+              if (!code) return
+              const name = String(record.managing_lou_legal_name || '').trim()
+              if (name !== '') {
+                next.set(code, name)
+                return
+              }
+              if (!next.has(code)) {
+                next.set(code, null)
+              }
+            })
+            return next
+          })
+
+          setSuccessorLeiNames((prev) => {
+            const next = new Map(prev)
+            normalizedDisplayData.forEach((record: LEIRecord) => {
+              const code = normalizeLeiCode(record.successor_lei)
+              if (!code) return
+              const name = String(record.successor_lei_legal_name || '').trim()
+              if (name !== '') {
+                next.set(code, name)
+                return
+              }
+              if (!next.has(code)) {
+                next.set(code, null)
+              }
+            })
+            return next
+          })
+        }
         
         setRecords(normalizedDisplayData)
         setHasMorePages(hasMorePages)
@@ -569,6 +607,7 @@ export default function LEIRecordsPage() {
     effectiveVisibleColumns,
     itemsPerPage,
     normalizeStatusFilterForAPI,
+    normalizeLeiCode,
     sortDirection,
     sortField,
     statusFilter,
@@ -720,9 +759,13 @@ export default function LEIRecordsPage() {
     const fetchManagingLouName = async () => {
       if (!selectedRecord?.managing_lou) {
         setManagingLouName(null)
+        setManagingLouNameLoading(false)
         return
       }
-      
+
+      setManagingLouNameLoading(true)
+      setManagingLouName(null)
+
       try {
         const response = await fetch(`${API_BASE_URL}/api/v1/lei/${selectedRecord.managing_lou}`)
         if (response.ok) {
@@ -734,17 +777,18 @@ export default function LEIRecordsPage() {
       } catch (err) {
         console.error('Failed to fetch managing LOU name:', err)
         setManagingLouName(null)
+      } finally {
+        setManagingLouNameLoading(false)
       }
     }
-    
+
     fetchManagingLouName()
   }, [selectedRecord, API_BASE_URL])
 
   // Fetch successor LEI name when modal opens
   useEffect(() => {
     const fetchSuccessorLeiName = async () => {
-      const successorLeiCode = normalizeLeiCode(selectedRecord?.successor_lei || '')
-      if (!successorLeiCode) {
+      if (!selectedRecord?.successor_lei) {
         setSuccessorLeiName(null)
         setSuccessorLeiNameLoading(false)
         return
@@ -754,7 +798,7 @@ export default function LEIRecordsPage() {
       setSuccessorLeiName(null)
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/v1/lei/${successorLeiCode}`)
+        const response = await fetch(`${API_BASE_URL}/api/v1/lei/${selectedRecord.successor_lei}`)
         if (response.ok) {
           const data = await response.json()
           setSuccessorLeiName(data.legal_name || null)
@@ -831,59 +875,72 @@ export default function LEIRecordsPage() {
     fetchPredecessorLeiReferences()
   }, [selectedRecord?.lei, API_BASE_URL, predecessorLeiCache])
 
-  // Fetch managing LOU names for all records in table
+  // Shared helper: batch-fetch legal names for a set of LEI codes using a single HTTP request.
+  // Returns a map of LEI code → legal name for codes found in the database.
+  const fetchLegalNamesBatch = useCallback(async (codes: string[]): Promise<Map<string, string>> => {
+    if (codes.length === 0) return new Map()
+    const params = new URLSearchParams({ codes: codes.join(',') })
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/lei/names?${params}`)
+      if (!response.ok) return new Map()
+      const data: Record<string, string> = await response.json()
+      return new Map(Object.entries(data))
+    } catch {
+      return new Map()
+    }
+  }, [API_BASE_URL])
+
+  const mergeNameCacheWithMisses = useCallback(
+    (
+      previous: Map<string, string | null>,
+      requestedCodes: string[],
+      fetched: Map<string, string>
+    ): Map<string, string | null> => {
+      const next = new Map(previous)
+      requestedCodes.forEach((code) => {
+        next.set(code, fetched.get(code) ?? null)
+      })
+      return next
+    },
+    []
+  )
+
+  // Fetch managing LOU names for all records in table (single batch request).
   useEffect(() => {
     const fetchManagingLouNamesForTable = async () => {
-      // Get unique managing LOU codes from current records
       const uniqueLouCodes = Array.from(
         new Set(
           records
-            .filter(r => r.managing_lou && r.managing_lou.trim() !== '')
-            .map(r => r.managing_lou)
+            .map((r) => normalizeLeiCode(r.managing_lou))
+            .filter((code): code is string => code !== '')
         )
       )
-      
+
       if (uniqueLouCodes.length === 0) return
-      
-      // Only fetch codes we don't have yet
-      const codesToFetch = uniqueLouCodes.filter(code => !managingLouNames.has(code))
+
+      const codesToFetch = uniqueLouCodes.filter((code) => !managingLouNames.has(code))
       if (codesToFetch.length === 0) return
-      
-      // Fetch names for missing codes
-      const newNames = new Map(managingLouNames)
-      await Promise.all(
-        codesToFetch.map(async (code) => {
-          try {
-            const response = await fetch(`${API_BASE_URL}/api/v1/lei/${code}`)
-            if (response.ok) {
-              const data = await response.json()
-              if (data.legal_name) {
-                newNames.set(code, data.legal_name)
-              }
-            }
-          } catch (err) {
-            console.error(`Failed to fetch LOU name for ${code}:`, err)
-          }
-        })
-      )
-      
-      setManagingLouNames(newNames)
+
+      const fetched = await fetchLegalNamesBatch(codesToFetch)
+
+      setManagingLouNames((prev) => {
+        return mergeNameCacheWithMisses(prev, codesToFetch, fetched)
+      })
     }
-    
+
     if (records.length > 0) {
       fetchManagingLouNamesForTable()
     }
-  }, [records, managingLouNames, API_BASE_URL])
+  }, [records, managingLouNames, fetchLegalNamesBatch, mergeNameCacheWithMisses, normalizeLeiCode])
 
-  // Fetch successor LEI names for all records in table
+  // Fetch successor LEI names for all records in table (single batch request).
   useEffect(() => {
     const fetchSuccessorLeiNamesForTable = async () => {
-      const MAX_CONCURRENT_REQUESTS = 8
       const uniqueSuccessorLeiCodes = Array.from(
         new Set(
           records
-            .map((r) => normalizeLeiCode(r.successor_lei || ''))
-            .filter((code) => code !== '')
+            .map((r) => normalizeLeiCode(r.successor_lei))
+            .filter((code): code is string => code !== '')
         )
       )
 
@@ -892,41 +949,21 @@ export default function LEIRecordsPage() {
       const codesToFetch = uniqueSuccessorLeiCodes.filter((code) => !successorLeiNames.has(code))
       if (codesToFetch.length === 0) return
 
-      const newNames = new Map(successorLeiNames)
+      const fetched = await fetchLegalNamesBatch(codesToFetch)
 
-      for (let i = 0; i < codesToFetch.length; i += MAX_CONCURRENT_REQUESTS) {
-        const batch = codesToFetch.slice(i, i + MAX_CONCURRENT_REQUESTS)
-        await Promise.all(
-          batch.map(async (code) => {
-            try {
-              const response = await fetch(`${API_BASE_URL}/api/v1/lei/${code}`)
-              if (response.ok) {
-                const data = await response.json()
-                if (data.legal_name) {
-                  newNames.set(code, data.legal_name)
-                }
-              }
-            } catch {
-              // Best-effort enrichment only.
-            }
-          })
-        )
-      }
-
-      setSuccessorLeiNames(newNames)
+      setSuccessorLeiNames((prev) => {
+        return mergeNameCacheWithMisses(prev, codesToFetch, fetched)
+      })
     }
 
     if (records.length > 0) {
       fetchSuccessorLeiNamesForTable()
     }
-  }, [records, successorLeiNames, API_BASE_URL])
+  }, [records, successorLeiNames, fetchLegalNamesBatch, mergeNameCacheWithMisses, normalizeLeiCode])
+
 
   const formatCellValue = (value: any, key: keyof LEIRecord): string => {
     return formatLEICellValue(value, key)
-  }
-
-  const normalizeLeiCode = (value: string): string => {
-    return (value || '').trim().toUpperCase()
   }
 
   const isVirtualColumnKey = (key: keyof LEIRecord): boolean => {
@@ -1178,15 +1215,6 @@ export default function LEIRecordsPage() {
               >
                 {effectiveExpandedWidth ? '⬅️ Normal' : '↔️ Expand'}
               </button>
-              {expandedWidthPreference.hasUnsavedChanges && (
-                <button
-                  onClick={expandedWidthPreference.saveCurrentValue}
-                  className="px-3 py-2 rounded-lg bg-green-700 hover:bg-green-600 transition-colors text-white text-xs font-medium"
-                  title="Save current page width as your permanent default"
-                >
-                  💾 Save width
-                </button>
-              )}
 
               <div className="relative">
                 <button
@@ -1221,15 +1249,6 @@ export default function LEIRecordsPage() {
                         >
                           Reset to Default
                         </button>
-                        {localColumns !== null && (
-                          <button
-                            onClick={handleSaveColumnsNow}
-                            className="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded hover:bg-green-200 dark:hover:bg-green-800 ml-auto"
-                            title="Save current column selection as your permanent default"
-                          >
-                            💾 Save as default
-                          </button>
-                        )}
                       </div>
                     </div>
 
@@ -1654,36 +1673,39 @@ export default function LEIRecordsPage() {
                                 <div>
                                   <button
                                     type="button"
-                                    onClick={(event) => handleLinkedLeiClick(event, String(value || ''))}
+                                    onClick={(event) => handleLinkedLeiClick(event, normalizeLeiCode(String(value || '')))}
                                     className="font-mono text-left text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
                                   >
                                     {formatCellValue(value, column.key)}
                                   </button>
-                                  {value && managingLouNames.has(String(value)) && (
-                                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                      {managingLouNames.get(String(value))}
-                                    </div>
-                                  )}
+                                  {(() => {
+                                    const normalizedValue = value ? normalizeLeiCode(String(value)) : ''
+                                    const cachedName = normalizedValue ? managingLouNames.get(normalizedValue) : null
+                                    if (!cachedName) return null
+                                    return (
+                                      <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                        {cachedName}
+                                      </div>
+                                    )
+                                  })()}
                                 </div>
                               ) : isSuccessorLei ? (
                                 <div>
-                                  {(() => {
-                                    const normalizedSuccessorLei = normalizeLeiCode(String(value || ''))
-                                    return (
-                                      <>
                                   <button
                                     type="button"
-                                    onClick={(event) => handleLinkedLeiClick(event, String(value || ''))}
+                                    onClick={(event) => handleLinkedLeiClick(event, normalizeLeiCode(String(value || '')))}
                                     className="font-mono text-left text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
                                   >
                                     {formatCellValue(value, column.key)}
                                   </button>
-                                  {normalizedSuccessorLei && successorLeiNames.has(normalizedSuccessorLei) && (
-                                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                      {successorLeiNames.get(normalizedSuccessorLei)}
-                                    </div>
-                                  )}
-                                      </>
+                                  {(() => {
+                                    const normalizedValue = value ? normalizeLeiCode(String(value)) : ''
+                                    const cachedName = normalizedValue ? successorLeiNames.get(normalizedValue) : null
+                                    if (!cachedName) return null
+                                    return (
+                                      <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                        {cachedName}
+                                      </div>
                                     )
                                   })()}
                                 </div>
@@ -1775,18 +1797,7 @@ export default function LEIRecordsPage() {
         )}
 
         <div className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">
-          <p>
-            Data source:{' '}
-            <a
-              href="https://www.gleif.org/en/lei-data/gleif-golden-copy/download-the-golden-copy"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 underline"
-            >
-              GLEIF Golden Copy Files
-            </a>{' '}
-            • Updated via scheduled sync jobs
-          </p>
+          <p>Data source: GLEIF Golden Copy Files • Updated via scheduled sync jobs</p>
           <p className="mt-2">
             Total database contains {totalRecords.toLocaleString()} LEI records • 
             <Link href="/lei" className="ml-1 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 underline">
@@ -2272,8 +2283,11 @@ export default function LEIRecordsPage() {
                         {managingLouName && (
                           <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{managingLouName}</p>
                         )}
-                        {managingLouName === null && selectedRecord.managing_lou && (
+                        {managingLouNameLoading && (
                           <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 italic">Loading name...</p>
+                        )}
+                        {!managingLouNameLoading && !managingLouName && (
+                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 italic">Name unavailable.</p>
                         )}
                       </div>
                     )}

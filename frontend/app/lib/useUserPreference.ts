@@ -44,7 +44,15 @@ function writeToCache(pageKey: string, prefKey: string, value: string) {
 
 function getToken(): string | null {
   if (typeof window === 'undefined') return null
-  return localStorage.getItem('axiom_token')
+
+  const rawToken = localStorage.getItem('axiom_token')
+  const normalizedToken = rawToken?.replace(/^Bearer\s+/i, '').trim() ?? ''
+
+  if (normalizedToken === '' || normalizedToken === 'undefined' || normalizedToken === 'null') {
+    return null
+  }
+
+  return normalizedToken
 }
 
 async function fetchAllPreferences(): Promise<UserPreference[]> {
