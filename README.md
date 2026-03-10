@@ -121,6 +121,25 @@ axiom/
 - RabbitMQ 4.2+
 - Docker & Docker Compose
 
+### Frontend Translation Automation
+
+The frontend i18n workflow now includes automated key extraction and locale completeness validation.
+
+```bash
+cd frontend
+
+# Extract keys used in app/**/*.ts(x) into public/locales/*/common.json
+npm run i18n:extract
+
+# Ensure all non-English locale files contain every key from en/common.json
+npm run i18n:check
+
+# CI command: extract + check + fail if locale files were not committed
+npm run i18n:verify
+```
+
+When adding new `t('...')` keys, run `npm run i18n:extract` and commit resulting locale JSON changes.
+
 ### Multi-Environment Support
 
 Axiom supports running multiple environments simultaneously on the same machine. Each environment uses a unique port
