@@ -234,7 +234,7 @@ export default function AdminTranslationsPage() {
   const totalPages = Math.ceil(total / pageSize)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-950 to-gray-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-gray-900 dark:via-blue-950 dark:to-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <PageHeader
           title={t('admin.translations.title')}
@@ -261,19 +261,19 @@ export default function AdminTranslationsPage() {
         )}
 
         {/* Filters */}
-        <div className="bg-white/5 backdrop-blur-sm border-2 border-white/10 rounded-lg p-4 mb-6 flex flex-wrap gap-3 items-end">
+        <div className="bg-white dark:bg-white/5 backdrop-blur-sm border-2 border-gray-200 dark:border-white/10 rounded-lg p-4 mb-6 flex flex-wrap gap-3 items-end">
           <div>
-            <label className="block text-xs text-gray-400 mb-1">
+            <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
               {t('admin.translations.filterByLanguage')}
             </label>
             <select
               value={langFilter}
               onChange={(e) => { setLangFilter(e.target.value); setPage(0) }}
-              className="bg-white/5 border border-white/20 rounded-md text-white text-sm px-3 py-1.5 focus:outline-none"
+              className="bg-white dark:bg-white/5 border border-gray-300 dark:border-white/20 rounded-md text-gray-900 dark:text-white text-sm px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="" className="bg-gray-800 text-white">{t('admin.translations.allLanguages')}</option>
+              <option value="" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">{t('admin.translations.allLanguages')}</option>
               {SUPPORTED_LANGUAGES.map((l) => (
-                <option key={l.code} value={l.code} className="bg-gray-800 text-white">
+                <option key={l.code} value={l.code} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
                   {l.flag} {l.nativeName}
                 </option>
               ))}
@@ -281,23 +281,23 @@ export default function AdminTranslationsPage() {
           </div>
 
           <div>
-            <label className="block text-xs text-gray-400 mb-1">
+            <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
               {t('admin.translations.filterByStatus')}
             </label>
             <select
               value={statusFilter}
               onChange={(e) => { setStatusFilter(e.target.value); setPage(0) }}
-              className="bg-white/5 border border-white/20 rounded-md text-white text-sm px-3 py-1.5 focus:outline-none"
+              className="bg-white dark:bg-white/5 border border-gray-300 dark:border-white/20 rounded-md text-gray-900 dark:text-white text-sm px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="" className="bg-gray-800 text-white">{t('admin.translations.allStatuses')}</option>
-              <option value="pending" className="bg-gray-800 text-white">{t('admin.translations.statusPending')}</option>
-              <option value="approved" className="bg-gray-800 text-white">{t('admin.translations.statusApproved')}</option>
-              <option value="rejected" className="bg-gray-800 text-white">{t('admin.translations.statusRejected')}</option>
+              <option value="" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">{t('admin.translations.allStatuses')}</option>
+              <option value="pending" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">{t('admin.translations.statusPending')}</option>
+              <option value="approved" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">{t('admin.translations.statusApproved')}</option>
+              <option value="rejected" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">{t('admin.translations.statusRejected')}</option>
             </select>
           </div>
 
           <div className="flex-1 min-w-[200px]">
-            <label className="block text-xs text-gray-400 mb-1">
+            <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
               {t('common.search')}
             </label>
             <input
@@ -305,14 +305,14 @@ export default function AdminTranslationsPage() {
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(0) }}
               placeholder={t('admin.translations.searchPlaceholder')}
-              className="w-full bg-white/5 border border-white/20 rounded-md text-white text-sm px-3 py-1.5 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-white dark:bg-white/5 border border-gray-300 dark:border-white/20 rounded-md text-gray-900 dark:text-white text-sm px-3 py-1.5 placeholder-gray-500 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           {(langFilter || statusFilter || search) && (
             <button
               onClick={() => { setLangFilter(''); setStatusFilter(''); setSearch(''); setPage(0) }}
-              className="px-3 py-1.5 text-sm text-gray-300 hover:text-white border border-white/20 rounded-md transition-colors"
+              className="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white border border-gray-300 dark:border-white/20 rounded-md transition-colors"
             >
               {t('common.clearFilters')}
             </button>
@@ -320,17 +320,17 @@ export default function AdminTranslationsPage() {
         </div>
 
         {/* Table */}
-        <div className="bg-white/5 backdrop-blur-sm border-2 border-white/10 rounded-lg overflow-hidden">
+        <div className="bg-white dark:bg-white/5 backdrop-blur-sm border-2 border-gray-200 dark:border-white/10 rounded-lg overflow-hidden">
           {loading ? (
             <LoadingSpinner message={t('common.loading')} />
           ) : translations.length === 0 ? (
-            <div className="text-center py-16 text-gray-400">
+            <div className="text-center py-16 text-gray-600 dark:text-gray-400">
               {t('admin.translations.noTranslations')}
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left text-gray-300">
-                <thead className="text-xs uppercase bg-white/5 text-gray-400">
+              <table className="w-full text-sm text-left text-gray-700 dark:text-gray-300">
+                <thead className="text-xs uppercase bg-gray-50 dark:bg-white/5 text-gray-600 dark:text-gray-400">
                   <tr>
                     <th className="px-4 py-3">{t('admin.translations.keyColumn')}</th>
                     <th className="px-4 py-3">{t('admin.translations.languageColumn')}</th>
@@ -345,9 +345,9 @@ export default function AdminTranslationsPage() {
                     return (
                       <tr
                         key={tr.id}
-                        className="border-t border-white/5 hover:bg-blue-50/5 transition-colors"
+                        className="border-t border-gray-100 dark:border-white/5 hover:bg-blue-50 dark:hover:bg-blue-50/5 transition-colors"
                       >
-                        <td className="px-4 py-3 font-mono text-xs text-blue-300 whitespace-nowrap">
+                        <td className="px-4 py-3 font-mono text-xs text-blue-700 dark:text-blue-300 whitespace-nowrap">
                           {tr.translation_key}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
@@ -399,7 +399,7 @@ export default function AdminTranslationsPage() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex justify-between items-center mt-4 text-sm text-gray-400">
+          <div className="flex justify-between items-center mt-4 text-sm text-gray-600 dark:text-gray-400">
             <span>
               {page * pageSize + 1}–{Math.min((page + 1) * pageSize, total)} of {total.toLocaleString()}
             </span>
@@ -407,14 +407,14 @@ export default function AdminTranslationsPage() {
               <button
                 disabled={page === 0}
                 onClick={() => setPage((p) => p - 1)}
-                className="px-3 py-1.5 rounded border border-white/20 hover:border-white/40 disabled:opacity-40 transition-colors"
+                className="px-3 py-1.5 rounded border border-gray-300 dark:border-white/20 hover:border-gray-400 dark:hover:border-white/40 disabled:opacity-40 transition-colors"
               >
                 ← Prev
               </button>
               <button
                 disabled={page >= totalPages - 1}
                 onClick={() => setPage((p) => p + 1)}
-                className="px-3 py-1.5 rounded border border-white/20 hover:border-white/40 disabled:opacity-40 transition-colors"
+                className="px-3 py-1.5 rounded border border-gray-300 dark:border-white/20 hover:border-gray-400 dark:hover:border-white/40 disabled:opacity-40 transition-colors"
               >
                 Next →
               </button>
@@ -426,14 +426,14 @@ export default function AdminTranslationsPage() {
       {/* New Translation Modal */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-gray-900 border border-white/20 rounded-xl shadow-2xl w-full max-w-lg">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
-              <h2 className="text-lg font-semibold text-white">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/20 rounded-xl shadow-2xl w-full max-w-lg">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-white/10">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
                 {t('admin.translations.newTranslation')}
               </h2>
               <button
                 onClick={() => setShowForm(false)}
-                className="text-gray-400 hover:text-white transition-colors"
+                className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
                 aria-label={t('common.close')}
               >
                 ✕
@@ -446,8 +446,8 @@ export default function AdminTranslationsPage() {
               )}
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
-                  {t('admin.translations.keyLabel')} <span className="text-red-400">*</span>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('admin.translations.keyLabel')} <span className="text-red-500 dark:text-red-400">*</span>
                 </label>
                 <input
                   type="text"
@@ -455,22 +455,22 @@ export default function AdminTranslationsPage() {
                   value={formData.translation_key}
                   onChange={(e) => setFormData((d) => ({ ...d, translation_key: e.target.value }))}
                   placeholder={t('admin.translations.keyPlaceholder')}
-                  className="w-full bg-white/5 border border-white/20 rounded-md text-white text-sm px-3 py-2 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-white dark:bg-white/5 border border-gray-300 dark:border-white/20 rounded-md text-gray-900 dark:text-white text-sm px-3 py-2 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
-                  {t('admin.translations.languageLabel')} <span className="text-red-400">*</span>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('admin.translations.languageLabel')} <span className="text-red-500 dark:text-red-400">*</span>
                 </label>
                 <select
                   required
                   value={formData.language_code}
                   onChange={(e) => setFormData((d) => ({ ...d, language_code: e.target.value }))}
-                  className="w-full bg-gray-800 border border-white/20 rounded-md text-white text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-white/20 rounded-md text-gray-900 dark:text-white text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   {SUPPORTED_LANGUAGES.map((l) => (
-                    <option key={l.code} value={l.code} className="bg-gray-800 text-white">
+                    <option key={l.code} value={l.code} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
                       {l.flag} {l.nativeName} ({l.code})
                     </option>
                   ))}
@@ -478,8 +478,8 @@ export default function AdminTranslationsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
-                  {t('admin.translations.valueLabel')} <span className="text-red-400">*</span>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('admin.translations.valueLabel')} <span className="text-red-500 dark:text-red-400">*</span>
                 </label>
                 <textarea
                   required
@@ -487,12 +487,12 @@ export default function AdminTranslationsPage() {
                   value={formData.translation_value}
                   onChange={(e) => setFormData((d) => ({ ...d, translation_value: e.target.value }))}
                   placeholder={t('admin.translations.valuePlaceholder')}
-                  className="w-full bg-white/5 border border-white/20 rounded-md text-white text-sm px-3 py-2 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  className="w-full bg-white dark:bg-white/5 border border-gray-300 dark:border-white/20 rounded-md text-gray-900 dark:text-white text-sm px-3 py-2 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   {t('admin.translations.notesLabel')}
                 </label>
                 <input
@@ -500,7 +500,7 @@ export default function AdminTranslationsPage() {
                   value={formData.notes}
                   onChange={(e) => setFormData((d) => ({ ...d, notes: e.target.value }))}
                   placeholder={t('admin.translations.notesPlaceholder')}
-                  className="w-full bg-white/5 border border-white/20 rounded-md text-white text-sm px-3 py-2 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-white dark:bg-white/5 border border-gray-300 dark:border-white/20 rounded-md text-gray-900 dark:text-white text-sm px-3 py-2 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
@@ -508,7 +508,7 @@ export default function AdminTranslationsPage() {
                 <button
                   type="button"
                   onClick={() => setShowForm(false)}
-                  className="flex-1 px-4 py-2 text-sm font-medium text-gray-300 hover:text-white border border-white/20 rounded-lg transition-colors"
+                  className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white border border-gray-300 dark:border-white/20 rounded-lg transition-colors"
                 >
                   {t('common.cancel')}
                 </button>
