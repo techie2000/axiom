@@ -29,6 +29,24 @@ interface UITranslation {
   updated_at: string
 }
 
+type LocaleNode = {
+  [key: string]: string | LocaleNode
+}
+
+function resolveLocaleValue(locale: LocaleNode | null, dottedKey: string): string | null {
+  if (!locale || !dottedKey) return null
+
+  let current: string | LocaleNode | undefined = locale
+  for (const segment of dottedKey.split('.')) {
+    if (!current || typeof current === 'string') {
+      return null
+    }
+    current = current[segment]
+  }
+
+  return typeof current === 'string' ? current : null
+}
+
 function statusBadge(status: string, t: (key: string) => string) {
   const variants: Record<string, 'yellow' | 'green' | 'red'> = {
     pending: 'yellow',
@@ -84,6 +102,7 @@ export default function AdminTranslationsPage() {
   const [formData, setFormData] = useState<TranslationFormData>(EMPTY_FORM)
   const [formLoading, setFormLoading] = useState(false)
   const [formError, setFormError] = useState('')
+  const [englishLocale, setEnglishLocale] = useState<LocaleNode | null>(null)
 
   const getToken = () =>
     typeof window !== 'undefined' ? localStorage.getItem('axiom_token') : null
@@ -126,6 +145,30 @@ export default function AdminTranslationsPage() {
   useEffect(() => {
     fetchTranslations()
   }, [fetchTranslations])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadEnglishLocale() {
+      try {
+        const res = await fetch('/locales/en/common.json')
+        if (!res.ok) return
+
+        const data = (await res.json()) as LocaleNode
+        if (!cancelled) {
+          setEnglishLocale(data)
+        }
+      } catch {
+        // No-op: table gracefully falls back when locale source is unavailable.
+      }
+    }
+
+    loadEnglishLocale()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   // Close form on Escape
   useEffect(() => {
@@ -334,6 +377,7 @@ export default function AdminTranslationsPage() {
                   <tr>
                     <th className="px-4 py-3">{t('admin.translations.keyColumn')}</th>
                     <th className="px-4 py-3">{t('admin.translations.languageColumn')}</th>
+                    <th className="px-4 py-3">English Default</th>
                     <th className="px-4 py-3">{t('admin.translations.valueColumn')}</th>
                     <th className="px-4 py-3">{t('admin.translations.statusColumn')}</th>
                     <th className="px-4 py-3">{t('admin.translations.actionsColumn')}</th>
@@ -342,6 +386,7 @@ export default function AdminTranslationsPage() {
                 <tbody>
                   {translations.map((tr) => {
                     const lang = SUPPORTED_LANGUAGES.find((l) => l.code === tr.language_code)
+                    const englishDefault = resolveLocaleValue(englishLocale, tr.translation_key)
                     return (
                       <tr
                         key={tr.id}
@@ -352,6 +397,9 @@ export default function AdminTranslationsPage() {
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
                           {lang ? `${lang.flag} ${lang.nativeName}` : tr.language_code}
+                        </td>
+                        <td className="px-4 py-3 max-w-xs truncate text-gray-600 dark:text-gray-400" title={englishDefault ?? ''}>
+                          {englishDefault ?? '-'}
                         </td>
                         <td className="px-4 py-3 max-w-xs truncate" title={tr.translation_value}>
                           {tr.translation_value}
