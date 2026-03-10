@@ -401,7 +401,43 @@ func TestGetLegalNamesByLEICodes(t *testing.T) {
 		if resp.Code != http.StatusBadRequest {
 			t.Fatalf("expected status %d, got %d", http.StatusBadRequest, resp.Code)
 		}
-		if !strings.Contains(resp.Body.String(), "codes query parameter is required") {
+		if !strings.Contains(resp.Body.String(), "at least one valid LEI code is required") {
+			t.Fatalf("expected validation error, got %s", resp.Body.String())
+		}
+	})
+
+	t.Run("filters invalid codes and deduplicates normalized valid codes", func(t *testing.T) {
+		stub := &leiServiceStub{legalNames: map[string]string{}}
+		h := NewLEIHandler(stub, &schedulerServiceStub{})
+
+		resp := executeGET(
+			"/lei/names",
+			"/lei/names?codes=AAA11111111111111111,%20aaa11111111111111111,%20INVALID,%20BBB22222222222222222,%20BBB22222222222222222,%20abc123",
+			h.GetLegalNamesByLEICodes,
+		)
+		if resp.Code != http.StatusOK {
+			t.Fatalf("expected status %d, got %d", http.StatusOK, resp.Code)
+		}
+
+		expected := []string{"AAA11111111111111111", "BBB22222222222222222"}
+		if len(stub.receivedCodes) != len(expected) {
+			t.Fatalf("expected %d deduped valid codes, got %d (%v)", len(expected), len(stub.receivedCodes), stub.receivedCodes)
+		}
+		for i := range expected {
+			if stub.receivedCodes[i] != expected[i] {
+				t.Fatalf("expected code %q at index %d, got %q", expected[i], i, stub.receivedCodes[i])
+			}
+		}
+	})
+
+	t.Run("returns bad request when all provided codes are invalid", func(t *testing.T) {
+		h := NewLEIHandler(&leiServiceStub{}, &schedulerServiceStub{})
+
+		resp := executeGET("/lei/names", "/lei/names?codes=abc,123,toolong12345678901234567890", h.GetLegalNamesByLEICodes)
+		if resp.Code != http.StatusBadRequest {
+			t.Fatalf("expected status %d, got %d", http.StatusBadRequest, resp.Code)
+		}
+		if !strings.Contains(resp.Body.String(), "at least one valid LEI code is required") {
 			t.Fatalf("expected validation error, got %s", resp.Body.String())
 		}
 	})
@@ -466,7 +502,7 @@ func TestGetLegalNamesByLEICodes(t *testing.T) {
 	t.Run("caps requested codes at 500 before service call", func(t *testing.T) {
 		allCodes := make([]string, 0, 505)
 		for i := 1; i <= 505; i++ {
-			allCodes = append(allCodes, fmt.Sprintf("L%020d", i))
+			allCodes = append(allCodes, fmt.Sprintf("A%019d", i))
 		}
 
 		stub := &leiServiceStub{legalNames: map[string]string{}}
@@ -484,10 +520,10 @@ func TestGetLegalNamesByLEICodes(t *testing.T) {
 		if len(stub.receivedCodes) != 500 {
 			t.Fatalf("expected 500 capped codes, got %d", len(stub.receivedCodes))
 		}
-		if stub.receivedCodes[0] != "L00000000000000000001" {
+		if stub.receivedCodes[0] != "A0000000000000000001" {
 			t.Fatalf("unexpected first code after cap: %q", stub.receivedCodes[0])
 		}
-		if stub.receivedCodes[499] != "L00000000000000000500" {
+		if stub.receivedCodes[499] != "A0000000000000000500" {
 			t.Fatalf("unexpected last code after cap: %q", stub.receivedCodes[499])
 		}
 	})

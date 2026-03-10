@@ -224,7 +224,7 @@ func (h *LEIHandler) ListLEI(c *gin.Context) {
 
 // GetLegalNamesByLEICodes retrieves legal names for a batch of LEI codes in a single round-trip.
 // @Summary Batch-fetch legal names for a set of LEI codes
-// @Description Returns a map of LEI code to legal name. Codes not found are absent from the response.
+// @Description Returns a map of LEI code to legal name. Input codes are trimmed, normalized, deduplicated, and validated (20-char uppercase alphanumeric). Codes not found are absent from the response.
 // @Tags LEI
 // @Produce json
 // @Param codes query string true "Comma-separated list of LEI codes (max 500)"
@@ -245,16 +245,23 @@ func (h *LEIHandler) GetLegalNamesByLEICodes(c *gin.Context) {
 		codes = codes[:maxCodes]
 	}
 
-	filtered := codes[:0]
+	filtered := make([]string, 0, len(codes))
+	seen := make(map[string]struct{}, len(codes))
 	for _, code := range codes {
-		if trimmed := strings.TrimSpace(code); trimmed != "" {
-			filtered = append(filtered, trimmed)
+		normalized := strings.ToUpper(strings.TrimSpace(code))
+		if !isValidLEICode(normalized) {
+			continue
 		}
+		if _, exists := seen[normalized]; exists {
+			continue
+		}
+		seen[normalized] = struct{}{}
+		filtered = append(filtered, normalized)
 	}
 	codes = filtered
 
 	if len(codes) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "codes query parameter is required"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "at least one valid LEI code is required"})
 		return
 	}
 
@@ -265,6 +272,21 @@ func (h *LEIHandler) GetLegalNamesByLEICodes(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, names)
+}
+
+func isValidLEICode(code string) bool {
+	if len(code) != 20 {
+		return false
+	}
+	for i := range len(code) {
+		ch := code[i]
+		isUpperLetter := ch >= 'A' && ch <= 'Z'
+		isDigit := ch >= '0' && ch <= '9'
+		if !isUpperLetter && !isDigit {
+			return false
+		}
+	}
+	return true
 }
 
 // GetAuditHistory retrieves audit history for an LEI
