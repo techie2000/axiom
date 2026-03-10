@@ -1,6 +1,5 @@
 import React from 'react'
 import Link from 'next/link'
-import ThemeToggle from './ThemeToggle'
 import UserBadge from './UserBadge'
 
 interface PageHeaderProps {
@@ -34,7 +33,6 @@ export default function PageHeader({
       <div className="flex items-center gap-4">
         {actions}
         <UserBadge />
-        <ThemeToggle />
       </div>
     </div>
   )

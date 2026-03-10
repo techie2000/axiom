@@ -89,6 +89,7 @@ type TranslationSortField = 'translation_key' | 'language_code' | 'english_defau
 
 const TARGET_TRANSLATION_LANGUAGES = SUPPORTED_LANGUAGES.filter((language) => language.code !== 'en')
 const DEFAULT_TARGET_LANGUAGE = TARGET_TRANSLATION_LANGUAGES[0]?.code ?? 'fr'
+const SEARCH_FETCH_LIMIT = 5000
 
 const createEmptyForm = (): TranslationFormData => ({
   translation_key: '',
@@ -144,13 +145,13 @@ export default function AdminTranslationsPage() {
       return
     }
     try {
+      const hasSearchTerm = Boolean(search.trim())
       const params = new URLSearchParams({
-        limit: String(pageSize),
-        offset: String(page * pageSize),
+        limit: String(hasSearchTerm ? SEARCH_FETCH_LIMIT : pageSize),
+        offset: String(hasSearchTerm ? 0 : page * pageSize),
       })
       if (langFilter) params.set('language', langFilter)
       if (statusFilter) params.set('status', statusFilter)
-      if (search) params.set('search', search)
 
       const res = await fetch(`${API_BASE_URL}/api/v1/translations?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -161,8 +162,9 @@ export default function AdminTranslationsPage() {
       }
       if (!res.ok) throw new Error('Failed to load translations')
       const data = await res.json()
-      setTranslations(data.records ?? [])
-      setTotal(data.total ?? 0)
+      const records = data.records ?? []
+      setTranslations(records)
+      setTotal(hasSearchTerm ? records.length : (data.total ?? 0))
     } catch {
       setError('Failed to load translations')
     } finally {
@@ -330,7 +332,32 @@ export default function AdminTranslationsPage() {
     setSortDirection('asc')
   }
 
-  const sortedTranslations = [...translations].sort((left, right) => {
+  const normalizedSearch = search.trim().toLowerCase()
+
+  const filteredTranslations = normalizedSearch
+    ? translations.filter((row) => {
+        const englishDefault = resolveLocaleValue(englishLocale, row.translation_key) ?? ''
+        const language = SUPPORTED_LANGUAGES.find((entry) => entry.code === row.language_code)
+        const languageText = language
+          ? `${language.code} ${language.name} ${language.nativeName}`.toLowerCase()
+          : row.language_code.toLowerCase()
+
+        const searchableText = [
+          row.translation_key,
+          row.translation_value,
+          row.notes ?? '',
+          englishDefault,
+          row.status,
+          languageText,
+        ]
+          .join(' ')
+          .toLowerCase()
+
+        return searchableText.includes(normalizedSearch)
+      })
+    : translations
+
+  const sortedTranslations = [...filteredTranslations].sort((left, right) => {
     if (!sortField) {
       return left.translation_key.localeCompare(right.translation_key, undefined, { sensitivity: 'base' })
     }
@@ -365,7 +392,13 @@ export default function AdminTranslationsPage() {
     return left.translation_key.localeCompare(right.translation_key, undefined, { sensitivity: 'base' })
   })
 
-  const totalPages = Math.ceil(total / pageSize)
+  const selectedEnglishDefault = resolveLocaleValue(englishLocale, formData.translation_key)
+  const displayedTranslations = normalizedSearch
+    ? sortedTranslations.slice(page * pageSize, (page + 1) * pageSize)
+    : sortedTranslations
+  const visibleTotal = normalizedSearch ? filteredTranslations.length : total
+
+  const totalPages = Math.ceil(visibleTotal / pageSize)
 
   return (
     <div className="min-h-screen p-8">
@@ -415,7 +448,7 @@ export default function AdminTranslationsPage() {
               className="bg-white dark:bg-white/5 border border-gray-300 dark:border-white/20 rounded-md text-gray-900 dark:text-white text-sm px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">{t('admin.translations.allLanguages')}</option>
-              {SUPPORTED_LANGUAGES.map((l) => (
+              {TARGET_TRANSLATION_LANGUAGES.map((l) => (
                 <option key={l.code} value={l.code} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
                   {l.flag} {l.nativeName}
                 </option>
@@ -466,7 +499,7 @@ export default function AdminTranslationsPage() {
         <div className="bg-white dark:bg-white/5 backdrop-blur-sm border-2 border-gray-200 dark:border-white/10 rounded-lg overflow-hidden">
           {loading ? (
             <LoadingSpinner message={t('common.loading')} />
-          ) : translations.length === 0 ? (
+          ) : displayedTranslations.length === 0 ? (
             <div className="text-center py-16 text-gray-600 dark:text-gray-400">
               {t('admin.translations.noTranslations')}
             </div>
@@ -525,7 +558,7 @@ export default function AdminTranslationsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {sortedTranslations.map((tr) => {
+                  {displayedTranslations.map((tr) => {
                     const lang = SUPPORTED_LANGUAGES.find((l) => l.code === tr.language_code)
                     const englishDefault = resolveLocaleValue(englishLocale, tr.translation_key)
                     return (
@@ -593,7 +626,10 @@ export default function AdminTranslationsPage() {
         {totalPages > 1 && (
           <div className="flex justify-between items-center mt-4 text-sm text-gray-600 dark:text-gray-400">
             <span>
-              {page * pageSize + 1}–{Math.min((page + 1) * pageSize, total)} of {total.toLocaleString()}
+              {visibleTotal === 0
+                ? '0-0'
+                : `${page * pageSize + 1}-${Math.min((page + 1) * pageSize, visibleTotal).toLocaleString()}`}{' '}
+              of {visibleTotal.toLocaleString()}
             </span>
             <div className="flex gap-2">
               <button
@@ -680,6 +716,19 @@ export default function AdminTranslationsPage() {
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  English Default
+                </label>
+                <textarea
+                  readOnly
+                  rows={3}
+                  value={selectedEnglishDefault ?? ''}
+                  placeholder="No English default found for this key"
+                  className="w-full bg-gray-50 dark:bg-white/5 border border-gray-300 dark:border-white/20 rounded-md text-gray-900 dark:text-gray-200 text-sm px-3 py-2 placeholder-gray-500 focus:outline-none resize-none"
+                />
               </div>
 
               <div>

@@ -42,9 +42,10 @@ export default function LanguageSelector({ className = '', compact = false }: La
   )
 
   const current = SUPPORTED_LANGUAGES.find((l) => l.code === i18n.language) ?? SUPPORTED_LANGUAGES[0]
+  const currentTooltip = `Locale: ${current.regionCode} (${current.regionName}) / ${current.code.toUpperCase()} (${current.name})`
 
   return (
-    <div className={`flex items-center gap-1.5 ${className}`} title="Select language">
+    <div className={`flex items-center gap-1.5 ${className}`} title={compact ? currentTooltip : 'Select language'}>
       <span className="text-lg leading-none" aria-hidden="true">
         {current.flag}
       </span>
@@ -61,14 +62,16 @@ export default function LanguageSelector({ className = '', compact = false }: La
         ]
           .filter(Boolean)
           .join(' ')}
+        title={compact ? currentTooltip : 'Select language'}
       >
         {SUPPORTED_LANGUAGES.map((lang) => (
           <option
             key={lang.code}
             value={lang.code}
             className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+            title={`${lang.regionCode} = ${lang.regionName}; ${lang.code.toUpperCase()} = ${lang.name}`}
           >
-            {compact ? `${lang.flag} ${lang.code.toUpperCase()}` : `${lang.flag} ${lang.nativeName}`}
+            {compact ? lang.code.toUpperCase() : lang.nativeName}
           </option>
         ))}
       </select>
