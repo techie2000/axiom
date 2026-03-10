@@ -234,7 +234,7 @@ export default function AdminTranslationsPage() {
   const totalPages = Math.ceil(total / pageSize)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-gray-900 dark:via-blue-950 dark:to-gray-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <PageHeader
           title={t('admin.translations.title')}
@@ -345,7 +345,7 @@ export default function AdminTranslationsPage() {
                     return (
                       <tr
                         key={tr.id}
-                        className="border-t border-gray-100 dark:border-white/5 hover:bg-blue-50 dark:hover:bg-blue-50/5 transition-colors"
+                        className="border-t border-gray-100 dark:border-white/5 hover:bg-blue-50 dark:hover:bg-white/5 transition-colors"
                       >
                         <td className="px-4 py-3 font-mono text-xs text-blue-700 dark:text-blue-300 whitespace-nowrap">
                           {tr.translation_key}
@@ -366,14 +366,14 @@ export default function AdminTranslationsPage() {
                                 <button
                                   onClick={() => handleApprove(tr.id)}
                                   disabled={actionLoading !== null}
-                                  className="text-xs px-2.5 py-1 rounded bg-green-600/30 text-green-300 hover:bg-green-600/50 disabled:opacity-50 transition-colors"
+                                  className="text-xs px-2.5 py-1 rounded bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-600/30 dark:text-green-300 dark:hover:bg-green-600/50 disabled:opacity-50 transition-colors"
                                 >
                                   {t('admin.translations.approve')}
                                 </button>
                                 <button
                                   onClick={() => handleReject(tr.id)}
                                   disabled={actionLoading !== null}
-                                  className="text-xs px-2.5 py-1 rounded bg-yellow-600/30 text-yellow-300 hover:bg-yellow-600/50 disabled:opacity-50 transition-colors"
+                                  className="text-xs px-2.5 py-1 rounded bg-amber-100 text-amber-800 hover:bg-amber-200 dark:bg-yellow-600/30 dark:text-yellow-300 dark:hover:bg-yellow-600/50 disabled:opacity-50 transition-colors"
                                 >
                                   {t('admin.translations.reject')}
                                 </button>
@@ -382,7 +382,7 @@ export default function AdminTranslationsPage() {
                             <button
                               onClick={() => handleDelete(tr.id)}
                               disabled={actionLoading !== null}
-                              className="text-xs px-2.5 py-1 rounded bg-red-600/30 text-red-300 hover:bg-red-600/50 disabled:opacity-50 transition-colors"
+                              className="text-xs px-2.5 py-1 rounded bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-600/30 dark:text-red-300 dark:hover:bg-red-600/50 disabled:opacity-50 transition-colors"
                             >
                               {t('common.delete')}
                             </button>
