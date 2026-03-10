@@ -70,7 +70,6 @@ export default function I18nProvider({ children }: I18nProviderProps) {
 
         while (true) {
           const params = new URLSearchParams({
-            language: normalizedLanguageCode,
             status: 'approved',
             limit: String(limit),
             offset: String(offset),
@@ -80,11 +79,16 @@ export default function I18nProvider({ children }: I18nProviderProps) {
           if (!res.ok) return
 
           const payload = (await res.json()) as {
-            records?: Array<{ translation_key?: string; translation_value?: string }>
+            records?: Array<{ language_code?: string; translation_key?: string; translation_value?: string }>
           }
 
           const records = payload.records ?? []
           for (const record of records) {
+            const recordLanguage = normalizeLanguageCode(record.language_code || '')
+            if (recordLanguage !== normalizedLanguageCode) {
+              continue
+            }
+
             const key = record.translation_key?.trim()
             const value = record.translation_value ?? ''
             if (!key) continue
