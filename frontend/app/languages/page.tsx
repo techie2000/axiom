@@ -283,7 +283,7 @@ export default function LanguagesPage() {
                 onClick={clearFilters}
                 className="px-6 py-2 rounded-lg bg-white hover:bg-gray-100 dark:bg-gray-600 dark:hover:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-transparent transition-colors font-medium shadow-sm"
               >
-                {t('languages.actions.clearFilters')}
+                {t('actions.clearFilters')}
               </button>
             </div>
           )}
