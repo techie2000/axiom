@@ -277,8 +277,8 @@ export default function AdminTranslationsPage() {
   const totalPages = Math.ceil(total / pageSize)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen p-8">
+      <div className="max-w-7xl mx-auto">
         <PageHeader
           title={t('admin.translations.title')}
           subtitle={t('admin.translations.subtitle')}
@@ -390,9 +390,9 @@ export default function AdminTranslationsPage() {
                     return (
                       <tr
                         key={tr.id}
-                        className="border-t border-gray-100 dark:border-white/5 hover:bg-blue-50 dark:hover:bg-white/5 transition-colors"
+                        className="border-t border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
                       >
-                        <td className="px-4 py-3 font-mono text-xs text-blue-700 dark:text-blue-300 whitespace-nowrap">
+                        <td className="px-4 py-3 font-mono text-xs text-gray-700 dark:text-gray-300 whitespace-nowrap">
                           {tr.translation_key}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
