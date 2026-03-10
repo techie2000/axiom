@@ -237,10 +237,10 @@ export default function LEIRecordsPage() {
   const [selectedRecord, setSelectedRecord] = useState<LEIRecord | null>(null)
   const [showColumnSelector, setShowColumnSelector] = useState(false)
   const [managingLouName, setManagingLouName] = useState<string | null>(null)
-  const [managingLouNames, setManagingLouNames] = useState<Map<string, string>>(new Map())
+  const [managingLouNames, setManagingLouNames] = useState<Map<string, string | null>>(new Map())
   const [successorLeiName, setSuccessorLeiName] = useState<string | null>(null)
   const [successorLeiNameLoading, setSuccessorLeiNameLoading] = useState(false)
-  const [successorLeiNames, setSuccessorLeiNames] = useState<Map<string, string>>(new Map())
+  const [successorLeiNames, setSuccessorLeiNames] = useState<Map<string, string | null>>(new Map())
   const [predecessorLeiReferences, setPredecessorLeiReferences] = useState<RelatedLEIReference[]>([])
   const [predecessorLeiCache, setPredecessorLeiCache] = useState<Map<string, RelatedLEIReference[]>>(new Map())
   const [predecessorLeiLoading, setPredecessorLeiLoading] = useState(false)
@@ -835,6 +835,21 @@ export default function LEIRecordsPage() {
     }
   }, [API_BASE_URL])
 
+  const mergeNameCacheWithMisses = useCallback(
+    (
+      previous: Map<string, string | null>,
+      requestedCodes: string[],
+      fetched: Map<string, string>
+    ): Map<string, string | null> => {
+      const next = new Map(previous)
+      requestedCodes.forEach((code) => {
+        next.set(code, fetched.get(code) ?? null)
+      })
+      return next
+    },
+    []
+  )
+
   // Fetch managing LOU names for all records in table (single batch request).
   useEffect(() => {
     const fetchManagingLouNamesForTable = async () => {
@@ -852,19 +867,16 @@ export default function LEIRecordsPage() {
       if (codesToFetch.length === 0) return
 
       const fetched = await fetchLegalNamesBatch(codesToFetch)
-      if (fetched.size === 0) return
 
       setManagingLouNames((prev) => {
-        const next = new Map(prev)
-        fetched.forEach((name, code) => next.set(code, name))
-        return next
+        return mergeNameCacheWithMisses(prev, codesToFetch, fetched)
       })
     }
 
     if (records.length > 0) {
       fetchManagingLouNamesForTable()
     }
-  }, [records, managingLouNames, API_BASE_URL, fetchLegalNamesBatch])
+  }, [records, managingLouNames, fetchLegalNamesBatch, mergeNameCacheWithMisses])
 
   // Fetch successor LEI names for all records in table (single batch request).
   useEffect(() => {
@@ -883,19 +895,16 @@ export default function LEIRecordsPage() {
       if (codesToFetch.length === 0) return
 
       const fetched = await fetchLegalNamesBatch(codesToFetch)
-      if (fetched.size === 0) return
 
       setSuccessorLeiNames((prev) => {
-        const next = new Map(prev)
-        fetched.forEach((name, code) => next.set(code, name))
-        return next
+        return mergeNameCacheWithMisses(prev, codesToFetch, fetched)
       })
     }
 
     if (records.length > 0) {
       fetchSuccessorLeiNamesForTable()
     }
-  }, [records, successorLeiNames, API_BASE_URL, fetchLegalNamesBatch])
+  }, [records, successorLeiNames, fetchLegalNamesBatch, mergeNameCacheWithMisses])
 
 
   const formatCellValue = (value: any, key: keyof LEIRecord): string => {
@@ -1614,11 +1623,15 @@ export default function LEIRecordsPage() {
                                   >
                                     {formatCellValue(value, column.key)}
                                   </button>
-                                  {value && managingLouNames.has(String(value)) && (
-                                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                      {managingLouNames.get(String(value))}
-                                    </div>
-                                  )}
+                                  {(() => {
+                                    const cachedName = value ? managingLouNames.get(String(value)) : null
+                                    if (!cachedName) return null
+                                    return (
+                                      <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                        {cachedName}
+                                      </div>
+                                    )
+                                  })()}
                                 </div>
                               ) : isSuccessorLei ? (
                                 <div>
@@ -1629,11 +1642,15 @@ export default function LEIRecordsPage() {
                                   >
                                     {formatCellValue(value, column.key)}
                                   </button>
-                                  {value && successorLeiNames.has(String(value)) && (
-                                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                      {successorLeiNames.get(String(value))}
-                                    </div>
-                                  )}
+                                  {(() => {
+                                    const cachedName = value ? successorLeiNames.get(String(value)) : null
+                                    if (!cachedName) return null
+                                    return (
+                                      <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                        {cachedName}
+                                      </div>
+                                    )
+                                  })()}
                                 </div>
                               ) : isLegalName ? (
                                 <div>
