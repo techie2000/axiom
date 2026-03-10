@@ -24,6 +24,7 @@ type LEIRepository interface {
 	FindPredecessorLEIsBySuccessor(lei string) ([]*domain.LEIRecord, error)
 	FindAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string) ([]*domain.LEIRecord, error)
 	CountLEIRecords() (int64, error)
+	FindLegalNamesByLEICodes(codes []string) (map[string]string, error)
 	GetDistinctCountries() ([]string, error)
 	GetDistinctCategories() ([]string, error)
 	GetDistinctRegions() ([]string, error)
@@ -113,6 +114,34 @@ func (r *leiRepository) FindAllLEI(limit, offset int) ([]*domain.LEIRecord, erro
 		return nil, err
 	}
 	return records, nil
+}
+
+// FindLegalNamesByLEICodes retrieves legal names for a batch of LEI codes in a single query.
+// Returns a map of LEI code → legal name for codes that exist in the database.
+func (r *leiRepository) FindLegalNamesByLEICodes(codes []string) (map[string]string, error) {
+	if len(codes) == 0 {
+		return map[string]string{}, nil
+	}
+
+	type row struct {
+		LEI       string
+		LegalName string
+	}
+
+	var rows []row
+	if err := r.db.Model(&domain.LEIRecord{}).
+		Select("lei, legal_name").
+		Where("lei IN ?", codes).
+		Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+
+	names := make(map[string]string, len(rows))
+	for _, row := range rows {
+		names[row.LEI] = row.LegalName
+	}
+
+	return names, nil
 }
 
 // FindPredecessorLEIsBySuccessor retrieves LEI records that point to the provided LEI as successor.

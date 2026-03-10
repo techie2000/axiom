@@ -115,6 +115,7 @@ type LEIService interface {
 	GetDistinctCategories() ([]string, error)
 	GetDistinctRegions() ([]string, error)
 	GetDistinctLegalForms() ([]string, error)
+	GetLegalNamesByLEICodes(codes []string) (map[string]string, error)
 	UpdateLEIRecord(record *domain.LEIRecord) error
 
 	// Audit and history
@@ -1431,6 +1432,12 @@ func (s *leiService) GetAllLEIWithFilters(limit, offset int, search, status, cat
 // CountLEIRecords returns the total count of LEI records
 func (s *leiService) CountLEIRecords() (int64, error) {
 	return s.repo.CountLEIRecords()
+}
+
+// GetLegalNamesByLEICodes returns a map of LEI code → legal name for a batch of codes.
+// Codes not found in the database are simply absent from the returned map.
+func (s *leiService) GetLegalNamesByLEICodes(codes []string) (map[string]string, error) {
+	return s.repo.FindLegalNamesByLEICodes(codes)
 }
 
 // GetDistinctCountries returns a sorted list of active countries from the countries reference table

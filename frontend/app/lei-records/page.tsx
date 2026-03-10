@@ -237,10 +237,10 @@ export default function LEIRecordsPage() {
   const [selectedRecord, setSelectedRecord] = useState<LEIRecord | null>(null)
   const [showColumnSelector, setShowColumnSelector] = useState(false)
   const [managingLouName, setManagingLouName] = useState<string | null>(null)
-  const [managingLouNames, setManagingLouNames] = useState<Map<string, string>>(new Map())
+  const [managingLouNames, setManagingLouNames] = useState<Map<string, string | null>>(new Map())
   const [successorLeiName, setSuccessorLeiName] = useState<string | null>(null)
   const [successorLeiNameLoading, setSuccessorLeiNameLoading] = useState(false)
-  const [successorLeiNames, setSuccessorLeiNames] = useState<Map<string, string>>(new Map())
+  const [successorLeiNames, setSuccessorLeiNames] = useState<Map<string, string | null>>(new Map())
   const [predecessorLeiReferences, setPredecessorLeiReferences] = useState<RelatedLEIReference[]>([])
   const [predecessorLeiCache, setPredecessorLeiCache] = useState<Map<string, RelatedLEIReference[]>>(new Map())
   const [predecessorLeiLoading, setPredecessorLeiLoading] = useState(false)
@@ -820,59 +820,76 @@ export default function LEIRecordsPage() {
     fetchPredecessorLeiReferences()
   }, [selectedRecord?.lei, API_BASE_URL, predecessorLeiCache])
 
-  // Fetch managing LOU names for all records in table
+  // Shared helper: batch-fetch legal names for a set of LEI codes using a single HTTP request.
+  // Returns a map of LEI code → legal name for codes found in the database.
+  const fetchLegalNamesBatch = useCallback(async (codes: string[]): Promise<Map<string, string>> => {
+    if (codes.length === 0) return new Map()
+    const params = new URLSearchParams({ codes: codes.join(',') })
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/lei/names?${params}`)
+      if (!response.ok) return new Map()
+      const data: Record<string, string> = await response.json()
+      return new Map(Object.entries(data))
+    } catch {
+      return new Map()
+    }
+  }, [API_BASE_URL])
+
+  const mergeNameCacheWithMisses = useCallback(
+    (
+      previous: Map<string, string | null>,
+      requestedCodes: string[],
+      fetched: Map<string, string>
+    ): Map<string, string | null> => {
+      const next = new Map(previous)
+      requestedCodes.forEach((code) => {
+        next.set(code, fetched.get(code) ?? null)
+      })
+      return next
+    },
+    []
+  )
+
+  const normalizeLeiCode = useCallback((value: string | null | undefined): string => {
+    return String(value || '').trim().toUpperCase()
+  }, [])
+
+  // Fetch managing LOU names for all records in table (single batch request).
   useEffect(() => {
     const fetchManagingLouNamesForTable = async () => {
-      // Get unique managing LOU codes from current records
       const uniqueLouCodes = Array.from(
         new Set(
           records
-            .filter(r => r.managing_lou && r.managing_lou.trim() !== '')
-            .map(r => r.managing_lou)
+            .map((r) => normalizeLeiCode(r.managing_lou))
+            .filter((code): code is string => code !== '')
         )
       )
-      
+
       if (uniqueLouCodes.length === 0) return
-      
-      // Only fetch codes we don't have yet
-      const codesToFetch = uniqueLouCodes.filter(code => !managingLouNames.has(code))
+
+      const codesToFetch = uniqueLouCodes.filter((code) => !managingLouNames.has(code))
       if (codesToFetch.length === 0) return
-      
-      // Fetch names for missing codes
-      const newNames = new Map(managingLouNames)
-      await Promise.all(
-        codesToFetch.map(async (code) => {
-          try {
-            const response = await fetch(`${API_BASE_URL}/api/v1/lei/${code}`)
-            if (response.ok) {
-              const data = await response.json()
-              if (data.legal_name) {
-                newNames.set(code, data.legal_name)
-              }
-            }
-          } catch (err) {
-            console.error(`Failed to fetch LOU name for ${code}:`, err)
-          }
-        })
-      )
-      
-      setManagingLouNames(newNames)
+
+      const fetched = await fetchLegalNamesBatch(codesToFetch)
+
+      setManagingLouNames((prev) => {
+        return mergeNameCacheWithMisses(prev, codesToFetch, fetched)
+      })
     }
-    
+
     if (records.length > 0) {
       fetchManagingLouNamesForTable()
     }
-  }, [records, managingLouNames, API_BASE_URL])
+  }, [records, managingLouNames, fetchLegalNamesBatch, mergeNameCacheWithMisses, normalizeLeiCode])
 
-  // Fetch successor LEI names for all records in table
+  // Fetch successor LEI names for all records in table (single batch request).
   useEffect(() => {
     const fetchSuccessorLeiNamesForTable = async () => {
-      const MAX_CONCURRENT_REQUESTS = 8
       const uniqueSuccessorLeiCodes = Array.from(
         new Set(
           records
-            .filter((r) => r.successor_lei && r.successor_lei.trim() !== '')
-            .map((r) => r.successor_lei)
+            .map((r) => normalizeLeiCode(r.successor_lei))
+            .filter((code): code is string => code !== '')
         )
       )
 
@@ -881,34 +898,18 @@ export default function LEIRecordsPage() {
       const codesToFetch = uniqueSuccessorLeiCodes.filter((code) => !successorLeiNames.has(code))
       if (codesToFetch.length === 0) return
 
-      const newNames = new Map(successorLeiNames)
+      const fetched = await fetchLegalNamesBatch(codesToFetch)
 
-      for (let i = 0; i < codesToFetch.length; i += MAX_CONCURRENT_REQUESTS) {
-        const batch = codesToFetch.slice(i, i + MAX_CONCURRENT_REQUESTS)
-        await Promise.all(
-          batch.map(async (code) => {
-            try {
-              const response = await fetch(`${API_BASE_URL}/api/v1/lei/${code}`)
-              if (response.ok) {
-                const data = await response.json()
-                if (data.legal_name) {
-                  newNames.set(code, data.legal_name)
-                }
-              }
-            } catch {
-              // Best-effort enrichment only.
-            }
-          })
-        )
-      }
-
-      setSuccessorLeiNames(newNames)
+      setSuccessorLeiNames((prev) => {
+        return mergeNameCacheWithMisses(prev, codesToFetch, fetched)
+      })
     }
 
     if (records.length > 0) {
       fetchSuccessorLeiNamesForTable()
     }
-  }, [records, successorLeiNames, API_BASE_URL])
+  }, [records, successorLeiNames, fetchLegalNamesBatch, mergeNameCacheWithMisses, normalizeLeiCode])
+
 
   const formatCellValue = (value: any, key: keyof LEIRecord): string => {
     return formatLEICellValue(value, key)
@@ -1621,31 +1622,41 @@ export default function LEIRecordsPage() {
                                 <div>
                                   <button
                                     type="button"
-                                    onClick={(event) => handleLinkedLeiClick(event, String(value || ''))}
+                                    onClick={(event) => handleLinkedLeiClick(event, normalizeLeiCode(String(value || '')))}
                                     className="font-mono text-left text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
                                   >
                                     {formatCellValue(value, column.key)}
                                   </button>
-                                  {value && managingLouNames.has(String(value)) && (
-                                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                      {managingLouNames.get(String(value))}
-                                    </div>
-                                  )}
+                                  {(() => {
+                                    const normalizedValue = value ? normalizeLeiCode(String(value)) : ''
+                                    const cachedName = normalizedValue ? managingLouNames.get(normalizedValue) : null
+                                    if (!cachedName) return null
+                                    return (
+                                      <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                        {cachedName}
+                                      </div>
+                                    )
+                                  })()}
                                 </div>
                               ) : isSuccessorLei ? (
                                 <div>
                                   <button
                                     type="button"
-                                    onClick={(event) => handleLinkedLeiClick(event, String(value || ''))}
+                                    onClick={(event) => handleLinkedLeiClick(event, normalizeLeiCode(String(value || '')))}
                                     className="font-mono text-left text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
                                   >
                                     {formatCellValue(value, column.key)}
                                   </button>
-                                  {value && successorLeiNames.has(String(value)) && (
-                                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                      {successorLeiNames.get(String(value))}
-                                    </div>
-                                  )}
+                                  {(() => {
+                                    const normalizedValue = value ? normalizeLeiCode(String(value)) : ''
+                                    const cachedName = normalizedValue ? successorLeiNames.get(normalizedValue) : null
+                                    if (!cachedName) return null
+                                    return (
+                                      <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                        {cachedName}
+                                      </div>
+                                    )
+                                  })()}
                                 </div>
                               ) : isLegalName ? (
                                 <div>
