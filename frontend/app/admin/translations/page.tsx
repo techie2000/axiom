@@ -34,6 +34,16 @@ type LocaleNode = {
   [key: string]: string | LocaleNode
 }
 
+function flattenLocaleKeys(locale: LocaleNode, prefix = ''): string[] {
+  return Object.entries(locale).flatMap(([key, value]) => {
+    const nextKey = prefix ? `${prefix}.${key}` : key
+    if (typeof value === 'string') {
+      return [nextKey]
+    }
+    return flattenLocaleKeys(value, nextKey)
+  })
+}
+
 function resolveLocaleValue(locale: LocaleNode | null, dottedKey: string): string | null {
   if (!locale || !dottedKey) return null
 
@@ -73,12 +83,15 @@ interface TranslationFormData {
   notes: string
 }
 
-const EMPTY_FORM: TranslationFormData = {
+const TARGET_TRANSLATION_LANGUAGES = SUPPORTED_LANGUAGES.filter((language) => language.code !== 'en')
+const DEFAULT_TARGET_LANGUAGE = TARGET_TRANSLATION_LANGUAGES[0]?.code ?? 'fr'
+
+const createEmptyForm = (): TranslationFormData => ({
   translation_key: '',
-  language_code: 'en',
+  language_code: DEFAULT_TARGET_LANGUAGE,
   translation_value: '',
   notes: '',
-}
+})
 
 export default function AdminTranslationsPage() {
   const router = useRouter()
@@ -107,10 +120,11 @@ export default function AdminTranslationsPage() {
 
   // Form / modal state
   const [showForm, setShowForm] = useState(false)
-  const [formData, setFormData] = useState<TranslationFormData>(EMPTY_FORM)
+  const [formData, setFormData] = useState<TranslationFormData>(() => createEmptyForm())
   const [formLoading, setFormLoading] = useState(false)
   const [formError, setFormError] = useState('')
   const [englishLocale, setEnglishLocale] = useState<LocaleNode | null>(null)
+  const [translationKeyOptions, setTranslationKeyOptions] = useState<string[]>([])
 
   const getToken = () =>
     typeof window !== 'undefined' ? localStorage.getItem('axiom_token') : null
@@ -165,6 +179,15 @@ export default function AdminTranslationsPage() {
         const data = (await res.json()) as LocaleNode
         if (!cancelled) {
           setEnglishLocale(data)
+
+          const keys = flattenLocaleKeys(data).sort((left, right) => left.localeCompare(right))
+          setTranslationKeyOptions(keys)
+          if (keys.length > 0) {
+            setFormData((current) => ({
+              ...current,
+              translation_key: current.translation_key || keys[0],
+            }))
+          }
         }
       } catch {
         // No-op: table gracefully falls back when locale source is unavailable.
@@ -277,10 +300,13 @@ export default function AdminTranslationsPage() {
   }
 
   const handleOpenNewTranslationForm = useCallback(() => {
-    setFormData(EMPTY_FORM)
+    setFormData({
+      ...createEmptyForm(),
+      translation_key: translationKeyOptions[0] ?? '',
+    })
     setFormError('')
     setShowForm(true)
-  }, [])
+  }, [translationKeyOptions])
 
   const totalPages = Math.ceil(total / pageSize)
 
@@ -396,6 +422,7 @@ export default function AdminTranslationsPage() {
                     <th className="px-4 py-3">{t('admin.translations.languageColumn')}</th>
                     <th className="px-4 py-3">English Default</th>
                     <th className="px-4 py-3">{t('admin.translations.valueColumn')}</th>
+                    <th className="px-4 py-3">{t('admin.translations.notesLabel')}</th>
                     <th className="px-4 py-3">{t('admin.translations.statusColumn')}</th>
                     <th className="px-4 py-3">{t('admin.translations.actionsColumn')}</th>
                   </tr>
@@ -420,6 +447,9 @@ export default function AdminTranslationsPage() {
                         </td>
                         <td className="px-4 py-3 max-w-xs truncate" title={tr.translation_value}>
                           {tr.translation_value}
+                        </td>
+                        <td className="px-4 py-3 max-w-xs text-gray-600 dark:text-gray-400 break-words" title={tr.notes ?? ''}>
+                          {tr.notes?.trim() ? tr.notes : '-'}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
                           {statusBadge(tr.status, t)}
@@ -514,14 +544,19 @@ export default function AdminTranslationsPage() {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   {t('admin.translations.keyLabel')} <span className="text-red-500 dark:text-red-400">*</span>
                 </label>
-                <input
-                  type="text"
+                <select
                   required
                   value={formData.translation_key}
                   onChange={(e) => setFormData((d) => ({ ...d, translation_key: e.target.value }))}
-                  placeholder={t('admin.translations.keyPlaceholder')}
-                  className="w-full bg-white dark:bg-white/5 border border-gray-300 dark:border-white/20 rounded-md text-gray-900 dark:text-white text-sm px-3 py-2 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+                  className="w-full bg-white dark:bg-white/5 border border-gray-300 dark:border-white/20 rounded-md text-gray-900 dark:text-white text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="" disabled>{t('admin.translations.keyPlaceholder')}</option>
+                  {translationKeyOptions.map((key) => (
+                    <option key={key} value={key} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
+                      {key}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
@@ -534,7 +569,7 @@ export default function AdminTranslationsPage() {
                   onChange={(e) => setFormData((d) => ({ ...d, language_code: e.target.value }))}
                   className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-white/20 rounded-md text-gray-900 dark:text-white text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  {SUPPORTED_LANGUAGES.map((l) => (
+                  {TARGET_TRANSLATION_LANGUAGES.map((l) => (
                     <option key={l.code} value={l.code} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
                       {l.flag} {l.nativeName} ({l.code})
                     </option>
