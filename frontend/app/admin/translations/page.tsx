@@ -10,6 +10,8 @@ import Badge from '../../components/Badge'
 import LoadingSpinner from '../../components/LoadingSpinner'
 import { SUPPORTED_LANGUAGES } from '../../lib/i18n'
 import { useDeferredBooleanPreference } from '../../lib/useDeferredBooleanPreference'
+import PreferenceSavePrompt from '../../components/PreferenceSavePrompt'
+import SortableHeaderCell from '../../components/SortableHeaderCell'
 
 const API_BASE_URL =
   typeof window !== 'undefined'
@@ -83,6 +85,8 @@ interface TranslationFormData {
   notes: string
 }
 
+type TranslationSortField = 'translation_key' | 'language_code' | 'english_default' | 'translation_value' | 'notes' | 'status'
+
 const TARGET_TRANSLATION_LANGUAGES = SUPPORTED_LANGUAGES.filter((language) => language.code !== 'en')
 const DEFAULT_TARGET_LANGUAGE = TARGET_TRANSLATION_LANGUAGES[0]?.code ?? 'fr'
 
@@ -117,6 +121,8 @@ export default function AdminTranslationsPage() {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(0)
   const pageSize = 50
+  const [sortField, setSortField] = useState<TranslationSortField | null>(null)
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
 
   // Form / modal state
   const [showForm, setShowForm] = useState(false)
@@ -289,7 +295,7 @@ export default function AdminTranslationsPage() {
         throw new Error(d.error || 'Failed to submit')
       }
       setShowForm(false)
-      setFormData(EMPTY_FORM)
+      setFormData(createEmptyForm())
       showSuccess(t('admin.translations.saveSuccess'))
       fetchTranslations()
     } catch (err) {
@@ -307,6 +313,57 @@ export default function AdminTranslationsPage() {
     setFormError('')
     setShowForm(true)
   }, [translationKeyOptions])
+
+  const handleSort = (field: TranslationSortField) => {
+    if (sortField !== field) {
+      setSortField(field)
+      setSortDirection('asc')
+      return
+    }
+
+    if (sortDirection === 'asc') {
+      setSortDirection('desc')
+      return
+    }
+
+    setSortField(null)
+    setSortDirection('asc')
+  }
+
+  const sortedTranslations = [...translations].sort((left, right) => {
+    if (!sortField) {
+      return left.translation_key.localeCompare(right.translation_key, undefined, { sensitivity: 'base' })
+    }
+
+    const getSortableValue = (row: UITranslation): string => {
+      switch (sortField) {
+        case 'translation_key':
+          return row.translation_key || ''
+        case 'language_code':
+          return row.language_code || ''
+        case 'english_default':
+          return resolveLocaleValue(englishLocale, row.translation_key) || ''
+        case 'translation_value':
+          return row.translation_value || ''
+        case 'notes':
+          return row.notes || ''
+        case 'status':
+        default:
+          return row.status || ''
+      }
+    }
+
+    const comparison = getSortableValue(left).localeCompare(getSortableValue(right), undefined, {
+      sensitivity: 'base',
+      numeric: true,
+    })
+
+    if (comparison !== 0) {
+      return sortDirection === 'asc' ? comparison : -comparison
+    }
+
+    return left.translation_key.localeCompare(right.translation_key, undefined, { sensitivity: 'base' })
+  })
 
   const totalPages = Math.ceil(total / pageSize)
 
@@ -418,17 +475,57 @@ export default function AdminTranslationsPage() {
               <table className="w-full text-sm text-left text-gray-700 dark:text-gray-300">
                 <thead className="text-xs uppercase bg-gray-50 dark:bg-white/5 text-gray-600 dark:text-gray-400">
                   <tr>
-                    <th className="px-4 py-3">{t('admin.translations.keyColumn')}</th>
-                    <th className="px-4 py-3">{t('admin.translations.languageColumn')}</th>
-                    <th className="px-4 py-3">English Default</th>
-                    <th className="px-4 py-3">{t('admin.translations.valueColumn')}</th>
-                    <th className="px-4 py-3">{t('admin.translations.notesLabel')}</th>
-                    <th className="px-4 py-3">{t('admin.translations.statusColumn')}</th>
-                    <th className="px-4 py-3">{t('admin.translations.actionsColumn')}</th>
+                    <SortableHeaderCell
+                      className="px-4 py-3"
+                      label={t('admin.translations.keyColumn')}
+                      onSort={() => handleSort('translation_key')}
+                      isActiveSort={sortField === 'translation_key'}
+                      sortDirection={sortDirection}
+                    />
+                    <SortableHeaderCell
+                      className="px-4 py-3"
+                      label={t('admin.translations.languageColumn')}
+                      onSort={() => handleSort('language_code')}
+                      isActiveSort={sortField === 'language_code'}
+                      sortDirection={sortDirection}
+                    />
+                    <SortableHeaderCell
+                      className="px-4 py-3"
+                      label="English Default"
+                      onSort={() => handleSort('english_default')}
+                      isActiveSort={sortField === 'english_default'}
+                      sortDirection={sortDirection}
+                    />
+                    <SortableHeaderCell
+                      className="px-4 py-3"
+                      label={t('admin.translations.valueColumn')}
+                      onSort={() => handleSort('translation_value')}
+                      isActiveSort={sortField === 'translation_value'}
+                      sortDirection={sortDirection}
+                    />
+                    <SortableHeaderCell
+                      className="px-4 py-3"
+                      label={t('admin.translations.notesLabel')}
+                      onSort={() => handleSort('notes')}
+                      isActiveSort={sortField === 'notes'}
+                      sortDirection={sortDirection}
+                    />
+                    <SortableHeaderCell
+                      className="px-4 py-3"
+                      label={t('admin.translations.statusColumn')}
+                      onSort={() => handleSort('status')}
+                      isActiveSort={sortField === 'status'}
+                      sortDirection={sortDirection}
+                    />
+                    <SortableHeaderCell
+                      className="px-4 py-3"
+                      label={t('admin.translations.actionsColumn')}
+                      sortable={false}
+                    />
                   </tr>
                 </thead>
                 <tbody>
-                  {translations.map((tr) => {
+                  {sortedTranslations.map((tr) => {
                     const lang = SUPPORTED_LANGUAGES.find((l) => l.code === tr.language_code)
                     const englishDefault = resolveLocaleValue(englishLocale, tr.translation_key)
                     return (
@@ -517,6 +614,14 @@ export default function AdminTranslationsPage() {
           </div>
         )}
       </div>
+
+      <PreferenceSavePrompt
+        visible={expandedWidthPreference.showPrompt}
+        resetKey={expandedWidthPreference.promptResetKey}
+        onSave={expandedWidthPreference.save}
+        onDismiss={expandedWidthPreference.dismiss}
+        label="Save page width as your default?"
+      />
 
       {/* New Translation Modal */}
       {showForm && (
