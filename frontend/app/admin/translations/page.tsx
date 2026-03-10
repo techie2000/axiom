@@ -9,6 +9,7 @@ import Alert from '../../components/Alert'
 import Badge from '../../components/Badge'
 import LoadingSpinner from '../../components/LoadingSpinner'
 import { SUPPORTED_LANGUAGES } from '../../lib/i18n'
+import { useDeferredBooleanPreference } from '../../lib/useDeferredBooleanPreference'
 
 const API_BASE_URL =
   typeof window !== 'undefined'
@@ -82,6 +83,13 @@ const EMPTY_FORM: TranslationFormData = {
 export default function AdminTranslationsPage() {
   const router = useRouter()
   const { t } = useTranslation('common')
+
+  const expandedWidthPreference = useDeferredBooleanPreference({
+    pageKey: 'admin-translations',
+    preferenceKey: 'expanded_width',
+    defaultValue: false,
+  })
+  const effectiveExpandedWidth = expandedWidthPreference.value
 
   const [translations, setTranslations] = useState<UITranslation[]>([])
   const [total, setTotal] = useState(0)
@@ -278,17 +286,26 @@ export default function AdminTranslationsPage() {
 
   return (
     <div className="min-h-screen p-8">
-      <div className="max-w-7xl mx-auto">
+      <div className={`${effectiveExpandedWidth ? 'max-w-full' : 'max-w-7xl'} mx-auto transition-all duration-300`}>
         <PageHeader
           title={t('admin.translations.title')}
           subtitle={t('admin.translations.subtitle')}
           actions={
-            <button
-            onClick={() => handleOpenNewTranslationForm()}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
-            >
-              + {t('admin.translations.addTranslation')}
-            </button>
+            <>
+              <button
+                onClick={expandedWidthPreference.toggle}
+                className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 transition-colors text-white text-sm font-medium"
+                title={effectiveExpandedWidth ? 'Normal Width' : 'Expanded Width'}
+              >
+                {effectiveExpandedWidth ? '⬅️ Normal' : '↔️ Expand'}
+              </button>
+              <button
+                onClick={() => handleOpenNewTranslationForm()}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+              >
+                + {t('admin.translations.addTranslation')}
+              </button>
+            </>
           }
         />
 
