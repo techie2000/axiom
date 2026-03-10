@@ -7,6 +7,7 @@ const LOCALES_DIR = path.join(ROOT, 'public', 'locales')
 const SOURCE_LOCALE = 'en'
 const NAMESPACE = 'common'
 const EXTENSIONS = new Set(['.ts', '.tsx'])
+const BLOCKED_PATH_SEGMENTS = new Set(['__proto__', 'prototype', 'constructor'])
 
 function getAllFiles(dir) {
   const entries = fs.readdirSync(dir, { withFileTypes: true })
@@ -54,8 +55,16 @@ function writeJson(filePath, value) {
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, 'utf8')
 }
 
+function hasBlockedPathSegment(parts) {
+  return parts.some((part) => BLOCKED_PATH_SEGMENTS.has(part))
+}
+
 function setNestedValue(target, dottedKey, defaultValue) {
   const parts = dottedKey.split('.')
+  if (hasBlockedPathSegment(parts)) {
+    return false
+  }
+
   let cursor = target
 
   for (let i = 0; i < parts.length - 1; i += 1) {
@@ -76,7 +85,12 @@ function setNestedValue(target, dottedKey, defaultValue) {
 }
 
 function getNestedValue(target, dottedKey) {
-  return dottedKey.split('.').reduce((current, part) => {
+  const parts = dottedKey.split('.')
+  if (hasBlockedPathSegment(parts)) {
+    return undefined
+  }
+
+  return parts.reduce((current, part) => {
     if (current === undefined || current === null || typeof current !== 'object') {
       return undefined
     }
@@ -96,6 +110,7 @@ if (!fs.existsSync(LOCALES_DIR)) {
 
 const files = getAllFiles(APP_DIR)
 const extractedKeys = new Set()
+let blockedKeyCount = 0
 
 for (const filePath of files) {
   const content = fs.readFileSync(filePath, 'utf8')
@@ -105,6 +120,14 @@ for (const filePath of files) {
 }
 
 const keys = [...extractedKeys].sort()
+const safeKeys = keys.filter((key) => {
+  const blocked = hasBlockedPathSegment(key.split('.'))
+  if (blocked) {
+    blockedKeyCount += 1
+  }
+  return !blocked
+})
+
 if (keys.length === 0) {
   console.log('[i18n:extract] No static translation keys discovered in app/**/*.ts(x).')
   process.exit(0)
@@ -122,7 +145,7 @@ if (!fs.existsSync(sourceFile)) {
 
 const sourceJson = readJson(sourceFile)
 let sourceAdded = 0
-for (const key of keys) {
+for (const key of safeKeys) {
   sourceAdded += setNestedValue(sourceJson, key, key) ? 1 : 0
 }
 if (sourceAdded > 0) {
@@ -141,7 +164,7 @@ for (const locale of localeDirs) {
 
   const localeJson = readJson(localeFile)
   let localeAdded = 0
-  for (const key of keys) {
+  for (const key of safeKeys) {
     const sourceValue = getNestedValue(sourceJson, key)
     localeAdded += setNestedValue(localeJson, key, typeof sourceValue === 'string' ? sourceValue : key) ? 1 : 0
   }
@@ -151,4 +174,8 @@ for (const locale of localeDirs) {
   }
 }
 
-console.log(`[i18n:extract] Processed ${keys.length} key(s); added ${sourceAdded} missing key(s) to ${SOURCE_LOCALE}/${NAMESPACE}.json.`)
+if (blockedKeyCount > 0) {
+  console.warn(`[i18n:extract] Skipped ${blockedKeyCount} key(s) containing blocked path segments: ${[...BLOCKED_PATH_SEGMENTS].join(', ')}.`)
+}
+
+console.log(`[i18n:extract] Processed ${safeKeys.length} safe key(s) (${keys.length} total discovered); added ${sourceAdded} missing key(s) to ${SOURCE_LOCALE}/${NAMESPACE}.json.`)
