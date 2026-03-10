@@ -48,6 +48,21 @@ COMMENT ON COLUMN ui_translations.reviewed_at IS
 COMMENT ON COLUMN ui_translations.created_at IS 'Timestamp when the translation was submitted.';
 COMMENT ON COLUMN ui_translations.updated_at IS 'Timestamp of the most recent change to this row.';
 
+-- Ensure required language reference records exist before FK-backed seed inserts.
+INSERT INTO languages (code, language_name, native_name, rtl)
+VALUES
+    ('en', 'English', 'English', FALSE),
+    ('fr', 'French', 'Francais', FALSE),
+    ('es', 'Spanish', 'Espanol', FALSE),
+    ('de', 'German', 'Deutsch', FALSE),
+    ('ja', 'Japanese', 'Nihongo', FALSE),
+    ('ar', 'Arabic', 'al-''arabiyah', TRUE),
+    ('zh', 'Chinese', 'Zhongwen', FALSE),
+    ('it', 'Italian', 'Italiano', FALSE),
+    ('pt', 'Portuguese', 'Portugues', FALSE),
+    ('nl', 'Dutch', 'Nederlands', FALSE)
+ON CONFLICT (code) DO NOTHING;
+
 INSERT INTO ui_translations (translation_key, language_code, translation_value, status)
 VALUES
     ('login.title', 'fr', 'Connexion', 'approved'),
