@@ -120,6 +120,112 @@
       "rejectSuccess": "Translation rejected"
     }
   },
+  "accounts": {
+    "title": "Accounts",
+    "subtitle": "Trading accounts and settlement instructions",
+    "comingSoon": {
+      "title": "Accounts Management",
+      "description": "This page will display trading accounts, custodian relationships, and standard settlement instructions (SSI) managed in Axiom.",
+      "authRequired": "This is protected data requiring user authentication.",
+      "featureSummary": "Features coming soon: Browse accounts, search by account number, view SSI details, manage account data"
+    },
+    "cards": {
+      "searchTitle": "🔍 Account Search",
+      "searchDescription": "Search accounts by number, entity, custodian, and status",
+      "ssiTitle": "📋 SSI Management",
+      "ssiDescription": "View and manage standard settlement instructions for each account",
+      "maintenanceTitle": "✏️ Data Maintenance",
+      "maintenanceDescription": "Create, update, and validate account reference data"
+    }
+  },
+  "instruments": {
+    "title": "Instruments",
+    "subtitle": "Financial instruments and securities reference data",
+    "comingSoon": {
+      "title": "Instruments Management",
+      "description": "This page will display financial instruments including securities, bonds, derivatives, and other trading instruments managed in Axiom.",
+      "authRequired": "This is protected data requiring user authentication.",
+      "featureSummary": "Features coming soon: Browse instruments, search by ISIN/CUSIP, view instrument details, manage reference data"
+    },
+    "cards": {
+      "searchTitle": "🔍 Search & Filter",
+      "searchDescription": "Advanced search by ISIN, CUSIP, name, type, and issuer",
+      "detailsTitle": "📊 Instrument Details",
+      "detailsDescription": "View complete instrument specifications, pricing, and corporate actions",
+      "managementTitle": "✏️ Data Management",
+      "managementDescription": "Create, update, and maintain instrument reference data"
+    }
+  },
+  "ssi": {
+    "title": "Standard Settlement Instructions (SSI)",
+    "subtitle": "Manage settlement instructions for securities trading counterparties",
+    "comingSoon": {
+      "title": "Coming Soon",
+      "description": "The SSI module is currently under development. This feature will provide:",
+      "points": {
+        "templates": "Settlement instruction templates for multiple asset classes",
+        "counterparties": "Counterparty SSI database with validation rules",
+        "multicurrency": "Multi-currency and cross-border settlement support",
+        "integration": "Integration with accounts and entities",
+        "validation": "BIC/SWIFT code validation",
+        "automation": "Settlement workflow automation"
+      }
+    },
+    "cards": {
+      "templatesTitle": "SSI Templates",
+      "templatesDescription": "Pre-configured settlement instruction templates for Equities, Bonds, FX, and Derivatives",
+      "counterpartyTitle": "Counterparty Management",
+      "counterpartyDescription": "Centralized repository of counterparty settlement details with LEI integration",
+      "validationTitle": "Validation Rules",
+      "validationDescription": "Real-time validation of BIC codes, IBANs, and account numbers against ISO standards",
+      "automationTitle": "Settlement Automation",
+      "automationDescription": "Automated settlement instruction generation based on trade details and counterparty rules"
+    }
+  },
+  "codeMappings": {
+    "loading": "Loading code mappings...",
+    "title": "Code Mappings",
+    "subtitle": "Cross-system code translation — map external codes (e.g., ALERT) to internal AXIOM identifiers",
+    "about": {
+      "title": "💡 About Code Mappings:"
+    },
+    "noticeTitle": "📋 Notice:",
+    "errorTitle": "⚠️ Error:",
+    "searchPlaceholder": "Search by system, code type, or code value...",
+    "stats": {
+      "totalMappings": "Total Mappings",
+      "activeMappings": "Active Mappings",
+      "sourceSystems": "Source Systems",
+      "filteredResults": "Filtered Results"
+    },
+    "columns": {
+      "fromSystem": "From System",
+      "fromType": "From Type",
+      "fromCode": "From Code",
+      "toSystem": "To System",
+      "toType": "To Type",
+      "toCode": "To Code",
+      "status": "Status",
+      "description": "Description"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "emptyDescription": "—",
+    "emptyWithSearch": "No mappings found matching your search",
+    "emptyWithoutSearch": "No code mappings configured yet",
+    "footer": {
+      "prefix": "Code mappings are managed via the API. Use",
+      "suffix": "to create new mappings."
+    },
+    "errors": {
+      "noneConfigured": "No code mappings have been configured yet.",
+      "authRequired": "Authentication required. Please log in to view code mappings.",
+      "apiReturned": "API returned {{status}}: {{statusText}}",
+      "unableToConnect": "Unable to connect to backend API. Please ensure the backend service is running at {{apiBaseUrl}}"
+    }
+  },
   "footer": {
     "copyright": "Axiom – Financial Services Static Data"
   }

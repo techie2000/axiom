@@ -12,8 +12,8 @@ export default function SSIPage() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <PageHeader
-          title="Standard Settlement Instructions (SSI)"
-          subtitle="Manage settlement instructions for securities trading counterparties"
+          title={t('ssi.title')}
+          subtitle={t('ssi.subtitle')}
           backHref="/dashboard"
         />
 
@@ -22,17 +22,17 @@ export default function SSIPage() {
           <div className="flex items-start">
             <span className="text-4xl mr-4">🚧</span>
             <div>
-              <h2 className="text-2xl font-semibold mb-2 text-purple-400">Coming Soon</h2>
+              <h2 className="text-2xl font-semibold mb-2 text-purple-400">{t('ssi.comingSoon.title')}</h2>
               <p className="opacity-70 mb-4">
-                The SSI module is currently under development. This feature will provide:
+                {t('ssi.comingSoon.description')}
               </p>
               <ul className="list-disc list-inside space-y-2 opacity-70">
-                <li>Settlement instruction templates for multiple asset classes</li>
-                <li>Counterparty SSI database with validation rules</li>
-                <li>Multi-currency and cross-border settlement support</li>
-                <li>Integration with accounts and entities</li>
-                <li>BIC/SWIFT code validation</li>
-                <li>Settlement workflow automation</li>
+                <li>{t('ssi.comingSoon.points.templates')}</li>
+                <li>{t('ssi.comingSoon.points.counterparties')}</li>
+                <li>{t('ssi.comingSoon.points.multicurrency')}</li>
+                <li>{t('ssi.comingSoon.points.integration')}</li>
+                <li>{t('ssi.comingSoon.points.validation')}</li>
+                <li>{t('ssi.comingSoon.points.automation')}</li>
               </ul>
             </div>
           </div>
@@ -42,41 +42,41 @@ export default function SSIPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-white/5 backdrop-blur-sm rounded-lg shadow-lg p-6 border-2 border-white/10">
             <div className="flex items-start justify-between mb-4">
-              <h3 className="text-xl font-semibold">SSI Templates</h3>
+              <h3 className="text-xl font-semibold">{t('ssi.cards.templatesTitle')}</h3>
               <span className="text-3xl">📋</span>
             </div>
             <p className="opacity-70">
-              Pre-configured settlement instruction templates for Equities, Bonds, FX, and Derivatives
+              {t('ssi.cards.templatesDescription')}
             </p>
           </div>
 
           <div className="bg-white/5 backdrop-blur-sm rounded-lg shadow-lg p-6 border-2 border-white/10">
             <div className="flex items-start justify-between mb-4">
-              <h3 className="text-xl font-semibold">Counterparty Management</h3>
+              <h3 className="text-xl font-semibold">{t('ssi.cards.counterpartyTitle')}</h3>
               <span className="text-3xl">🏦</span>
             </div>
             <p className="opacity-70">
-              Centralized repository of counterparty settlement details with LEI integration
+              {t('ssi.cards.counterpartyDescription')}
             </p>
           </div>
 
           <div className="bg-white/5 backdrop-blur-sm rounded-lg shadow-lg p-6 border-2 border-white/10">
             <div className="flex items-start justify-between mb-4">
-              <h3 className="text-xl font-semibold">Validation Rules</h3>
+              <h3 className="text-xl font-semibold">{t('ssi.cards.validationTitle')}</h3>
               <span className="text-3xl">✅</span>
             </div>
             <p className="opacity-70">
-              Real-time validation of BIC codes, IBANs, and account numbers against ISO standards
+              {t('ssi.cards.validationDescription')}
             </p>
           </div>
 
           <div className="bg-white/5 backdrop-blur-sm rounded-lg shadow-lg p-6 border-2 border-white/10">
             <div className="flex items-start justify-between mb-4">
-              <h3 className="text-xl font-semibold">Settlement Automation</h3>
+              <h3 className="text-xl font-semibold">{t('ssi.cards.automationTitle')}</h3>
               <span className="text-3xl">⚡</span>
             </div>
             <p className="opacity-70">
-              Automated settlement instruction generation based on trade details and counterparty rules
+              {t('ssi.cards.automationDescription')}
             </p>
           </div>
         </div>
