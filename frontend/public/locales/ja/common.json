@@ -50,12 +50,16 @@
   "language": {
     "selectLanguage": "言語を選択",
     "currentLanguage": "言語",
+    "arabic": "アラビア語",
+    "chinese": "中国語（簡体字）",
+    "dutch": "オランダ語",
     "english": "英語",
     "french": "フランス語",
-    "spanish": "スペイン語",
     "german": "ドイツ語",
+    "italian": "イタリア語",
     "japanese": "日本語",
-    "arabic": "アラビア語"
+    "portuguese": "ポルトガル語（ブラジル）",
+    "spanish": "スペイン語"
   },
   "theme": {
     "toggle": "テーマを切り替える"

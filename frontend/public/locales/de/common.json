@@ -50,12 +50,16 @@
   "language": {
     "selectLanguage": "Sprache auswählen",
     "currentLanguage": "Sprache",
+    "arabic": "Arabisch",
+    "chinese": "Chinesisch (vereinfacht)",
+    "dutch": "Niederländisch",
     "english": "Englisch",
     "french": "Französisch",
-    "spanish": "Spanisch",
     "german": "Deutsch",
+    "italian": "Italienisch",
     "japanese": "Japanisch",
-    "arabic": "Arabisch"
+    "portuguese": "Portugiesisch (Brasilianisch)",
+    "spanish": "Spanisch"
   },
   "theme": {
     "toggle": "Thema wechseln"

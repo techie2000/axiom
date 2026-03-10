@@ -3,7 +3,8 @@
  *
  * Uses i18next with the browser language detector and HTTP backend (fetching
  * locale JSON files from /public/locales/).  English is the required fallback;
- * French, Spanish, German, Japanese and Arabic are supported out of the box.
+ * Arabic, Chinese (Simplified), Dutch, French, German, Italian, Japanese,
+ * Portuguese (Brazilian), and Spanish are supported out of the box.
  *
  * The active language is persisted in localStorage under the key
  * `axiom_pref::global::language` so it is consistent with the UserPreference
@@ -17,11 +18,15 @@ import HttpBackend from 'i18next-http-backend'
 
 export const SUPPORTED_LANGUAGES = [
   { code: 'en', name: 'English', nativeName: 'English', rtl: false, flag: '🇬🇧' },
-  { code: 'fr', name: 'French', nativeName: 'Français', rtl: false, flag: '🇫🇷' },
-  { code: 'es', name: 'Spanish', nativeName: 'Español', rtl: false, flag: '🇪🇸' },
-  { code: 'de', name: 'German', nativeName: 'Deutsch', rtl: false, flag: '🇩🇪' },
-  { code: 'ja', name: 'Japanese', nativeName: '日本語', rtl: false, flag: '🇯🇵' },
   { code: 'ar', name: 'Arabic', nativeName: 'العربية', rtl: true, flag: '🇸🇦' },
+  { code: 'zh', name: 'Chinese (Simplified)', nativeName: '中文（简体）', rtl: false, flag: '🇨🇳' },
+  { code: 'nl', name: 'Dutch', nativeName: 'Nederlands', rtl: false, flag: '🇳🇱' },
+  { code: 'fr', name: 'French', nativeName: 'Français', rtl: false, flag: '🇫🇷' },
+  { code: 'de', name: 'German', nativeName: 'Deutsch', rtl: false, flag: '🇩🇪' },
+  { code: 'it', name: 'Italian', nativeName: 'Italiano', rtl: false, flag: '🇮🇹' },
+  { code: 'ja', name: 'Japanese', nativeName: '日本語', rtl: false, flag: '🇯🇵' },
+  { code: 'pt', name: 'Portuguese (Brazilian)', nativeName: 'Português (Brasil)', rtl: false, flag: '🇧🇷' },
+  { code: 'es', name: 'Spanish', nativeName: 'Español', rtl: false, flag: '🇪🇸' },
 ] as const
 
 export type SupportedLanguageCode = (typeof SUPPORTED_LANGUAGES)[number]['code']

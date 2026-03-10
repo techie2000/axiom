@@ -30,11 +30,15 @@ this implementation.
 | Code | Name | Native Name | RTL | Flag |
 | ---- | ---- | ----------- | --- | ---- |
 | `en` | English | English | No | 🇬🇧 |
-| `fr` | French | Français | No | 🇫🇷 |
-| `es` | Spanish | Español | No | 🇪🇸 |
-| `de` | German | Deutsch | No | 🇩🇪 |
-| `ja` | Japanese | 日本語 | No | 🇯🇵 |
 | `ar` | Arabic | العربية | Yes | 🇸🇦 |
+| `zh` | Chinese (Simplified) | 中文（简体） | No | 🇨🇳 |
+| `nl` | Dutch | Nederlands | No | 🇳🇱 |
+| `fr` | French | Français | No | 🇫🇷 |
+| `de` | German | Deutsch | No | 🇩🇪 |
+| `it` | Italian | Italiano | No | 🇮🇹 |
+| `ja` | Japanese | 日本語 | No | 🇯🇵 |
+| `pt` | Portuguese (Brazilian) | Português (Brasil) | No | 🇧🇷 |
+| `es` | Spanish | Español | No | 🇪🇸 |
 
 The canonical source of truth for supported languages is
 `frontend/app/lib/i18n.ts` (`SUPPORTED_LANGUAGES` constant).
@@ -210,10 +214,10 @@ Tailwind's `rtl:` variant utilities work automatically when `dir="rtl"` is set o
 1. Add the language entry to `SUPPORTED_LANGUAGES` in `frontend/app/lib/i18n.ts`:
 
 ```ts
-{ code: 'pt', name: 'Portuguese', nativeName: 'Português', rtl: false, flag: '🇧🇷' }
+{ code: 'ko', name: 'Korean', nativeName: '한국어', rtl: false, flag: '🇰🇷' }
 ```
 
-2. Create the locale file `frontend/public/locales/pt/common.json` with translated strings
+2. Create the locale file `frontend/public/locales/ko/common.json` with translated strings
    (copy from `en/common.json` and translate).
 3. Ensure the language code exists in the `languages` reference table in the database (it is
    referenced by the `ui_translations` table FK).

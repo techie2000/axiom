@@ -141,11 +141,15 @@ translations are exported into the locale JSON files that i18next consumes, sati
 | Code | Name | Native Name | RTL |
 | ---- | ---- | ----------- | --- |
 | `en` | English | English | No |
-| `fr` | French | Français | No |
-| `es` | Spanish | Español | No |
-| `de` | German | Deutsch | No |
-| `ja` | Japanese | 日本語 | No |
 | `ar` | Arabic | العربية | Yes |
+| `zh` | Chinese (Simplified) | 中文（简体） | No |
+| `nl` | Dutch | Nederlands | No |
+| `fr` | French | Français | No |
+| `de` | German | Deutsch | No |
+| `it` | Italian | Italiano | No |
+| `ja` | Japanese | 日本語 | No |
+| `pt` | Portuguese (Brazilian) | Português (Brasil) | No |
+| `es` | Spanish | Español | No |
 
 ### Locale File Structure
 

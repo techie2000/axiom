@@ -67,5 +67,17 @@ VALUES
     ('register.title', 'ja', 'アクセスを申請', 'approved'),
     ('login.title', 'ar', 'تسجيل الدخول', 'approved'),
     ('login.submitButton', 'ar', 'تسجيل الدخول', 'approved'),
-    ('register.title', 'ar', 'طلب الوصول', 'approved')
+    ('register.title', 'ar', 'طلب الوصول', 'approved'),
+    ('login.title', 'zh', '登录', 'approved'),
+    ('login.submitButton', 'zh', '登录', 'approved'),
+    ('register.title', 'zh', '申请访问', 'approved'),
+    ('login.title', 'it', 'Accedi', 'approved'),
+    ('login.submitButton', 'it', 'Accedi', 'approved'),
+    ('register.title', 'it', 'Richiedi accesso', 'approved'),
+    ('login.title', 'pt', 'Entrar', 'approved'),
+    ('login.submitButton', 'pt', 'Entrar', 'approved'),
+    ('register.title', 'pt', 'Solicitar acesso', 'approved'),
+    ('login.title', 'nl', 'Inloggen', 'approved'),
+    ('login.submitButton', 'nl', 'Inloggen', 'approved'),
+    ('register.title', 'nl', 'Toegang aanvragen', 'approved')
 ON CONFLICT (translation_key, language_code) DO NOTHING;
