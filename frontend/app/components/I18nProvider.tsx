@@ -48,17 +48,29 @@ export default function I18nProvider({ children }: I18nProviderProps) {
       current[lastPart] = value
     }
 
+    const normalizeLanguageCode = (languageCode: string): string => {
+      return String(languageCode || '')
+        .trim()
+        .toLowerCase()
+        .split('-')[0]
+    }
+
     const loadApprovedTranslations = async (languageCode: string) => {
-      if (!languageCode || languageCode === 'en') return
+      const normalizedLanguageCode = normalizeLanguageCode(languageCode)
+      if (!normalizedLanguageCode || normalizedLanguageCode === 'en') return
 
       try {
+        // Ensure the static namespace is loaded first so remote overrides are applied last.
+        await i18n.loadLanguages(normalizedLanguageCode)
+        await i18n.loadNamespaces('common')
+
         let offset = 0
         const limit = 200
         const overrides: Record<string, unknown> = {}
 
         while (true) {
           const params = new URLSearchParams({
-            language: languageCode,
+            language: normalizedLanguageCode,
             status: 'approved',
             limit: String(limit),
             offset: String(offset),
@@ -85,14 +97,15 @@ export default function I18nProvider({ children }: I18nProviderProps) {
 
         if (cancelled || Object.keys(overrides).length === 0) return
 
-        i18n.addResourceBundle(languageCode, 'common', overrides, true, true)
+        i18n.addResourceBundle(normalizedLanguageCode, 'common', overrides, true, true)
       } catch {
         // Keep static locale fallback when remote translation overlays are unavailable.
       }
     }
 
     const refreshCurrentLanguage = () => {
-      void loadApprovedTranslations(i18n.language)
+      const activeLanguage = i18n.resolvedLanguage || i18n.language
+      void loadApprovedTranslations(activeLanguage)
     }
 
     const handleTranslationsUpdated = () => {
