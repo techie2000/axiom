@@ -157,6 +157,8 @@ if (!i18n.isInitialized) {
 
       react: {
         useSuspense: false,
+        // Re-render components when runtime translation overlays are merged.
+        bindI18nStore: 'added removed',
       },
     })
 }

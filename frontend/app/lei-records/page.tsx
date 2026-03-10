@@ -986,8 +986,8 @@ export default function LEIRecordsPage() {
     <div className="min-h-screen p-8">
       <div className={`${effectiveExpandedWidth ? 'max-w-full' : 'max-w-7xl'} mx-auto transition-all duration-300`}>
         <PageHeader
-          title="LEI Records"
-          subtitle="GLEIF Legal Entity Identifiers (ISO 17442)"
+          title={t('leiRecords.title')}
+          subtitle={t('leiRecords.subtitle')}
           backHref={backHref}
           actions={
             <>

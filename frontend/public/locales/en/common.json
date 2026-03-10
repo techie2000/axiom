@@ -117,7 +117,94 @@
       "saveSuccess": "Translation saved successfully",
       "deleteSuccess": "Translation deleted",
       "approveSuccess": "Translation approved",
-      "rejectSuccess": "Translation rejected"
+      "rejectSuccess": "Translation rejected",
+      "englishDefaultLabel": "English Default",
+      "englishDefaultPlaceholder": "No English default found for this key",
+      "pagination": {
+        "of": "of {{count}}",
+        "prev": "← Prev",
+        "next": "Next →"
+      },
+      "width": {
+        "normalTitle": "Normal Width",
+        "expandedTitle": "Expanded Width",
+        "normalButton": "⬅️ Normal",
+        "expandedButton": "↔️ Expand",
+        "savePrompt": "Save page width as your default?"
+      },
+      "stale": {
+        "badge": "STALE",
+        "noneFound": "No stale translation rows found.",
+        "cleanupTitle": "Delete translation rows whose keys are no longer present in locale files",
+        "cleanupButton": "Cleanup Stale ({{count}})",
+        "deleteConfirm": "Delete {{count}} stale translation row(s) that no longer match active locale keys?",
+        "deletedSuccess": "Deleted {{count}} stale translation row(s).",
+        "deletedPartial": "Deleted {{deleted}} stale row(s); {{failed}} deletion(s) failed.",
+        "cleanupFailed": "Failed to clean up stale translation rows"
+      },
+      "errors": {
+        "loadFailed": "Failed to load translations",
+        "approveFailed": "Failed to approve translation",
+        "rejectFailed": "Failed to reject translation",
+        "deleteFailed": "Failed to delete translation",
+        "submitFailed": "Failed to submit"
+      }
+    },
+    "users": {
+      "title": "User Management",
+      "subtitle": "Review and approve user account requests",
+      "loadingUsers": "Loading users...",
+      "filters": {
+        "all": "All"
+      },
+      "emptyWithStatus": "No {{status}} users found.",
+      "columns": {
+        "user": "User",
+        "username": "Username",
+        "role": "Role",
+        "status": "Status",
+        "requested": "Requested",
+        "actions": "Actions"
+      },
+      "bootstrapWarning": {
+        "title": "⚠️ You are logged in with the default bootstrap administrator account.",
+        "bodyBefore": "Approve a pending user, then use the",
+        "bodyAfter": "button to grant them admin rights. Once that real admin logs in, the bootstrap account will be deactivated automatically."
+      },
+      "roles": {
+        "admin": "Admin",
+        "user": "User"
+      },
+      "status": {
+        "pending": "Pending",
+        "active": "Active",
+        "inactive": "Inactive",
+        "permanentlyLocked": "Permanently locked"
+      },
+      "actions": {
+        "approve": "Approve",
+        "deactivate": "Deactivate",
+        "reactivate": "Reactivate",
+        "demote": "Demote",
+        "promoteToAdmin": "Promote to Admin",
+        "promoteTooltip": "Promote to administrator",
+        "demoteTooltip": "Demote to regular user",
+        "loading": "..."
+      },
+      "errors": {
+        "loadFailed": "Failed to load users",
+        "networkRetry": "Network error - please try again",
+        "network": "Network error",
+        "approvalFailed": "Approval failed",
+        "actionFailed": "Action failed",
+        "roleChangeFailed": "Role change failed"
+      },
+      "fallback": {
+        "none": "-"
+      },
+      "aria": {
+        "userActions": "User actions"
+      }
     }
   },
   "accounts": {
@@ -226,7 +313,154 @@
       "unableToConnect": "Unable to connect to backend API. Please ensure the backend service is running at {{apiBaseUrl}}"
     }
   },
+  "leiRecords": {
+    "title": "LEI Records",
+    "subtitle": "GLEIF Legal Entity Identifiers (ISO 17442)"
+  },
   "footer": {
     "copyright": "Axiom – Financial Services Static Data"
+  },
+  "actions": {
+    "clearFilters": "actions.clearFilters"
+  },
+  "countries": {
+    "actions": {
+      "columns": "countries.actions.columns",
+      "reset": "countries.actions.reset",
+      "selectAll": "countries.actions.selectAll"
+    },
+    "columns": {
+      "continentCode": "countries.columns.continentCode",
+      "continentName": "countries.columns.continentName",
+      "currencyCodes": "countries.columns.currencyCodes",
+      "currencyNames": "countries.columns.currencyNames",
+      "languageCodes": "countries.columns.languageCodes",
+      "languageNames": "countries.columns.languageNames"
+    },
+    "dataQualityTitle": "countries.dataQualityTitle",
+    "emptyWithSearch": "countries.emptyWithSearch",
+    "errorTitle": "countries.errorTitle",
+    "filters": {
+      "${activeFilter}": "countries.filters.${activeFilter}",
+      "active": "countries.filters.active",
+      "all": "countries.filters.all",
+      "allContinentCodes": "countries.filters.allContinentCodes",
+      "allContinents": "countries.filters.allContinents",
+      "allRegions": "countries.filters.allRegions",
+      "continent": "countries.filters.continent",
+      "continentChip": "countries.filters.continentChip",
+      "inactive": "countries.filters.inactive",
+      "region": "countries.filters.region",
+      "regionChip": "countries.filters.regionChip",
+      "search": "countries.filters.search",
+      "status": "countries.filters.status",
+      "statusChip": "countries.filters.statusChip"
+    },
+    "footer": "countries.footer",
+    "loading": "countries.loading",
+    "noDataTip": "countries.noDataTip",
+    "noticeTitle": "countries.noticeTitle",
+    "prompts": {
+      "saveColumnsDefault": "countries.prompts.saveColumnsDefault"
+    },
+    "searchPlaceholder": "countries.searchPlaceholder",
+    "stats": {
+      "dataStandard": "countries.stats.dataStandard",
+      "filteredResults": "countries.stats.filteredResults",
+      "iso3166": "countries.stats.iso3166",
+      "totalCountries": "countries.stats.totalCountries"
+    },
+    "subtitle": "countries.subtitle",
+    "title": "countries.title"
+  },
+  "currencies": {
+    "aria": {
+      "filterAlertCls": "currencies.aria.filterAlertCls",
+      "filterOfac": "currencies.aria.filterOfac"
+    },
+    "columns": {
+      "alertCls": "currencies.columns.alertCls",
+      "code": "currencies.columns.code",
+      "decimals": "currencies.columns.decimals",
+      "name": "currencies.columns.name",
+      "ofac": "currencies.columns.ofac",
+      "symbol": "currencies.columns.symbol"
+    },
+    "emptyWithSearch": "currencies.emptyWithSearch",
+    "errorTitle": "currencies.errorTitle",
+    "filters": {
+      "alertClsAllowed": "currencies.filters.alertClsAllowed",
+      "allCurrencies": "currencies.filters.allCurrencies",
+      "complianceChip": "currencies.filters.complianceChip",
+      "ofacSanctioned": "currencies.filters.ofacSanctioned"
+    },
+    "footer": "currencies.footer",
+    "loading": "currencies.loading",
+    "noDataTip": "currencies.noDataTip",
+    "noticeTitle": "currencies.noticeTitle",
+    "searchPlaceholder": "currencies.searchPlaceholder",
+    "stats": {
+      "alertClsAllowed": "currencies.stats.alertClsAllowed",
+      "filteredResults": "currencies.stats.filteredResults",
+      "ofacSanctioned": "currencies.stats.ofacSanctioned",
+      "totalCurrencies": "currencies.stats.totalCurrencies"
+    },
+    "status": {
+      "allowed": "currencies.status.allowed",
+      "sanctioned": "currencies.status.sanctioned"
+    },
+    "subtitle": "currencies.subtitle",
+    "title": "currencies.title"
+  },
+  "filters": {
+    "activeFilters": "filters.activeFilters",
+    "clearAll": "filters.clearAll",
+    "searchChip": "filters.searchChip"
+  },
+  "languages": {
+    "aria": {
+      "filterLtr": "languages.aria.filterLtr",
+      "filterRtl": "languages.aria.filterRtl"
+    },
+    "columns": {
+      "code": "languages.columns.code",
+      "direction": "languages.columns.direction",
+      "languageName": "languages.columns.languageName",
+      "nativeName": "languages.columns.nativeName"
+    },
+    "emptyWithSearch": "languages.emptyWithSearch",
+    "errorTitle": "languages.errorTitle",
+    "filters": {
+      "all": "languages.filters.all",
+      "direction": "languages.filters.direction",
+      "directionChip": "languages.filters.directionChip",
+      "ltr": "languages.filters.ltr",
+      "rtl": "languages.filters.rtl",
+      "search": "languages.filters.search"
+    },
+    "footer": "languages.footer",
+    "loading": "languages.loading",
+    "noticeTitle": "languages.noticeTitle",
+    "searchPlaceholder": "languages.searchPlaceholder",
+    "stats": {
+      "filteredResults": "languages.stats.filteredResults",
+      "ltrLanguages": "languages.stats.ltrLanguages",
+      "rtlLanguages": "languages.stats.rtlLanguages",
+      "totalLanguages": "languages.stats.totalLanguages"
+    },
+    "subtitle": "languages.subtitle",
+    "title": "languages.title"
+  },
+  "referenceLayout": {
+    "displayCodesButton": "referenceLayout.displayCodesButton",
+    "displayModeCodes": "referenceLayout.displayModeCodes",
+    "displayModeNames": "referenceLayout.displayModeNames",
+    "displayNamesButton": "referenceLayout.displayNamesButton",
+    "expandButton": "referenceLayout.expandButton",
+    "expandedWidth": "referenceLayout.expandedWidth",
+    "normalButton": "referenceLayout.normalButton",
+    "normalWidth": "referenceLayout.normalWidth",
+    "saveDisplayModeDefault": "referenceLayout.saveDisplayModeDefault",
+    "savePageWidthDefault": "referenceLayout.savePageWidthDefault"
   }
 }

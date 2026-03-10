@@ -326,6 +326,33 @@ The script validates:
   `bic`, `iban`, `settlement_method`, `status`, `updated_at`
 - no `BGC` text appears in `counterparty_name`/`account_name`
 
+#### Translation Stale-Row Cleanup
+
+To keep UI translation rows aligned with active locale keys (cold-start source), run:
+
+```bash
+# Preview stale rows without deleting
+make cleanup-stale-translations api=http://localhost:18080 token=<ADMIN_JWT> whatif=1
+
+# Delete stale rows
+make cleanup-stale-translations api=http://localhost:18080 token=<ADMIN_JWT>
+```
+
+PowerShell direct usage:
+
+```powershell
+./scripts/cleanup-stale-translations.ps1 -ApiBaseUrl http://localhost:18080 -BearerToken <ADMIN_JWT> -WhatIf
+./scripts/cleanup-stale-translations.ps1 -ApiBaseUrl http://localhost:18080 -BearerToken <ADMIN_JWT>
+```
+
+Recommended daily automation:
+
+1. Remove obsolete keys from `frontend/public/locales/en/common.json`.
+2. Run stale-row cleanup daily (Task Scheduler/cron).
+3. Keep locale files in source control as the cold-start key source of truth.
+
+This ensures rows removed from the active locale key set are also removed from `ui_translations`.
+
 #### Environment-Specific URLs
 
 Once started, each environment is accessible at:

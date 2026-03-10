@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 import '../../lib/i18n'
@@ -91,16 +91,29 @@ const TARGET_TRANSLATION_LANGUAGES = SUPPORTED_LANGUAGES.filter((language) => la
 const DEFAULT_TARGET_LANGUAGE = TARGET_TRANSLATION_LANGUAGES[0]?.code ?? 'fr'
 const SEARCH_FETCH_LIMIT = 5000
 
-const createEmptyForm = (): TranslationFormData => ({
+const normalizeLanguageCode = (languageCode: string): string =>
+  String(languageCode || '').trim().toLowerCase().split('-')[0]
+
+const getPreferredTargetLanguage = (activeLanguage: string): string => {
+  const normalized = normalizeLanguageCode(activeLanguage)
+  const preferred = TARGET_TRANSLATION_LANGUAGES.find((language) => language.code === normalized)
+  return preferred?.code ?? DEFAULT_TARGET_LANGUAGE
+}
+
+const createEmptyForm = (defaultLanguage: string): TranslationFormData => ({
   translation_key: '',
-  language_code: DEFAULT_TARGET_LANGUAGE,
+  language_code: defaultLanguage,
   translation_value: '',
   notes: '',
 })
 
 export default function AdminTranslationsPage() {
   const router = useRouter()
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
+  const defaultFormLanguage = useMemo(
+    () => getPreferredTargetLanguage(i18n.resolvedLanguage || i18n.language || ''),
+    [i18n.language, i18n.resolvedLanguage]
+  )
 
   const expandedWidthPreference = useDeferredBooleanPreference({
     pageKey: 'admin-translations',
@@ -127,7 +140,7 @@ export default function AdminTranslationsPage() {
 
   // Form / modal state
   const [showForm, setShowForm] = useState(false)
-  const [formData, setFormData] = useState<TranslationFormData>(() => createEmptyForm())
+  const [formData, setFormData] = useState<TranslationFormData>(() => createEmptyForm(defaultFormLanguage))
   const [formLoading, setFormLoading] = useState(false)
   const [formError, setFormError] = useState('')
   const [englishLocale, setEnglishLocale] = useState<LocaleNode | null>(null)
@@ -160,17 +173,17 @@ export default function AdminTranslationsPage() {
         router.push('/login')
         return
       }
-      if (!res.ok) throw new Error('Failed to load translations')
+      if (!res.ok) throw new Error(t('admin.translations.errors.loadFailed'))
       const data = await res.json()
       const records = data.records ?? []
       setTranslations(records)
       setTotal(hasSearchTerm ? records.length : (data.total ?? 0))
     } catch {
-      setError('Failed to load translations')
+      setError(t('admin.translations.errors.loadFailed'))
     } finally {
       setLoading(false)
     }
-  }, [router, langFilter, statusFilter, search, page])
+  }, [router, langFilter, statusFilter, search, page, t])
 
   useEffect(() => {
     fetchTranslations()
@@ -223,6 +236,17 @@ export default function AdminTranslationsPage() {
     setTimeout(() => setSuccessMessage(''), 3000)
   }
 
+  const translationKeySet = useMemo(() => new Set(translationKeyOptions), [translationKeyOptions])
+  const isStaleTranslationKey = useCallback(
+    (translationKey: string) => translationKeyOptions.length > 0 && !translationKeySet.has(translationKey),
+    [translationKeyOptions.length, translationKeySet]
+  )
+
+  const staleTranslationRows = useMemo(
+    () => translations.filter((row) => isStaleTranslationKey(row.translation_key)),
+    [translations, isStaleTranslationKey]
+  )
+
   const notifyTranslationsUpdated = () => {
     if (typeof window === 'undefined') return
     window.dispatchEvent(new CustomEvent('axiom:translations-updated'))
@@ -236,12 +260,12 @@ export default function AdminTranslationsPage() {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       })
-      if (!res.ok) throw new Error('Failed to approve')
+      if (!res.ok) throw new Error(t('admin.translations.errors.approveFailed'))
       showSuccess(t('admin.translations.approveSuccess'))
       notifyTranslationsUpdated()
       fetchTranslations()
     } catch {
-      setError('Failed to approve translation')
+      setError(t('admin.translations.errors.approveFailed'))
     } finally {
       setActionLoading(null)
     }
@@ -255,11 +279,11 @@ export default function AdminTranslationsPage() {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       })
-      if (!res.ok) throw new Error('Failed to reject')
+      if (!res.ok) throw new Error(t('admin.translations.errors.rejectFailed'))
       showSuccess(t('admin.translations.rejectSuccess'))
       fetchTranslations()
     } catch {
-      setError('Failed to reject translation')
+      setError(t('admin.translations.errors.rejectFailed'))
     } finally {
       setActionLoading(null)
     }
@@ -274,11 +298,11 @@ export default function AdminTranslationsPage() {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       })
-      if (!res.ok) throw new Error('Failed to delete')
+      if (!res.ok) throw new Error(t('admin.translations.errors.deleteFailed'))
       showSuccess(t('admin.translations.deleteSuccess'))
       fetchTranslations()
     } catch {
-      setError('Failed to delete translation')
+      setError(t('admin.translations.errors.deleteFailed'))
     } finally {
       setActionLoading(null)
     }
@@ -300,14 +324,14 @@ export default function AdminTranslationsPage() {
       })
       if (!res.ok) {
         const d = await res.json()
-        throw new Error(d.error || 'Failed to submit')
+        throw new Error(d.error || t('admin.translations.errors.submitFailed'))
       }
       setShowForm(false)
-      setFormData(createEmptyForm())
+      setFormData(createEmptyForm(defaultFormLanguage))
       showSuccess(t('admin.translations.saveSuccess'))
       fetchTranslations()
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Failed to submit')
+      setFormError(err instanceof Error ? err.message : t('admin.translations.errors.submitFailed'))
     } finally {
       setFormLoading(false)
     }
@@ -315,12 +339,61 @@ export default function AdminTranslationsPage() {
 
   const handleOpenNewTranslationForm = useCallback(() => {
     setFormData({
-      ...createEmptyForm(),
+      ...createEmptyForm(defaultFormLanguage),
       translation_key: translationKeyOptions[0] ?? '',
     })
     setFormError('')
     setShowForm(true)
-  }, [translationKeyOptions])
+  }, [defaultFormLanguage, translationKeyOptions])
+
+  const handleDeleteStaleTranslations = async () => {
+    if (staleTranslationRows.length === 0) {
+      showSuccess(t('admin.translations.stale.noneFound'))
+      return
+    }
+
+    const confirmed = window.confirm(
+      t('admin.translations.stale.deleteConfirm', { count: staleTranslationRows.length })
+    )
+    if (!confirmed) return
+
+    const token = getToken()
+    if (!token) {
+      router.push('/login')
+      return
+    }
+
+    setActionLoading('cleanup-stale')
+    try {
+      const results = await Promise.allSettled(
+        staleTranslationRows.map((row) =>
+          fetch(`${API_BASE_URL}/api/v1/translations/${row.id}`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}` },
+          })
+        )
+      )
+
+      const failed = results.filter((result) => result.status === 'rejected' || (result.status === 'fulfilled' && !result.value.ok)).length
+      const deleted = staleTranslationRows.length - failed
+
+      if (deleted > 0) {
+        notifyTranslationsUpdated()
+      }
+
+      if (failed === 0) {
+        showSuccess(t('admin.translations.stale.deletedSuccess', { count: deleted }))
+      } else {
+        setError(t('admin.translations.stale.deletedPartial', { deleted, failed }))
+      }
+
+      fetchTranslations()
+    } catch {
+      setError(t('admin.translations.stale.cleanupFailed'))
+    } finally {
+      setActionLoading(null)
+    }
+  }
 
   const handleSort = (field: TranslationSortField) => {
     if (sortField !== field) {
@@ -417,9 +490,15 @@ export default function AdminTranslationsPage() {
               <button
                 onClick={expandedWidthPreference.toggle}
                 className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 transition-colors text-white text-sm font-medium"
-                title={effectiveExpandedWidth ? 'Normal Width' : 'Expanded Width'}
+                title={
+                  effectiveExpandedWidth
+                    ? t('admin.translations.width.normalTitle')
+                    : t('admin.translations.width.expandedTitle')
+                }
               >
-                {effectiveExpandedWidth ? '⬅️ Normal' : '↔️ Expand'}
+                {effectiveExpandedWidth
+                  ? t('admin.translations.width.normalButton')
+                  : t('admin.translations.width.expandedButton')}
               </button>
               <button
                 onClick={() => handleOpenNewTranslationForm()}
@@ -427,6 +506,16 @@ export default function AdminTranslationsPage() {
               >
                 + {t('admin.translations.addTranslation')}
               </button>
+              {staleTranslationRows.length > 0 && (
+                <button
+                  onClick={handleDeleteStaleTranslations}
+                  disabled={actionLoading !== null}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
+                  title={t('admin.translations.stale.cleanupTitle')}
+                >
+                  {t('admin.translations.stale.cleanupButton', { count: staleTranslationRows.length })}
+                </button>
+              )}
             </>
           }
         />
@@ -530,7 +619,7 @@ export default function AdminTranslationsPage() {
                     />
                     <SortableHeaderCell
                       className="px-4 py-3"
-                      label="English Default"
+                      label={t('admin.translations.englishDefaultLabel')}
                       onSort={() => handleSort('english_default')}
                       isActiveSort={sortField === 'english_default'}
                       sortDirection={sortDirection}
@@ -574,6 +663,11 @@ export default function AdminTranslationsPage() {
                       >
                         <td className="px-4 py-3 font-mono text-xs text-gray-700 dark:text-gray-300 whitespace-nowrap">
                           {tr.translation_key}
+                          {isStaleTranslationKey(tr.translation_key) && (
+                            <span className="ml-2 inline-block rounded bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 px-1.5 py-0.5 text-[10px] align-middle">
+                              {t('admin.translations.stale.badge')}
+                            </span>
+                          )}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
                           {lang ? `${lang.flag} ${lang.nativeName}` : tr.language_code}
@@ -635,7 +729,7 @@ export default function AdminTranslationsPage() {
               {visibleTotal === 0
                 ? '0-0'
                 : `${page * pageSize + 1}-${Math.min((page + 1) * pageSize, visibleTotal).toLocaleString()}`}{' '}
-              of {visibleTotal.toLocaleString()}
+              {t('admin.translations.pagination.of', { count: visibleTotal.toLocaleString() })}
             </span>
             <div className="flex gap-2">
               <button
@@ -643,14 +737,14 @@ export default function AdminTranslationsPage() {
                 onClick={() => setPage((p) => p - 1)}
                 className="px-3 py-1.5 rounded border border-gray-300 dark:border-white/20 hover:border-gray-400 dark:hover:border-white/40 disabled:opacity-40 transition-colors"
               >
-                ← Prev
+                {t('admin.translations.pagination.prev')}
               </button>
               <button
                 disabled={page >= totalPages - 1}
                 onClick={() => setPage((p) => p + 1)}
                 className="px-3 py-1.5 rounded border border-gray-300 dark:border-white/20 hover:border-gray-400 dark:hover:border-white/40 disabled:opacity-40 transition-colors"
               >
-                Next →
+                {t('admin.translations.pagination.next')}
               </button>
             </div>
           </div>
@@ -662,7 +756,7 @@ export default function AdminTranslationsPage() {
         resetKey={expandedWidthPreference.promptResetKey}
         onSave={expandedWidthPreference.save}
         onDismiss={expandedWidthPreference.dismiss}
-        label="Save page width as your default?"
+        label={t('admin.translations.width.savePrompt')}
       />
 
       {/* New Translation Modal */}
@@ -726,13 +820,13 @@ export default function AdminTranslationsPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  English Default
+                  {t('admin.translations.englishDefaultLabel')}
                 </label>
                 <textarea
                   readOnly
                   rows={3}
                   value={selectedEnglishDefault ?? ''}
-                  placeholder="No English default found for this key"
+                  placeholder={t('admin.translations.englishDefaultPlaceholder')}
                   className="w-full bg-gray-50 dark:bg-white/5 border border-gray-300 dark:border-white/20 rounded-md text-gray-900 dark:text-gray-200 text-sm px-3 py-2 placeholder-gray-500 focus:outline-none resize-none"
                 />
               </div>
