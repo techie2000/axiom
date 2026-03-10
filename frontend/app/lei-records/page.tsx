@@ -239,6 +239,7 @@ export default function LEIRecordsPage() {
   const [selectedRecord, setSelectedRecord] = useState<LEIRecord | null>(null)
   const [showColumnSelector, setShowColumnSelector] = useState(false)
   const [managingLouName, setManagingLouName] = useState<string | null>(null)
+  const [managingLouNameLoading, setManagingLouNameLoading] = useState(false)
   const [managingLouNames, setManagingLouNames] = useState<Map<string, string | null>>(new Map())
   const [successorLeiName, setSuccessorLeiName] = useState<string | null>(null)
   const [successorLeiNameLoading, setSuccessorLeiNameLoading] = useState(false)
@@ -758,9 +759,13 @@ export default function LEIRecordsPage() {
     const fetchManagingLouName = async () => {
       if (!selectedRecord?.managing_lou) {
         setManagingLouName(null)
+        setManagingLouNameLoading(false)
         return
       }
-      
+
+      setManagingLouNameLoading(true)
+      setManagingLouName(null)
+
       try {
         const response = await fetch(`${API_BASE_URL}/api/v1/lei/${selectedRecord.managing_lou}`)
         if (response.ok) {
@@ -772,9 +777,11 @@ export default function LEIRecordsPage() {
       } catch (err) {
         console.error('Failed to fetch managing LOU name:', err)
         setManagingLouName(null)
+      } finally {
+        setManagingLouNameLoading(false)
       }
     }
-    
+
     fetchManagingLouName()
   }, [selectedRecord, API_BASE_URL])
 
@@ -2276,8 +2283,11 @@ export default function LEIRecordsPage() {
                         {managingLouName && (
                           <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{managingLouName}</p>
                         )}
-                        {managingLouName === null && selectedRecord.managing_lou && (
+                        {managingLouNameLoading && (
                           <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 italic">Loading name...</p>
+                        )}
+                        {!managingLouNameLoading && !managingLouName && (
+                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 italic">Name unavailable.</p>
                         )}
                       </div>
                     )}
