@@ -323,7 +323,6 @@ func setupRouter(cfg *config.Config, h *handler.Handlers) *gin.Engine {
 			// Translation routes: public listing, authenticated submission, admin review/delete
 			translations := protected.Group("/translations")
 			{
-				translations.GET("", h.UITranslation.ListTranslations)
 				translations.POST("", h.UITranslation.SubmitTranslation)
 			}
 			adminTranslations := protected.Group("/translations")
