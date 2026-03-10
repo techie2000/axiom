@@ -8,10 +8,10 @@ new bind-mount layout introduced for the `main` and `dev` compose environments.
 Earlier versions of `docker-compose.main.yml` and `docker-compose.dev.yml` stored PostgreSQL data
 in Docker-managed named volumes:
 
-| Environment | Old named volume      | New bind-mount path        |
-|-------------|----------------------|----------------------------|
-| `main`      | `postgres_data_main` | `./data/main/postgres`     |
-| `dev`       | `postgres_data_dev`  | `./data/dev/postgres`      |
+| Environment | Old named volume      | New bind-mount path    |
+| ----------- | --------------------- | ---------------------- |
+| `main`      | `postgres_data_main`  | `./data/main/postgres` |
+| `dev`       | `postgres_data_dev`   | `./data/dev/postgres`  |
 
 Switching to bind mounts gives developers direct filesystem access to database files without
 needing extra Docker commands. However, the old named volume is not read automatically by the new
