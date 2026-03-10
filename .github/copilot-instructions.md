@@ -551,6 +551,11 @@ When an AI agent creates a pull request, it should complete standard PR hygiene 
 1. Add appropriate labels (at minimum `automated` plus a best-fit category label such as `enhancement`/`bug`).
 2. Request a reviewer (prefer `copilot-pull-request-reviewer` when available).
 3. Post a concise verification checklist comment relevant to the changed files.
+4. After each commit push to the PR branch, post a concise implementation summary comment that includes:
+   - what changed,
+   - what validation/tests were run,
+   - any follow-up actions or known limitations.
+5. Do not ask whether to post the summary/checklist comments; post them by default.
 
 Only ask follow-up questions if required metadata cannot be applied (for example, reviewer handle is unavailable).
 
