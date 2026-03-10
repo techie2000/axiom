@@ -13,8 +13,15 @@ interface DeferredStringPreference {
   value: string
   showPrompt: boolean
   promptResetKey: number
+  /** True while the user has an in-session change that hasn't been persisted yet. */
+  hasUnsavedChanges: boolean
   setValue: (next: string) => void
   save: () => void
+  /**
+   * Immediately persists the current effective value as the user's stored default,
+   * regardless of whether a toast prompt is visible.
+   */
+  saveCurrentValue: () => void
   dismiss: () => void
 }
 
@@ -51,12 +58,23 @@ export function useDeferredStringPreference({
     setShowPrompt(false)
   }, [])
 
+  const hasUnsavedChanges = localValue !== null
+
+  const saveCurrentValue = useCallback(() => {
+    setStoredValue(value)
+    setLocalValue(null)
+    pendingValue.current = null
+    setShowPrompt(false)
+  }, [setStoredValue, value])
+
   return {
     value,
     showPrompt,
     promptResetKey,
+    hasUnsavedChanges,
     setValue,
     save,
+    saveCurrentValue,
     dismiss,
   }
 }
