@@ -55,6 +55,8 @@ interface LEIRecord {
   // Associated Entities
   managing_lou: string
   successor_lei: string
+  managing_lou_legal_name?: string
+  successor_lei_legal_name?: string
   
   // Dates
   registration_date: string
@@ -250,6 +252,10 @@ export default function LEIRecordsPage() {
   const API_BASE_URL = typeof window !== 'undefined' 
     ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080')
     : 'http://backend:8080'
+
+  const normalizeLeiCode = useCallback((value: string | null | undefined): string => {
+    return String(value || '').trim().toUpperCase()
+  }, [])
 
   const statusOptions = ['ACTIVE', 'INACTIVE', 'LAPSED', 'MERGED', 'RETIRED', 'NULL']
 
@@ -517,6 +523,11 @@ export default function LEIRecordsPage() {
       const columnsParam = columnsToFetch.join(',')
       if (columnsParam) params.append('columns', columnsParam)
 
+      const includeLinkedNames = effectiveVisibleColumns.has('managing_lou') || effectiveVisibleColumns.has('successor_lei')
+      if (includeLinkedNames) {
+        params.append('includeLinkedNames', 'true')
+      }
+
       const response = await fetch(
         `${API_BASE_URL}/api/v1/lei?${params.toString()}`,
         {
@@ -532,6 +543,42 @@ export default function LEIRecordsPage() {
         const hasMorePages = data && data.length > itemsPerPage
         const displayData = hasMorePages ? data.slice(0, itemsPerPage) : (data || [])
         const normalizedDisplayData = displayData.map((record: LEIRecord) => normalizeRecordNullLikeValues(record))
+
+        if (includeLinkedNames) {
+          setManagingLouNames((prev) => {
+            const next = new Map(prev)
+            normalizedDisplayData.forEach((record: LEIRecord) => {
+              const code = normalizeLeiCode(record.managing_lou)
+              if (!code) return
+              const name = String(record.managing_lou_legal_name || '').trim()
+              if (name !== '') {
+                next.set(code, name)
+                return
+              }
+              if (!next.has(code)) {
+                next.set(code, null)
+              }
+            })
+            return next
+          })
+
+          setSuccessorLeiNames((prev) => {
+            const next = new Map(prev)
+            normalizedDisplayData.forEach((record: LEIRecord) => {
+              const code = normalizeLeiCode(record.successor_lei)
+              if (!code) return
+              const name = String(record.successor_lei_legal_name || '').trim()
+              if (name !== '') {
+                next.set(code, name)
+                return
+              }
+              if (!next.has(code)) {
+                next.set(code, null)
+              }
+            })
+            return next
+          })
+        }
         
         setRecords(normalizedDisplayData)
         setHasMorePages(hasMorePages)
@@ -559,6 +606,7 @@ export default function LEIRecordsPage() {
     effectiveVisibleColumns,
     itemsPerPage,
     normalizeStatusFilterForAPI,
+    normalizeLeiCode,
     sortDirection,
     sortField,
     statusFilter,
@@ -849,10 +897,6 @@ export default function LEIRecordsPage() {
     },
     []
   )
-
-  const normalizeLeiCode = useCallback((value: string | null | undefined): string => {
-    return String(value || '').trim().toUpperCase()
-  }, [])
 
   // Fetch managing LOU names for all records in table (single batch request).
   useEffect(() => {

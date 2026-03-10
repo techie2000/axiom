@@ -109,7 +109,7 @@ type LEIService interface {
 	GetPredecessorLEIs(lei string) ([]*domain.LEIRecord, error)
 	GetLEIByID(id string) (*domain.LEIRecord, error)
 	GetAllLEI(limit, offset int) ([]*domain.LEIRecord, error)
-	GetAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string) ([]*domain.LEIRecord, error)
+	GetAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string, includeLinkedNames bool) ([]*domain.LEIRecord, error)
 	CountLEIRecords() (int64, error)
 	GetDistinctCountries() ([]domain.Country, error)
 	GetDistinctCategories() ([]string, error)
@@ -1416,8 +1416,8 @@ func (s *leiService) GetAllLEI(limit, offset int) ([]*domain.LEIRecord, error) {
 }
 
 // GetAllLEIWithFilters retrieves LEI records with search and filters
-func (s *leiService) GetAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string) ([]*domain.LEIRecord, error) {
-	records, err := s.repo.FindAllLEIWithFilters(limit, offset, search, status, category, country, sortBy, sortOrder, columns)
+func (s *leiService) GetAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string, includeLinkedNames bool) ([]*domain.LEIRecord, error) {
+	records, err := s.repo.FindAllLEIWithFilters(limit, offset, search, status, category, country, sortBy, sortOrder, columns, includeLinkedNames)
 	if err != nil {
 		return nil, err
 	}

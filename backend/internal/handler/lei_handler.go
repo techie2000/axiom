@@ -191,6 +191,7 @@ func (h *LEIHandler) GetLEIByID(c *gin.Context) {
 // @Param country query string false "Country code filter (e.g., US, GB)"
 // @Param sortBy query string false "Sort field (lei, legal_name, entity_status, entity_category, legal_address_country, last_update_date)"
 // @Param sortOrder query string false "Sort order (asc, desc)" default(asc)
+// @Param includeLinkedNames query boolean false "Include successor/managing LOU legal names in list response"
 // @Success 200 {array} domain.LEIRecord
 // @Failure 500 {object} map[string]string
 // @Router /api/v1/lei [get]
@@ -201,6 +202,7 @@ func (h *LEIHandler) ListLEI(c *gin.Context) {
 	status := c.Query("status")
 	category := c.Query("category")
 	country := c.Query("country")
+	includeLinkedNames := strings.EqualFold(c.DefaultQuery("includeLinkedNames", "false"), "true")
 	sortBy := c.Query("sortBy")       // Empty if not provided - repository will use Hybrid Approach
 	sortOrder := c.Query("sortOrder") // Empty if not provided - repository will choose based on context
 
@@ -213,7 +215,7 @@ func (h *LEIHandler) ListLEI(c *gin.Context) {
 		limit = 501
 	}
 
-	records, err := h.leiService.GetAllLEIWithFilters(limit, offset, search, status, category, country, sortBy, sortOrder, columns)
+	records, err := h.leiService.GetAllLEIWithFilters(limit, offset, search, status, category, country, sortBy, sortOrder, columns, includeLinkedNames)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve LEI records"})
 		return
