@@ -223,6 +223,11 @@ export default function AdminTranslationsPage() {
     setTimeout(() => setSuccessMessage(''), 3000)
   }
 
+  const notifyTranslationsUpdated = () => {
+    if (typeof window === 'undefined') return
+    window.dispatchEvent(new CustomEvent('axiom:translations-updated'))
+  }
+
   const handleApprove = async (id: string) => {
     setActionLoading(id + '-approve')
     const token = getToken()
@@ -233,6 +238,7 @@ export default function AdminTranslationsPage() {
       })
       if (!res.ok) throw new Error('Failed to approve')
       showSuccess(t('admin.translations.approveSuccess'))
+      notifyTranslationsUpdated()
       fetchTranslations()
     } catch {
       setError('Failed to approve translation')

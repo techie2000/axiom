@@ -91,12 +91,30 @@ export default function I18nProvider({ children }: I18nProviderProps) {
       }
     }
 
-    loadApprovedTranslations(i18n.language)
+    const refreshCurrentLanguage = () => {
+      void loadApprovedTranslations(i18n.language)
+    }
+
+    const handleTranslationsUpdated = () => {
+      refreshCurrentLanguage()
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refreshCurrentLanguage()
+      }
+    }
+
+    refreshCurrentLanguage()
     i18n.on('languageChanged', loadApprovedTranslations)
+    window.addEventListener('axiom:translations-updated', handleTranslationsUpdated as EventListener)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
 
     return () => {
       cancelled = true
       i18n.off('languageChanged', loadApprovedTranslations)
+      window.removeEventListener('axiom:translations-updated', handleTranslationsUpdated as EventListener)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [])
 
