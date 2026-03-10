@@ -850,14 +850,18 @@ export default function LEIRecordsPage() {
     []
   )
 
+  const normalizeLeiCode = useCallback((value: string | null | undefined): string => {
+    return String(value || '').trim().toUpperCase()
+  }, [])
+
   // Fetch managing LOU names for all records in table (single batch request).
   useEffect(() => {
     const fetchManagingLouNamesForTable = async () => {
       const uniqueLouCodes = Array.from(
         new Set(
           records
-            .filter((r) => r.managing_lou && r.managing_lou.trim() !== '')
-            .map((r) => r.managing_lou)
+            .map((r) => normalizeLeiCode(r.managing_lou))
+            .filter((code): code is string => code !== '')
         )
       )
 
@@ -876,7 +880,7 @@ export default function LEIRecordsPage() {
     if (records.length > 0) {
       fetchManagingLouNamesForTable()
     }
-  }, [records, managingLouNames, fetchLegalNamesBatch, mergeNameCacheWithMisses])
+  }, [records, managingLouNames, fetchLegalNamesBatch, mergeNameCacheWithMisses, normalizeLeiCode])
 
   // Fetch successor LEI names for all records in table (single batch request).
   useEffect(() => {
@@ -884,8 +888,8 @@ export default function LEIRecordsPage() {
       const uniqueSuccessorLeiCodes = Array.from(
         new Set(
           records
-            .filter((r) => r.successor_lei && r.successor_lei.trim() !== '')
-            .map((r) => r.successor_lei)
+            .map((r) => normalizeLeiCode(r.successor_lei))
+            .filter((code): code is string => code !== '')
         )
       )
 
@@ -904,7 +908,7 @@ export default function LEIRecordsPage() {
     if (records.length > 0) {
       fetchSuccessorLeiNamesForTable()
     }
-  }, [records, successorLeiNames, fetchLegalNamesBatch, mergeNameCacheWithMisses])
+  }, [records, successorLeiNames, fetchLegalNamesBatch, mergeNameCacheWithMisses, normalizeLeiCode])
 
 
   const formatCellValue = (value: any, key: keyof LEIRecord): string => {
@@ -1618,13 +1622,14 @@ export default function LEIRecordsPage() {
                                 <div>
                                   <button
                                     type="button"
-                                    onClick={(event) => handleLinkedLeiClick(event, String(value || ''))}
+                                    onClick={(event) => handleLinkedLeiClick(event, normalizeLeiCode(String(value || '')))}
                                     className="font-mono text-left text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
                                   >
                                     {formatCellValue(value, column.key)}
                                   </button>
                                   {(() => {
-                                    const cachedName = value ? managingLouNames.get(String(value)) : null
+                                    const normalizedValue = value ? normalizeLeiCode(String(value)) : ''
+                                    const cachedName = normalizedValue ? managingLouNames.get(normalizedValue) : null
                                     if (!cachedName) return null
                                     return (
                                       <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -1637,13 +1642,14 @@ export default function LEIRecordsPage() {
                                 <div>
                                   <button
                                     type="button"
-                                    onClick={(event) => handleLinkedLeiClick(event, String(value || ''))}
+                                    onClick={(event) => handleLinkedLeiClick(event, normalizeLeiCode(String(value || '')))}
                                     className="font-mono text-left text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
                                   >
                                     {formatCellValue(value, column.key)}
                                   </button>
                                   {(() => {
-                                    const cachedName = value ? successorLeiNames.get(String(value)) : null
+                                    const normalizedValue = value ? normalizeLeiCode(String(value)) : ''
+                                    const cachedName = normalizedValue ? successorLeiNames.get(normalizedValue) : null
                                     if (!cachedName) return null
                                     return (
                                       <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
