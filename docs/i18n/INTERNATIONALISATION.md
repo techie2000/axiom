@@ -83,10 +83,10 @@ Browser
 }
 ```
 
-3. Add the same key to all other locale files (`fr`, `es`, `de`, `ja`, `ar`) with the
+1. Add the same key to all other locale files (`fr`, `es`, `de`, `ja`, `ar`) with the
    translated value. If you do not have a translation, copy the English string – i18next will
    use the English fallback automatically, but having the key present avoids a console warning.
-4. Use the key in the component with `t('myFeature.myNewKey')`.
+2. Use the key in the component with `t('myFeature.myNewKey')`.
 
 ---
 
@@ -217,11 +217,11 @@ Tailwind's `rtl:` variant utilities work automatically when `dir="rtl"` is set o
 { code: 'ko', name: 'Korean', nativeName: '한국어', rtl: false, flag: '🇰🇷' }
 ```
 
-2. Create the locale file `frontend/public/locales/ko/common.json` with translated strings
+1. Create the locale file `frontend/public/locales/ko/common.json` with translated strings
    (copy from `en/common.json` and translate).
-3. Ensure the language code exists in the `languages` reference table in the database (it is
+2. Ensure the language code exists in the `languages` reference table in the database (it is
    referenced by the `ui_translations` table FK).
-4. The `LanguageSelector` picks up the new language automatically from `SUPPORTED_LANGUAGES`.
+3. The `LanguageSelector` picks up the new language automatically from `SUPPORTED_LANGUAGES`.
 
 ---
 
