@@ -59,15 +59,29 @@ function hasBlockedPathSegment(parts) {
   return parts.some((part) => BLOCKED_PATH_SEGMENTS.has(part))
 }
 
+function isSafeObject(obj) {
+  if (obj === null || typeof obj !== 'object') return false
+  if (Array.isArray(obj)) return false
+  const proto = Object.getPrototypeOf(obj)
+  return proto === Object.prototype || proto === null
+}
+
 function setNestedValue(target, dottedKey, defaultValue) {
   const parts = dottedKey.split('.')
   if (hasBlockedPathSegment(parts)) {
     return false
   }
 
+  if (!isSafeObject(target)) {
+    return false
+  }
+
   let cursor = target
 
   for (let i = 0; i < parts.length - 1; i += 1) {
+    if (!isSafeObject(cursor)) {
+      return false
+    }
     const part = parts[i]
     if (cursor[part] === undefined || cursor[part] === null || typeof cursor[part] !== 'object' || Array.isArray(cursor[part])) {
       cursor[part] = {}
