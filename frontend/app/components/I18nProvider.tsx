@@ -55,6 +55,65 @@ export default function I18nProvider({ children }: I18nProviderProps) {
         .split('-')[0]
     }
 
+    const isPlaceholderValue = (value: string, dottedKey: string, namespace: string): boolean => {
+      const normalizedValue = value.trim().toLowerCase()
+      if (!normalizedValue) {
+        return true
+      }
+
+      const normalizedKey = dottedKey.trim().toLowerCase()
+      if (!normalizedKey) {
+        return false
+      }
+
+      if (normalizedValue === normalizedKey || normalizedValue === `${namespace}.${normalizedKey}`) {
+        return true
+      }
+
+      return false
+    }
+
+    const sanitizeBundleNode = (
+      node: Record<string, unknown>,
+      namespace: string,
+      pathParts: string[] = []
+    ): Record<string, unknown> => {
+      const sanitized: Record<string, unknown> = {}
+
+      for (const [key, rawValue] of Object.entries(node)) {
+        const nextPath = [...pathParts, key]
+        const dottedKey = nextPath.join('.')
+
+        if (typeof rawValue === 'string') {
+          if (isPlaceholderValue(rawValue, dottedKey, namespace)) {
+            continue
+          }
+          sanitized[key] = rawValue
+          continue
+        }
+
+        if (rawValue && typeof rawValue === 'object' && !Array.isArray(rawValue)) {
+          const sanitizedChild = sanitizeBundleNode(rawValue as Record<string, unknown>, namespace, nextPath)
+          if (Object.keys(sanitizedChild).length > 0) {
+            sanitized[key] = sanitizedChild
+          }
+        }
+      }
+
+      return sanitized
+    }
+
+    const sanitizeResourceBundle = (languageCode: string, namespace: string) => {
+      const currentBundle = i18n.getResourceBundle(languageCode, namespace) as Record<string, unknown> | undefined
+      if (!currentBundle || typeof currentBundle !== 'object') {
+        return
+      }
+
+      const sanitizedBundle = sanitizeBundleNode(currentBundle, namespace)
+      i18n.removeResourceBundle(languageCode, namespace)
+      i18n.addResourceBundle(languageCode, namespace, sanitizedBundle, true, true)
+    }
+
     const loadApprovedTranslations = async (languageCode: string) => {
       const normalizedLanguageCode = normalizeLanguageCode(languageCode)
       if (!normalizedLanguageCode || normalizedLanguageCode === 'en') return
@@ -63,6 +122,7 @@ export default function I18nProvider({ children }: I18nProviderProps) {
         // Ensure the static namespace is loaded first so remote overrides are applied last.
         await i18n.loadLanguages(normalizedLanguageCode)
         await i18n.loadNamespaces('common')
+        sanitizeResourceBundle(normalizedLanguageCode, 'common')
 
         let offset = 0
         const limit = 200
@@ -92,6 +152,7 @@ export default function I18nProvider({ children }: I18nProviderProps) {
             const key = record.translation_key?.trim()
             const value = record.translation_value ?? ''
             if (!key) continue
+            if (isPlaceholderValue(value, key, 'common')) continue
             setNestedValue(overrides, key, value)
           }
 
