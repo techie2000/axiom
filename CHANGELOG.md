@@ -7,12 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-03-09
+
 ### Added
 
 - **Branding-first entry flow for frontend routes**:
   - `/` now serves as a branding-only entry page
   - `/home` now serves as the public reference data hub
-  - Sign-in success redirects non-bootstrap users to `/home`
+  - Sign-in success redirects non-bootstrap users to `/dashboard`
 
 - **Branding asset pipeline and alternate theme-ready assets**:
   - Canonical source asset documentation added at [docs/assets/branding/README.md](docs/assets/branding/README.md)
@@ -146,6 +148,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - JWT authentication framework
 - Prometheus metrics and health check endpoints
 
-[Unreleased]: https://github.com/techie2000/axiom/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/techie2000/axiom/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/techie2000/axiom/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/techie2000/axiom/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/techie2000/axiom/releases/tag/v0.1.0

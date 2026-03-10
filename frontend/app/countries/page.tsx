@@ -148,6 +148,17 @@ export default function CountriesPage() {
 
   const handleDismissColumns = useCallback(() => { setShowColumnsPrompt(false) }, [])
 
+  // Saves the current effective column selection immediately as the stored default,
+  // without requiring a new toast cycle. Column preferences cannot reuse the
+  // hook's saveCurrentValue because they are Set-based (serialised as a
+  // comma-separated string), not a simple boolean managed by the hook.
+  const handleSaveColumnsNow = useCallback(() => {
+    setStoredColumns(Array.from(effectiveVisibleColumns).join(','))
+    setLocalColumns(null)
+    pendingColumns.current = null
+    setShowColumnsPrompt(false)
+  }, [effectiveVisibleColumns, setStoredColumns])
+
   const API_BASE_URL = typeof window !== 'undefined'
     ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080')
     : 'http://backend:8080'
@@ -521,6 +532,15 @@ export default function CountriesPage() {
               >
                 {effectiveExpandedWidth ? t('referenceLayout.normalButton') : t('referenceLayout.expandButton')}
               </button>
+              {expandedWidthPreference.hasUnsavedChanges && (
+                <button
+                  onClick={expandedWidthPreference.saveCurrentValue}
+                  className="px-3 py-2 rounded-lg bg-green-700 hover:bg-green-600 transition-colors text-white text-xs font-medium"
+                  title="Save current page width as your permanent default"
+                >
+                  💾 Save width
+                </button>
+              )}
               <button
                 onClick={referenceDisplayPreference.toggle}
                 className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 transition-colors text-white text-sm font-medium"
@@ -538,7 +558,7 @@ export default function CountriesPage() {
 
                 {showColumnSelector && (
                   <div className="absolute right-0 mt-2 w-72 max-h-96 overflow-y-auto bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-white/20 rounded-lg shadow-xl z-50 p-3">
-                    <div className="flex gap-2 text-xs mb-3">
+                    <div className="flex flex-wrap gap-2 text-xs mb-3">
                       <button
                         onClick={() => handleSetVisibleColumns(new Set(AVAILABLE_COLUMNS.map((column) => column.key)))}
                         className="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded hover:bg-blue-200 dark:hover:bg-blue-800"
@@ -551,6 +571,15 @@ export default function CountriesPage() {
                       >
                         {t('countries.actions.reset')}
                       </button>
+                      {localColumns !== null && (
+                        <button
+                          onClick={handleSaveColumnsNow}
+                          className="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded hover:bg-green-200 dark:hover:bg-green-800 ml-auto"
+                          title="Save current column selection as your permanent default"
+                        >
+                          💾 Save as default
+                        </button>
+                      )}
                     </div>
                     <div className="space-y-1">
                       {AVAILABLE_COLUMNS.map((column) => (
@@ -749,7 +778,7 @@ export default function CountriesPage() {
                         switch (column.key) {
                           case 'flag':
                             return (
-                              <td key={column.key} className="px-6 py-4 whitespace-nowrap" title={country.name}>
+                              <td key={column.key} className="px-6 py-4 whitespace-nowrap align-top" title={country.name}>
                                 <CountryFlag
                                   countryCode={country.alpha2 || country.code}
                                   title={country.name}
@@ -759,61 +788,61 @@ export default function CountriesPage() {
                             )
                           case 'name':
                             return (
-                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white align-top">
                                 {country.name}
                               </td>
                             )
                           case 'alpha2':
                             return (
-                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-center">
+                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-center align-top">
                                 <Badge variant="blue" mono>{country.alpha2 || '-'}</Badge>
                               </td>
                             )
                           case 'alpha3':
                             return (
-                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-center">
+                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-center align-top">
                                 <Badge variant="green" mono>{country.alpha3 || '-'}</Badge>
                               </td>
                             )
                           case 'numeric_code':
                             return (
-                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 font-mono">
+                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 font-mono align-top">
                                 {country.numeric_code || '-'}
                               </td>
                             )
                           case 'native_name':
                             return (
-                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 align-top">
                                 {country.native_name || '-'}
                               </td>
                             )
                           case 'capital':
                             return (
-                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 align-top">
                                 {country.capital || '-'}
                               </td>
                             )
                           case 'continent':
                             return (
-                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 align-top">
                                 {getContinentDisplay(country.continent)}
                               </td>
                             )
                           case 'region':
                             return (
-                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 align-top">
                                 {country.region || '-'}
                               </td>
                             )
                           case 'phone_codes':
                             return (
-                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 align-top">
                                 {formatPhoneCodeListValue(country.phone_codes)}
                               </td>
                             )
                           case 'currency_codes':
                             return (
-                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 whitespace-normal break-words align-top">
                                 <ReferenceDetailList
                                   values={country.currency_codes}
                                   normalizeValue={(value) => String(value || '').trim().toUpperCase()}
@@ -836,7 +865,7 @@ export default function CountriesPage() {
                             )
                           case 'languages':
                             return (
-                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 whitespace-normal break-words align-top">
                                 <ReferenceDetailList
                                   values={country.languages}
                                   normalizeValue={(value) => String(value || '').trim().toLowerCase()}
@@ -854,7 +883,7 @@ export default function CountriesPage() {
                             )
                           default:
                             return (
-                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">-
+                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 align-top">-
                               </td>
                             )
                         }

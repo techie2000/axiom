@@ -13,9 +13,17 @@ interface DeferredBooleanPreference {
   value: boolean
   showPrompt: boolean
   promptResetKey: number
+  /** True while the user has an in-session change that hasn't been persisted yet. */
+  hasUnsavedChanges: boolean
   setValue: (next: boolean) => void
   toggle: () => void
   save: () => void
+  /**
+   * Immediately persists the current effective value as the user's stored default,
+   * regardless of whether a toast prompt is visible. Use this for explicit "Save as
+   * my default" actions so users can save at any time without re-triggering a change.
+   */
+  saveCurrentValue: () => void
   dismiss: () => void
 }
 
@@ -56,13 +64,24 @@ export function useDeferredBooleanPreference({
     setShowPrompt(false)
   }, [])
 
+  const hasUnsavedChanges = localValue !== null
+
+  const saveCurrentValue = useCallback(() => {
+    setStoredValue(String(value))
+    setLocalValue(null)
+    pendingValue.current = null
+    setShowPrompt(false)
+  }, [setStoredValue, value])
+
   return {
     value,
     showPrompt,
     promptResetKey,
+    hasUnsavedChanges,
     setValue,
     toggle,
     save,
+    saveCurrentValue,
     dismiss,
   }
 }

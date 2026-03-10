@@ -209,13 +209,24 @@ export default function CurrenciesPage() {
           subtitle={t('currencies.subtitle')}
           backHref={backHref}
           actions={
-            <button
-              onClick={expandedWidthPreference.toggle}
-              className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 transition-colors text-white text-sm font-medium"
-              title={effectiveExpandedWidth ? t('referenceLayout.normalWidth') : t('referenceLayout.expandedWidth')}
-            >
-              {effectiveExpandedWidth ? t('referenceLayout.normalButton') : t('referenceLayout.expandButton')}
-            </button>
+            <>
+              <button
+                onClick={expandedWidthPreference.toggle}
+                className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 transition-colors text-white text-sm font-medium"
+                title={effectiveExpandedWidth ? t('referenceLayout.normalWidth') : t('referenceLayout.expandedWidth')}
+              >
+                {effectiveExpandedWidth ? t('referenceLayout.normalButton') : t('referenceLayout.expandButton')}
+              </button>
+              {expandedWidthPreference.hasUnsavedChanges && (
+                <button
+                  onClick={expandedWidthPreference.saveCurrentValue}
+                  className="px-3 py-2 rounded-lg bg-green-700 hover:bg-green-600 transition-colors text-white text-xs font-medium"
+                  title={t('referenceLayout.savePageWidthDefault')}
+                >
+                  {t('admin.translations.width.savePrompt')}
+                </button>
+              )}
+            </>
           }
         />
 

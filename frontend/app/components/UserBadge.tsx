@@ -2,18 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { readStoredUser, StoredUser } from '../lib/stored-user'
 import { resetPreferencesCache } from '../lib/useUserPreference'
 import ThemeToggle from './ThemeToggle'
 import LanguageSelector from './LanguageSelector'
-
-interface StoredUser {
-  id: string
-  email: string
-  username: string
-  full_name: string
-  role: string
-  status: string
-}
 
 export default function UserBadge() {
   const router = useRouter()
@@ -24,12 +16,7 @@ export default function UserBadge() {
 
   useEffect(() => {
     setMounted(true)
-    try {
-      const raw = localStorage.getItem('axiom_user')
-      if (raw) setUser(JSON.parse(raw))
-    } catch {
-      // ignore malformed data
-    }
+    setUser(readStoredUser())
   }, [])
 
   useEffect(() => {
