@@ -20,6 +20,20 @@ type leiServiceStub struct {
 	errs           map[string]error
 	predecessors   []*domain.LEIRecord
 	predecessorErr error
+	legalNames     map[string]string
+	legalNamesErr  error
+	receivedCodes  []string
+}
+
+func (s *leiServiceStub) GetLegalNamesByLEICodes(codes []string) (map[string]string, error) {
+	s.receivedCodes = append([]string{}, codes...)
+	if s.legalNamesErr != nil {
+		return nil, s.legalNamesErr
+	}
+	if s.legalNames == nil {
+		return map[string]string{}, nil
+	}
+	return s.legalNames, nil
 }
 
 func (s *leiServiceStub) GetPredecessorLEIs(_ string) ([]*domain.LEIRecord, error) {
@@ -363,6 +377,70 @@ func TestGetPredecessorLEIs(t *testing.T) {
 		resp := executeGET("/lei/:lei/predecessors", "/lei/BBB22222222222222222/predecessors", h.GetPredecessorLEIs)
 		if resp.Code != http.StatusInternalServerError {
 			t.Fatalf("expected status %d, got %d", http.StatusInternalServerError, resp.Code)
+		}
+	})
+}
+
+func TestGetLegalNamesByLEICodes(t *testing.T) {
+	t.Run("returns bad request when codes query is missing", func(t *testing.T) {
+		h := NewLEIHandler(&leiServiceStub{}, &schedulerServiceStub{})
+
+		resp := executeGET("/lei/names", "/lei/names", h.GetLegalNamesByLEICodes)
+		if resp.Code != http.StatusBadRequest {
+			t.Fatalf("expected status %d, got %d", http.StatusBadRequest, resp.Code)
+		}
+		if !strings.Contains(resp.Body.String(), "codes query parameter is required") {
+			t.Fatalf("expected validation error, got %s", resp.Body.String())
+		}
+	})
+
+	t.Run("returns bad request when codes query is empty after trimming", func(t *testing.T) {
+		h := NewLEIHandler(&leiServiceStub{}, &schedulerServiceStub{})
+
+		resp := executeGET("/lei/names", "/lei/names?codes=,%20,%20", h.GetLegalNamesByLEICodes)
+		if resp.Code != http.StatusBadRequest {
+			t.Fatalf("expected status %d, got %d", http.StatusBadRequest, resp.Code)
+		}
+		if !strings.Contains(resp.Body.String(), "codes query parameter is required") {
+			t.Fatalf("expected validation error, got %s", resp.Body.String())
+		}
+	})
+
+	t.Run("returns legal names for valid codes", func(t *testing.T) {
+		stub := &leiServiceStub{
+			legalNames: map[string]string{
+				"AAA11111111111111111": "Entity A",
+				"BBB22222222222222222": "Entity B",
+			},
+		}
+		h := NewLEIHandler(stub, &schedulerServiceStub{})
+
+		resp := executeGET(
+			"/lei/names",
+			"/lei/names?codes=AAA11111111111111111,%20BBB22222222222222222",
+			h.GetLegalNamesByLEICodes,
+		)
+		if resp.Code != http.StatusOK {
+			t.Fatalf("expected status %d, got %d", http.StatusOK, resp.Code)
+		}
+
+		if len(stub.receivedCodes) != 2 {
+			t.Fatalf("expected 2 codes, got %d (%v)", len(stub.receivedCodes), stub.receivedCodes)
+		}
+		if stub.receivedCodes[0] != "AAA11111111111111111" || stub.receivedCodes[1] != "BBB22222222222222222" {
+			t.Fatalf("expected trimmed codes, got %v", stub.receivedCodes)
+		}
+	})
+
+	t.Run("returns internal server error on service failure", func(t *testing.T) {
+		h := NewLEIHandler(&leiServiceStub{legalNamesErr: errors.New("db failure")}, &schedulerServiceStub{})
+
+		resp := executeGET("/lei/names", "/lei/names?codes=AAA11111111111111111", h.GetLegalNamesByLEICodes)
+		if resp.Code != http.StatusInternalServerError {
+			t.Fatalf("expected status %d, got %d", http.StatusInternalServerError, resp.Code)
+		}
+		if !strings.Contains(resp.Body.String(), "Failed to retrieve LEI names") {
+			t.Fatalf("expected service error response, got %s", resp.Body.String())
 		}
 	})
 }

@@ -229,12 +229,13 @@ func (h *LEIHandler) ListLEI(c *gin.Context) {
 // @Produce json
 // @Param codes query string true "Comma-separated list of LEI codes (max 500)"
 // @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
 // @Failure 500 {object} map[string]string
 // @Router /api/v1/lei/names [get]
 func (h *LEIHandler) GetLegalNamesByLEICodes(c *gin.Context) {
 	rawCodes := c.Query("codes")
 	if rawCodes == "" {
-		c.JSON(http.StatusOK, map[string]string{})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "codes query parameter is required"})
 		return
 	}
 
@@ -251,6 +252,11 @@ func (h *LEIHandler) GetLegalNamesByLEICodes(c *gin.Context) {
 		}
 	}
 	codes = filtered
+
+	if len(codes) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "codes query parameter is required"})
+		return
+	}
 
 	names, err := h.leiService.GetLegalNamesByLEICodes(codes)
 	if err != nil {
