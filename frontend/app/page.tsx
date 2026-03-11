@@ -4,6 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { getAuthToken } from './lib/auth-token'
 
 export default function Home() {
   const [mounted, setMounted] = useState(false)
@@ -14,9 +15,7 @@ export default function Home() {
   useEffect(() => {
     setMounted(true)
 
-    const rawToken = localStorage.getItem('axiom_token')
-    const normalizedToken = rawToken?.replace(/^Bearer\s+/i, '').trim() ?? ''
-    const hasValidToken = normalizedToken !== '' && normalizedToken !== 'undefined' && normalizedToken !== 'null'
+    const hasValidToken = getAuthToken() !== null
     setIsAuthenticated(hasValidToken)
 
     if (!hasValidToken) {

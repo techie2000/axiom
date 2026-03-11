@@ -12,24 +12,13 @@ import CurrenciesRecordsCard from '../components/CurrenciesRecordsCard'
 import LanguagesRecordsCard from '../components/LanguagesRecordsCard'
 import ProtectedLandingCard from '../components/ProtectedLandingCard'
 import AdminSection from '../components/AdminSection'
+import { getAuthToken } from '../lib/auth-token'
 
 export default function DashboardPage() {
   const router = useRouter()
   const { t } = useTranslation('common')
   const [mounted, setMounted] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
-
-  const getAuthToken = (): string | null => {
-    const rawToken = localStorage.getItem('axiom_token')
-    if (!rawToken) return null
-
-    const normalizedToken = rawToken.replace(/^Bearer\s+/i, '').trim()
-    if (!normalizedToken || normalizedToken === 'undefined' || normalizedToken === 'null') {
-      return null
-    }
-
-    return normalizedToken
-  }
 
   useEffect(() => {
     setMounted(true)

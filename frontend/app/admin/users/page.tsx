@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next'
 import PageHeader from '../../components/PageHeader'
 import Alert from '../../components/Alert'
 import LoadingSpinner from '../../components/LoadingSpinner'
+import { getAuthToken } from '../../lib/auth-token'
 
 const API_BASE_URL =
   typeof window !== 'undefined'
@@ -80,8 +81,7 @@ function AdminUsersContent() {
     return status
   }
 
-  const getToken = () =>
-    typeof window !== 'undefined' ? localStorage.getItem('axiom_token') : null
+  const getToken = () => getAuthToken()
 
   const fetchUsers = useCallback(async () => {
     setLoading(true)

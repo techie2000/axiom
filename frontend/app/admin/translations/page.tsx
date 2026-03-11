@@ -13,6 +13,7 @@ import { SUPPORTED_LANGUAGES } from '../../lib/i18n'
 import { useDeferredBooleanPreference } from '../../lib/useDeferredBooleanPreference'
 import PreferenceSavePrompt from '../../components/PreferenceSavePrompt'
 import SortableHeaderCell from '../../components/SortableHeaderCell'
+import { getAuthToken } from '../../lib/auth-token'
 
 const API_BASE_URL =
   typeof window !== 'undefined'
@@ -147,8 +148,7 @@ export default function AdminTranslationsPage() {
   const [englishLocale, setEnglishLocale] = useState<LocaleNode | null>(null)
   const [translationKeyOptions, setTranslationKeyOptions] = useState<string[]>([])
 
-  const getToken = () =>
-    typeof window !== 'undefined' ? localStorage.getItem('axiom_token') : null
+  const getToken = () => getAuthToken()
 
   const fetchTranslations = useCallback(async () => {
     setLoading(true)
