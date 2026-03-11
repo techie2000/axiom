@@ -732,7 +732,7 @@ export default function AdminTranslationsPage() {
               {visibleTotal === 0
                 ? '0-0'
                 : `${page * pageSize + 1}-${Math.min((page + 1) * pageSize, visibleTotal).toLocaleString()}`}{' '}
-              {t('admin.translations.pagination.of', { count: visibleTotal.toLocaleString() })}
+              {t('admin.translations.pagination.of', { count: visibleTotal })}
             </span>
             <div className="flex gap-2">
               <button

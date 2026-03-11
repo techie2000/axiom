@@ -1798,7 +1798,7 @@ export default function LEIRecordsPage() {
         <div className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">
           <p>{t('leiRecords.dataSource')}</p>
           <p className="mt-2">
-            {t('leiRecords.totalDatabase', { count: totalRecords.toLocaleString() })} • 
+            {t('leiRecords.totalDatabase', { count: totalRecords })} |
             <Link href="/lei" className="ml-1 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 underline">
               {t('leiRecords.viewSyncStatus')}
             </Link>
