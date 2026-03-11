@@ -6,6 +6,7 @@ import Alert from '../components/Alert'
 import Badge from '../components/Badge'
 import LoadingSpinner from '../components/LoadingSpinner'
 import PageHeader from '../components/PageHeader'
+import SearchInputWithOverflowTooltip from '../components/SearchInputWithOverflowTooltip'
 import StatCard from '../components/StatCard'
 
 interface CodeMapping {
@@ -117,7 +118,7 @@ export default function CodeMappingsPage() {
 
         {/* Search */}
         <div className="mb-6">
-          <input
+          <SearchInputWithOverflowTooltip
             type="text"
             placeholder={t('codeMappings.searchPlaceholder')}
             value={searchTerm}

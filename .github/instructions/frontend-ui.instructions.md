@@ -98,6 +98,9 @@ const API_BASE_URL = typeof window !== 'undefined'
 - All components must support dark mode by default
 - Use transparent backgrounds with opacity: `bg-white/5`
 - Avoid hardcoded light-mode colors like `bg-white`, `bg-gray-50`, `text-gray-900`
+- For dark utility panels, overlays, dropdowns, and dev helper surfaces, prefer `zinc`/`neutral`
+  tokens (for example `dark:bg-zinc-900`, `dark:border-zinc-700`, `dark:text-zinc-100`) over cool
+  `gray`/`slate` tones when a blue cast would conflict with the adopted black/grey visual direction.
 - Include `<ThemeToggle />` component in page headers
 - **Dropdowns/Select Elements**: Add explicit dark styling to both select and option elements:
   ```tsx
@@ -219,6 +222,16 @@ EVERY visual change:
 - The `Columns` count should reflect current visible column count.
 - Use the LEI Records pattern as the baseline implementation for grouped or ungrouped column selectors.
 - **Column visibility must be backed by `useUserPreference`** (see User Preference Standard below).
+- All visible selector labels/actions must be rendered through i18n keys (`t('...')`).
+  Do not hardcode user-facing labels such as `Save as default`, `Select All`, `Reset`, `Columns`, or group names.
+- Keep icons/decorations outside translation keys where possible (e.g., render `aria-hidden` icon + translated text)
+  so translators only translate semantic text.
+- The selector header action row must use a stable split layout: left group for selection controls, right-aligned
+  persistent save action. Avoid `ml-auto` + `flex-wrap` combinations that misalign under longer translations.
+- Dark/light mode styling must be parity-tested for selector container, sticky header, action buttons, group headers,
+  checkbox rows, hover/focus states, and scrollable regions. No page-specific theme shortcuts.
+- Prefer a shared column selector component in `frontend/app/components/` for repeated selector UI patterns.
+  If a page temporarily inlines selector markup, it must match the shared visual and accessibility behavior exactly.
 
 ### Table Width Toggle Standard (Required)
 - Pages with wide data tables and optional columns must provide an `Expand/Normal` width toggle in the page header.

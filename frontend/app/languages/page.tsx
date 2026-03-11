@@ -8,6 +8,7 @@ import Badge from '../components/Badge'
 import LoadingSpinner from '../components/LoadingSpinner'
 import PageHeader from '../components/PageHeader'
 import PreferenceSavePrompt from '../components/PreferenceSavePrompt'
+import SearchInputWithOverflowTooltip from '../components/SearchInputWithOverflowTooltip'
 import SortableHeaderCell from '../components/SortableHeaderCell'
 import StatCard from '../components/StatCard'
 import SyncedWideTable from '../components/SyncedWideTable'
@@ -265,7 +266,7 @@ export default function LanguagesPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             <div>
               <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">{t('languages.filters.search')}</label>
-              <input
+              <SearchInputWithOverflowTooltip
                 type="text"
                 placeholder={t('languages.searchPlaceholder')}
                 value={searchTerm}

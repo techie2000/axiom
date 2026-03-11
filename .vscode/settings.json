@@ -193,7 +193,8 @@
     "xmldoc",
     "XNAS",
     "xvzf",
-    "zerolog"
+    "zerolog",
+    "لوحة"
   ],
   "go.toolsEnvVars": {
     "GOPROXY": "direct"

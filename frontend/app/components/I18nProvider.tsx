@@ -11,13 +11,26 @@
 
 import { useEffect } from 'react'
 import { I18nextProvider } from 'react-i18next'
-import i18n, { isRtlLanguage } from '../lib/i18n'
+import i18n, { isRtlLanguage, LANGUAGE_PREF_KEY, SUPPORTED_LANGUAGES } from '../lib/i18n'
+import I18nMissingTranslationsDevTool from './I18nMissingTranslationsDevTool'
 
 interface I18nProviderProps {
   children: React.ReactNode
 }
 
 export default function I18nProvider({ children }: I18nProviderProps) {
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const stored = (localStorage.getItem(LANGUAGE_PREF_KEY) || '').trim().toLowerCase().split('-')[0]
+    if (!stored) return
+
+    const isSupported = SUPPORTED_LANGUAGES.some((language) => language.code === stored)
+    if (!isSupported || i18n.language === stored) return
+
+    void i18n.changeLanguage(stored)
+  }, [])
+
   useEffect(() => {
     if (typeof window === 'undefined') return
 
@@ -119,9 +132,10 @@ export default function I18nProvider({ children }: I18nProviderProps) {
       if (!normalizedLanguageCode || normalizedLanguageCode === 'en') return
 
       try {
-        // Ensure the static namespace is loaded first so remote overrides are applied last.
-        await i18n.loadLanguages(normalizedLanguageCode)
-        await i18n.loadNamespaces('common')
+        // Rebuild the bundle from static locale files so removed/rejected overrides
+        // do not linger in memory, then apply current approved overrides.
+        i18n.removeResourceBundle(normalizedLanguageCode, 'common')
+        await i18n.reloadResources([normalizedLanguageCode], ['common'])
         sanitizeResourceBundle(normalizedLanguageCode, 'common')
 
         let offset = 0
@@ -131,6 +145,7 @@ export default function I18nProvider({ children }: I18nProviderProps) {
         while (true) {
           const params = new URLSearchParams({
             status: 'approved',
+            language: normalizedLanguageCode,
             limit: String(limit),
             offset: String(offset),
           })
@@ -211,5 +226,10 @@ export default function I18nProvider({ children }: I18nProviderProps) {
     }
   }, [])
 
-  return <I18nextProvider i18n={i18n}>{children}</I18nextProvider>
+  return (
+    <I18nextProvider i18n={i18n}>
+      {children}
+      <I18nMissingTranslationsDevTool />
+    </I18nextProvider>
+  )
 }

@@ -117,94 +117,7 @@
       "saveSuccess": "翻訳が正常に保存されました",
       "deleteSuccess": "翻訳が削除されました",
       "approveSuccess": "翻訳が承認されました",
-      "rejectSuccess": "翻訳が却下されました",
-      "englishDefaultLabel": "English Default",
-      "englishDefaultPlaceholder": "No English default found for this key",
-      "errors": {
-        "approveFailed": "Failed to approve translation",
-        "deleteFailed": "Failed to delete translation",
-        "loadFailed": "Failed to load translations",
-        "rejectFailed": "Failed to reject translation",
-        "submitFailed": "Failed to submit"
-      },
-      "pagination": {
-        "next": "Next →",
-        "of": "of {{count}}",
-        "prev": "← Prev"
-      },
-      "stale": {
-        "badge": "STALE",
-        "cleanupButton": "Cleanup Stale ({{count}})",
-        "cleanupFailed": "Failed to clean up stale translation rows",
-        "cleanupTitle": "Delete translation rows whose keys are no longer present in locale files",
-        "deleteConfirm": "Delete {{count}} stale translation row(s) that no longer match active locale keys?",
-        "deletedPartial": "Deleted {{deleted}} stale row(s); {{failed}} deletion(s) failed.",
-        "deletedSuccess": "Deleted {{count}} stale translation row(s).",
-        "noneFound": "No stale translation rows found."
-      },
-      "width": {
-        "expandedButton": "↔️ Expand",
-        "expandedTitle": "Expanded Width",
-        "normalButton": "⬅️ Normal",
-        "normalTitle": "Normal Width",
-        "savePrompt": "Save page width as your default?"
-      }
-    },
-    "users": {
-      "actions": {
-        "approve": "Approve",
-        "deactivate": "Deactivate",
-        "demote": "Demote",
-        "demoteTooltip": "Demote to regular user",
-        "loading": "...",
-        "promoteToAdmin": "Promote to Admin",
-        "promoteTooltip": "Promote to administrator",
-        "reactivate": "Reactivate"
-      },
-      "aria": {
-        "userActions": "User actions"
-      },
-      "bootstrapWarning": {
-        "bodyAfter": "button to grant them admin rights. Once that real admin logs in, the bootstrap account will be deactivated automatically.",
-        "bodyBefore": "Approve a pending user, then use the",
-        "title": "⚠️ You are logged in with the default bootstrap administrator account."
-      },
-      "columns": {
-        "actions": "Actions",
-        "requested": "Requested",
-        "role": "Role",
-        "status": "Status",
-        "user": "User",
-        "username": "Username"
-      },
-      "emptyWithStatus": "No {{status}} users found.",
-      "errors": {
-        "actionFailed": "Action failed",
-        "approvalFailed": "Approval failed",
-        "loadFailed": "Failed to load users",
-        "network": "Network error",
-        "networkRetry": "Network error - please try again",
-        "roleChangeFailed": "Role change failed"
-      },
-      "fallback": {
-        "none": "-"
-      },
-      "filters": {
-        "all": "All"
-      },
-      "loadingUsers": "Loading users...",
-      "roles": {
-        "admin": "Admin",
-        "user": "User"
-      },
-      "status": {
-        "pending": "Pending",
-        "active": "Active",
-        "inactive": "Inactive",
-        "permanentlyLocked": "Permanently locked"
-      },
-      "subtitle": "Review and approve user account requests",
-      "title": "User Management"
+      "rejectSuccess": "翻訳が却下されました"
     }
   },
   "footer": {
@@ -422,7 +335,7 @@
     "title": "languages.title"
   },
   "leiRecords": {
-    "subtitle": "GLEIF Legal Entity Identifiers (ISO 17442)",
+    "subtitle": "GLEIF 法人識別子 (ISO 17442)",
     "title": "LEI Records"
   },
   "referenceLayout": {
@@ -464,3 +377,4 @@
     "title": "Standard Settlement Instructions (SSI)"
   }
 }
+

@@ -1192,7 +1192,7 @@ export default function LEIRecordsPage() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center py-20">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            <p className="mt-4 opacity-70">Loading LEI records...</p>
+            <p className="mt-4 opacity-70">{t('leiRecords.loading')}</p>
           </div>
         </div>
       </div>
@@ -1211,15 +1211,15 @@ export default function LEIRecordsPage() {
               <button
                 onClick={expandedWidthPreference.toggle}
                 className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 transition-colors text-white text-sm font-medium flex items-center gap-2"
-                title={effectiveExpandedWidth ? 'Normal Width' : 'Expanded Width'}
+                title={effectiveExpandedWidth ? t('leiRecords.widthNormal') : t('leiRecords.widthExpand')}
               >
-                {effectiveExpandedWidth ? '⬅️ Normal' : '↔️ Expand'}
+                {effectiveExpandedWidth ? t('leiRecords.widthNormalBtn') : t('leiRecords.widthExpandBtn')}
               </button>
 
               <div className="relative">
                 <button
                   onClick={() => setShowColumnSelector(!showColumnSelector)}
-                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 transition-colors text-white text-sm font-medium flex items-center gap-2"
+                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors text-white text-sm font-medium flex items-center gap-2"
                 >
                   ⚙️ Columns ({effectiveVisibleColumns.size})
                 </button>
@@ -1228,7 +1228,7 @@ export default function LEIRecordsPage() {
                   <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-white/20 rounded-lg shadow-xl z-50">
                     <div className="sticky top-0 bg-white dark:bg-gray-800 border-b-2 border-gray-200 dark:border-white/10 p-3">
                       <div className="flex justify-between items-center mb-2">
-                        <h3 className="font-semibold text-gray-900 dark:text-white">Select Columns</h3>
+                        <h3 className="font-semibold text-gray-900 dark:text-white">{t('leiRecords.columns.selector.title')}</h3>
                         <button
                           onClick={() => setShowColumnSelector(false)}
                           className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
@@ -1239,15 +1239,15 @@ export default function LEIRecordsPage() {
                       <div className="flex gap-2 text-xs">
                         <button
                           onClick={() => handleSetVisibleColumns(new Set(AVAILABLE_COLUMNS.map(c => c.key)))}
-                          className="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded hover:bg-blue-200 dark:hover:bg-blue-800"
+                          className="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-gray-700 dark:text-gray-100 rounded hover:bg-blue-200 dark:hover:bg-gray-600"
                         >
-                          Select All
+                          {t('leiRecords.columns.selector.selectAll')}
                         </button>
                         <button
                           onClick={() => handleSetVisibleColumns(new Set(AVAILABLE_COLUMNS.filter(c => c.defaultVisible).map(c => c.key)))}
                           className="px-2 py-1 bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
                         >
-                          Reset to Default
+                          {t('leiRecords.columns.selector.resetToDefault')}
                         </button>
                       </div>
                     </div>
@@ -1294,9 +1294,9 @@ export default function LEIRecordsPage() {
               <button
                 onClick={toggleLocationDisplayMode}
                 className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 transition-colors text-white text-sm font-medium"
-                title={showLocationCodes ? 'Display mode: codes' : 'Display mode: names'}
+                title={showLocationCodes ? t('leiRecords.display.codes') : t('leiRecords.display.names')}
               >
-                {showLocationCodes ? '🏷️ Display: Codes' : '🏷️ Display: Names'}
+                {showLocationCodes ? t('leiRecords.display.codes') : t('leiRecords.display.names')}
               </button>
             </>
           }
@@ -1313,48 +1313,45 @@ export default function LEIRecordsPage() {
         )}
 
         <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <StatCard title="Total Records" value={totalRecords.toLocaleString()} />
+          <StatCard title={t('leiRecords.stats.totalRecords')} value={totalRecords.toLocaleString()} />
           <StatCard
-            title="Current Page"
-            value={`${currentPage} ${hasActiveFilters ? '(filtered)' : `of ${totalPages.toLocaleString()}`}`}
+            title={t('leiRecords.stats.currentPage')}
+            value={`${currentPage} ${hasActiveFilters ? t('leiRecords.stats.currentPageFiltered', { page: currentPage }) : t('leiRecords.stats.currentPageOf', { page: currentPage, total: totalPages.toLocaleString() })}`}
           />
           <StatCard
-            title="Showing"
+            title={t('leiRecords.stats.showing')}
             value={`${((currentPage - 1) * itemsPerPage) + 1}-${Math.min(currentPage * itemsPerPage, totalRecords)}`}
           />
         </div>
 
         {/* Info message about sorting behavior (Hybrid Approach) */}
         {!hasActiveFilters && (
-          <Alert variant="info" title="ℹ️ Showing recently updated records" className="mb-6">
-            Results are sorted by most recent updates for fast browsing. Use search or filters to sort by name.
+          <Alert variant="info" title={t('leiRecords.infoAlert.title')} className="mb-6">
+            {t('leiRecords.infoAlert.message')}
           </Alert>
         )}
 
         <div className="relative z-40 mb-6 bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm rounded-lg p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Search</label>
+              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">{t('leiRecords.filters.search')}</label>
               <SearchInputWithOverflowTooltip
                 type="text"
-                placeholder="LEI code, legal name, or other names..."
+                placeholder={t('leiRecords.filters.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full px-4 py-2 rounded-lg border-2 border-gray-300 bg-gray-50 text-gray-900 placeholder-gray-500 dark:border-white/20 dark:bg-white/5 dark:text-white dark:placeholder-gray-400 focus:border-blue-500 focus:outline-none"
               />
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                Searches LEI code, legal name, and other names.
-              </p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Status</label>
+              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">{t('leiRecords.filters.status')}</label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="w-full px-4 py-2 rounded-lg border-2 border-gray-300 bg-gray-50 text-gray-900 dark:border-white/20 dark:bg-white/5 dark:text-white focus:border-blue-500 focus:outline-none"
               >
-                <option value="" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">All Statuses</option>
+                <option value="" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">{t('leiRecords.filters.allStatuses')}</option>
                 {statusOptions.map(status => (
                   <option key={status} value={status} className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">
                     {formatStatusFilterLabel(status)}
@@ -1364,13 +1361,13 @@ export default function LEIRecordsPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Category</label>
+              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">{t('leiRecords.filters.category')}</label>
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
                 className="w-full px-4 py-2 rounded-lg border-2 border-gray-300 bg-gray-50 text-gray-900 dark:border-white/20 dark:bg-white/5 dark:text-white focus:border-blue-500 focus:outline-none"
               >
-                <option value="" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">All Categories</option>
+                <option value="" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">{t('leiRecords.filters.allCategories')}</option>
                 {categoryOptions.map(category => (
                   <option key={category} value={category} className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">{formatEnumDisplayValue(category)}</option>
                 ))}
@@ -1378,11 +1375,11 @@ export default function LEIRecordsPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Country</label>
+              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">{t('leiRecords.filters.country')}</label>
               <div className="relative z-50" ref={countryDropdownRef}>
                 <SearchInputWithOverflowTooltip
                   type="text"
-                  placeholder="Search countries..."
+                  placeholder={t('leiRecords.filters.countryPlaceholder')}
                   value={countrySearch}
                   onChange={(e) => {
                     setCountrySearch(e.target.value)
@@ -1402,7 +1399,7 @@ export default function LEIRecordsPage() {
                       }}
                       className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700"
                     >
-                      All Countries
+                      {t('leiRecords.filters.allCountries')}
                     </button>
                     {countryOptions
                       .filter(country => 
@@ -1433,7 +1430,7 @@ export default function LEIRecordsPage() {
                       country.code.toLowerCase().includes(countrySearch.toLowerCase())
                     ).length === 0 && (
                       <div className="px-4 py-2 text-gray-500 dark:text-gray-400 text-sm">
-                        No countries found
+                        {t('leiRecords.filters.noCountriesFound')}
                       </div>
                     )}
                   </div>
@@ -1441,7 +1438,7 @@ export default function LEIRecordsPage() {
                 
                 {countryFilter && (
                   <div className="mt-1 text-xs text-gray-600 dark:text-gray-400">
-                    Filtered by: {countryOptions.find(c => c.code === countryFilter)?.name || countryFilter}
+                    {t('leiRecords.filters.filteredBy', { name: countryOptions.find(c => c.code === countryFilter)?.name || countryFilter })}
                   </div>
                 )}
               </div>
@@ -1467,17 +1464,19 @@ export default function LEIRecordsPage() {
               disabled={currentPage === 1}
               className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-500 dark:disabled:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-white"
             >
-              ← Previous
+              {t('leiRecords.pagination.previous')}
             </button>
             <span className="text-gray-700 dark:text-gray-300">
-                Page {currentPage} {hasActiveFilters ? `(showing ${records.length} of ${records.length})` : `of ${totalPages.toLocaleString()}`}
+                {hasActiveFilters
+                  ? t('leiRecords.pagination.pageFiltered', { page: currentPage, count: records.length })
+                  : t('leiRecords.pagination.pageOf', { page: currentPage, total: totalPages.toLocaleString() })}
             </span>
             <button
               onClick={() => setCurrentPage(p => p + 1)}
               disabled={isLastPage}
               className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-500 dark:disabled:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-white"
             >
-              Next →
+              {t('leiRecords.pagination.next')}
             </button>
           </div>
         )}
@@ -1487,13 +1486,13 @@ export default function LEIRecordsPage() {
           <div ref={filterBarRef} className="sticky top-0 z-40 bg-blue-50 dark:bg-blue-900 border-b-2 border-blue-200 dark:border-blue-700 px-6 py-3 shadow-md rounded-t-lg">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-3 flex-wrap text-sm">
-                <span className="font-medium text-blue-900 dark:text-blue-100">🔍 Active Filters:</span>
+                <span className="font-medium text-blue-900 dark:text-blue-100">{t('leiRecords.filters.activeFilters')}</span>
                 {debouncedSearch && (
                   <button
                     onClick={() => setSearchTerm('')}
                     className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors flex items-center gap-1"
                   >
-                    Search: &quot;{debouncedSearch}&quot; <span className="ml-1">✕</span>
+                    {t('leiRecords.filters.searchChip', { value: debouncedSearch })} <span className="ml-1">✕</span>
                   </button>
                 )}
                 {statusFilter && (
@@ -1501,7 +1500,7 @@ export default function LEIRecordsPage() {
                     onClick={() => setStatusFilter('')}
                     className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors flex items-center gap-1"
                   >
-                    Status: {formatStatusFilterLabel(statusFilter)} <span className="ml-1">✕</span>
+                    {t('leiRecords.filters.statusChip', { value: formatStatusFilterLabel(statusFilter) })} <span className="ml-1">✕</span>
                   </button>
                 )}
                 {categoryFilter && (
@@ -1509,7 +1508,7 @@ export default function LEIRecordsPage() {
                     onClick={() => setCategoryFilter('')}
                     className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors flex items-center gap-1"
                   >
-                    Category: {formatEnumDisplayValue(categoryFilter)} <span className="ml-1">✕</span>
+                    {t('leiRecords.filters.categoryChip', { value: formatEnumDisplayValue(categoryFilter) })} <span className="ml-1">✕</span>
                   </button>
                 )}
                 {countryFilter && (
@@ -1517,7 +1516,7 @@ export default function LEIRecordsPage() {
                     onClick={() => setCountryFilter('')}
                     className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors flex items-center gap-1"
                   >
-                    Country: {countryOptions.find(c => c.code === countryFilter)?.name || countryFilter} <span className="ml-1">✕</span>
+                    {t('leiRecords.filters.countryChip', { name: countryOptions.find(c => c.code === countryFilter)?.name || countryFilter })} <span className="ml-1">✕</span>
                   </button>
                 )}
               </div>
@@ -1538,7 +1537,7 @@ export default function LEIRecordsPage() {
               <div className="fixed inset-0 bg-black/30 dark:bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
                 <div className="flex flex-col items-center gap-3 bg-white dark:bg-gray-800 px-8 py-6 rounded-lg shadow-2xl border-2 border-blue-500 dark:border-blue-400">
                   <div className="animate-spin rounded-full h-16 w-16 border-4 border-gray-200 dark:border-gray-700 border-t-blue-600 dark:border-t-blue-400"></div>
-                  <p className="text-base font-semibold text-gray-900 dark:text-gray-100">Loading results...</p>
+                  <p className="text-base font-semibold text-gray-900 dark:text-gray-100">{t('leiRecords.loadingResults')}</p>
                 </div>
               </div>
             )}
@@ -1751,7 +1750,7 @@ export default function LEIRecordsPage() {
           </div>
         ) : (
             <div className="text-center py-12 bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm rounded-lg">
-              <p className="text-xl text-gray-600 dark:text-gray-400">No records found with current filters</p>
+              <p className="text-xl text-gray-600 dark:text-gray-400">{t('leiRecords.noRecordsFound')}</p>
             </div>
           )}
 
@@ -1762,14 +1761,14 @@ export default function LEIRecordsPage() {
               disabled={currentPage === 1}
               className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-500 dark:disabled:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-white"
             >
-              ← Previous
+              {t('leiRecords.pagination.previous')}
             </button>
             <div className="flex items-center gap-4">
               <span className="text-gray-700 dark:text-gray-300">
-                Page {currentPage} {hasActiveFilters && `(showing ${records.length})`}
+                {t('leiRecords.pagination.page', { page: currentPage })}{hasActiveFilters && ` (${t('leiRecords.stats.showing').toLowerCase()} ${records.length})`}
               </span>
               <div className="flex items-center gap-2">
-                <label htmlFor="items-per-page" className="text-sm text-gray-700 dark:text-gray-300">Items per page:</label>
+                <label htmlFor="items-per-page" className="text-sm text-gray-700 dark:text-gray-300">{t('leiRecords.pagination.itemsPerPage')}</label>
                 <select
                   id="items-per-page"
                   value={itemsPerPage}
@@ -1791,17 +1790,17 @@ export default function LEIRecordsPage() {
               disabled={isLastPage}
               className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-500 dark:disabled:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-white"
             >
-              Next →
+              {t('leiRecords.pagination.next')}
             </button>
           </div>
         )}
 
         <div className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">
-          <p>Data source: GLEIF Golden Copy Files • Updated via scheduled sync jobs</p>
+          <p>{t('leiRecords.dataSource')}</p>
           <p className="mt-2">
-            Total database contains {totalRecords.toLocaleString()} LEI records • 
+            {t('leiRecords.totalDatabase', { count: totalRecords.toLocaleString() })} • 
             <Link href="/lei" className="ml-1 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 underline">
-              View sync status
+              {t('leiRecords.viewSyncStatus')}
             </Link>
           </p>
         </div>
@@ -1821,31 +1820,31 @@ export default function LEIRecordsPage() {
             <div className="sticky top-0 bg-white dark:bg-gray-900 border-b-2 border-gray-200 dark:border-white/10 p-6 z-10">
               <div className="flex justify-between items-start mb-4">
                 <div className="flex-1">
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">LEI Record Details</h2>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{t('leiRecords.modal.title')}</h2>
                   <p className="text-lg font-mono text-blue-600 dark:text-blue-400">{selectedRecord.lei}</p>
                 </div>
                 <button
                   onClick={() => setSelectedRecord(null)}
                   className="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors text-gray-900 dark:text-white font-medium"
                 >
-                  ✕ Close
+                  {t('leiRecords.modal.close')}
                 </button>
               </div>
               {/* Date Display Mode Toggle */}
               <div className="flex items-center gap-2 text-sm">
-                <span className="text-gray-600 dark:text-gray-400">Date display:</span>
+                <span className="text-gray-600 dark:text-gray-400">{t('leiRecords.modal.dateDisplay')}</span>
                 <button
                   onClick={() => setDateDisplayMode(dateDisplayMode === 'relative' ? 'absolute' : 'relative')}
                   className="px-3 py-1 rounded-lg bg-blue-100 hover:bg-blue-200 dark:bg-blue-900 dark:hover:bg-blue-800 text-blue-900 dark:text-blue-100 transition-colors font-medium"
                 >
-                  {dateDisplayMode === 'relative' ? '📅 Relative' : '🔢 Days only'}
+                  {dateDisplayMode === 'relative' ? t('leiRecords.modal.dateRelative') : t('leiRecords.modal.dateDaysOnly')}
                 </button>
-                <span className="text-gray-600 dark:text-gray-400 ml-2">Display:</span>
+                <span className="text-gray-600 dark:text-gray-400 ml-2">{t('leiRecords.modal.display')}</span>
                 <button
                   onClick={toggleLocationDisplayMode}
                   className="px-3 py-1 rounded-lg bg-indigo-100 hover:bg-indigo-200 dark:bg-indigo-900 dark:hover:bg-indigo-800 text-indigo-900 dark:text-indigo-100 transition-colors font-medium"
                 >
-                  {showLocationCodes ? '🏷️ Codes' : '🏷️ Names'}
+                  {showLocationCodes ? t('leiRecords.display.codes') : t('leiRecords.display.names')}
                 </button>
               </div>
             </div>
@@ -1855,7 +1854,7 @@ export default function LEIRecordsPage() {
               {/* Core Information */}
               <section className="bg-white dark:bg-gray-900 p-6 pb-0">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 pb-2 border-b border-gray-200 dark:border-white/10">
-                  Core Information
+                  {t('leiRecords.modal.coreInformation')}
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white dark:bg-gray-900">
                   <div>
@@ -1919,14 +1918,14 @@ export default function LEIRecordsPage() {
               {/* Addresses - Side by Side with Aligned Fields */}
               <section className="bg-white dark:bg-gray-900 p-6 pb-0">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 pb-2 border-b border-gray-200 dark:border-white/10">
-                  Addresses
+                  {t('leiRecords.modal.addresses')}
                 </h3>
                 
                 {/* Column Headers */}
                 <div className="grid grid-cols-2 gap-6 mb-4 bg-white dark:bg-gray-900">
                   <div className="flex items-center justify-between">
                     <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
-                      Legal Address
+                      {t('leiRecords.modal.legalAddress')}
                     </h4>
                     {selectedRecord.legal_address_city && (
                       <button
@@ -1943,13 +1942,13 @@ export default function LEIRecordsPage() {
                         className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-xs font-medium flex items-center gap-1 transition-colors"
                         title="View on OpenStreetMap"
                       >
-                        🗺️ View on Map
+                        {t('leiRecords.modal.viewOnMap')}
                       </button>
                     )}
                   </div>
                   <div className="flex items-center justify-between">
                     <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
-                      Headquarters Address
+                      {t('leiRecords.modal.hqAddress')}
                     </h4>
                     {!isHqAddressSameAsLegal(selectedRecord) && selectedRecord.hq_address_city && (
                       <button
@@ -1966,7 +1965,7 @@ export default function LEIRecordsPage() {
                         className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-xs font-medium flex items-center gap-1 transition-colors"
                         title="View on OpenStreetMap"
                       >
-                        🗺️ View on Map
+                        {t('leiRecords.modal.viewOnMap')}
                       </button>
                     )}
                   </div>
@@ -1988,7 +1987,7 @@ export default function LEIRecordsPage() {
                       <div>
                         <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Address</label>
                         <p className="text-sm text-gray-500 dark:text-gray-400 italic mt-1">
-                          Same as Legal Address
+                          {t('leiRecords.modal.sameAsLegal')}
                         </p>
                       </div>
                     </div>
@@ -2158,7 +2157,7 @@ export default function LEIRecordsPage() {
               {/* Registration Information */}
               <section className="bg-white dark:bg-gray-900 p-6 pb-0">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 pb-2 border-b border-gray-200 dark:border-white/10">
-                  Registration Information
+                  {t('leiRecords.modal.registrationInformation')}
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white dark:bg-gray-900">
                   <div>
@@ -2215,17 +2214,17 @@ export default function LEIRecordsPage() {
               {(selectedRecord.managing_lou || selectedRecord.successor_lei || predecessorLeiLoading || predecessorLeiReferences.length > 0) && (
                 <section className="bg-white dark:bg-gray-900 p-6 pb-0">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 pb-2 border-b border-gray-200 dark:border-white/10">
-                    Associated Entities
+                    {t('leiRecords.modal.associatedEntities')}
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white dark:bg-gray-900">
                     <div>
-                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Predecessor LEI</label>
+                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('leiRecords.modal.predecessorLei')}</label>
                       <div className="mt-1 space-y-2">
                         {predecessorLeiLoading && (
-                          <p className="text-xs text-gray-400 dark:text-gray-500 italic">Checking predecessor links...</p>
+                          <p className="text-xs text-gray-400 dark:text-gray-500 italic">{t('leiRecords.modal.checkingPredecessorLinks')}</p>
                         )}
                         {!predecessorLeiLoading && predecessorLeiReferences.length === 0 && (
-                          <p className="text-xs text-gray-400 dark:text-gray-500 italic">No predecessor links found.</p>
+                          <p className="text-xs text-gray-400 dark:text-gray-500 italic">{t('leiRecords.modal.noPredecessorLinks')}</p>
                         )}
                         {!predecessorLeiLoading && predecessorLeiReferences.map((reference) => (
                           <div key={reference.lei}>
@@ -2245,7 +2244,7 @@ export default function LEIRecordsPage() {
                     </div>
 
                     <div>
-                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Successor LEI</label>
+                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('leiRecords.modal.successorLei')}</label>
                       {selectedRecord.successor_lei ? (
                         <>
                           <button
@@ -2259,7 +2258,7 @@ export default function LEIRecordsPage() {
                             <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{successorLeiName}</p>
                           )}
                           {successorLeiNameLoading && (
-                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 italic">Loading name...</p>
+                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 italic">{t('leiRecords.modal.loadingName')}</p>
                           )}
                           {!successorLeiNameLoading && !successorLeiName && (
                             <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 italic">Name unavailable.</p>
@@ -2272,7 +2271,7 @@ export default function LEIRecordsPage() {
 
                     {selectedRecord.managing_lou && (
                       <div className="md:col-span-2 border-t border-gray-200 pt-4 dark:border-white/10">
-                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Managing LOU</label>
+                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('leiRecords.modal.managingLou')}</label>
                         <button
                           type="button"
                           onClick={(event) => handleLinkedLeiClick(event, selectedRecord.managing_lou)}
@@ -2284,10 +2283,10 @@ export default function LEIRecordsPage() {
                           <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{managingLouName}</p>
                         )}
                         {managingLouNameLoading && (
-                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 italic">Loading name...</p>
+                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 italic">{t('leiRecords.modal.loadingName')}</p>
                         )}
                         {!managingLouNameLoading && !managingLouName && (
-                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 italic">Name unavailable.</p>
+                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 italic">{t('leiRecords.modal.nameUnavailable')}</p>
                         )}
                       </div>
                     )}
@@ -2299,11 +2298,11 @@ export default function LEIRecordsPage() {
               {selectedRecord.validation_authority && (
                 <section className="bg-white dark:bg-gray-900 p-6">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 pb-2 border-b border-gray-200 dark:border-white/10">
-                    Validation
+                    {t('leiRecords.modal.validation')}
                   </h3>
                   <div className="grid grid-cols-1 gap-4 bg-white dark:bg-gray-900">
                     <div>
-                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Validation Authority</label>
+                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('leiRecords.modal.validationAuthority')}</label>
                       <p className="text-sm text-gray-900 dark:text-white mt-1">{selectedRecord.validation_authority}</p>
                     </div>
                   </div>
@@ -2318,21 +2317,21 @@ export default function LEIRecordsPage() {
       <PreferenceSavePrompt
         visible={showColumnSavePrompt}
         resetKey={columnSaveVersion}
-        label="Save column selection as your default?"
+        label={t('leiRecords.saveColumnPrompt')}
         onSave={handleSaveColumns}
         onDismiss={handleDismissColumns}
       />
       <PreferenceSavePrompt
         visible={expandedWidthPreference.showPrompt}
         resetKey={expandedWidthPreference.promptResetKey}
-        label="Save page width as your default?"
+        label={t('leiRecords.saveWidthPrompt')}
         onSave={expandedWidthPreference.save}
         onDismiss={expandedWidthPreference.dismiss}
       />
       <PreferenceSavePrompt
         visible={locationDisplayPreference.showPrompt}
         resetKey={locationDisplayPreference.promptResetKey}
-        label="Save display mode as your default?"
+        label={t('leiRecords.saveDisplayPrompt')}
         onSave={locationDisplayPreference.save}
         onDismiss={locationDisplayPreference.dismiss}
       />

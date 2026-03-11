@@ -3,11 +3,13 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 export default function Home() {
   const [mounted, setMounted] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [signedInAs, setSignedInAs] = useState<string | null>(null)
+  const { t } = useTranslation('common')
 
   useEffect(() => {
     setMounted(true)
@@ -72,13 +74,13 @@ export default function Home() {
                 />
                 <div>
                   <span className="inline-block mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400">
-                    Axiom platform
+                    {t('landing.platformLabel')}
                   </span>
                   <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 dark:text-white leading-tight">
                     Axiom
                   </h1>
                   <p className="mt-1.5 text-gray-700 dark:text-gray-200">
-                    Financial Services Static Data Management System
+                    {t('landing.subtitle')}
                   </p>
                 </div>
               </div>
@@ -86,14 +88,14 @@ export default function Home() {
 
             <div>
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                Welcome to Axiom
+                {t('landing.welcomeTitle')}
               </h2>
               <p className="text-gray-700 dark:text-gray-200 mb-6">
                 {!mounted
-                  ? 'Loading your experience...'
+                  ? t('landing.loading')
                   : isAuthenticated
-                  ? 'Welcome back. Continue to your modules or browse public reference data.'
-                  : 'Choose where you want to go: sign in for protected features, or browse public reference data.'}
+                  ? t('landing.welcomeBack')
+                  : t('landing.chooseWhere')}
               </p>
             </div>
 
@@ -107,27 +109,27 @@ export default function Home() {
                   href="/dashboard"
                   className="inline-flex items-center justify-center rounded-md bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 font-semibold transition-colors"
                 >
-                  Return to Dashboard →
+                  {t('landing.returnToDashboard')}
                 </Link>
               ) : (
                 <Link
                   href="/login"
                   className="inline-flex items-center justify-center rounded-md bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 font-semibold transition-colors"
                 >
-                  Sign In →
+                  {t('landing.signInBtn')}
                 </Link>
               )}
               <Link
                 href="/home"
                 className="inline-flex items-center justify-center rounded-md border-2 border-blue-500 text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 px-6 py-3 font-semibold transition-colors"
               >
-                Explore Public Reference Data
+                {t('landing.explorePublicData')}
               </Link>
             </div>
             <div className="mt-6 text-sm text-gray-500 dark:text-gray-400">
               {mounted && (isAuthenticated
-                ? `You are signed in${signedInAs ? ` as ${signedInAs}` : ''}.`
-                : 'Protected modules are available after sign-in.')}
+                ? (signedInAs ? t('landing.signedInAs', { name: signedInAs }) : t('landing.signedIn'))
+                : t('landing.protectedModules'))}
             </div>
           </div>
         </section>

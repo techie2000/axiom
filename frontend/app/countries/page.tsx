@@ -9,6 +9,7 @@ import LoadingSpinner from '../components/LoadingSpinner'
 import PageHeader from '../components/PageHeader'
 import PreferenceSavePrompt from '../components/PreferenceSavePrompt'
 import ReferenceDetailList from '../components/ReferenceDetailList'
+import SearchInputWithOverflowTooltip from '../components/SearchInputWithOverflowTooltip'
 import SortableHeaderCell from '../components/SortableHeaderCell'
 import StatCard from '../components/StatCard'
 import SyncedWideTable from '../components/SyncedWideTable'
@@ -551,33 +552,36 @@ export default function CountriesPage() {
               <div className="relative">
                 <button
                   onClick={() => setShowColumnSelector(!showColumnSelector)}
-                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 transition-colors text-white text-sm font-medium"
+                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors text-white text-sm font-medium"
                 >
                   {t('countries.actions.columns', { count: effectiveVisibleColumns.size })}
                 </button>
 
                 {showColumnSelector && (
                   <div className="absolute right-0 mt-2 w-72 max-h-96 overflow-y-auto bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-white/20 rounded-lg shadow-xl z-50 p-3">
-                    <div className="flex flex-wrap gap-2 text-xs mb-3">
-                      <button
-                        onClick={() => handleSetVisibleColumns(new Set(AVAILABLE_COLUMNS.map((column) => column.key)))}
-                        className="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded hover:bg-blue-200 dark:hover:bg-blue-800"
-                      >
-                        {t('countries.actions.selectAll')}
-                      </button>
-                      <button
-                        onClick={() => handleSetVisibleColumns(new Set(AVAILABLE_COLUMNS.filter((column) => column.defaultVisible).map((column) => column.key)))}
-                        className="px-2 py-1 bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-                      >
-                        {t('countries.actions.reset')}
-                      </button>
+                    <div className="mb-3 flex items-start justify-between gap-2 text-xs">
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={() => handleSetVisibleColumns(new Set(AVAILABLE_COLUMNS.map((column) => column.key)))}
+                          className="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-gray-700 dark:text-gray-100 rounded hover:bg-blue-200 dark:hover:bg-gray-600"
+                        >
+                          {t('countries.actions.selectAll')}
+                        </button>
+                        <button
+                          onClick={() => handleSetVisibleColumns(new Set(AVAILABLE_COLUMNS.filter((column) => column.defaultVisible).map((column) => column.key)))}
+                          className="px-2 py-1 bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                        >
+                          {t('countries.actions.reset')}
+                        </button>
+                      </div>
                       {localColumns !== null && (
                         <button
                           onClick={handleSaveColumnsNow}
-                          className="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded hover:bg-green-200 dark:hover:bg-green-800 ml-auto"
+                          className="shrink-0 whitespace-nowrap px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded hover:bg-green-200 dark:hover:bg-green-800"
                           title="Save current column selection as your permanent default"
                         >
-                          💾 Save as default
+                          <span aria-hidden="true">💾 </span>
+                          {t('countries.actions.saveAsDefault')}
                         </button>
                       )}
                     </div>
@@ -635,7 +639,7 @@ export default function CountriesPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
             <div>
               <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">{t('countries.filters.search')}</label>
-              <input
+              <SearchInputWithOverflowTooltip
                 type="text"
                 placeholder={t('countries.searchPlaceholder')}
                 value={searchTerm}

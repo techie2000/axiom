@@ -8,6 +8,7 @@ import PageHeader from '../../components/PageHeader'
 import Alert from '../../components/Alert'
 import Badge from '../../components/Badge'
 import LoadingSpinner from '../../components/LoadingSpinner'
+import SearchInputWithOverflowTooltip from '../../components/SearchInputWithOverflowTooltip'
 import { SUPPORTED_LANGUAGES } from '../../lib/i18n'
 import { useDeferredBooleanPreference } from '../../lib/useDeferredBooleanPreference'
 import PreferenceSavePrompt from '../../components/PreferenceSavePrompt'
@@ -281,6 +282,7 @@ export default function AdminTranslationsPage() {
       })
       if (!res.ok) throw new Error(t('admin.translations.errors.rejectFailed'))
       showSuccess(t('admin.translations.rejectSuccess'))
+      notifyTranslationsUpdated()
       fetchTranslations()
     } catch {
       setError(t('admin.translations.errors.rejectFailed'))
@@ -300,6 +302,7 @@ export default function AdminTranslationsPage() {
       })
       if (!res.ok) throw new Error(t('admin.translations.errors.deleteFailed'))
       showSuccess(t('admin.translations.deleteSuccess'))
+      notifyTranslationsUpdated()
       fetchTranslations()
     } catch {
       setError(t('admin.translations.errors.deleteFailed'))
@@ -571,7 +574,7 @@ export default function AdminTranslationsPage() {
             <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
               {t('common.search')}
             </label>
-            <input
+            <SearchInputWithOverflowTooltip
               type="text"
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(0) }}

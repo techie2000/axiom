@@ -78,8 +78,11 @@
     "filter": "Filter",
     "clear": "Clear",
     "clearFilters": "Clear Filters",
+    "filteredResults": "Filtered Results",
     "noResults": "No results found",
-    "required": "Required"
+    "required": "Required",
+    "errorTitle": "⚠️ Error:",
+    "noticeTitle": "📋 Notice:"
   },
   "admin": {
     "translations": {
@@ -126,11 +129,11 @@
         "next": "Next →"
       },
       "width": {
-        "normalTitle": "Normal Width",
-        "expandedTitle": "Expanded Width",
-        "normalButton": "⬅️ Normal",
-        "expandedButton": "↔️ Expand",
-        "savePrompt": "Save page width as your default?"
+        "normalTitle": "$t(referenceLayout.normalWidth)",
+        "expandedTitle": "$t(referenceLayout.expandedWidth)",
+        "normalButton": "$t(referenceLayout.normalButton)",
+        "expandedButton": "$t(referenceLayout.expandButton)",
+        "savePrompt": "$t(referenceLayout.savePageWidthDefault)"
       },
       "stale": {
         "badge": "STALE",
@@ -276,14 +279,14 @@
     "about": {
       "title": "💡 About Code Mappings:"
     },
-    "noticeTitle": "📋 Notice:",
-    "errorTitle": "⚠️ Error:",
+    "noticeTitle": "$t(common.noticeTitle)",
+    "errorTitle": "$t(common.errorTitle)",
     "searchPlaceholder": "Search by system, code type, or code value...",
     "stats": {
       "totalMappings": "Total Mappings",
       "activeMappings": "Active Mappings",
       "sourceSystems": "Source Systems",
-      "filteredResults": "Filtered Results"
+      "filteredResults": "$t(common.filteredResults)"
     },
     "columns": {
       "fromSystem": "From System",
@@ -313,154 +316,324 @@
       "unableToConnect": "Unable to connect to backend API. Please ensure the backend service is running at {{apiBaseUrl}}"
     }
   },
+  "dashboard": {
+    "platformLabel": "Axiom platform",
+    "title": "Axiom Dashboard",
+    "subtitle": "Public and protected data modules in one place.",
+    "publicDataHubButton": "Public Data Hub →",
+    "moduleCatalog": {
+      "title": "Module Catalog",
+      "subtitle": "Choose the area you want to manage"
+    },
+    "publicReferenceData": {
+      "title": "Public Reference Data",
+      "subtitle": "Publicly accessible ISO standards and reference data"
+    },
+    "masterData": {
+      "title": "Master Data Management",
+      "subtitle": "Core financial entities and reference data • Authentication required"
+    },
+    "dataAcquisition": {
+      "title": "Data Acquisition & Processing",
+      "subtitle": "External data ingestion and processing pipelines"
+    },
+    "dataImport": {
+      "title": "Data Import 🔒",
+      "description": "Manual data import and validation tools",
+      "comingSoon": "Coming Soon"
+    },
+    "instruments": {
+      "title": "Instruments",
+      "description": "Securities, bonds, and derivatives"
+    },
+    "accounts": {
+      "title": "Accounts",
+      "description": "Trading accounts and settlement instructions"
+    },
+    "ssi": {
+      "title": "SSI",
+      "description": "Standard Settlement Instructions"
+    },
+    "codeMappings": {
+      "title": "Code Mappings",
+      "description": "Cross-system code translation"
+    },
+    "redirecting": "Redirecting to sign in..."
+  },
+  "landing": {
+    "platformLabel": "$t(dashboard.platformLabel)",
+    "subtitle": "Financial Services Static Data Management System",
+    "welcomeTitle": "Welcome to Axiom",
+    "loading": "Loading your experience...",
+    "welcomeBack": "Welcome back. Continue to your modules or browse public reference data.",
+    "chooseWhere": "Choose where you want to go: sign in for protected features, or browse public reference data.",
+    "returnToDashboard": "Return to Dashboard →",
+    "signInBtn": "Sign In →",
+    "explorePublicData": "Explore Public Reference Data",
+    "signedInAs": "You are signed in as {{name}}.",
+    "signedIn": "You are signed in.",
+    "protectedModules": "Protected modules are available after sign-in."
+  },
+  "publicHub": {
+    "platformLabel": "$t(dashboard.platformLabel)",
+    "title": "Public Reference Data",
+    "subtitle": "Publicly accessible ISO standards and LEI reference datasets.",
+    "catalogTitle": "Data Catalog",
+    "catalogSubtitle": "Browse available public datasets",
+    "iso3166Countries": "ISO 3166 Countries",
+    "iso4217Currencies": "ISO 4217 Currencies",
+    "isoLanguages": "ISO Languages",
+    "leiRecordsTag": "$t(leiRecords.title)"
+  },
   "leiRecords": {
     "title": "LEI Records",
-    "subtitle": "GLEIF Legal Entity Identifiers (ISO 17442)"
+    "subtitle": "GLEIF Legal Entity Identifiers (ISO 17442)",
+    "loading": "Loading LEI records...",
+    "loadingResults": "Loading results...",
+    "noRecordsFound": "No records found with current filters",
+    "dataSource": "Data source: GLEIF Golden Copy Files • Updated via scheduled sync jobs",
+    "totalDatabase": "Total database contains {{count}} LEI records",
+    "viewSyncStatus": "View sync status",
+    "stats": {
+      "totalRecords": "Total Records",
+      "currentPage": "Current Page",
+      "currentPageFiltered": "{{page}} (filtered)",
+      "currentPageOf": "{{page}} of {{total}}",
+      "showing": "Showing"
+    },
+    "infoAlert": {
+      "title": "ℹ️ Showing recently updated records",
+      "message": "Results are sorted by most recent updates for fast browsing. Use search or filters to sort by name."
+    },
+    "filters": {
+      "search": "Search",
+      "searchPlaceholder": "LEI code, legal name, or other names...",
+      "status": "Status",
+      "allStatuses": "All Statuses",
+      "category": "Category",
+      "allCategories": "All Categories",
+      "country": "Country",
+      "countryPlaceholder": "Search countries...",
+      "allCountries": "All Countries",
+      "noCountriesFound": "No countries found",
+      "filteredBy": "Filtered by: {{name}}",
+      "activeFilters": "🔍 Active Filters:",
+      "searchChip": "Search: \"{{value}}\"",
+      "statusChip": "Status: {{value}}",
+      "categoryChip": "Category: {{value}}",
+      "countryChip": "Country: {{name}}"
+    },
+    "noDataMatchesFilters": "No LEI data matches the selected filters.",
+    "columns": {
+      "selector": {
+        "title": "Select Columns",
+        "selectAll": "Select All",
+        "resetToDefault": "Reset to Default"
+      },
+      "button": "⚙️ Columns ({{count}})"
+    },
+    "display": {
+      "codes": "🏷️ Display: Codes",
+      "names": "🏷️ Display: Names"
+    },
+    "pagination": {
+      "previous": "← Previous",
+      "next": "Next →",
+      "page": "Page {{page}}",
+      "pageFiltered": "Page {{page}} (showing {{count}})",
+      "pageOf": "Page {{page}} of {{total}}",
+      "itemsPerPage": "Items per page:"
+    },
+    "modal": {
+      "title": "LEI Record Details",
+      "close": "✕ Close",
+      "dateDisplay": "Date display:",
+      "dateRelative": "📅 Relative",
+      "dateDaysOnly": "🔢 Days only",
+      "display": "Display:",
+      "coreInformation": "Core Information",
+      "addresses": "Addresses",
+      "legalAddress": "Legal Address",
+      "hqAddress": "Headquarters Address",
+      "sameAsLegal": "Same as Legal Address",
+      "viewOnMap": "🗺️ View on Map",
+      "registrationInformation": "Registration Information",
+      "associatedEntities": "Associated Entities",
+      "predecessorLei": "Predecessor LEI",
+      "checkingPredecessorLinks": "Checking predecessor links...",
+      "noPredecessorLinks": "No predecessor links found.",
+      "successorLei": "Successor LEI",
+      "noSuccessorLink": "No successor link found.",
+      "managingLou": "Managing LOU",
+      "loadingName": "Loading name...",
+      "nameUnavailable": "Name unavailable.",
+      "validation": "Validation",
+      "validationAuthority": "Validation Authority"
+    },
+    "widthNormal": "$t(referenceLayout.normalWidth)",
+    "widthExpand": "$t(referenceLayout.expandedWidth)",
+    "widthNormalBtn": "$t(referenceLayout.normalButton)",
+    "widthExpandBtn": "$t(referenceLayout.expandButton)",
+    "saveColumnPrompt": "Save column selection as your default?",
+    "saveWidthPrompt": "$t(referenceLayout.savePageWidthDefault)",
+    "saveDisplayPrompt": "$t(referenceLayout.saveDisplayModeDefault)"
   },
   "footer": {
     "copyright": "Axiom – Financial Services Static Data"
   },
   "actions": {
-    "clearFilters": "actions.clearFilters"
+    "clearFilters": "$t(common.clearFilters)"
   },
   "countries": {
     "actions": {
-      "columns": "countries.actions.columns",
-      "reset": "countries.actions.reset",
-      "selectAll": "countries.actions.selectAll"
+      "columns": "Columns ({{count}})",
+      "reset": "Reset",
+      "saveAsDefault": "Save as default",
+      "selectAll": "Select All"
     },
     "columns": {
-      "continentCode": "countries.columns.continentCode",
-      "continentName": "countries.columns.continentName",
-      "currencyCodes": "countries.columns.currencyCodes",
-      "currencyNames": "countries.columns.currencyNames",
-      "languageCodes": "countries.columns.languageCodes",
-      "languageNames": "countries.columns.languageNames"
+      "active": "Active",
+      "alpha2Primary": "Alpha-2 (Primary)",
+      "alpha3Secondary": "Alpha-3 (Secondary)",
+      "capital": "Capital",
+      "continent": "Continent",
+      "continentCode": "Continent Code",
+      "continentName": "Continent",
+      "currencyCodes": "Currency Codes",
+      "currencyNames": "Currency Names",
+      "flag": "Flag",
+      "languageCodes": "Language Codes",
+      "languageNames": "Language Names",
+      "languages": "Languages",
+      "name": "Name",
+      "nativeName": "Native Name",
+      "numeric": "Numeric",
+      "phoneCodes": "Phone Codes",
+      "region": "Region"
     },
-    "dataQualityTitle": "countries.dataQualityTitle",
-    "emptyWithSearch": "countries.emptyWithSearch",
-    "errorTitle": "countries.errorTitle",
+    "dataQualityTitle": "Data Quality Warning",
+    "emptyWithSearch": "No countries found matching your search",
+    "errorTitle": "$t(common.errorTitle)",
     "filters": {
-      "${activeFilter}": "countries.filters.${activeFilter}",
-      "active": "countries.filters.active",
-      "all": "countries.filters.all",
-      "allContinentCodes": "countries.filters.allContinentCodes",
-      "allContinents": "countries.filters.allContinents",
-      "allRegions": "countries.filters.allRegions",
-      "continent": "countries.filters.continent",
-      "continentChip": "countries.filters.continentChip",
-      "inactive": "countries.filters.inactive",
-      "region": "countries.filters.region",
-      "regionChip": "countries.filters.regionChip",
-      "search": "countries.filters.search",
-      "status": "countries.filters.status",
-      "statusChip": "countries.filters.statusChip"
+      "active": "Active",
+      "all": "All",
+      "allContinentCodes": "All Continent Codes",
+      "allContinents": "All Continents",
+      "allRegions": "All Regions",
+      "continent": "Continent",
+      "continentChip": "Continent: {{value}}",
+      "inactive": "Inactive",
+      "region": "Region",
+      "regionChip": "Region: {{value}}",
+      "search": "Search",
+      "status": "Status",
+      "statusChip": "Status: {{value}}"
     },
-    "footer": "countries.footer",
-    "loading": "countries.loading",
-    "noDataTip": "countries.noDataTip",
-    "noticeTitle": "countries.noticeTitle",
+    "footer": "Countries data source: ISO 3166 reference data",
+    "loading": "Loading countries...",
+    "noDataTip": "No countries data is available. Please verify the backend service and seed data.",
+    "noticeTitle": "$t(common.noticeTitle)",
     "prompts": {
-      "saveColumnsDefault": "countries.prompts.saveColumnsDefault"
+      "saveColumnsDefault": "Save selected columns as your default?"
     },
-    "searchPlaceholder": "countries.searchPlaceholder",
+    "searchPlaceholder": "Search by country name, code, region, or capital...",
     "stats": {
-      "dataStandard": "countries.stats.dataStandard",
-      "filteredResults": "countries.stats.filteredResults",
-      "iso3166": "countries.stats.iso3166",
-      "totalCountries": "countries.stats.totalCountries"
+      "dataStandard": "Data Standard",
+      "filteredResults": "$t(common.filteredResults)",
+      "iso3166": "ISO 3166",
+      "totalCountries": "Total Countries"
     },
-    "subtitle": "countries.subtitle",
-    "title": "countries.title"
+    "subtitle": "Browse ISO 3166 country codes and reference data",
+    "title": "Countries"
   },
   "currencies": {
     "aria": {
-      "filterAlertCls": "currencies.aria.filterAlertCls",
-      "filterOfac": "currencies.aria.filterOfac"
+      "filterAlertCls": "Filter currencies allowed in ALERT CLS",
+      "filterOfac": "Filter OFAC sanctioned currencies"
     },
     "columns": {
-      "alertCls": "currencies.columns.alertCls",
-      "code": "currencies.columns.code",
-      "decimals": "currencies.columns.decimals",
-      "name": "currencies.columns.name",
-      "ofac": "currencies.columns.ofac",
-      "symbol": "currencies.columns.symbol"
+      "alertCls": "ALERT CLS",
+      "code": "Code",
+      "decimals": "Decimals",
+      "name": "Name",
+      "ofac": "OFAC",
+      "symbol": "Symbol"
     },
-    "emptyWithSearch": "currencies.emptyWithSearch",
-    "errorTitle": "currencies.errorTitle",
+    "emptyWithSearch": "No currencies found matching your search",
+    "errorTitle": "$t(common.errorTitle)",
     "filters": {
-      "alertClsAllowed": "currencies.filters.alertClsAllowed",
-      "allCurrencies": "currencies.filters.allCurrencies",
-      "complianceChip": "currencies.filters.complianceChip",
-      "ofacSanctioned": "currencies.filters.ofacSanctioned"
+      "alertClsAllowed": "ALERT CLS Allowed",
+      "allCurrencies": "All Currencies",
+      "complianceChip": "Compliance: {{value}}",
+      "ofacSanctioned": "OFAC Sanctioned"
     },
-    "footer": "currencies.footer",
-    "loading": "currencies.loading",
-    "noDataTip": "currencies.noDataTip",
-    "noticeTitle": "currencies.noticeTitle",
-    "searchPlaceholder": "currencies.searchPlaceholder",
+    "footer": "Currency data source: ISO 4217 and compliance reference feeds",
+    "loading": "Loading currencies...",
+    "noDataTip": "No currencies data is available. Please verify the backend service and seed data.",
+    "noticeTitle": "$t(common.noticeTitle)",
+    "searchPlaceholder": "Search by code, name, or symbol...",
     "stats": {
-      "alertClsAllowed": "currencies.stats.alertClsAllowed",
-      "filteredResults": "currencies.stats.filteredResults",
-      "ofacSanctioned": "currencies.stats.ofacSanctioned",
-      "totalCurrencies": "currencies.stats.totalCurrencies"
+      "alertClsAllowed": "$t(currencies.filters.alertClsAllowed)",
+      "filteredResults": "$t(common.filteredResults)",
+      "ofacSanctioned": "$t(currencies.filters.ofacSanctioned)",
+      "totalCurrencies": "Total Currencies"
     },
     "status": {
-      "allowed": "currencies.status.allowed",
-      "sanctioned": "currencies.status.sanctioned"
+      "allowed": "Allowed",
+      "sanctioned": "Sanctioned"
     },
-    "subtitle": "currencies.subtitle",
-    "title": "currencies.title"
+    "subtitle": "Browse ISO 4217 currency codes and compliance metadata",
+    "title": "Currencies"
   },
   "filters": {
-    "activeFilters": "filters.activeFilters",
-    "clearAll": "filters.clearAll",
-    "searchChip": "filters.searchChip"
+    "activeFilters": "Active Filters:",
+    "clearAll": "Clear all",
+    "searchChip": "Search: {{value}}"
   },
   "languages": {
     "aria": {
-      "filterLtr": "languages.aria.filterLtr",
-      "filterRtl": "languages.aria.filterRtl"
+      "filterLtr": "Filter left-to-right languages",
+      "filterRtl": "Filter right-to-left languages"
     },
     "columns": {
-      "code": "languages.columns.code",
-      "direction": "languages.columns.direction",
-      "languageName": "languages.columns.languageName",
-      "nativeName": "languages.columns.nativeName"
+      "code": "Code",
+      "direction": "Direction",
+      "languageName": "Language Name",
+      "nativeName": "Native Name"
     },
-    "emptyWithSearch": "languages.emptyWithSearch",
-    "errorTitle": "languages.errorTitle",
+    "emptyWithSearch": "No languages found matching your search",
+    "errorTitle": "$t(common.errorTitle)",
     "filters": {
-      "all": "languages.filters.all",
-      "direction": "languages.filters.direction",
-      "directionChip": "languages.filters.directionChip",
-      "ltr": "languages.filters.ltr",
-      "rtl": "languages.filters.rtl",
-      "search": "languages.filters.search"
+      "all": "All",
+      "direction": "Direction",
+      "directionChip": "Direction: {{value}}",
+      "ltr": "LTR",
+      "rtl": "RTL",
+      "search": "Search"
     },
-    "footer": "languages.footer",
-    "loading": "languages.loading",
-    "noticeTitle": "languages.noticeTitle",
-    "searchPlaceholder": "languages.searchPlaceholder",
+    "footer": "Language data source: ISO 639 and locale metadata",
+    "loading": "Loading languages...",
+    "noticeTitle": "$t(common.noticeTitle)",
+    "searchPlaceholder": "Search by language name, native name, or code...",
     "stats": {
-      "filteredResults": "languages.stats.filteredResults",
-      "ltrLanguages": "languages.stats.ltrLanguages",
-      "rtlLanguages": "languages.stats.rtlLanguages",
-      "totalLanguages": "languages.stats.totalLanguages"
+      "filteredResults": "$t(common.filteredResults)",
+      "ltrLanguages": "LTR Languages",
+      "rtlLanguages": "RTL Languages",
+      "totalLanguages": "Total Languages"
     },
-    "subtitle": "languages.subtitle",
-    "title": "languages.title"
+    "subtitle": "Browse supported language codes and metadata",
+    "title": "Languages"
   },
   "referenceLayout": {
-    "displayCodesButton": "referenceLayout.displayCodesButton",
-    "displayModeCodes": "referenceLayout.displayModeCodes",
-    "displayModeNames": "referenceLayout.displayModeNames",
-    "displayNamesButton": "referenceLayout.displayNamesButton",
-    "expandButton": "referenceLayout.expandButton",
-    "expandedWidth": "referenceLayout.expandedWidth",
-    "normalButton": "referenceLayout.normalButton",
-    "normalWidth": "referenceLayout.normalWidth",
-    "saveDisplayModeDefault": "referenceLayout.saveDisplayModeDefault",
-    "savePageWidthDefault": "referenceLayout.savePageWidthDefault"
+    "displayCodesButton": "Show Codes",
+    "displayModeCodes": "Display code values",
+    "displayModeNames": "Display localized names",
+    "displayNamesButton": "Show Names",
+    "expandButton": "↔️ Expand",
+    "expandedWidth": "Expanded Width",
+    "normalButton": "⬅️ Normal",
+    "normalWidth": "Normal Width",
+    "saveDisplayModeDefault": "Save display mode as your default?",
+    "savePageWidthDefault": "Save page width as your default?"
   }
 }

@@ -1,8 +1,8 @@
 /**
  * i18n configuration for Axiom frontend.
  *
- * Uses i18next with the browser language detector and HTTP backend (fetching
- * locale JSON files from /public/locales/).  English is the required fallback;
+ * Uses i18next with HTTP backend (fetching locale JSON files from
+ * /public/locales/).  English is the required fallback;
  * Arabic, Chinese (Simplified), Dutch, French, German, Italian, Japanese,
  * Portuguese (Brazilian), and Spanish are supported out of the box.
  *
@@ -13,7 +13,6 @@
 
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
-import LanguageDetector from 'i18next-browser-languagedetector'
 import HttpBackend from 'i18next-http-backend'
 
 export const SUPPORTED_LANGUAGES = [
@@ -119,21 +118,15 @@ export function isRtlLanguage(code: string): boolean {
   return SUPPORTED_LANGUAGES.find((l) => l.code === code)?.rtl ?? false
 }
 
-function getStoredLanguage(): string | null {
-  if (typeof window === 'undefined') return null
-  return localStorage.getItem(LANGUAGE_PREF_KEY)
-}
-
 // Only initialise once.
 if (!i18n.isInitialized) {
   i18n
     .use(HttpBackend)
-    .use(LanguageDetector)
     .use(initReactI18next)
     .init({
-      // Start with the value stored in localStorage (mirrors the user-preference
-      // system), then fall back to browser detection, then English.
-      lng: getStoredLanguage() ?? undefined,
+      // Keep startup language deterministic for SSR/hydration consistency.
+      // A client-side effect applies user preference after mount.
+      lng: 'en',
       fallbackLng: ['en'],
       supportedLngs: SUPPORTED_LANGUAGES.map((l) => l.code),
       defaultNS: 'common',
@@ -146,13 +139,6 @@ if (!i18n.isInitialized) {
 
       interpolation: {
         escapeValue: false, // React already escapes values.
-      },
-
-      detection: {
-        // Detection order: localStorage key → cookie → browser language header.
-        order: ['localStorage', 'navigator'],
-        lookupLocalStorage: LANGUAGE_PREF_KEY,
-        caches: ['localStorage'],
       },
 
       react: {

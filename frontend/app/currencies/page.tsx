@@ -8,6 +8,7 @@ import Badge from '../components/Badge'
 import LoadingSpinner from '../components/LoadingSpinner'
 import PageHeader from '../components/PageHeader'
 import PreferenceSavePrompt from '../components/PreferenceSavePrompt'
+import SearchInputWithOverflowTooltip from '../components/SearchInputWithOverflowTooltip'
 import SortableHeaderCell from '../components/SortableHeaderCell'
 import StatCard from '../components/StatCard'
 import SyncedWideTable from '../components/SyncedWideTable'
@@ -271,7 +272,7 @@ export default function CurrenciesPage() {
         {/* Search and compliance filter */}
         <div className="mb-6 bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm rounded-lg p-6">
           <div className="flex flex-col sm:flex-row gap-3 mb-4">
-          <input
+          <SearchInputWithOverflowTooltip
             type="text"
             placeholder={t('currencies.searchPlaceholder')}
             value={searchTerm}
