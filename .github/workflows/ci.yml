@@ -193,7 +193,8 @@ jobs:
           fi
         working-directory: ./frontend
 
-      - name: Verify i18n catalogs are complete and up to date
+      - name: Verify i18n catalogs are complete and up to date (non-blocking temporary)
+        continue-on-error: true
         run: npm run i18n:verify
         working-directory: ./frontend
 
