@@ -52,14 +52,14 @@ COMMENT ON COLUMN ui_translations.updated_at IS 'Timestamp of the most recent ch
 INSERT INTO languages (code, language_name, native_name, rtl)
 VALUES
     ('en', 'English', 'English', FALSE),
-    ('fr', 'French', 'Francais', FALSE),
-    ('es', 'Spanish', 'Espanol', FALSE),
+    ('fr', 'French', 'Français', FALSE),
+    ('es', 'Spanish', 'Español', FALSE),
     ('de', 'German', 'Deutsch', FALSE),
-    ('ja', 'Japanese', 'Nihongo', FALSE),
-    ('ar', 'Arabic', 'al-''arabiyah', TRUE),
-    ('zh', 'Chinese', 'Zhongwen', FALSE),
+    ('ja', 'Japanese', '日本語', FALSE),
+    ('ar', 'Arabic', 'العربية', TRUE),
+    ('zh', 'Chinese', '中文', FALSE),
     ('it', 'Italian', 'Italiano', FALSE),
-    ('pt', 'Portuguese', 'Portugues', FALSE),
+    ('pt', 'Portuguese', 'Português', FALSE),
     ('nl', 'Dutch', 'Nederlands', FALSE)
 ON CONFLICT (code) DO NOTHING;
 
