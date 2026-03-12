@@ -310,16 +310,20 @@ This section is a quick reference.
 | Code | Native Name | RTL |
 | ---- | ----------- | --- |
 | `en` | English | No |
-| `fr` | Français | No |
-| `es` | Español | No |
-| `de` | Deutsch | No |
-| `ja` | 日本語 | No |
 | `ar` | العربية | Yes |
+| `zh` | 中文 | No |
+| `nl` | Nederlands | No |
+| `fr` | Français | No |
+| `de` | Deutsch | No |
+| `it` | Italiano | No |
+| `ja` | 日本語 | No |
+| `pt` | Português | No |
+| `es` | Español | No |
 
 ### Adding a translation key (quick start)
 
 1. Add the key to `frontend/public/locales/en/common.json` (English is the source of truth).
-2. Add the same key to all other locale files (`fr/`, `es/`, `de/`, `ja/`, `ar/`).
+2. Add the same key to all other locale files (`ar/`, `de/`, `es/`, `fr/`, `it/`, `ja/`, `nl/`, `pt/`, `zh/`).
 3. Use the key in the component:
 
 ```tsx
