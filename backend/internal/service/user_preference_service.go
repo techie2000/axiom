@@ -2,7 +2,6 @@ package service
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
@@ -69,7 +68,6 @@ func (s *userPreferenceService) Set(userID, pageKey, preferenceKey, value, ipAdd
 		PageKey:       pageKey,
 		PreferenceKey: preferenceKey,
 		NewValue:      value,
-		ChangedAt:     time.Now().UTC(),
 	}
 	if existing != nil {
 		old := existing.PreferenceValue

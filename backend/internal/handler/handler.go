@@ -1247,7 +1247,7 @@ func (h *UserPreferenceHandler) SetPreference(c *gin.Context) {
 		return
 	}
 
-	if err := h.svc.Set(userID, req.PageKey, req.PreferenceKey, req.PreferenceValue, c.ClientIP()); err != nil {
+	if err := h.svc.Set(userID, req.PageKey, req.PreferenceKey, req.PreferenceValue, c.RemoteIP()); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save preference"})
 		return
 	}

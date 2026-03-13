@@ -36,7 +36,7 @@ COMMENT ON COLUMN user_preferences_audit.old_value IS
 did not exist prior to this write (i.e. first save of this preference).';
 COMMENT ON COLUMN user_preferences_audit.new_value IS
 'Serialised preference value after the change. Booleans stored as
-''true''/''false''; column arrays stored as JSON strings.';
+''true''/''false''; column arrays stored as comma-separated lists.';
 COMMENT ON COLUMN user_preferences_audit.changed_at IS
 'Database timestamp at which the change was committed. Uses the DB clock
 (NOW()) rather than the application clock to avoid client-clock skew.';
