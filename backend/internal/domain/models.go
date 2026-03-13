@@ -368,6 +368,23 @@ func (UserPreference) TableName() string {
 	return "user_preferences"
 }
 
+// PreferenceAudit is an append-only record of every preference upsert.
+// old_value is nil when the preference did not previously exist.
+type PreferenceAudit struct {
+	ID            uuid.UUID  `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+	UserID        uuid.UUID  `gorm:"type:uuid;not null;index" json:"user_id"`
+	PageKey       string     `gorm:"size:100;not null" json:"page_key"`
+	PreferenceKey string     `gorm:"size:100;not null" json:"preference_key"`
+	OldValue      *string    `gorm:"type:text" json:"old_value"`
+	NewValue      string     `gorm:"type:text;not null" json:"new_value"`
+	ChangedAt     time.Time  `gorm:"not null;default:now()" json:"changed_at"`
+	IPAddress     *string    `gorm:"size:45" json:"ip_address"`
+}
+
+func (PreferenceAudit) TableName() string {
+	return "preference_audit"
+}
+
 // TranslationStatus represents the review lifecycle of a UI translation.
 type TranslationStatus string
 

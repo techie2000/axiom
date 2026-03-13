@@ -56,6 +56,11 @@ export default function ThemeToggle() {
         onSave={themePreference.save}
         onDismiss={themePreference.dismiss}
         label="Save theme as your default?"
+        showUndo={themePreference.showUndo}
+        undoResetKey={themePreference.undoResetKey}
+        onUndo={themePreference.undo}
+        onUndoDismiss={themePreference.undoDismiss}
+        undoLabel="Theme saved — Undo?"
       />
     </>
   )

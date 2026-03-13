@@ -128,6 +128,9 @@ export default function CountriesPage() {
   // always get 8 s from their *last* column change rather than their first.
   const [columnsSaveVersion, setColumnsSaveVersion] = useState(0)
   const pendingColumns = useRef<Set<CountryColumnKey> | null>(null)
+  const previousColumns = useRef<string | null>(null)
+  const [showColumnsUndoToast, setShowColumnsUndoToast] = useState(false)
+  const [columnsUndoVersion, setColumnsUndoVersion] = useState(0)
 
   const [hasHydrated, setHasHydrated] = useState(false)
   const effectiveExpandedWidth = hasHydrated ? expandedWidthPreference.value : true
@@ -147,14 +150,28 @@ export default function CountriesPage() {
 
   const handleSaveColumns = useCallback(() => {
     if (pendingColumns.current) {
+      previousColumns.current = storedColumns
       setStoredColumns(Array.from(pendingColumns.current).join(','))
       setLocalColumns(null)
       pendingColumns.current = null
     }
     setShowColumnsPrompt(false)
-  }, [setStoredColumns])
+    setShowColumnsUndoToast(true)
+    setColumnsUndoVersion(v => v + 1)
+  }, [setStoredColumns, storedColumns])
 
   const handleDismissColumns = useCallback(() => { setShowColumnsPrompt(false) }, [])
+
+  const handleUndoColumns = useCallback(() => {
+    if (previousColumns.current !== null) {
+      setStoredColumns(previousColumns.current)
+      setLocalColumns(null)
+      previousColumns.current = null
+    }
+    setShowColumnsUndoToast(false)
+  }, [setStoredColumns])
+
+  const handleUndoDismissColumns = useCallback(() => { setShowColumnsUndoToast(false) }, [])
 
   // Saves the current effective column selection immediately as the stored default,
   // without requiring a new toast cycle. Column preferences cannot reuse the
@@ -949,6 +966,11 @@ export default function CountriesPage() {
         onSave={expandedWidthPreference.save}
         onDismiss={expandedWidthPreference.dismiss}
         label={t('referenceLayout.savePageWidthDefault')}
+        showUndo={expandedWidthPreference.showUndo}
+        undoResetKey={expandedWidthPreference.undoResetKey}
+        onUndo={expandedWidthPreference.undo}
+        onUndoDismiss={expandedWidthPreference.undoDismiss}
+        undoLabel={t('preferences.savedUndo')}
       />
       <PreferenceSavePrompt
         visible={showColumnsPrompt}
@@ -956,6 +978,11 @@ export default function CountriesPage() {
         onSave={handleSaveColumns}
         onDismiss={handleDismissColumns}
         label={t('countries.prompts.saveColumnsDefault')}
+        showUndo={showColumnsUndoToast}
+        undoResetKey={columnsUndoVersion}
+        onUndo={handleUndoColumns}
+        onUndoDismiss={handleUndoDismissColumns}
+        undoLabel={t('preferences.savedUndo')}
       />
       <PreferenceSavePrompt
         visible={referenceDisplayPreference.showPrompt}
@@ -963,6 +990,11 @@ export default function CountriesPage() {
         onSave={referenceDisplayPreference.save}
         onDismiss={referenceDisplayPreference.dismiss}
         label={t('referenceLayout.saveDisplayModeDefault')}
+        showUndo={referenceDisplayPreference.showUndo}
+        undoResetKey={referenceDisplayPreference.undoResetKey}
+        onUndo={referenceDisplayPreference.undo}
+        onUndoDismiss={referenceDisplayPreference.undoDismiss}
+        undoLabel={t('preferences.savedUndo')}
       />
     </div>
   )

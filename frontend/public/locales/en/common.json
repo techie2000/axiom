@@ -72,7 +72,8 @@
     "englishTooltips": "English tooltips",
     "englishTooltipsDescription": "Show English text on hover when the UI is in another language.",
     "openUserMenu": "Open user menu",
-    "menuLabel": "Global Preferences"
+    "menuLabel": "Global Preferences",
+    "savedUndo": "✓ Saved — Undo?"
   },
   "common": {
     "loading": "Loading…",
