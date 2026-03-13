@@ -305,8 +305,8 @@ LIMIT 51
 
 ### Documentation
 
-- `docs/LEI_SEARCH_PERFORMANCE_ANALYSIS.md` (performance analysis)
-- `docs/DYNAMIC_SELECT_IMPLEMENTATION.md` (this file)
+- `docs/performance/LEI_SEARCH_PERFORMANCE_ANALYSIS.md` (performance analysis)
+- `docs/performance/DYNAMIC_SELECT_IMPLEMENTATION.md` (this file)
 
 ## Deployment Notes
 

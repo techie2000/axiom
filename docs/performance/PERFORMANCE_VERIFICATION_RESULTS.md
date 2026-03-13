@@ -112,7 +112,7 @@ LIMIT 51
 ### Option A: Add B-tree Index for Sorting (Quick Win)
 
 ```sql
--- Migration: 000011_add_btree_index_for_sorting.up.sql
+-- Suggested migration to add B-tree index for sorting
 CREATE INDEX idx_lei_records_legal_name_btree 
 ON lei_raw.lei_records(legal_name) 
 WHERE deleted_at IS NULL;
@@ -174,9 +174,9 @@ WHERE deleted_at IS NULL;
 
 ### Documentation Created
 
-1. `docs/DYNAMIC_SELECT_IMPLEMENTATION.md` - Complete implementation guide (343 lines)
-2. `docs/LEI_SEARCH_PERFORMANCE_ANALYSIS.md` - Updated with completion status
-3. `docs/PERFORMANCE_VERIFICATION_RESULTS.md` - This file
+1. `docs/performance/DYNAMIC_SELECT_IMPLEMENTATION.md` - Complete implementation guide (343 lines)
+2. `docs/performance/LEI_SEARCH_PERFORMANCE_ANALYSIS.md` - Updated with completion status
+3. `docs/performance/PERFORMANCE_VERIFICATION_RESULTS.md` - This file
 
 ### Database Migrations
 
@@ -252,5 +252,5 @@ See [HYBRID_SORTING_IMPLEMENTATION.md](./HYBRID_SORTING_IMPLEMENTATION.md) for d
 - [Dynamic SELECT Implementation Guide](./DYNAMIC_SELECT_IMPLEMENTATION.md)
 - [Hybrid Sorting Implementation Guide](./HYBRID_SORTING_IMPLEMENTATION.md)
 - [LEI Search Performance Analysis](./LEI_SEARCH_PERFORMANCE_ANALYSIS.md)
-- [Migration 000010: Optimize LEI Search Filters](../backend/migrations/000010_optimize_lei_search_filters.up.sql)
-- [Migration 000011: Add Updated At Index](../backend/migrations/000011_add_updated_at_index.up.sql)
+- [Migration 000010: Optimize LEI Search Filters](../../backend/migrations/000010_optimize_lei_search_filters.up.sql)
+- [Migration 000011: Add Updated At Index](../../backend/migrations/000011_add_updated_at_index.up.sql)
