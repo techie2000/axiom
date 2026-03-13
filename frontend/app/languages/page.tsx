@@ -1,17 +1,19 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import Alert from '../components/Alert'
 import ActionableStatCard from '../components/ActionableStatCard'
 import Badge from '../components/Badge'
 import LoadingSpinner from '../components/LoadingSpinner'
 import PageHeader from '../components/PageHeader'
 import PreferenceSavePrompt from '../components/PreferenceSavePrompt'
+import SearchInputWithOverflowTooltip from '../components/SearchInputWithOverflowTooltip'
 import SortableHeaderCell from '../components/SortableHeaderCell'
 import StatCard from '../components/StatCard'
 import SyncedWideTable from '../components/SyncedWideTable'
 import { useDeferredBooleanPreference } from '../lib/useDeferredBooleanPreference'
-import { useUserPreference } from '../lib/useUserPreference'
+import { useEnglishTooltips } from '../lib/useEnglishTooltips'
 
 interface Language {
   code: string
@@ -24,6 +26,8 @@ type DirectionFilter = 'all' | 'rtl' | 'ltr'
 type LanguageSortField = 'code' | 'name' | 'native' | 'rtl'
 
 export default function LanguagesPage() {
+  const { t } = useTranslation('common')
+  const { getEnglishTooltip } = useEnglishTooltips()
   const filterBarRef = useRef<HTMLDivElement>(null)
 
   const [languages, setLanguages] = useState<Language[]>([])
@@ -48,8 +52,13 @@ export default function LanguagesPage() {
     defaultValue: false,
   })
 
-  const effectiveExpandedWidth = expandedWidthPreference.value
+  const [hasHydrated, setHasHydrated] = useState(false)
+  const effectiveExpandedWidth = hasHydrated ? expandedWidthPreference.value : true
   const showReferenceCodes = referenceDisplayPreference.value
+
+  useEffect(() => {
+    setHasHydrated(true)
+  }, [])
 
   const API_BASE_URL = typeof window !== 'undefined'
     ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080')
@@ -168,6 +177,7 @@ export default function LanguagesPage() {
   const rtlCount = languages.filter((language) => language.rtl).length
   const ltrCount = languages.length - rtlCount
   const hasActiveFilters = searchTerm || directionFilter !== 'all'
+  const directionFilterTranslationKey = directionFilter === 'rtl' ? 'languages.filters.rtl' : directionFilter === 'ltr' ? 'languages.filters.ltr' : 'languages.filters.all'
 
   const applyDirectionCardFilter = (filter: DirectionFilter) => {
     setDirectionFilter((previousFilter) => (previousFilter === filter ? 'all' : filter))
@@ -188,34 +198,34 @@ export default function LanguagesPage() {
   }, [hasActiveFilters, searchTerm, directionFilter])
 
   if (loading) {
-    return <LoadingSpinner message="Loading languages..." />
+    return <LoadingSpinner message={t('languages.loading')} />
   }
 
   const backHref = isLoggedIn ? '/dashboard' : '/home'
-  const backLabel = isLoggedIn ? '← Back to Dashboard' : '← Back to Home'
 
   return (
     <div className="min-h-screen p-8">
       <div className={`${effectiveExpandedWidth ? 'max-w-full' : 'max-w-7xl'} mx-auto transition-all duration-300`}>
         <PageHeader
-          title="Languages"
-          subtitle="Browse language reference data and writing direction"
+          title={t('languages.title')}
+          subtitle={t('languages.subtitle')}
+          titleTooltip={getEnglishTooltip('languages.title')}
+          subtitleTooltip={getEnglishTooltip('languages.subtitle')}
           backHref={backHref}
-          backLabel={backLabel}
           actions={
             <>
               <button
                 onClick={expandedWidthPreference.toggle}
                 className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 transition-colors text-white text-sm font-medium"
-                title={effectiveExpandedWidth ? 'Normal Width' : 'Expanded Width'}
+                title={effectiveExpandedWidth ? getEnglishTooltip('referenceLayout.normalButton') : getEnglishTooltip('referenceLayout.expandButton')}
               >
-                {effectiveExpandedWidth ? '⬅️ Normal' : '↔️ Expand'}
+                {effectiveExpandedWidth ? t('referenceLayout.normalButton') : t('referenceLayout.expandButton')}
               </button>
               {expandedWidthPreference.hasUnsavedChanges && (
                 <button
                   onClick={expandedWidthPreference.saveCurrentValue}
                   className="px-3 py-2 rounded-lg bg-green-700 hover:bg-green-600 transition-colors text-white text-xs font-medium"
-                  title="Save current page width as your permanent default"
+                  title={getEnglishTooltip('referenceLayout.savePageWidthDefault')}
                 >
                   💾 Save width
                 </button>
@@ -223,9 +233,9 @@ export default function LanguagesPage() {
               <button
                 onClick={referenceDisplayPreference.toggle}
                 className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 transition-colors text-white text-sm font-medium"
-                title={showReferenceCodes ? 'Display mode: codes' : 'Display mode: names'}
+                title={showReferenceCodes ? getEnglishTooltip('referenceLayout.displayCodesButton') : getEnglishTooltip('referenceLayout.displayNamesButton')}
               >
-                {showReferenceCodes ? '🏷️ Display: Codes' : '🏷️ Display: Names'}
+                {showReferenceCodes ? t('referenceLayout.displayCodesButton') : t('referenceLayout.displayNamesButton')}
               </button>
             </>
           }
@@ -234,7 +244,7 @@ export default function LanguagesPage() {
         {error && (
           <Alert
             variant={error.includes('No languages data') ? 'warning' : 'error'}
-            title={error.includes('No languages data') ? '📋 Notice:' : '⚠️ Error:'}
+            title={error.includes('No languages data') ? t('languages.noticeTitle') : t('languages.errorTitle')}
             className="mb-6"
           >
             {error}
@@ -242,48 +252,52 @@ export default function LanguagesPage() {
         )}
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <StatCard title="Total Languages" value={languages.length} />
-          <StatCard title="Filtered Results" value={filteredLanguages.length} />
+          <StatCard title={t('languages.stats.totalLanguages')} titleTooltip={getEnglishTooltip('languages.stats.totalLanguages')} value={languages.length} />
+          <StatCard title={t('languages.stats.filteredResults')} titleTooltip={getEnglishTooltip('languages.stats.filteredResults')} value={filteredLanguages.length} />
           <ActionableStatCard
-            title="LTR Languages"
+            title={t('languages.stats.ltrLanguages')}
+            titleTooltip={getEnglishTooltip('languages.stats.ltrLanguages')}
             value={ltrCount}
             accent="yellow"
             isActive={directionFilter === 'ltr'}
             onClick={() => applyDirectionCardFilter('ltr')}
-            ariaLabel="Filter by LTR languages"
+            ariaLabel={t('languages.aria.filterLtr')}
           />
           <ActionableStatCard
-            title="RTL Languages"
+            title={t('languages.stats.rtlLanguages')}
+            titleTooltip={getEnglishTooltip('languages.stats.rtlLanguages')}
             value={rtlCount}
             accent="purple"
             isActive={directionFilter === 'rtl'}
             onClick={() => applyDirectionCardFilter('rtl')}
-            ariaLabel="Filter by RTL languages"
+            ariaLabel={t('languages.aria.filterRtl')}
           />
         </div>
 
         <div className="mb-6 bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm rounded-lg p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Search</label>
-              <input
+              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">{t('languages.filters.search')}</label>
+              <SearchInputWithOverflowTooltip
                 type="text"
-                placeholder="Search by code, name, or native name..."
+                placeholder={t('languages.searchPlaceholder')}
+                title={getEnglishTooltip('languages.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-white/20 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-white/5 text-gray-900 dark:text-white"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Direction</label>
+              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">{t('languages.filters.direction')}</label>
               <select
                 value={directionFilter}
                 onChange={(e) => setDirectionFilter(e.target.value as DirectionFilter)}
+                title={getEnglishTooltip(directionFilterTranslationKey)}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-white/20 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
               >
-                <option value="all" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">All</option>
-                <option value="rtl" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">RTL</option>
-                <option value="ltr" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">LTR</option>
+                <option value="all" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white" title={getEnglishTooltip('languages.filters.all')}>{t('languages.filters.all')}</option>
+                <option value="rtl" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white" title={getEnglishTooltip('languages.filters.rtl')}>{t('languages.filters.rtl')}</option>
+                <option value="ltr" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white" title={getEnglishTooltip('languages.filters.ltr')}>{t('languages.filters.ltr')}</option>
               </select>
             </div>
           </div>
@@ -292,8 +306,9 @@ export default function LanguagesPage() {
               <button
                 onClick={clearFilters}
                 className="px-6 py-2 rounded-lg bg-white hover:bg-gray-100 dark:bg-gray-600 dark:hover:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-transparent transition-colors font-medium shadow-sm"
+                title={getEnglishTooltip('actions.clearFilters')}
               >
-                ✕ Clear Filters
+                {t('actions.clearFilters')}
               </button>
             </div>
           )}
@@ -306,29 +321,32 @@ export default function LanguagesPage() {
           >
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-semibold text-blue-900 dark:text-blue-100">Active Filters:</span>
+                <span className="text-xs font-semibold text-blue-900 dark:text-blue-100">{t('filters.activeFilters')}</span>
                 {searchTerm && (
                   <button
                     onClick={() => setSearchTerm('')}
                     className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors"
+                    title={getEnglishTooltip('filters.searchChip', { value: searchTerm })}
                   >
-                    Search: {searchTerm} ✕
+                    {t('filters.searchChip', { value: searchTerm })}
                   </button>
                 )}
                 {directionFilter !== 'all' && (
                   <button
                     onClick={() => setDirectionFilter('all')}
                     className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors"
+                    title={getEnglishTooltip('languages.filters.directionChip', { value: directionFilter.toUpperCase() })}
                   >
-                    Direction: {directionFilter.toUpperCase()} ✕
+                    {t('languages.filters.directionChip', { value: directionFilter.toUpperCase() })}
                   </button>
                 )}
               </div>
               <button
                 onClick={clearFilters}
                 className="px-3 py-1 text-xs rounded-lg bg-white hover:bg-gray-100 dark:bg-blue-600 dark:hover:bg-blue-700 text-blue-900 dark:text-white border border-blue-300 dark:border-transparent transition-colors font-medium shadow-sm"
+                title={getEnglishTooltip('filters.clearAll')}
               >
-                ✕ Clear All
+                {t('filters.clearAll')}
               </button>
             </div>
           </div>
@@ -343,7 +361,7 @@ export default function LanguagesPage() {
                 <SortableHeaderCell
                   className={`${showReferenceCodes ? 'w-24 px-4' : 'w-64 px-6'} py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider`}
                   align={showReferenceCodes ? 'center' : 'left'}
-                  label={showReferenceCodes ? 'Code' : 'Language Name'}
+                  label={showReferenceCodes ? t('languages.columns.code') : t('languages.columns.languageName')}
                   onSort={() => handleSort(showReferenceCodes ? 'code' : 'name')}
                   isActiveSort={sortField === (showReferenceCodes ? 'code' : 'name')}
                   sortDirection={sortDirection}
@@ -351,14 +369,14 @@ export default function LanguagesPage() {
                 <SortableHeaderCell
                   className={`${showReferenceCodes ? 'w-64 px-6' : 'w-24 px-4'} py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider`}
                   align={showReferenceCodes ? 'left' : 'center'}
-                  label={showReferenceCodes ? 'Language Name' : 'Code'}
+                  label={showReferenceCodes ? t('languages.columns.languageName') : t('languages.columns.code')}
                   onSort={() => handleSort(showReferenceCodes ? 'name' : 'code')}
                   isActiveSort={sortField === (showReferenceCodes ? 'name' : 'code')}
                   sortDirection={sortDirection}
                 />
                 <SortableHeaderCell
                   className="w-64 px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-                  label="Native Name"
+                  label={t('languages.columns.nativeName')}
                   onSort={() => handleSort('native')}
                   isActiveSort={sortField === 'native'}
                   sortDirection={sortDirection}
@@ -366,7 +384,7 @@ export default function LanguagesPage() {
                 <SortableHeaderCell
                   className="w-36 px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                   align="center"
-                  label="Direction"
+                  label={t('languages.columns.direction')}
                   onSort={() => handleSort('rtl')}
                   isActiveSort={sortField === 'rtl'}
                   sortDirection={sortDirection}
@@ -397,9 +415,9 @@ export default function LanguagesPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
                         {language.rtl ? (
-                          <Badge variant="purple" shape="pill">RTL</Badge>
+                          <Badge variant="purple" shape="pill">{t('languages.filters.rtl')}</Badge>
                         ) : (
-                          <Badge variant="yellow" shape="pill">LTR</Badge>
+                          <Badge variant="yellow" shape="pill">{t('languages.filters.ltr')}</Badge>
                         )}
                       </td>
                     </tr>
@@ -407,7 +425,7 @@ export default function LanguagesPage() {
                 ) : (
                   <tr>
                     <td colSpan={4} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
-                      No languages found matching your search
+                      {t('languages.emptyWithSearch')}
                     </td>
                   </tr>
                 )}
@@ -417,7 +435,7 @@ export default function LanguagesPage() {
         </div>
 
         <div className="mt-6 text-center text-sm text-gray-500">
-          <p>Data source: Language reference data • ISO language codes</p>
+          <p>{t('languages.footer')}</p>
         </div>
       </div>
 
@@ -426,14 +444,14 @@ export default function LanguagesPage() {
         resetKey={expandedWidthPreference.promptResetKey}
         onSave={expandedWidthPreference.save}
         onDismiss={expandedWidthPreference.dismiss}
-        label="Save page width as your default?"
+        label={t('referenceLayout.savePageWidthDefault')}
       />
       <PreferenceSavePrompt
         visible={referenceDisplayPreference.showPrompt}
         resetKey={referenceDisplayPreference.promptResetKey}
         onSave={referenceDisplayPreference.save}
         onDismiss={referenceDisplayPreference.dismiss}
-        label="Save display mode as your default?"
+        label={t('referenceLayout.saveDisplayModeDefault')}
       />
     </div>
   )

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 const PREFERENCE_SAVE_ERROR_EVENT = 'axiom:preference-save-error'
+const PREFERENCE_UPDATED_EVENT = 'axiom:preference-updated'
 
 class PreferenceSaveError extends Error {
   status?: number
@@ -162,6 +163,27 @@ export function useUserPreference(
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cacheLoaded])
 
+  // Keep all hook instances in sync when any preference is updated in-session.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const handlePreferenceUpdated = (event: Event) => {
+      const customEvent = event as CustomEvent<{ pageKey?: string; preferenceKey?: string; value?: string }>
+      const detail = customEvent.detail
+      if (!detail || detail.pageKey !== pageKey || detail.preferenceKey !== prefKey) {
+        return
+      }
+
+      const nextValue = typeof detail.value === 'string' ? detail.value : readFromCache(pageKey, prefKey)
+      if (typeof nextValue === 'string' && nextValue !== value) {
+        setValue(nextValue)
+      }
+    }
+
+    window.addEventListener(PREFERENCE_UPDATED_EVENT, handlePreferenceUpdated)
+    return () => window.removeEventListener(PREFERENCE_UPDATED_EVENT, handlePreferenceUpdated)
+  }, [pageKey, prefKey, value])
+
   const set = useCallback(
     (newValue: string) => {
       setValue(newValue)
@@ -169,6 +191,13 @@ export function useUserPreference(
       // Always write to localStorage as a fast local fallback.
       if (typeof window !== 'undefined') {
         localStorage.setItem(localKey, newValue)
+        window.dispatchEvent(new CustomEvent(PREFERENCE_UPDATED_EVENT, {
+          detail: {
+            pageKey,
+            preferenceKey: prefKey,
+            value: newValue,
+          },
+        }))
       }
       // Persist to server asynchronously (best-effort).
       savePreferenceToServer(pageKey, prefKey, newValue).catch((error) => {

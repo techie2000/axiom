@@ -2,7 +2,7 @@
 .PHONY: docker-main-up docker-main-down docker-dev-up docker-dev-down docker-uat-up docker-uat-down docker-prod-up docker-prod-down
 .PHONY: docker-all-up docker-all-down docker-all-status validate-env
 .PHONY: lint lint-docs lint-docs-fix lint-all install-hooks
-.PHONY: smoke-api smoke-ssi
+.PHONY: smoke-api smoke-ssi cleanup-stale-translations
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
@@ -303,3 +303,6 @@ smoke-api: ## Run API smoke checks (usage: make smoke-api [env=dev|uat|prod|all]
 
 smoke-ssi: ## Run SSI smoke checks (usage: make smoke-ssi [env=dev|uat|prod] [seed=1] [cleanup=1] [timeout=25])
 	@pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/smoke-ssi.ps1 -Environment $${env:-dev} -TimeoutSec $${timeout:-25} $$( [ "$${seed:-0}" = "1" ] && echo "-SeedSmokeData" ) $$( [ "$${cleanup:-0}" = "1" ] && echo "-CleanupSmokeData" )
+
+cleanup-stale-translations: ## Delete stale UI translation rows (usage: make cleanup-stale-translations api=http://localhost:18080 token=<JWT> [whatif=1])
+	@pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/cleanup-stale-translations.ps1 -ApiBaseUrl $${api:-http://localhost:18080} -BearerToken "$${token}" $$( [ "$${whatif:-0}" = "1" ] && echo "-WhatIf" )

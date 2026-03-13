@@ -43,6 +43,12 @@ export default function AdminSection() {
           description="Review registration requests, approve or deactivate accounts, and manage user roles"
           icon="👥"
         />
+        <AdminLandingCard
+          href="/admin/translations"
+          title="Translations"
+          description="Review community-contributed UI translations, approve or reject pending strings, and add new translations"
+          icon="🌐"
+        />
       </div>
     </section>
   )

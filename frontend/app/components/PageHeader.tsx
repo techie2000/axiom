@@ -1,11 +1,15 @@
-import React from 'react'
+'use client'
+
+import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
-import ThemeToggle from './ThemeToggle'
+import { useTranslation } from 'react-i18next'
 import UserBadge from './UserBadge'
 
 interface PageHeaderProps {
   title: string
   subtitle?: string
+  titleTooltip?: string
+  subtitleTooltip?: string
   backHref?: string
   backLabel?: string
   showBackLink?: boolean
@@ -15,26 +19,39 @@ interface PageHeaderProps {
 export default function PageHeader({
   title,
   subtitle,
+  titleTooltip,
+  subtitleTooltip,
   backHref = '/home',
-  backLabel = '← Back to Home',
+  backLabel,
   showBackLink = true,
   actions,
 }: PageHeaderProps) {
+  const { t } = useTranslation('common')
+  const [hasHydrated, setHasHydrated] = useState(false)
+
+  useEffect(() => {
+    setHasHydrated(true)
+  }, [])
+
+  const fallbackBackLabel = backHref === '/dashboard' ? '← Back to Dashboard' : '← Back to Home'
+  const translatedBackLabel = backHref === '/dashboard' ? t('nav.backToDashboard') : t('nav.backToHome')
+  const resolvedBackLabel =
+    backLabel ?? (hasHydrated ? translatedBackLabel : fallbackBackLabel)
+
   return (
     <div className="mb-8 flex justify-between items-start">
       <div>
         {showBackLink && (
           <Link href={backHref} className="text-blue-400 hover:text-blue-300 mb-4 inline-block">
-            {backLabel}
+            {resolvedBackLabel}
           </Link>
         )}
-        <h1 className="text-4xl font-bold mb-2">{title}</h1>
-        {subtitle && <p className="opacity-70">{subtitle}</p>}
+        <h1 className="text-4xl font-bold mb-2" title={titleTooltip}>{title}</h1>
+        {subtitle && <p className="opacity-70" title={subtitleTooltip}>{subtitle}</p>}
       </div>
       <div className="flex items-center gap-4">
         {actions}
         <UserBadge />
-        <ThemeToggle />
       </div>
     </div>
   )

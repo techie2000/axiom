@@ -1,11 +1,14 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import Alert from '../components/Alert'
 import Badge from '../components/Badge'
 import LoadingSpinner from '../components/LoadingSpinner'
 import PageHeader from '../components/PageHeader'
+import SearchInputWithOverflowTooltip from '../components/SearchInputWithOverflowTooltip'
 import StatCard from '../components/StatCard'
+import { useEnglishTooltips } from '../lib/useEnglishTooltips'
 
 interface CodeMapping {
   id: string
@@ -23,9 +26,12 @@ interface CodeMapping {
 }
 
 export default function CodeMappingsPage() {
+  const { t } = useTranslation('common')
+  const { getEnglishTooltip } = useEnglishTooltips()
   const [mappings, setMappings] = useState<CodeMapping[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [errorKind, setErrorKind] = useState<'noneConfigured' | 'authRequired' | 'apiError' | 'networkError' | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
 
   const API_BASE_URL = typeof window !== 'undefined'
@@ -44,22 +50,27 @@ export default function CodeMappingsPage() {
         const data = await response.json()
         setMappings(data || [])
         if (!data || data.length === 0) {
-          setError('No code mappings have been configured yet.')
+          setError(t('codeMappings.errors.noneConfigured'))
+          setErrorKind('noneConfigured')
         } else {
           setError(null)
+          setErrorKind(null)
         }
       } else if (response.status === 401) {
-        setError('Authentication required. Please log in to view code mappings.')
+        setError(t('codeMappings.errors.authRequired'))
+        setErrorKind('authRequired')
       } else {
-        setError(`API returned ${response.status}: ${response.statusText}`)
+        setError(t('codeMappings.errors.apiReturned', { status: response.status, statusText: response.statusText }))
+        setErrorKind('apiError')
       }
     } catch (err) {
       console.error('Code mappings fetch error:', err)
-      setError('Unable to connect to backend API. Please ensure the backend service is running at ' + API_BASE_URL)
+      setError(t('codeMappings.errors.unableToConnect', { apiBaseUrl: API_BASE_URL }))
+      setErrorKind('networkError')
     } finally {
       setLoading(false)
     }
-  }, [API_BASE_URL])
+  }, [API_BASE_URL, t])
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -81,7 +92,7 @@ export default function CodeMappingsPage() {
   const uniqueSystems = [...new Set(mappings.map(m => m.from_system))]
 
   if (loading) {
-    return <LoadingSpinner message="Loading code mappings..." />
+    return <LoadingSpinner message={t('codeMappings.loading')} />
   }
 
   return (
@@ -89,14 +100,15 @@ export default function CodeMappingsPage() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <PageHeader
-          title="Code Mappings"
-          subtitle="Cross-system code translation — map external codes (e.g., ALERT) to internal AXIOM identifiers"
+          title={t('codeMappings.title')}
+          subtitle={t('codeMappings.subtitle')}
+          titleTooltip={getEnglishTooltip('codeMappings.title')}
+          subtitleTooltip={getEnglishTooltip('codeMappings.subtitle')}
           backHref="/dashboard"
-          backLabel="← Back to Dashboard"
         />
 
         {/* Info box explaining the feature */}
-        <Alert variant="info" title="💡 About Code Mappings:" className="mb-6">
+        <Alert variant="info" title={t('codeMappings.about.title')} className="mb-6">
           This table maps codes from external systems (e.g., ALERT currency code &quot;SWE&quot;) to standardised
           AXIOM identifiers (e.g., ISO country code &quot;SE&quot;). The combination of{' '}
           <em>from_system</em>, <em>to_system</em>, <em>from_code_type</em>,{' '}
@@ -106,8 +118,8 @@ export default function CodeMappingsPage() {
         {/* Error/Notice Alert */}
         {error && (
           <Alert
-            variant={error.includes('No code mappings') ? 'warning' : 'error'}
-            title={error.includes('No code mappings') ? '📋 Notice:' : '⚠️ Error:'}
+            variant={errorKind === 'noneConfigured' ? 'warning' : 'error'}
+            title={errorKind === 'noneConfigured' ? t('codeMappings.noticeTitle') : t('codeMappings.errorTitle')}
             className="mb-6"
           >
             {error}
@@ -116,9 +128,10 @@ export default function CodeMappingsPage() {
 
         {/* Search */}
         <div className="mb-6">
-          <input
+          <SearchInputWithOverflowTooltip
             type="text"
-            placeholder="Search by system, code type, or code value..."
+            placeholder={t('codeMappings.searchPlaceholder')}
+            title={getEnglishTooltip('codeMappings.searchPlaceholder')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full px-4 py-2 border border-gray-300 dark:border-white/20 rounded-lg
@@ -129,10 +142,10 @@ export default function CodeMappingsPage() {
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <StatCard title="Total Mappings" value={mappings.length} />
-          <StatCard title="Active Mappings" value={activeMappings.length} accent="green" />
-          <StatCard title="Source Systems" value={uniqueSystems.length} />
-          <StatCard title="Filtered Results" value={filteredMappings.length} />
+          <StatCard title={t('codeMappings.stats.totalMappings')} titleTooltip={getEnglishTooltip('codeMappings.stats.totalMappings')} value={mappings.length} />
+          <StatCard title={t('codeMappings.stats.activeMappings')} titleTooltip={getEnglishTooltip('codeMappings.stats.activeMappings')} value={activeMappings.length} accent="green" />
+          <StatCard title={t('codeMappings.stats.sourceSystems')} titleTooltip={getEnglishTooltip('codeMappings.stats.sourceSystems')} value={uniqueSystems.length} />
+          <StatCard title={t('codeMappings.stats.filteredResults')} titleTooltip={getEnglishTooltip('codeMappings.stats.filteredResults')} value={filteredMappings.length} />
         </div>
 
         {/* Mappings Table */}
@@ -142,28 +155,28 @@ export default function CodeMappingsPage() {
               <thead className="bg-gray-50 dark:bg-white/5">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    From System
+                    <span title={getEnglishTooltip('codeMappings.columns.fromSystem')}>{t('codeMappings.columns.fromSystem')}</span>
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    From Type
+                    <span title={getEnglishTooltip('codeMappings.columns.fromType')}>{t('codeMappings.columns.fromType')}</span>
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    From Code
+                    <span title={getEnglishTooltip('codeMappings.columns.fromCode')}>{t('codeMappings.columns.fromCode')}</span>
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    To System
+                    <span title={getEnglishTooltip('codeMappings.columns.toSystem')}>{t('codeMappings.columns.toSystem')}</span>
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    To Type
+                    <span title={getEnglishTooltip('codeMappings.columns.toType')}>{t('codeMappings.columns.toType')}</span>
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    To Code
+                    <span title={getEnglishTooltip('codeMappings.columns.toCode')}>{t('codeMappings.columns.toCode')}</span>
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Status
+                    <span title={getEnglishTooltip('codeMappings.columns.status')}>{t('codeMappings.columns.status')}</span>
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Description
+                    <span title={getEnglishTooltip('codeMappings.columns.description')}>{t('codeMappings.columns.description')}</span>
                   </th>
                 </tr>
               </thead>
@@ -191,18 +204,20 @@ export default function CodeMappingsPage() {
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
                         <Badge variant={mapping.active ? 'green' : 'gray'}>
-                          {mapping.active ? 'Active' : 'Inactive'}
+                          <span title={mapping.active ? getEnglishTooltip('codeMappings.status.active') : getEnglishTooltip('codeMappings.status.inactive')}>
+                            {mapping.active ? t('codeMappings.status.active') : t('codeMappings.status.inactive')}
+                          </span>
                         </Badge>
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate">
-                        {mapping.description || '—'}
+                        {mapping.description || t('codeMappings.emptyDescription')}
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
                     <td colSpan={8} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
-                      {searchTerm ? 'No mappings found matching your search' : 'No code mappings configured yet'}
+                      {searchTerm ? t('codeMappings.emptyWithSearch') : t('codeMappings.emptyWithoutSearch')}
                     </td>
                   </tr>
                 )}
@@ -213,10 +228,10 @@ export default function CodeMappingsPage() {
 
         {/* Footer Note */}
         <div className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
-          <p>
-            Code mappings are managed via the API. Use <code className="font-mono bg-gray-100 dark:bg-white/10 px-1 rounded">
+          <p title={getEnglishTooltip('codeMappings.footer.prefix')}>
+            {t('codeMappings.footer.prefix')} <code className="font-mono bg-gray-100 dark:bg-white/10 px-1 rounded">
               POST /api/v1/code-mappings
-            </code> to create new mappings.
+            </code> {t('codeMappings.footer.suffix')}
           </p>
         </div>
       </div>

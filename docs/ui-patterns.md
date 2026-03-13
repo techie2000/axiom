@@ -6,6 +6,7 @@ optimized for performance, accessibility, and user experience.
 ## Table of Contents
 
 - [User Preferences](#user-preferences)
+- [Internationalisation](#internationalisation)
 - [Reusable Components](#reusable-components)
 - [Sticky Headers with Smooth Transitions](#sticky-headers-with-smooth-transitions)
 - [Frozen Columns Checklist](#frozen-columns-checklist)
@@ -67,6 +68,16 @@ const [value, setValue, isLoading] = useUserPreference(pageKey, prefKey, default
 2. **Write** – `setValue(newValue)` updates React state, the module-level cache, `localStorage`,
    and sends a `PUT /api/v1/preferences` request in the background.
 3. **Sign-out** – call `resetPreferencesCache()` so the next login gets fresh server data.
+
+#### Live updates across mounted components
+
+Preference changes must propagate immediately to all mounted consumers without requiring page refresh.
+In practice, `useUserPreference` should broadcast an update event (for example
+`axiom:preference-updated`) on write, and other hook instances should subscribe and update local
+state when their `pageKey` + `prefKey` match.
+
+This behavior is required for global toggles (for example English tooltips, language, and theme)
+because those toggles are commonly changed from shared UI surfaces such as the user menu.
 
 #### `page_key` registry
 
@@ -293,6 +304,96 @@ localStorage.removeItem('axiom_token')
 localStorage.removeItem('axiom_user')
 router.push('/login')
 ```
+
+---
+
+## Internationalisation
+
+Axiom's UI strings are fully internationalised using **i18next** and **react-i18next**. Every
+user-facing string must be accessed via the `t()` function rather than being hardcoded in JSX.
+
+See the [full Internationalisation Guide](./i18n/INTERNATIONALISATION.md) for complete coverage.
+This section is a quick reference.
+
+### Supported Languages
+
+| Code | Native Name | RTL |
+| ---- | ----------- | --- |
+| `en` | English | No |
+| `ar` | العربية | Yes |
+| `zh` | 中文 | No |
+| `nl` | Nederlands | No |
+| `fr` | Français | No |
+| `de` | Deutsch | No |
+| `it` | Italiano | No |
+| `ja` | 日本語 | No |
+| `pt` | Português | No |
+| `es` | Español | No |
+
+### Adding a translation key (quick start)
+
+1. Add the key to `frontend/public/locales/en/common.json` (English is the source of truth).
+2. Add the same key to all other locale files (`ar/`, `de/`, `es/`, `fr/`, `it/`, `ja/`, `nl/`, `pt/`, `zh/`).
+3. Use the key in the component:
+
+```tsx
+'use client'
+import '../../lib/i18n'
+import { useTranslation } from 'react-i18next'
+
+export default function MyComponent() {
+  const { t } = useTranslation()
+  return <button>{t('common.save')}</button>
+}
+```
+
+### LanguageSelector
+
+Drop the shared component into any page header to let users switch language without a page
+reload:
+
+```tsx
+import LanguageSelector from '../components/LanguageSelector'
+
+// Standard – flag + native name dropdown
+<LanguageSelector />
+
+// Compact – flag + language code only
+<LanguageSelector compact />
+```
+
+Language is persisted via `useUserPreference('global', 'language', 'en')` so it roams across
+devices when the user is authenticated.
+
+### RTL support
+
+The `I18nProvider` (added to `layout.tsx`) sets `document.documentElement.dir` to `'rtl'` or
+`'ltr'` automatically when the language changes. Use Tailwind's `rtl:` variant for mirrored
+layouts:
+
+```tsx
+<div className="pl-4 rtl:pl-0 rtl:pr-4">…</div>
+```
+
+For popovers and user menus, do not hardcode one-side anchoring (`right-0` only).
+Placement must adapt at open time so panels remain inside visible content bounds in both LTR and
+RTL contexts. Use viewport-safe sizing (for example `max-w-[calc(100vw-1rem)]`) and choose left or
+right alignment based on trigger position.
+
+### Community translation review workflow
+
+Any authenticated user can submit a translation via `POST /api/v1/translations` (status:
+`pending`). Admins approve or reject in the **Admin → Translations** page
+(`/admin/translations`). Only `approved` translations are exported to locale JSON by the nightly
+CI seed job.
+
+### `page_key` registry update
+
+The language preference uses the `global` page key:
+
+| Value | Preference key | Description |
+| ----- | -------------- | ----------- |
+| `global` | `language` | Active UI language (`en`, `fr`, `es`, `de`, `ja`, `ar`) |
 
 ---
 
@@ -964,5 +1065,7 @@ When adding a new UI pattern to this guide:
 - [ADR-0006: Next.js and Tailwind CSS](./adr/adr-0006-nextjs-tailwind-frontend.md)
 - [ADR-0008: Sticky Headers with Smooth Transitions](./adr/adr-0008-sticky-headers-with-smooth-transitions.md)
 - [ADR-0011: User Preferences](./adr/adr-0011-user-preferences.md)
+- [ADR-0012: Internationalisation](./adr/adr-0012-internationalisation.md)
+- [Internationalisation Guide](./i18n/INTERNATIONALISATION.md)
 - [Frontend UI Guidelines](.github/instructions/frontend-ui.instructions.md)
 - [Performance Optimization](.github/instructions/performance-optimization.instructions.md)

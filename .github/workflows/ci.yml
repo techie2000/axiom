@@ -184,6 +184,14 @@ jobs:
           cache: 'npm'
           cache-dependency-path: 'frontend/package-lock.json'
 
+      - name: Restore Next.js build cache
+        uses: actions/cache@v4
+        with:
+          path: frontend/.next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('frontend/package-lock.json', 'frontend/next.config.js', 'frontend/tsconfig.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-
+
       - name: Install dependencies
         run: |
           if [ -f package-lock.json ]; then
@@ -191,6 +199,11 @@ jobs:
           else
             npm install --legacy-peer-deps
           fi
+        working-directory: ./frontend
+
+      - name: Verify i18n catalogs are complete and up to date (non-blocking temporary)
+        continue-on-error: true
+        run: npm run i18n:verify
         working-directory: ./frontend
 
       - name: Build frontend

@@ -46,6 +46,8 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
   admin approval workflow, JWT issuance, and bootstrap admin strategy
 - [ADR-0011: User Preferences](docs/adr/adr-0011-user-preferences.md): Per-user UI preferences persisted to the
   database (theme, column visibility, page width) with `useUserPreference` hook and `PreferenceSavePrompt` toast
+- [ADR-0012: Internationalisation](docs/adr/adr-0012-internationalisation.md): i18next-based i18n stack, language
+  selection on login/register, community translation review workflow, and CI/daily seed integration
 
 ## Deployment and Infrastructure
 
@@ -81,7 +83,9 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
 ## Optional
 
 - [UI Patterns Guide](docs/ui-patterns.md): Reusable frontend components and patterns (Badge, Alert, LoadingSpinner,
-  StatCard, PageHeader, Sticky Headers, User Preferences)
+  StatCard, PageHeader, Sticky Headers, User Preferences, Internationalisation)
+- [Internationalisation Guide](docs/i18n/INTERNATIONALISATION.md): Full i18n guide: locale files, adding translation
+  keys, LanguageSelector component, RTL support, review workflow, CI seed integration
 - [Branding Assets Guide](docs/assets/branding/README.md): Canonical source logos and generated runtime favicon/logo
   outputs for active and alternate themes
 - [Makefile](Makefile): Build automation, testing, linting, and development commands

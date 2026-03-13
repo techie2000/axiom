@@ -283,6 +283,9 @@ func setupRouter(cfg *config.Config, h *handler.Handlers) *gin.Engine {
 		v1.GET("/currencies/:id", h.Currency.Get)
 		v1.GET("/languages", h.Language.List)
 
+		// Public approved translations (read-only, no auth required)
+		v1.GET("/translations", h.UITranslation.ListTranslations)
+
 		// Public LEI data routes (read-only, no auth required)
 		v1.GET("/lei", h.LEI.ListLEI)
 		v1.GET("/lei/import-failures", h.LEI.GetImportProcessingFailures)
@@ -317,6 +320,24 @@ func setupRouter(cfg *config.Config, h *handler.Handlers) *gin.Engine {
 				prefs.GET("", h.UserPreference.GetPreferences)
 				prefs.PUT("", h.UserPreference.SetPreference)
 				prefs.DELETE("", h.UserPreference.DeletePreference)
+			}
+
+			// Translation routes: public listing, authenticated submission, admin review/delete
+			translations := protected.Group("/translations")
+			{
+				translations.POST("", h.UITranslation.SubmitTranslation)
+			}
+			adminTranslations := protected.Group("/translations")
+			adminTranslations.Use(middleware.AdminRequired())
+			{
+				adminTranslations.POST("/:id/approve", h.UITranslation.ApproveTranslation)
+				adminTranslations.POST("/:id/reject", h.UITranslation.RejectTranslation)
+				adminTranslations.DELETE("/:id", h.UITranslation.DeleteTranslation)
+			}
+			adminTranslationList := protected.Group("/admin/translations")
+			adminTranslationList.Use(middleware.AdminRequired())
+			{
+				adminTranslationList.GET("", h.UITranslation.ListAdminTranslations)
 			}
 
 			// Protected write operations for countries and currencies

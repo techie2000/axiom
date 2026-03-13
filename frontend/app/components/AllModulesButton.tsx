@@ -2,26 +2,15 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { isAuthenticated } from '../lib/auth-token'
 
 export default function AllModulesButton() {
   const [mounted, setMounted] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
 
-  const getAuthToken = (): string | null => {
-    const rawToken = localStorage.getItem('axiom_token')
-    if (!rawToken) return null
-
-    const normalizedToken = rawToken.replace(/^Bearer\s+/i, '').trim()
-    if (!normalizedToken || normalizedToken === 'undefined' || normalizedToken === 'null') {
-      return null
-    }
-
-    return normalizedToken
-  }
-
   useEffect(() => {
     setMounted(true)
-    setIsLoggedIn(getAuthToken() !== null)
+    setIsLoggedIn(isAuthenticated())
   }, [])
 
   if (!mounted || !isLoggedIn) return null

@@ -121,6 +121,27 @@ axiom/
 - RabbitMQ 4.2+
 - Docker & Docker Compose
 
+### Frontend Translation Automation
+
+The frontend i18n workflow now includes automated key extraction and locale completeness validation.
+
+```bash
+cd frontend
+
+# Extract keys used in app/**/*.ts(x) into public/locales/en/common.json
+npm run i18n:extract
+
+# Report non-English locale gaps against en/common.json (warnings only; English fallback is intentional)
+npm run i18n:check
+
+# CI command: extract + check + fail if generated English locale changes were not committed
+npm run i18n:verify
+```
+
+When adding new `t('...')` keys, run `npm run i18n:extract` and commit the
+resulting `en/common.json` changes. Non-English locale files may omit new keys
+until translations are approved.
+
 ### Multi-Environment Support
 
 Axiom supports running multiple environments simultaneously on the same machine. Each environment uses a unique port
@@ -306,6 +327,33 @@ The script validates:
   `id`, `ssi_reference`, `counterparty_name`, `account_name`, `country_code`, `currency`,
   `bic`, `iban`, `settlement_method`, `status`, `updated_at`
 - no `BGC` text appears in `counterparty_name`/`account_name`
+
+#### Translation Stale-Row Cleanup
+
+To keep UI translation rows aligned with active locale keys (cold-start source), run:
+
+```bash
+# Preview stale rows without deleting
+make cleanup-stale-translations api=http://localhost:18080 token=<ADMIN_JWT> whatif=1
+
+# Delete stale rows
+make cleanup-stale-translations api=http://localhost:18080 token=<ADMIN_JWT>
+```
+
+PowerShell direct usage:
+
+```powershell
+./scripts/cleanup-stale-translations.ps1 -ApiBaseUrl http://localhost:18080 -BearerToken <ADMIN_JWT> -WhatIf
+./scripts/cleanup-stale-translations.ps1 -ApiBaseUrl http://localhost:18080 -BearerToken <ADMIN_JWT>
+```
+
+Recommended daily automation:
+
+1. Remove obsolete keys from `frontend/public/locales/en/common.json`.
+2. Run stale-row cleanup daily (Task Scheduler/cron).
+3. Keep locale files in source control as the cold-start key source of truth.
+
+This ensures rows removed from the active locale key set are also removed from `ui_translations`.
 
 #### Environment-Specific URLs
 

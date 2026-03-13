@@ -368,6 +368,35 @@ func (UserPreference) TableName() string {
 	return "user_preferences"
 }
 
+// TranslationStatus represents the review lifecycle of a UI translation.
+type TranslationStatus string
+
+const (
+	TranslationStatusPending  TranslationStatus = "pending"
+	TranslationStatusApproved TranslationStatus = "approved"
+	TranslationStatusRejected TranslationStatus = "rejected"
+)
+
+// UITranslation stores a community-contributed UI translation that goes
+// through a review workflow before being shipped as a locale JSON file.
+type UITranslation struct {
+	ID               uuid.UUID         `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+	TranslationKey   string            `gorm:"size:500;not null;index" json:"translation_key"`
+	LanguageCode     string            `gorm:"size:10;not null;index" json:"language_code"`
+	TranslationValue string            `gorm:"type:text;not null" json:"translation_value"`
+	Status           TranslationStatus `gorm:"type:varchar(20);not null;default:'pending'" json:"status"`
+	Notes            string            `gorm:"type:text" json:"notes,omitempty"`
+	SubmittedBy      *uuid.UUID        `gorm:"type:uuid" json:"submitted_by,omitempty"`
+	ReviewedBy       *uuid.UUID        `gorm:"type:uuid" json:"reviewed_by,omitempty"`
+	ReviewedAt       *time.Time        `json:"reviewed_at,omitempty"`
+	CreatedAt        time.Time         `json:"created_at"`
+	UpdatedAt        time.Time         `json:"updated_at"`
+}
+
+func (UITranslation) TableName() string {
+	return "ui_translations"
+}
+
 // CodeMappingAudit represents the complete audit history of code mapping changes
 type CodeMappingAudit struct {
 	ID             uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`

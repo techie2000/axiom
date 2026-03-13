@@ -851,7 +851,6 @@ export default function LEIStatusPage() {
   const showFullChildren = fullExpanded || fullStatus?.status === 'RUNNING' || rrStatus?.status === 'RUNNING' || repexStatus?.status === 'RUNNING'
   const showRrChild = rrExpanded || rrStatus?.status === 'RUNNING' || repexStatus?.status === 'RUNNING'
   const backHref = isLoggedIn ? '/dashboard' : '/home'
-  const backLabel = isLoggedIn ? '← Back to Dashboard' : '← Back to Home'
 
   return (
     <div className="min-h-screen p-8">
@@ -860,7 +859,6 @@ export default function LEIStatusPage() {
           title="LEI Data Processing"
           subtitle="Real-time monitoring of GLEIF data synchronization"
           backHref={backHref}
-          backLabel={backLabel}
           actions={
             <>
               <button
