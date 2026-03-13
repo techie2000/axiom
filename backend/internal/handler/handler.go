@@ -1308,8 +1308,15 @@ type uiTranslationPublicDTO struct {
 
 // translationListResponse wraps a paginated list of translations.
 type translationListResponse struct {
-	Total   int64                   `json:"total"`
+	Total   int64                     `json:"total"`
 	Records []*uiTranslationPublicDTO `json:"records"`
+}
+
+// adminTranslationListResponse wraps a paginated list of full translation rows
+// used by authenticated admin review tooling.
+type adminTranslationListResponse struct {
+	Total   int64                   `json:"total"`
+	Records []*domain.UITranslation `json:"records"`
 }
 
 // submitTranslationRequest is the request body for POST /translations.
@@ -1382,7 +1389,25 @@ func (h *UITranslationHandler) listTranslations(c *gin.Context, allowNonApproved
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list translations"})
 		return
 	}
-	c.JSON(http.StatusOK, translationListResponse{Total: total, Records: records})
+
+	if allowNonApproved {
+		c.JSON(http.StatusOK, adminTranslationListResponse{Total: total, Records: records})
+		return
+	}
+
+	publicRecords := make([]*uiTranslationPublicDTO, 0, len(records))
+	for _, record := range records {
+		if record == nil {
+			continue
+		}
+		publicRecords = append(publicRecords, &uiTranslationPublicDTO{
+			TranslationKey:   record.TranslationKey,
+			LanguageCode:     record.LanguageCode,
+			TranslationValue: record.TranslationValue,
+		})
+	}
+
+	c.JSON(http.StatusOK, translationListResponse{Total: total, Records: publicRecords})
 }
 
 // SubmitTranslation godoc

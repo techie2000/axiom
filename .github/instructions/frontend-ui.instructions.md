@@ -182,10 +182,16 @@ EVERY visual change:
 ```tsx
 {/* ✅ CORRECT: Visible in both modes */}
 {loading && (
-  <div className="absolute inset-0 bg-white/70 dark:bg-gray-900/70 backdrop-blur-sm z-50 flex items-center justify-center">
+  <div
+    className="absolute inset-0 bg-white/70 dark:bg-gray-900/70 backdrop-blur-sm z-50 flex items-center justify-center"
+  >
     <div className="bg-white dark:bg-gray-800 px-6 py-4 rounded-lg shadow-lg border-2 border-blue-500">
-      <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 dark:border-gray-700 border-t-blue-600 dark:border-t-blue-400"></div>
-      <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 mt-2">Loading...</p>
+      <div
+        className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 dark:border-gray-700 border-t-blue-600 dark:border-t-blue-400"
+      ></div>
+      <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 mt-2">
+        Loading...
+      </p>
     </div>
   </div>
 )}
@@ -315,13 +321,17 @@ step-by-step guide and integration checklist.
 
 ### Live Preference Reactivity (Required)
 - Preference toggles must apply immediately across mounted components and pages.
-- Any `useUserPreference` write path must emit a global client event (for example `axiom:preference-updated`) with `pageKey`, `preferenceKey`, and `value`.
-- Any `useUserPreference` read path must subscribe to that event and update local state when the same preference key changes elsewhere.
+- Any `useUserPreference` write path must emit a global client event
+  (for example `axiom:preference-updated`) with `pageKey`,
+  `preferenceKey`, and `value`.
+- Any `useUserPreference` read path must subscribe to that event and update
+  local state when the same preference key changes elsewhere.
 - Do not rely on page refresh or remount to pick up updated preferences.
 - Keep the server persistence call asynchronous and best-effort; UI state must update first.
 
 ### Popover Alignment (Required)
-- User menus/popovers must adapt placement to viewport position and document direction so they stay inside visible content bounds.
+- User menus/popovers must adapt placement to viewport position and
+  document direction so they stay inside visible content bounds.
 - Avoid hardcoded single-edge anchoring (`right-0` only or `left-0` only) for shared popovers.
 - Prefer dynamic alignment at open time:
   - anchor right when trigger is on right side of viewport;
@@ -339,13 +349,16 @@ step-by-step guide and integration checklist.
   above the table header that remains visible during vertical scroll.
 - The Active Filters bar must show removable filter chips and include a single **Clear All** action (LEI pattern).
 - The sticky header offset must account for the Active Filters bar height so header and bar do not overlap.
-- Freeze primary identity columns using sticky positioning so key context remains visible during horizontal scrolling.
+- Freeze primary identity columns using sticky positioning so key context remains
+  visible during horizontal scrolling.
 - For LEI-style entity tables, freeze `LEI` and `Legal Name` by default when visible.
 - Apply the same sticky/frozen behavior consistently to both header (`th`) and body (`td`) cells.
-- Ensure frozen cells define explicit background and z-index layers so content does not bleed through during scroll.
+- Ensure frozen cells define explicit background and z-index layers so content
+  does not bleed through during scroll.
 - Frozen column widths and left offsets must be derived from measured rendered header widths
   (not hard-coded constants alone) to prevent seam drift during horizontal scroll.
-- Add an explicit light+dark separator seam on frozen columns (for example border or inset shadow)
+- Add an explicit light+dark separator seam on frozen columns
+  (for example border or inset shadow)
   so horizontally scrolled cells cannot bleed through divider boundaries.
 - Use the **same seam rendering technique** for both frozen header (`th`) and body (`td`) cells;
   do not mix different seam primitives between header and body.
@@ -628,7 +641,8 @@ export default function MyComponent() {
 **Always** use the shared components from `frontend/app/components/` — do **not** duplicate inline
 markup that already exists as a component. See the full reference in
 docs/ui-patterns.md.
-Keep this as plain text (not a markdown link) because the prompts diagnostics provider can report a false missing-file error.
+Keep this as plain text (not a markdown link) because the prompts diagnostics
+provider can report a false missing-file error.
 
 ### PageHeader
 
