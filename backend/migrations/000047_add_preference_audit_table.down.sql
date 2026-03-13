@@ -1,1 +1,1 @@
-DROP TABLE IF EXISTS preference_audit;
+DROP TABLE IF EXISTS user_preferences_audit;

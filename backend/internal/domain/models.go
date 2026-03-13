@@ -382,7 +382,7 @@ type PreferenceAudit struct {
 }
 
 func (PreferenceAudit) TableName() string {
-	return "preference_audit"
+	return "user_preferences_audit"
 }
 
 // TranslationStatus represents the review lifecycle of a UI translation.

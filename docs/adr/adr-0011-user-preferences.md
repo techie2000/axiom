@@ -210,10 +210,10 @@ following the same pattern.
 
 #### 2. Audit trail (backend)
 
-Migration `000047_add_preference_audit_table` adds a `preference_audit` table:
+Migration `000047_add_preference_audit_table` adds a `user_preferences_audit` table:
 
 ```sql
-CREATE TABLE IF NOT EXISTS preference_audit (
+CREATE TABLE IF NOT EXISTS user_preferences_audit (
     id            UUID PRIMARY KEY DEFAULT GEN_RANDOM_UUID(),
     user_id       UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
     page_key      VARCHAR(100) NOT NULL,
@@ -236,6 +236,6 @@ preference save response to the user.
 
 ### Generalisation note
 
-The `preference_audit` table design is intentionally generic. Future entity mutation audit tables
+The `user_preferences_audit` table design is intentionally generic. Future entity mutation audit tables
 (e.g. `lei_record_audit`, `user_profile_audit`) should follow the same append-only, insert-only
 pattern with `old_value` / `new_value` columns and a DB-clock `changed_at` timestamp.
