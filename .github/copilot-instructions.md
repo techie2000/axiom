@@ -293,7 +293,7 @@ When adding, removing, or modifying environment variables:
 3. **Update all docker-compose files**: [`docker-compose.dev.yml`](../docker-compose.dev.yml), [`docker-compose.uat.yml`](../docker-compose.uat.yml), [`docker-compose.prod.yml`](../docker-compose.prod.yml) environment sections to include the variable
 4. **Update [`README.md`](../README.md)** configuration documentation with the new variable
 5. **Update [`docs/environments/`](../docs/environments/)** environment-specific documentation if applicable
-6. Create or update relevant ADRs in [`docs/adrs/`](../docs/adrs/) if the change affects core behavior or architecture
+6. Create or update relevant ADRs in [`docs/adr/`](../docs/adr/) if the change affects core behavior or architecture
 
 **Common mistake**: Forgetting to sync all environment files and docker-compose configurations, causing configuration drift between dev, UAT, and production environments.
 
