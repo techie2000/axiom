@@ -313,6 +313,22 @@ step-by-step guide and integration checklist.
 | `frontend/app/currencies/page.tsx` | `expanded_width` |
 | `frontend/app/languages/page.tsx` | `expanded_width` |
 
+### Live Preference Reactivity (Required)
+- Preference toggles must apply immediately across mounted components and pages.
+- Any `useUserPreference` write path must emit a global client event (for example `axiom:preference-updated`) with `pageKey`, `preferenceKey`, and `value`.
+- Any `useUserPreference` read path must subscribe to that event and update local state when the same preference key changes elsewhere.
+- Do not rely on page refresh or remount to pick up updated preferences.
+- Keep the server persistence call asynchronous and best-effort; UI state must update first.
+
+### Popover Alignment (Required)
+- User menus/popovers must adapt placement to viewport position and document direction so they stay inside visible content bounds.
+- Avoid hardcoded single-edge anchoring (`right-0` only or `left-0` only) for shared popovers.
+- Prefer dynamic alignment at open time:
+  - anchor right when trigger is on right side of viewport;
+  - anchor left when trigger is on left side of viewport.
+- Apply a viewport-safe max width (for example `max-w-[calc(100vw-1rem)]`) to prevent overflow on narrow screens.
+- Verify both LTR and RTL layouts for overflow, clipping, and visual containment in normal/expanded page-width modes.
+
 ### Wide Table Scroll & Freeze Standard (Required)
 - Wide data tables must provide a **top horizontal scrollbar** synchronized with the main table body scrollbar.
 - Sticky/fixed headers must stay horizontally synchronized with the data body at all times

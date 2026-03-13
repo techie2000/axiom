@@ -37,6 +37,7 @@ export default function SyncedWideTable({
   stickyContainerClassName = 'fixed z-30 overflow-x-auto bg-white border-b-2 border-gray-200 dark:bg-gray-800 dark:border-white/10 shadow-lg transition-all duration-200',
   onMainHeaderWidthsChange,
 }: SyncedWideTableProps) {
+  const STICKY_ACTIVATION_BUFFER = 16
   const tableContainerRef = useRef<HTMLDivElement>(null)
   const tableRef = useRef<HTMLTableElement>(null)
   const stickyTableRef = useRef<HTMLTableElement>(null)
@@ -93,6 +94,8 @@ export default function SyncedWideTable({
       if (!tableContainerRef.current || !tableRef.current) return
 
       const containerRect = tableContainerRef.current.getBoundingClientRect()
+      const mainHeaderElement = tableRef.current.querySelector('thead')
+      const headerRect = mainHeaderElement?.getBoundingClientRect()
 
       setStickyHeaderStyle({
         left: containerRect.left,
@@ -100,7 +103,9 @@ export default function SyncedWideTable({
       })
 
       setShowStickyHeader(
-        containerRect.top < stickyTopOffset && containerRect.bottom > stickyTopOffset + headerHeight
+        Boolean(headerRect) &&
+        headerRect!.top <= stickyTopOffset + STICKY_ACTIVATION_BUFFER &&
+        containerRect.bottom > stickyTopOffset + headerHeight
       )
 
       setTableClientWidth(tableContainerRef.current.clientWidth)
@@ -132,9 +137,11 @@ export default function SyncedWideTable({
     updateDimensions()
 
     window.addEventListener('scroll', updateDimensions)
+    document.addEventListener('scroll', updateDimensions, true)
     window.addEventListener('resize', updateDimensions)
     return () => {
       window.removeEventListener('scroll', updateDimensions)
+      document.removeEventListener('scroll', updateDimensions, true)
       window.removeEventListener('resize', updateDimensions)
     }
   }, [stickyTopOffset, headerHeight, dependencyKey])

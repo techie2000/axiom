@@ -46,7 +46,7 @@ if (!fs.existsSync(sourceFile)) {
 }
 
 const sourceKeys = new Set(flattenKeys(readJson(sourceFile)))
-const errors = []
+const warnings = []
 
 for (const locale of localeDirs) {
   if (locale === SOURCE_LOCALE) {
@@ -55,7 +55,7 @@ for (const locale of localeDirs) {
 
   const localeFile = path.join(LOCALES_DIR, locale, `${NAMESPACE}.json`)
   if (!fs.existsSync(localeFile)) {
-    errors.push(`[${locale}] Missing file: public/locales/${locale}/${NAMESPACE}.json`)
+    warnings.push(`[${locale}] Missing file: public/locales/${locale}/${NAMESPACE}.json (English fallback will be used)`)
     continue
   }
 
@@ -63,18 +63,17 @@ for (const locale of localeDirs) {
 
   const missing = [...sourceKeys].filter((key) => !localeKeys.has(key))
   if (missing.length > 0) {
-    errors.push(
-      `[${locale}] Missing ${missing.length} key(s): ${missing.slice(0, 10).join(', ')}${missing.length > 10 ? ', ...' : ''}`,
+    warnings.push(
+      `[${locale}] Missing ${missing.length} key(s): ${missing.slice(0, 10).join(', ')}${missing.length > 10 ? ', ...' : ''} (English fallback will be used)`,
     )
   }
 }
 
-if (errors.length > 0) {
-  console.error('[i18n:check] Translation completeness validation failed:')
-  for (const message of errors) {
-    console.error(`- ${message}`)
+if (warnings.length > 0) {
+  console.warn('[i18n:check] Non-English locale gaps detected; continuing because English fallback is intentional:')
+  for (const message of warnings) {
+    console.warn(`- ${message}`)
   }
-  process.exit(1)
 }
 
-console.log(`[i18n:check] OK: ${localeDirs.length} locales validated against '${SOURCE_LOCALE}/${NAMESPACE}.json'.`)
+console.log(`[i18n:check] OK: ${SOURCE_LOCALE}/${NAMESPACE}.json is the source of truth; ${localeDirs.length - 1} non-English locale(s) checked for optional coverage.`)

@@ -14,6 +14,7 @@
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import HttpBackend from 'i18next-http-backend'
+import LanguageDetector from 'i18next-browser-languagedetector'
 
 export const SUPPORTED_LANGUAGES = [
   {
@@ -122,15 +123,20 @@ export function isRtlLanguage(code: string): boolean {
 if (!i18n.isInitialized) {
   i18n
     .use(HttpBackend)
+    .use(LanguageDetector)
     .use(initReactI18next)
     .init({
-      // Keep startup language deterministic for SSR/hydration consistency.
-      // A client-side effect applies user preference after mount.
-      lng: 'en',
       fallbackLng: ['en'],
       supportedLngs: SUPPORTED_LANGUAGES.map((l) => l.code),
+      load: 'languageOnly',
       defaultNS: 'common',
       ns: ['common'],
+
+      detection: {
+        order: ['localStorage', 'navigator'],
+        lookupLocalStorage: LANGUAGE_PREF_KEY,
+        caches: ['localStorage'],
+      },
 
       // Fetch translation JSON files from /public/locales/.
       backend: {

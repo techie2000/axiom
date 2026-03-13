@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next'
 import '../lib/i18n'
 import ThemeToggle from '../components/ThemeToggle'
 import LanguageSelector from '../components/LanguageSelector'
+import { useEnglishTooltips } from '../lib/useEnglishTooltips'
 
 const API_BASE_URL =
   typeof window !== 'undefined'
@@ -16,6 +17,7 @@ const API_BASE_URL =
 export default function LoginPage() {
   const router = useRouter()
   const { t } = useTranslation('common')
+  const { getEnglishTooltip } = useEnglishTooltips()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -72,8 +74,8 @@ export default function LoginPage() {
 
         <div className="bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm rounded-lg shadow-lg p-8">
           <div className="text-center mb-6">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{t('login.title')}</h1>
-            <p className="text-gray-500 dark:text-gray-400 text-sm">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2" title={getEnglishTooltip('login.title')}>{t('login.title')}</h1>
+            <p className="text-gray-500 dark:text-gray-400 text-sm" title={getEnglishTooltip('login.subtitle')}>
               {t('login.subtitle')}
             </p>
           </div>
@@ -99,6 +101,7 @@ export default function LoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                title={getEnglishTooltip('login.emailPlaceholder')}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-white/20 rounded-md bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder={t('login.emailPlaceholder')}
               />
@@ -118,6 +121,7 @@ export default function LoginPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                title={getEnglishTooltip('login.passwordPlaceholder')}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-white/20 rounded-md bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder={t('login.passwordPlaceholder')}
               />
@@ -126,6 +130,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
+              title={loading ? getEnglishTooltip('login.submittingButton') : getEnglishTooltip('login.submitButton')}
               className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             >
               {loading ? t('login.submittingButton') : t('login.submitButton')}
@@ -137,6 +142,7 @@ export default function LoginPage() {
             <Link
               href="/register"
               className="text-blue-500 hover:text-blue-400 font-medium"
+              title={getEnglishTooltip('login.requestAccessLink')}
             >
               {t('login.requestAccessLink')}
             </Link>

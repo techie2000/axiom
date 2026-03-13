@@ -13,6 +13,7 @@ import SortableHeaderCell from '../components/SortableHeaderCell'
 import StatCard from '../components/StatCard'
 import SyncedWideTable from '../components/SyncedWideTable'
 import { useDeferredBooleanPreference } from '../lib/useDeferredBooleanPreference'
+import { useEnglishTooltips } from '../lib/useEnglishTooltips'
 
 interface Language {
   code: string
@@ -26,6 +27,7 @@ type LanguageSortField = 'code' | 'name' | 'native' | 'rtl'
 
 export default function LanguagesPage() {
   const { t } = useTranslation('common')
+  const { getEnglishTooltip } = useEnglishTooltips()
   const filterBarRef = useRef<HTMLDivElement>(null)
 
   const [languages, setLanguages] = useState<Language[]>([])
@@ -50,8 +52,13 @@ export default function LanguagesPage() {
     defaultValue: false,
   })
 
-  const effectiveExpandedWidth = expandedWidthPreference.value
+  const [hasHydrated, setHasHydrated] = useState(false)
+  const effectiveExpandedWidth = hasHydrated ? expandedWidthPreference.value : true
   const showReferenceCodes = referenceDisplayPreference.value
+
+  useEffect(() => {
+    setHasHydrated(true)
+  }, [])
 
   const API_BASE_URL = typeof window !== 'undefined'
     ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080')
@@ -170,6 +177,7 @@ export default function LanguagesPage() {
   const rtlCount = languages.filter((language) => language.rtl).length
   const ltrCount = languages.length - rtlCount
   const hasActiveFilters = searchTerm || directionFilter !== 'all'
+  const directionFilterTranslationKey = directionFilter === 'rtl' ? 'languages.filters.rtl' : directionFilter === 'ltr' ? 'languages.filters.ltr' : 'languages.filters.all'
 
   const applyDirectionCardFilter = (filter: DirectionFilter) => {
     setDirectionFilter((previousFilter) => (previousFilter === filter ? 'all' : filter))
@@ -201,13 +209,15 @@ export default function LanguagesPage() {
         <PageHeader
           title={t('languages.title')}
           subtitle={t('languages.subtitle')}
+          titleTooltip={getEnglishTooltip('languages.title')}
+          subtitleTooltip={getEnglishTooltip('languages.subtitle')}
           backHref={backHref}
           actions={
             <>
               <button
                 onClick={expandedWidthPreference.toggle}
                 className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 transition-colors text-white text-sm font-medium"
-                title={effectiveExpandedWidth ? t('referenceLayout.normalWidth') : t('referenceLayout.expandedWidth')}
+                title={effectiveExpandedWidth ? getEnglishTooltip('referenceLayout.normalButton') : getEnglishTooltip('referenceLayout.expandButton')}
               >
                 {effectiveExpandedWidth ? t('referenceLayout.normalButton') : t('referenceLayout.expandButton')}
               </button>
@@ -215,7 +225,7 @@ export default function LanguagesPage() {
                 <button
                   onClick={expandedWidthPreference.saveCurrentValue}
                   className="px-3 py-2 rounded-lg bg-green-700 hover:bg-green-600 transition-colors text-white text-xs font-medium"
-                  title="Save current page width as your permanent default"
+                  title={getEnglishTooltip('referenceLayout.savePageWidthDefault')}
                 >
                   💾 Save width
                 </button>
@@ -223,7 +233,7 @@ export default function LanguagesPage() {
               <button
                 onClick={referenceDisplayPreference.toggle}
                 className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 transition-colors text-white text-sm font-medium"
-                title={showReferenceCodes ? t('referenceLayout.displayModeCodes') : t('referenceLayout.displayModeNames')}
+                title={showReferenceCodes ? getEnglishTooltip('referenceLayout.displayCodesButton') : getEnglishTooltip('referenceLayout.displayNamesButton')}
               >
                 {showReferenceCodes ? t('referenceLayout.displayCodesButton') : t('referenceLayout.displayNamesButton')}
               </button>
@@ -242,10 +252,11 @@ export default function LanguagesPage() {
         )}
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <StatCard title={t('languages.stats.totalLanguages')} value={languages.length} />
-          <StatCard title={t('languages.stats.filteredResults')} value={filteredLanguages.length} />
+          <StatCard title={t('languages.stats.totalLanguages')} titleTooltip={getEnglishTooltip('languages.stats.totalLanguages')} value={languages.length} />
+          <StatCard title={t('languages.stats.filteredResults')} titleTooltip={getEnglishTooltip('languages.stats.filteredResults')} value={filteredLanguages.length} />
           <ActionableStatCard
             title={t('languages.stats.ltrLanguages')}
+            titleTooltip={getEnglishTooltip('languages.stats.ltrLanguages')}
             value={ltrCount}
             accent="yellow"
             isActive={directionFilter === 'ltr'}
@@ -254,6 +265,7 @@ export default function LanguagesPage() {
           />
           <ActionableStatCard
             title={t('languages.stats.rtlLanguages')}
+            titleTooltip={getEnglishTooltip('languages.stats.rtlLanguages')}
             value={rtlCount}
             accent="purple"
             isActive={directionFilter === 'rtl'}
@@ -269,6 +281,7 @@ export default function LanguagesPage() {
               <SearchInputWithOverflowTooltip
                 type="text"
                 placeholder={t('languages.searchPlaceholder')}
+                title={getEnglishTooltip('languages.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-white/20 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-white/5 text-gray-900 dark:text-white"
@@ -279,11 +292,12 @@ export default function LanguagesPage() {
               <select
                 value={directionFilter}
                 onChange={(e) => setDirectionFilter(e.target.value as DirectionFilter)}
+                title={getEnglishTooltip(directionFilterTranslationKey)}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-white/20 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
               >
-                <option value="all" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">{t('languages.filters.all')}</option>
-                <option value="rtl" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">{t('languages.filters.rtl')}</option>
-                <option value="ltr" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">{t('languages.filters.ltr')}</option>
+                <option value="all" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white" title={getEnglishTooltip('languages.filters.all')}>{t('languages.filters.all')}</option>
+                <option value="rtl" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white" title={getEnglishTooltip('languages.filters.rtl')}>{t('languages.filters.rtl')}</option>
+                <option value="ltr" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white" title={getEnglishTooltip('languages.filters.ltr')}>{t('languages.filters.ltr')}</option>
               </select>
             </div>
           </div>
@@ -292,6 +306,7 @@ export default function LanguagesPage() {
               <button
                 onClick={clearFilters}
                 className="px-6 py-2 rounded-lg bg-white hover:bg-gray-100 dark:bg-gray-600 dark:hover:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-transparent transition-colors font-medium shadow-sm"
+                title={getEnglishTooltip('actions.clearFilters')}
               >
                 {t('actions.clearFilters')}
               </button>
@@ -311,6 +326,7 @@ export default function LanguagesPage() {
                   <button
                     onClick={() => setSearchTerm('')}
                     className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors"
+                    title={getEnglishTooltip('filters.searchChip', { value: searchTerm })}
                   >
                     {t('filters.searchChip', { value: searchTerm })}
                   </button>
@@ -319,6 +335,7 @@ export default function LanguagesPage() {
                   <button
                     onClick={() => setDirectionFilter('all')}
                     className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors"
+                    title={getEnglishTooltip('languages.filters.directionChip', { value: directionFilter.toUpperCase() })}
                   >
                     {t('languages.filters.directionChip', { value: directionFilter.toUpperCase() })}
                   </button>
@@ -327,6 +344,7 @@ export default function LanguagesPage() {
               <button
                 onClick={clearFilters}
                 className="px-3 py-1 text-xs rounded-lg bg-white hover:bg-gray-100 dark:bg-blue-600 dark:hover:bg-blue-700 text-blue-900 dark:text-white border border-blue-300 dark:border-transparent transition-colors font-medium shadow-sm"
+                title={getEnglishTooltip('filters.clearAll')}
               >
                 {t('filters.clearAll')}
               </button>

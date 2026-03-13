@@ -69,6 +69,16 @@ const [value, setValue, isLoading] = useUserPreference(pageKey, prefKey, default
    and sends a `PUT /api/v1/preferences` request in the background.
 3. **Sign-out** – call `resetPreferencesCache()` so the next login gets fresh server data.
 
+#### Live updates across mounted components
+
+Preference changes must propagate immediately to all mounted consumers without requiring page refresh.
+In practice, `useUserPreference` should broadcast an update event (for example
+`axiom:preference-updated`) on write, and other hook instances should subscribe and update local
+state when their `pageKey` + `prefKey` match.
+
+This behavior is required for global toggles (for example English tooltips, language, and theme)
+because those toggles are commonly changed from shared UI surfaces such as the user menu.
+
 #### `page_key` registry
 
 | Value | Page / context |
@@ -364,6 +374,11 @@ layouts:
 ```tsx
 <div className="pl-4 rtl:pl-0 rtl:pr-4">…</div>
 ```
+
+For popovers and user menus, do not hardcode one-side anchoring (`right-0` only).
+Placement must adapt at open time so panels remain inside visible content bounds in both LTR and
+RTL contexts. Use viewport-safe sizing (for example `max-w-[calc(100vw-1rem)]`) and choose left or
+right alignment based on trigger position.
 
 ### Community translation review workflow
 

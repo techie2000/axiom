@@ -7,6 +7,8 @@ import i18n from '../lib/i18n'
 type MissingTranslationDraft = {
   key: string
   englishDefault: string
+  aliasTarget: string | null
+  referencedBy: string[]
   value: string
   notes: string
   submitting: boolean
@@ -20,6 +22,36 @@ const API_BASE_URL =
 
 const normalizeLanguageCode = (languageCode: string): string =>
   String(languageCode || '').trim().toLowerCase().split('-')[0]
+
+const NESTED_TRANSLATION_PATTERN = /^\$t\(([^)]+)\)$/
+const SHARED_KEY_PREFIXES = ['referenceLayout.']
+
+const extractNestedTranslationKey = (value: string | null): string | null => {
+  if (!value) return null
+  const match = value.trim().match(NESTED_TRANSLATION_PATTERN)
+  return match?.[1]?.trim() || null
+}
+
+const isDirectSharedKey = (translationKey: string): boolean =>
+  SHARED_KEY_PREFIXES.some((prefix) => translationKey.startsWith(prefix))
+
+type LocaleNode = {
+  [key: string]: string | LocaleNode
+}
+
+const findAliasReferences = (locale: LocaleNode | null | undefined, targetKey: string, prefix = ''): string[] => {
+  if (!locale || !targetKey) return []
+
+  return Object.entries(locale).flatMap(([key, value]) => {
+    const nextKey = prefix ? `${prefix}.${key}` : key
+
+    if (typeof value === 'string') {
+      return extractNestedTranslationKey(value) === targetKey ? [nextKey] : []
+    }
+
+    return findAliasReferences(value, targetKey, nextKey)
+  })
+}
 
 const isLikelyI18nKey = (value: string): boolean => {
   if (!value || value.includes(' ')) return false
@@ -120,14 +152,11 @@ export default function I18nMissingTranslationsDevTool() {
   }, [])
 
   // Reset entries when the user navigates to a different page so stale keys from
-  // the previous route are not shown on the new page.  Also dispatch a translations-
-  // updated event so the I18nProvider re-fetches any newly-approved translations from
-  // the server, ensuring the new page renders with the latest approved values.
+  // the previous route are not shown on the new page.
   useEffect(() => {
     if (!isEnabled) return
     seenKeys.current.clear()
     setEntries({})
-    window.dispatchEvent(new CustomEvent('axiom:translations-updated'))
   }, [isEnabled, pathname])
 
   useEffect(() => {
@@ -159,6 +188,7 @@ export default function I18nMissingTranslationsDevTool() {
 
     const originalT = i18n.t.bind(i18n)
     const originalFn = i18n.t
+    const englishLocale = i18n.getResourceBundle('en', 'common') as LocaleNode | undefined
     const pendingEntries: Record<string, MissingTranslationDraft> = {}
     let flushTimer: number | null = null
 
@@ -223,10 +253,18 @@ export default function I18nMissingTranslationsDevTool() {
         })
         if (!englishDefault || englishDefault === key) continue
 
+        const rawEnglishResource = i18n.getResource('en', 'common', key)
+        const aliasTarget = typeof rawEnglishResource === 'string'
+          ? extractNestedTranslationKey(rawEnglishResource)
+          : null
+        const referencedBy = findAliasReferences(englishLocale, key).filter((candidate) => candidate !== key)
+
         seenKeys.current.add(key)
         queueEntry({
           key,
           englishDefault,
+          aliasTarget,
+          referencedBy,
           value: '',
           notes: '',
           submitting: false,
@@ -341,17 +379,73 @@ export default function I18nMissingTranslationsDevTool() {
       })
     }
 
+    const handleTranslationsUpdated = (e: Event) => {
+      const detail = (e as CustomEvent<{ key?: string; language_code?: string }>).detail
+      const affectedKey = detail?.key
+      const affectedLang = detail?.language_code ? normalizeLanguageCode(detail.language_code) : undefined
+
+      if (affectedKey && affectedLang) {
+        const currentLanguage = normalizeLanguageCode(i18n.resolvedLanguage || i18n.language || '')
+
+        // Remove the in-memory resource that was added via i18n.addResource() at submit time,
+        // so that i18n.exists() correctly returns false after a delete/reject.
+        try {
+          const store = (i18n.services as { resourceStore?: { data?: Record<string, Record<string, Record<string, unknown>>> } })
+            ?.resourceStore?.data
+          const ns = store?.[affectedLang]?.common
+          if (ns) {
+            const parts = affectedKey.split('.')
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            let obj: any = ns
+            for (let i = 0; i < parts.length - 1; i++) {
+              if (!obj[parts[i]] || typeof obj[parts[i]] !== 'object') { obj = null; break }
+              obj = obj[parts[i]]
+            }
+            if (obj) delete obj[parts[parts.length - 1]]
+          }
+        } catch { /* best-effort */ }
+
+        // Allow the key to be detected as missing again.
+        seenKeys.current.delete(affectedKey)
+
+        // Re-add to entries if we are currently using the affected language.
+        if (currentLanguage && currentLanguage === affectedLang) {
+          const englishDefault = i18n.t(affectedKey, { lng: 'en', ns: 'common', defaultValue: '' } as Parameters<typeof i18n.t>[1])
+          if (englishDefault && englishDefault !== affectedKey) {
+            const rawResource = i18n.getResource('en', 'common', affectedKey)
+            const aliasTarget = typeof rawResource === 'string' ? extractNestedTranslationKey(rawResource) : null
+            const referencedBy = findAliasReferences(englishLocale, affectedKey).filter((c) => c !== affectedKey)
+            setEntries((prev) => ({
+              ...prev,
+              [affectedKey]: {
+                key: affectedKey,
+                englishDefault,
+                aliasTarget,
+                referencedBy,
+                value: '',
+                notes: '',
+                submitting: false,
+                error: '',
+              },
+            }))
+          }
+        }
+      }
+
+      reconcileResolvedEntries()
+    }
+
     // Reconcile periodically because approved overlay loading is async after page render.
     const intervalId = window.setInterval(reconcileResolvedEntries, 1500)
     i18n.on('loaded', reconcileResolvedEntries)
     i18n.on('languageChanged', reconcileResolvedEntries)
-    window.addEventListener('axiom:translations-updated', reconcileResolvedEntries as EventListener)
+    window.addEventListener('axiom:translations-updated', handleTranslationsUpdated)
 
     return () => {
       window.clearInterval(intervalId)
       i18n.off('loaded', reconcileResolvedEntries)
       i18n.off('languageChanged', reconcileResolvedEntries)
-      window.removeEventListener('axiom:translations-updated', reconcileResolvedEntries as EventListener)
+      window.removeEventListener('axiom:translations-updated', handleTranslationsUpdated)
     }
   }, [isEnabled])
 
@@ -403,26 +497,81 @@ export default function I18nMissingTranslationsDevTool() {
     setEntryField(entry.key, { submitting: true, error: '' })
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/translations`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
+      const submitTranslationRecord = async (payload: {
+        translation_key: string
+        language_code: string
+        translation_value: string
+        notes: string
+      }) => {
+        const response = await fetch(`${API_BASE_URL}/api/v1/translations`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        })
+
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({ error: '' })) as { error?: string }
+          throw new Error(payload.error || `Request failed (${response.status})`)
+        }
+      }
+
+      const notes = trimmedNotes || 'submitted from in-page dev helper'
+      const activeLanguage = normalizeLanguageCode(i18n.resolvedLanguage || i18n.language || '')
+
+      if (entry.aliasTarget) {
+        const updateMasterRecord = window.confirm(
+          `This key inherits from "${entry.aliasTarget}". Update the master key instead?\n\n` +
+          'OK: submit the master translation and keep this key as a pointer.\n' +
+          'Cancel: submit this key as an ALIAS override (page-specific value).'
+        )
+
+        if (updateMasterRecord) {
+          await submitTranslationRecord({
+            translation_key: entry.aliasTarget,
+            language_code: languageCode,
+            translation_value: translationValue,
+            notes,
+          })
+
+          await submitTranslationRecord({
+            translation_key: entry.key,
+            language_code: languageCode,
+            translation_value: `$t(${entry.aliasTarget})`,
+            notes,
+          })
+
+          if (languageCode && languageCode === activeLanguage) {
+            i18n.addResource(languageCode, 'common', entry.aliasTarget, translationValue)
+            i18n.addResource(languageCode, 'common', entry.key, `$t(${entry.aliasTarget})`)
+          }
+        } else {
+          await submitTranslationRecord({
+            translation_key: entry.key,
+            language_code: languageCode,
+            translation_value: translationValue,
+            notes,
+          })
+
+          if (languageCode && languageCode === activeLanguage) {
+            i18n.addResource(languageCode, 'common', entry.key, translationValue)
+          }
+        }
+      } else {
+        await submitTranslationRecord({
           translation_key: entry.key,
           language_code: languageCode,
           translation_value: translationValue,
-          notes: trimmedNotes || 'submitted from in-page dev helper',
-        }),
-      })
+          notes,
+        })
 
-      if (!response.ok) {
-        const payload = await response.json().catch(() => ({ error: '' })) as { error?: string }
-        throw new Error(payload.error || `Request failed (${response.status})`)
+        if (languageCode && languageCode === activeLanguage) {
+          i18n.addResource(languageCode, 'common', entry.key, translationValue)
+        }
       }
 
-      i18n.addResource(languageCode, 'common', entry.key, translationValue)
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('axiom:translations-updated'))
       }
@@ -487,6 +636,27 @@ export default function I18nMissingTranslationsDevTool() {
                       Hide
                     </button>
                   </div>
+
+                  {entry.aliasTarget && (
+                    <p className="mb-2 flex items-center gap-1.5 flex-wrap">
+                      <span className="inline-block rounded bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 px-1.5 py-0.5 text-[10px] font-semibold">ALIAS</span>
+                      <span className="text-[11px] text-zinc-500 dark:text-zinc-400">of <code className="font-mono">{entry.aliasTarget}</code></span>
+                    </p>
+                  )}
+
+                  {!entry.aliasTarget && entry.referencedBy.length > 0 && (
+                    <p className="mb-2 flex items-center gap-1.5 flex-wrap">
+                      <span className="inline-block rounded bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 px-1.5 py-0.5 text-[10px] font-semibold">MASTER</span>
+                      <span className="text-[11px] text-zinc-500 dark:text-zinc-400">source for <code className="font-mono">{entry.referencedBy.join(', ')}</code></span>
+                    </p>
+                  )}
+
+                  {!entry.aliasTarget && entry.referencedBy.length === 0 && isDirectSharedKey(entry.key) && (
+                    <p className="mb-2 flex items-center gap-1.5 flex-wrap">
+                      <span className="inline-block rounded bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300 px-1.5 py-0.5 text-[10px] font-semibold">SHARED</span>
+                      <span className="text-[11px] text-zinc-500 dark:text-zinc-400">used across multiple pages — translate once per language</span>
+                    </p>
+                  )}
 
                   <div className="group mb-2">
                     <p className="inline-flex items-center text-xs text-zinc-600 dark:text-zinc-300">

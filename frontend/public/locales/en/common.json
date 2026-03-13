@@ -65,6 +65,15 @@
   "theme": {
     "toggle": "Toggle theme"
   },
+  "preferences": {
+    "language": "Language",
+    "theme": "Theme",
+    "signOut": "Sign out",
+    "englishTooltips": "English tooltips",
+    "englishTooltipsDescription": "Show English text on hover when the UI is in another language.",
+    "openUserMenu": "Open user menu",
+    "menuLabel": "Global Preferences"
+  },
   "common": {
     "loading": "Loading…",
     "error": "Error",
@@ -144,6 +153,17 @@
         "deletedSuccess": "Deleted {{count}} stale translation row(s).",
         "deletedPartial": "Deleted {{deleted}} stale row(s); {{failed}} deletion(s) failed.",
         "cleanupFailed": "Failed to clean up stale translation rows"
+      },
+      "help": {
+        "openButton": "Help",
+        "closeButton": "Close help panel",
+        "panelTitle": "How Translation Relationships Work",
+        "intro": "These badges show how translation keys relate to each other, so you can avoid entering the same text repeatedly.",
+        "aliasDescription": "This key points to another key. Usually keep it as a pointer unless you need a page-specific override.",
+        "masterDescription": "This key is the source for one or more alias keys. Translate this once per language and aliases can inherit it.",
+        "sharedDescription": "This key is reused directly across multiple pages. Translate it once per language and all those pages use it.",
+        "ruleTitle": "Recommended workflow",
+        "ruleBody": "Enter the translation once for the MASTER or SHARED key. Keep ALIAS keys as pointers unless you intentionally need an ALIAS override for page-specific wording."
       },
       "errors": {
         "loadFailed": "Failed to load translations",
@@ -423,14 +443,67 @@
       "categoryChip": "Category: {{value}}",
       "countryChip": "Country: {{name}}"
     },
+    "errors": {
+      "unableToConnect": "Unable to connect to backend API.",
+      "requestTimedOut": "The LEI request took too long. Please retry or narrow your filters."
+    },
     "noDataMatchesFilters": "No LEI data matches the selected filters.",
     "columns": {
       "selector": {
         "title": "Select Columns",
         "selectAll": "Select All",
-        "resetToDefault": "Reset to Default"
+        "resetToDefault": "Reset to Default",
+        "toggleGroup": "Toggle all columns in this group"
       },
-      "button": "⚙️ Columns ({{count}})"
+      "button": "⚙️ Columns ({{count}})",
+      "groups": {
+        "core": "Core",
+        "entity": "Entity",
+        "legalAddress": "Legal Address",
+        "hqAddress": "HQ Address",
+        "registration": "Registration",
+        "associated": "Associated",
+        "validation": "Validation"
+      },
+      "labels": {
+        "lei": "LEI",
+        "legalName": "Legal Name",
+        "status": "Status",
+        "category": "$t(leiRecords.filters.category)",
+        "countryFlag": "Country Flag",
+        "lastUpdated": "Last Updated",
+        "transliteratedName": "Transliterated Name",
+        "subCategory": "Sub Category",
+        "legalAddressLine1": "Address Line 1",
+        "legalAddressLine2": "Address Line 2",
+        "legalAddressLine3": "Address Line 3",
+        "legalAddressLine4": "Address Line 4",
+        "legalCity": "City",
+        "legalPostalCode": "Postal Code",
+        "hqAddressLine1": "HQ Address Line 1",
+        "hqAddressLine2": "HQ Address Line 2",
+        "hqAddressLine3": "HQ Address Line 3",
+        "hqAddressLine4": "HQ Address Line 4",
+        "hqCity": "HQ City",
+        "hqPostalCode": "HQ Postal Code",
+        "registrationAuthority": "Registration Authority",
+        "registrationNumber": "Registration Number",
+        "initialRegistration": "Initial Registration",
+        "nextRenewal": "Next Renewal",
+        "managingLou": "Managing LOU",
+        "successorLei": "Successor LEI",
+        "validationAuthority": "Validation Authority",
+        "legalFormCode": "Legal Form Code",
+        "legalFormName": "Legal Form Name",
+        "regionCode": "Region Code",
+        "regionName": "Region Name",
+        "hqRegionCode": "HQ Region Code",
+        "hqRegionName": "HQ Region Name",
+        "countryCode": "Country Code",
+        "countryName": "Country Name",
+        "hqCountryCode": "HQ Country Code",
+        "hqCountryName": "HQ Country Name"
+      }
     },
     "display": {
       "codes": "🏷️ Display: Codes",
@@ -527,7 +600,8 @@
       "regionChip": "Region: {{value}}",
       "search": "Search",
       "status": "Status",
-      "statusChip": "Status: {{value}}"
+      "statusChip": "Status: {{value}}",
+      "${activeFilter}": "countries.filters.${activeFilter}"
     },
     "footer": "Countries data source: ISO 3166 reference data",
     "loading": "Loading countries...",

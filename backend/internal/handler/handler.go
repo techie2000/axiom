@@ -1321,7 +1321,23 @@ type submitTranslationRequest struct {
 }
 
 // ListTranslations godoc
-// @Summary List UI translations
+// @Summary List approved UI translations
+// @Description Return a paginated list of approved translation strings for public read-only consumption
+// @Tags translations
+// @Produce json
+// @Param language query string false "Filter by ISO 639-1 language code (e.g. fr, es)"
+// @Param status    query string false "Public access only supports approved"
+// @Param search    query string false "Search by key or value substring"
+// @Param limit     query int    false "Maximum records to return (default 50)"
+// @Param offset    query int    false "Offset for pagination (default 0)"
+// @Success 200 {object} translationListResponse
+// @Router /translations [get]
+func (h *UITranslationHandler) ListTranslations(c *gin.Context) {
+	h.listTranslations(c, false)
+}
+
+// ListAdminTranslations godoc
+// @Summary List UI translations for admin review
 // @Description Return a paginated list of translation strings, optionally filtered by language, status, or search text
 // @Tags translations
 // @Produce json
@@ -1331,11 +1347,30 @@ type submitTranslationRequest struct {
 // @Param limit     query int    false "Maximum records to return (default 50)"
 // @Param offset    query int    false "Offset for pagination (default 0)"
 // @Success 200 {object} translationListResponse
-// @Router /translations [get]
-func (h *UITranslationHandler) ListTranslations(c *gin.Context) {
+// @Security BearerAuth
+// @Router /admin/translations [get]
+func (h *UITranslationHandler) ListAdminTranslations(c *gin.Context) {
+	h.listTranslations(c, true)
+}
+
+func (h *UITranslationHandler) listTranslations(c *gin.Context, allowNonApproved bool) {
 	lang := c.Query("language")
-	status := c.Query("status")
+	status := strings.ToLower(strings.TrimSpace(c.Query("status")))
 	search := c.Query("search")
+	approvedStatus := string(domain.TranslationStatusApproved)
+
+	if !allowNonApproved {
+		switch status {
+		case "":
+			status = approvedStatus
+		case approvedStatus:
+			// Allowed explicitly.
+		default:
+			c.JSON(http.StatusForbidden, gin.H{"error": "only approved translations are publicly accessible"})
+			return
+		}
+	}
+
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
 	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
 	if limit <= 0 || limit > 200 {

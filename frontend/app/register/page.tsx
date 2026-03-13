@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import '../lib/i18n'
 import ThemeToggle from '../components/ThemeToggle'
 import LanguageSelector from '../components/LanguageSelector'
+import { useEnglishTooltips } from '../lib/useEnglishTooltips'
 
 const API_BASE_URL =
   typeof window !== 'undefined'
@@ -14,6 +15,7 @@ const API_BASE_URL =
 
 export default function RegisterPage() {
   const { t } = useTranslation('common')
+  const { getEnglishTooltip } = useEnglishTooltips()
   const [form, setForm] = useState({
     email: '',
     username: '',
@@ -79,12 +81,13 @@ export default function RegisterPage() {
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
               {t('register_success.title')}
             </h1>
-            <p className="text-gray-600 dark:text-gray-300 mb-6">
+            <p className="text-gray-600 dark:text-gray-300 mb-6" title={getEnglishTooltip('register_success.message')}>
               {t('register_success.message')}
             </p>
             <Link
               href="/login"
               className="inline-block py-2 px-6 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors"
+              title={getEnglishTooltip('register_success.backToLogin')}
             >
               {t('register_success.backToLogin')}
             </Link>
@@ -109,10 +112,10 @@ export default function RegisterPage() {
 
         <div className="bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm rounded-lg shadow-lg p-8">
           <div className="text-center mb-6">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2" title={getEnglishTooltip('register.title')}>
               {t('register.title')}
             </h1>
-            <p className="text-gray-500 dark:text-gray-400 text-sm">
+            <p className="text-gray-500 dark:text-gray-400 text-sm" title={getEnglishTooltip('register.subtitle')}>
               {t('register.subtitle')}
             </p>
           </div>
@@ -138,6 +141,7 @@ export default function RegisterPage() {
                 autoComplete="name"
                 value={form.full_name}
                 onChange={handleChange}
+                title={getEnglishTooltip('register.fullNamePlaceholder')}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-white/20 rounded-md bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder={t('register.fullNamePlaceholder')}
               />
@@ -158,6 +162,7 @@ export default function RegisterPage() {
                 required
                 value={form.email}
                 onChange={handleChange}
+                title={getEnglishTooltip('register.emailPlaceholder')}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-white/20 rounded-md bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder={t('register.emailPlaceholder')}
               />
@@ -180,6 +185,7 @@ export default function RegisterPage() {
                 maxLength={100}
                 value={form.username}
                 onChange={handleChange}
+                title={getEnglishTooltip('register.usernamePlaceholder')}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-white/20 rounded-md bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder={t('register.usernamePlaceholder')}
               />
@@ -201,6 +207,7 @@ export default function RegisterPage() {
                 minLength={8}
                 value={form.password}
                 onChange={handleChange}
+                title={getEnglishTooltip('register.passwordPlaceholder')}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-white/20 rounded-md bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder={t('register.passwordPlaceholder')}
               />
@@ -221,6 +228,7 @@ export default function RegisterPage() {
                 required
                 value={form.confirmPassword}
                 onChange={handleChange}
+                title={getEnglishTooltip('register.confirmPasswordPlaceholder')}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-white/20 rounded-md bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder={t('register.confirmPasswordPlaceholder')}
               />
@@ -229,6 +237,7 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={loading}
+              title={loading ? getEnglishTooltip('register.submittingButton') : getEnglishTooltip('register.submitButton')}
               className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             >
               {loading ? t('register.submittingButton') : t('register.submitButton')}
@@ -237,7 +246,7 @@ export default function RegisterPage() {
 
           <div className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
             {t('register.alreadyHaveAccount')}{' '}
-            <Link href="/login" className="text-blue-500 hover:text-blue-400 font-medium">
+            <Link href="/login" className="text-blue-500 hover:text-blue-400 font-medium" title={getEnglishTooltip('register.signInLink')}>
               {t('register.signInLink')}
             </Link>
           </div>

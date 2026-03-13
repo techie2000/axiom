@@ -2,17 +2,26 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslation } from 'react-i18next'
 import { readStoredUser, StoredUser } from '../lib/stored-user'
 import { resetPreferencesCache } from '../lib/useUserPreference'
+import { useEnglishTooltips } from '../lib/useEnglishTooltips'
 import ThemeToggle from './ThemeToggle'
 import LanguageSelector from './LanguageSelector'
 
 export default function UserBadge() {
   const router = useRouter()
+  const { t } = useTranslation('common')
+  const {
+    englishTooltipsPreferenceEnabled,
+    setEnglishTooltipsPreferenceEnabled,
+  } = useEnglishTooltips()
   const [user, setUser] = useState<StoredUser | null>(null)
   const [mounted, setMounted] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [menuAlign, setMenuAlign] = useState<'left' | 'right'>('right')
   const menuRef = useRef<HTMLDivElement | null>(null)
+  const buttonRef = useRef<HTMLButtonElement | null>(null)
 
   useEffect(() => {
     setMounted(true)
@@ -21,6 +30,12 @@ export default function UserBadge() {
 
   useEffect(() => {
     if (!menuOpen) return
+
+    const buttonRect = buttonRef.current?.getBoundingClientRect()
+    if (buttonRect) {
+      // Open toward the viewport center to keep the panel visually inside content bounds.
+      setMenuAlign(buttonRect.left > window.innerWidth / 2 ? 'right' : 'left')
+    }
 
     const handleOutsideClick = (event: MouseEvent) => {
       if (!menuRef.current) return
@@ -63,9 +78,10 @@ export default function UserBadge() {
   return (
     <div className="relative" ref={menuRef}>
       <button
+        ref={buttonRef}
         onClick={() => setMenuOpen((open) => !open)}
         className="flex items-center gap-2 h-9 px-3 rounded-lg bg-white/10 border border-white/20 text-sm hover:bg-white/20 transition-colors"
-        title="Open user menu"
+        title={t('preferences.openUserMenu')}
         aria-haspopup="menu"
         aria-expanded={menuOpen}
       >
@@ -83,32 +99,44 @@ export default function UserBadge() {
 
       {menuOpen && (
         <div
-          className="absolute right-0 mt-2 w-[320px] rounded-xl border border-gray-200 dark:border-white/20 bg-white dark:bg-gray-900 shadow-2xl p-4 z-50"
+          className={`absolute mt-2 w-[320px] max-w-[calc(100vw-1rem)] rounded-xl border border-gray-200 dark:border-white/20 bg-white dark:bg-gray-900 shadow-2xl p-4 z-50 ${menuAlign === 'right' ? 'right-0' : 'left-0'}`}
           role="menu"
           aria-label="User menu"
         >
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">
-            Global Preferences
+            {t('preferences.menuLabel')}
           </p>
 
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-3">
-              <span className="text-sm text-gray-700 dark:text-gray-300">Language</span>
+              <span className="text-sm text-gray-700 dark:text-gray-300">{t('preferences.language')}</span>
               <LanguageSelector className="justify-end" compact />
             </div>
             <div className="flex items-center justify-between gap-3">
-              <span className="text-sm text-gray-700 dark:text-gray-300">Theme</span>
+              <span className="text-sm text-gray-700 dark:text-gray-300">{t('preferences.theme')}</span>
               <ThemeToggle />
             </div>
+            <label className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <span className="block text-sm text-gray-700 dark:text-gray-300">{t('preferences.englishTooltips')}</span>
+                <span className="block text-xs text-gray-500 dark:text-gray-400">{t('preferences.englishTooltipsDescription')}</span>
+              </div>
+              <input
+                type="checkbox"
+                checked={englishTooltipsPreferenceEnabled}
+                onChange={(event) => setEnglishTooltipsPreferenceEnabled(event.target.checked)}
+                className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+            </label>
           </div>
 
           <div className="mt-4 pt-3 border-t border-gray-200 dark:border-white/10">
             <button
               onClick={handleSignOut}
               className="w-full h-9 px-3 text-sm rounded-lg bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 dark:bg-red-600/20 dark:text-red-300 dark:border-red-500/30 dark:hover:bg-red-600/30 transition-colors"
-              title="Sign out"
+              title={t('preferences.signOut')}
             >
-              Sign out
+              {t('preferences.signOut')}
             </button>
           </div>
         </div>

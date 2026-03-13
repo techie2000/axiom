@@ -128,17 +128,19 @@ The frontend i18n workflow now includes automated key extraction and locale comp
 ```bash
 cd frontend
 
-# Extract keys used in app/**/*.ts(x) into public/locales/*/common.json
+# Extract keys used in app/**/*.ts(x) into public/locales/en/common.json
 npm run i18n:extract
 
-# Ensure all non-English locale files contain every key from en/common.json
+# Report non-English locale gaps against en/common.json (warnings only; English fallback is intentional)
 npm run i18n:check
 
-# CI command: extract + check + fail if locale files were not committed
+# CI command: extract + check + fail if generated English locale changes were not committed
 npm run i18n:verify
 ```
 
-When adding new `t('...')` keys, run `npm run i18n:extract` and commit resulting locale JSON changes.
+When adding new `t('...')` keys, run `npm run i18n:extract` and commit the
+resulting `en/common.json` changes. Non-English locale files may omit new keys
+until translations are approved.
 
 ### Multi-Environment Support
 

@@ -5,12 +5,14 @@ import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { getAuthToken } from './lib/auth-token'
+import { useEnglishTooltips } from './lib/useEnglishTooltips'
 
 export default function Home() {
   const [mounted, setMounted] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [signedInAs, setSignedInAs] = useState<string | null>(null)
   const { t } = useTranslation('common')
+  const { getEnglishTooltip } = useEnglishTooltips()
 
   useEffect(() => {
     setMounted(true)
@@ -72,13 +74,13 @@ export default function Home() {
                   priority
                 />
                 <div>
-                  <span className="inline-block mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400">
+                  <span className="inline-block mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400" title={getEnglishTooltip('landing.platformLabel')}>
                     {t('landing.platformLabel')}
                   </span>
                   <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 dark:text-white leading-tight">
                     Axiom
                   </h1>
-                  <p className="mt-1.5 text-gray-700 dark:text-gray-200">
+                  <p className="mt-1.5 text-gray-700 dark:text-gray-200" title={getEnglishTooltip('landing.subtitle')}>
                     {t('landing.subtitle')}
                   </p>
                 </div>
@@ -86,10 +88,10 @@ export default function Home() {
             </div>
 
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2" title={getEnglishTooltip('landing.welcomeTitle')}>
                 {t('landing.welcomeTitle')}
               </h2>
-              <p className="text-gray-700 dark:text-gray-200 mb-6">
+              <p className="text-gray-700 dark:text-gray-200 mb-6" title={!mounted ? getEnglishTooltip('landing.loading') : isAuthenticated ? getEnglishTooltip('landing.welcomeBack') : getEnglishTooltip('landing.chooseWhere')}>
                 {!mounted
                   ? t('landing.loading')
                   : isAuthenticated
@@ -107,6 +109,7 @@ export default function Home() {
                 <Link
                   href="/dashboard"
                   className="inline-flex items-center justify-center rounded-md bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 font-semibold transition-colors"
+                  title={getEnglishTooltip('landing.returnToDashboard')}
                 >
                   {t('landing.returnToDashboard')}
                 </Link>
@@ -114,6 +117,7 @@ export default function Home() {
                 <Link
                   href="/login"
                   className="inline-flex items-center justify-center rounded-md bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 font-semibold transition-colors"
+                  title={getEnglishTooltip('landing.signInBtn')}
                 >
                   {t('landing.signInBtn')}
                 </Link>
@@ -121,6 +125,7 @@ export default function Home() {
               <Link
                 href="/home"
                 className="inline-flex items-center justify-center rounded-md border-2 border-blue-500 text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 px-6 py-3 font-semibold transition-colors"
+                title={getEnglishTooltip('landing.explorePublicData')}
               >
                 {t('landing.explorePublicData')}
               </Link>

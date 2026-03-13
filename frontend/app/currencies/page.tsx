@@ -13,6 +13,7 @@ import SortableHeaderCell from '../components/SortableHeaderCell'
 import StatCard from '../components/StatCard'
 import SyncedWideTable from '../components/SyncedWideTable'
 import { useDeferredBooleanPreference } from '../lib/useDeferredBooleanPreference'
+import { useEnglishTooltips } from '../lib/useEnglishTooltips'
 
 interface Currency {
   id: string
@@ -33,6 +34,7 @@ type CurrencySortField = 'code' | 'name' | 'symbol' | 'decimal_digits' | 'is_ale
 
 export default function CurrenciesPage() {
   const { t } = useTranslation('common')
+  const { getEnglishTooltip } = useEnglishTooltips()
   const filterBarRef = useRef<HTMLDivElement>(null)
 
   const [currencies, setCurrencies] = useState<Currency[]>([])
@@ -52,7 +54,12 @@ export default function CurrenciesPage() {
     defaultValue: true,
   })
 
-  const effectiveExpandedWidth = expandedWidthPreference.value
+  const [hasHydrated, setHasHydrated] = useState(false)
+  const effectiveExpandedWidth = hasHydrated ? expandedWidthPreference.value : true
+
+  useEffect(() => {
+    setHasHydrated(true)
+  }, [])
 
   const API_BASE_URL = typeof window !== 'undefined'
     ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080')
@@ -177,6 +184,13 @@ export default function CurrenciesPage() {
 
   const hasActiveFilters = searchTerm || complianceFilter !== 'all'
 
+  const complianceFilterTranslationKey =
+    complianceFilter === 'alert_cls'
+      ? 'currencies.filters.alertClsAllowed'
+      : complianceFilter === 'ofac'
+        ? 'currencies.filters.ofacSanctioned'
+        : 'currencies.filters.allCurrencies'
+
   const applyComplianceCardFilter = (filter: ComplianceFilter) => {
     setComplianceFilter((previousFilter) => (previousFilter === filter ? 'all' : filter))
   }
@@ -208,13 +222,15 @@ export default function CurrenciesPage() {
         <PageHeader
           title={t('currencies.title')}
           subtitle={t('currencies.subtitle')}
+          titleTooltip={getEnglishTooltip('currencies.title')}
+          subtitleTooltip={getEnglishTooltip('currencies.subtitle')}
           backHref={backHref}
           actions={
             <>
               <button
                 onClick={expandedWidthPreference.toggle}
                 className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 transition-colors text-white text-sm font-medium"
-                title={effectiveExpandedWidth ? t('referenceLayout.normalWidth') : t('referenceLayout.expandedWidth')}
+                title={effectiveExpandedWidth ? getEnglishTooltip('referenceLayout.normalButton') : getEnglishTooltip('referenceLayout.expandButton')}
               >
                 {effectiveExpandedWidth ? t('referenceLayout.normalButton') : t('referenceLayout.expandButton')}
               </button>
@@ -222,9 +238,9 @@ export default function CurrenciesPage() {
                 <button
                   onClick={expandedWidthPreference.saveCurrentValue}
                   className="px-3 py-2 rounded-lg bg-green-700 hover:bg-green-600 transition-colors text-white text-xs font-medium"
-                  title={t('referenceLayout.savePageWidthDefault')}
+                  title={getEnglishTooltip('referenceLayout.savePageWidthDefault')}
                 >
-                  {t('admin.translations.width.savePrompt')}
+                    {t('referenceLayout.savePageWidthDefault')}
                 </button>
               )}
             </>
@@ -249,10 +265,11 @@ export default function CurrenciesPage() {
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <StatCard title={t('currencies.stats.totalCurrencies')} value={currencies.length} />
-          <StatCard title={t('currencies.stats.filteredResults')} value={filteredCurrencies.length} />
+          <StatCard title={t('currencies.stats.totalCurrencies')} titleTooltip={getEnglishTooltip('currencies.stats.totalCurrencies')} value={currencies.length} />
+          <StatCard title={t('currencies.stats.filteredResults')} titleTooltip={getEnglishTooltip('currencies.stats.filteredResults')} value={filteredCurrencies.length} />
           <ActionableStatCard
             title={t('currencies.stats.alertClsAllowed')}
+            titleTooltip={getEnglishTooltip('currencies.stats.alertClsAllowed')}
             value={alertClsCount}
             accent="green"
             isActive={complianceFilter === 'alert_cls'}
@@ -261,6 +278,7 @@ export default function CurrenciesPage() {
           />
           <ActionableStatCard
             title={t('currencies.stats.ofacSanctioned')}
+            titleTooltip={getEnglishTooltip('currencies.stats.ofacSanctioned')}
             value={ofacCount}
             accent="red"
             isActive={complianceFilter === 'ofac'}
@@ -275,6 +293,7 @@ export default function CurrenciesPage() {
           <SearchInputWithOverflowTooltip
             type="text"
             placeholder={t('currencies.searchPlaceholder')}
+            title={getEnglishTooltip('currencies.searchPlaceholder')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="flex-1 px-4 py-2 border border-gray-300 dark:border-white/20 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-white/5 text-gray-900 dark:text-white"
@@ -282,11 +301,30 @@ export default function CurrenciesPage() {
           <select
             value={complianceFilter}
             onChange={(e) => setComplianceFilter(e.target.value as ComplianceFilter)}
+            title={getEnglishTooltip(complianceFilterTranslationKey)}
             className="px-4 py-2 border border-gray-300 dark:border-white/20 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
           >
-            <option className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white" value="all">{t('currencies.filters.allCurrencies')}</option>
-            <option className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white" value="alert_cls">{t('currencies.filters.alertClsAllowed')}</option>
-            <option className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white" value="ofac">{t('currencies.filters.ofacSanctioned')}</option>
+            <option
+              className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              value="all"
+              title={getEnglishTooltip('currencies.filters.allCurrencies')}
+            >
+              {t('currencies.filters.allCurrencies')}
+            </option>
+            <option
+              className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              value="alert_cls"
+              title={getEnglishTooltip('currencies.filters.alertClsAllowed')}
+            >
+              {t('currencies.filters.alertClsAllowed')}
+            </option>
+            <option
+              className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              value="ofac"
+              title={getEnglishTooltip('currencies.filters.ofacSanctioned')}
+            >
+              {t('currencies.filters.ofacSanctioned')}
+            </option>
           </select>
           </div>
           {hasActiveFilters && (
@@ -294,6 +332,7 @@ export default function CurrenciesPage() {
               <button
                 onClick={clearFilters}
                 className="px-6 py-2 rounded-lg bg-white hover:bg-gray-100 dark:bg-gray-600 dark:hover:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-transparent transition-colors font-medium shadow-sm"
+                title={getEnglishTooltip('actions.clearFilters')}
               >
                 {t('actions.clearFilters')}
               </button>
@@ -313,6 +352,7 @@ export default function CurrenciesPage() {
                   <button
                     onClick={() => setSearchTerm('')}
                     className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors"
+                    title={getEnglishTooltip('filters.searchChip', { value: searchTerm })}
                   >
                     {t('filters.searchChip', { value: searchTerm })}
                   </button>
@@ -321,6 +361,9 @@ export default function CurrenciesPage() {
                   <button
                     onClick={() => setComplianceFilter('all')}
                     className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors"
+                    title={getEnglishTooltip('currencies.filters.complianceChip', {
+                      value: complianceFilter === 'alert_cls' ? t('currencies.filters.alertClsAllowed', { lng: 'en' }) : t('currencies.filters.ofacSanctioned', { lng: 'en' })
+                    })}
                   >
                     {t('currencies.filters.complianceChip', {
                       value: complianceFilter === 'alert_cls' ? t('currencies.filters.alertClsAllowed') : t('currencies.filters.ofacSanctioned')
@@ -331,6 +374,7 @@ export default function CurrenciesPage() {
               <button
                 onClick={clearFilters}
                 className="px-3 py-1 text-xs rounded-lg bg-white hover:bg-gray-100 dark:bg-blue-600 dark:hover:bg-blue-700 text-blue-900 dark:text-white border border-blue-300 dark:border-transparent transition-colors font-medium shadow-sm"
+                title={getEnglishTooltip('filters.clearAll')}
               >
                 {t('filters.clearAll')}
               </button>
@@ -348,21 +392,21 @@ export default function CurrenciesPage() {
                 <SortableHeaderCell
                   className="w-20 px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                   align="center"
-                  label={t('currencies.columns.code')}
+                  label={<span title={getEnglishTooltip('currencies.columns.code')}>{t('currencies.columns.code')}</span>}
                   onSort={() => handleSort('code')}
                   isActiveSort={sortField === 'code'}
                   sortDirection={sortDirection}
                 />
                 <SortableHeaderCell
                   className="w-80 px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-                  label={t('currencies.columns.name')}
+                  label={<span title={getEnglishTooltip('currencies.columns.name')}>{t('currencies.columns.name')}</span>}
                   onSort={() => handleSort('name')}
                   isActiveSort={sortField === 'name'}
                   sortDirection={sortDirection}
                 />
                 <SortableHeaderCell
                   className="w-40 px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-                  label={t('currencies.columns.symbol')}
+                  label={<span title={getEnglishTooltip('currencies.columns.symbol')}>{t('currencies.columns.symbol')}</span>}
                   onSort={() => handleSort('symbol')}
                   isActiveSort={sortField === 'symbol'}
                   sortDirection={sortDirection}
@@ -370,7 +414,7 @@ export default function CurrenciesPage() {
                 <SortableHeaderCell
                   className="w-24 px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                   align="center"
-                  label={t('currencies.columns.decimals')}
+                  label={<span title={getEnglishTooltip('currencies.columns.decimals')}>{t('currencies.columns.decimals')}</span>}
                   onSort={() => handleSort('decimal_digits')}
                   isActiveSort={sortField === 'decimal_digits'}
                   sortDirection={sortDirection}
@@ -378,7 +422,7 @@ export default function CurrenciesPage() {
                 <SortableHeaderCell
                   className="w-32 px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                   align="center"
-                  label={t('currencies.columns.alertCls')}
+                  label={<span title={getEnglishTooltip('currencies.columns.alertCls')}>{t('currencies.columns.alertCls')}</span>}
                   onSort={() => handleSort('is_alert_cls_allowed')}
                   isActiveSort={sortField === 'is_alert_cls_allowed'}
                   sortDirection={sortDirection}
@@ -386,7 +430,7 @@ export default function CurrenciesPage() {
                 <SortableHeaderCell
                   className="w-36 px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                   align="center"
-                  label={t('currencies.columns.ofac')}
+                  label={<span title={getEnglishTooltip('currencies.columns.ofac')}>{t('currencies.columns.ofac')}</span>}
                   onSort={() => handleSort('is_ofac_sanctioned')}
                   isActiveSort={sortField === 'is_ofac_sanctioned'}
                   sortDirection={sortDirection}
@@ -420,14 +464,14 @@ export default function CurrenciesPage() {
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-center">
                         {currency.is_alert_cls_allowed ? (
-                          <Badge variant="green" shape="pill">{t('currencies.status.allowed')}</Badge>
+                          <Badge variant="green" shape="pill"><span title={getEnglishTooltip('currencies.status.allowed')}>{t('currencies.status.allowed')}</span></Badge>
                         ) : (
                           <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>
                         )}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-center">
                         {currency.is_ofac_sanctioned ? (
-                          <Badge variant="red" shape="pill">{t('currencies.status.sanctioned')}</Badge>
+                          <Badge variant="red" shape="pill"><span title={getEnglishTooltip('currencies.status.sanctioned')}>{t('currencies.status.sanctioned')}</span></Badge>
                         ) : (
                           <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>
                         )}
@@ -448,7 +492,7 @@ export default function CurrenciesPage() {
 
         {/* Footer Note */}
         <div className="mt-6 text-center text-sm text-gray-500">
-          <p>{t('currencies.footer')}</p>
+          <p title={getEnglishTooltip('currencies.footer')}>{t('currencies.footer')}</p>
         </div>
       </div>
 

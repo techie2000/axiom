@@ -66,6 +66,14 @@ function isSafeObject(obj) {
   return proto === Object.prototype || proto === null
 }
 
+function hasOwn(obj, key) {
+  return Object.prototype.hasOwnProperty.call(obj, key)
+}
+
+function getOwnValue(obj, key) {
+  return hasOwn(obj, key) ? obj[key] : undefined
+}
+
 function setNestedValue(target, dottedKey, defaultValue) {
   const parts = dottedKey.split('.')
   if (hasBlockedPathSegment(parts)) {
@@ -83,14 +91,21 @@ function setNestedValue(target, dottedKey, defaultValue) {
       return false
     }
     const part = parts[i]
-    if (cursor[part] === undefined || cursor[part] === null || typeof cursor[part] !== 'object' || Array.isArray(cursor[part])) {
-      cursor[part] = {}
+    const nextValue = getOwnValue(cursor, part)
+    if (nextValue === undefined || nextValue === null || typeof nextValue !== 'object' || Array.isArray(nextValue)) {
+      cursor[part] = Object.create(null)
     }
-    cursor = cursor[part]
+
+    const ownedChild = getOwnValue(cursor, part)
+    if (!isSafeObject(ownedChild)) {
+      return false
+    }
+
+    cursor = ownedChild
   }
 
   const leaf = parts[parts.length - 1]
-  if (cursor[leaf] === undefined) {
+  if (!hasOwn(cursor, leaf) || cursor[leaf] === undefined) {
     cursor[leaf] = defaultValue
     return true
   }
@@ -108,6 +123,11 @@ function getNestedValue(target, dottedKey) {
     if (current === undefined || current === null || typeof current !== 'object') {
       return undefined
     }
+
+    if (!isSafeObject(current) || !hasOwn(current, part)) {
+      return undefined
+    }
+
     return current[part]
   }, target)
 }
@@ -166,30 +186,8 @@ if (sourceAdded > 0) {
   writeJson(sourceFile, sourceJson)
 }
 
-for (const locale of localeDirs) {
-  if (locale === SOURCE_LOCALE) {
-    continue
-  }
-
-  const localeFile = path.join(LOCALES_DIR, locale, `${NAMESPACE}.json`)
-  if (!fs.existsSync(localeFile)) {
-    continue
-  }
-
-  const localeJson = readJson(localeFile)
-  let localeAdded = 0
-  for (const key of safeKeys) {
-    const sourceValue = getNestedValue(sourceJson, key)
-    localeAdded += setNestedValue(localeJson, key, typeof sourceValue === 'string' ? sourceValue : key) ? 1 : 0
-  }
-
-  if (localeAdded > 0) {
-    writeJson(localeFile, localeJson)
-  }
-}
-
 if (blockedKeyCount > 0) {
   console.warn(`[i18n:extract] Skipped ${blockedKeyCount} key(s) containing blocked path segments: ${[...BLOCKED_PATH_SEGMENTS].join(', ')}.`)
 }
 
-console.log(`[i18n:extract] Processed ${safeKeys.length} safe key(s) (${keys.length} total discovered); added ${sourceAdded} missing key(s) to ${SOURCE_LOCALE}/${NAMESPACE}.json.`)
+console.log(`[i18n:extract] Processed ${safeKeys.length} safe key(s) (${keys.length} total discovered); added ${sourceAdded} missing key(s) to ${SOURCE_LOCALE}/${NAMESPACE}.json only.`)

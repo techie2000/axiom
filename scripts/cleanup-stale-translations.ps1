@@ -52,9 +52,38 @@ $headers = @{}
 if (-not [string]::IsNullOrWhiteSpace($BearerToken)) {
   $headers.Authorization = "Bearer $BearerToken"
 }
-$translationsUri = "$ApiBaseUrl/api/v1/translations?limit=5000&offset=0"
-$translationResponse = Invoke-RestMethod -Method Get -Uri $translationsUri -Headers $headers
-$records = @($translationResponse.records)
+
+if ([string]::IsNullOrWhiteSpace($BearerToken)) {
+  throw "BearerToken is required to list admin translation rows."
+}
+
+$pageSize = 200
+$offset = 0
+$records = @()
+$pageCount = 0
+
+while ($true) {
+  $translationsUri = "$ApiBaseUrl/api/v1/admin/translations?limit=$pageSize&offset=$offset"
+  $translationResponse = Invoke-RestMethod -Method Get -Uri $translationsUri -Headers $headers
+  $pageRecords = @($translationResponse.records)
+  $pageCount += 1
+
+  Write-Host "Fetched translation page $pageCount (offset=$offset, rows=$($pageRecords.Count))"
+
+  if ($pageRecords.Count -eq 0) {
+    break
+  }
+
+  $records += $pageRecords
+
+  if ($pageRecords.Count -lt $pageSize) {
+    break
+  }
+
+  $offset += $pageSize
+}
+
+Write-Host "Translation pages fetched: $pageCount"
 
 $stale = @()
 foreach ($record in $records) {

@@ -6,6 +6,7 @@ interface ActionableStatCardProps {
   title: string
   value: string | number
   accent?: Accent
+  titleTooltip?: string
   isActive: boolean
   onClick: () => void
   ariaLabel: string
@@ -25,6 +26,7 @@ export default function ActionableStatCard({
   title,
   value,
   accent = 'default',
+  titleTooltip,
   isActive,
   onClick,
   ariaLabel,
@@ -39,7 +41,7 @@ export default function ActionableStatCard({
       aria-pressed={isActive}
       aria-label={ariaLabel}
     >
-      <StatCard title={title} value={value} accent={accent} />
+      <StatCard title={title} value={value} accent={accent} titleTooltip={titleTooltip} />
     </button>
   )
 }

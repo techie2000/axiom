@@ -8,6 +8,7 @@ import PageHeader from '../../components/PageHeader'
 import Alert from '../../components/Alert'
 import LoadingSpinner from '../../components/LoadingSpinner'
 import { getAuthToken } from '../../lib/auth-token'
+import { useEnglishTooltips } from '../../lib/useEnglishTooltips'
 
 const API_BASE_URL =
   typeof window !== 'undefined'
@@ -58,6 +59,7 @@ function roleBadge(role: string, label: string) {
 
 function AdminUsersContent() {
   const { t } = useTranslation('common')
+  const { getEnglishTooltip } = useEnglishTooltips()
   const router = useRouter()
   const searchParams = useSearchParams()
   const isBootstrap = searchParams.get('bootstrap') === 'true'
@@ -193,6 +195,8 @@ function AdminUsersContent() {
         <PageHeader
           title={t('admin.users.title')}
           subtitle={t('admin.users.subtitle')}
+          titleTooltip={getEnglishTooltip('admin.users.title')}
+          subtitleTooltip={getEnglishTooltip('admin.users.subtitle')}
           backHref="/dashboard"
         />
 
@@ -218,6 +222,7 @@ function AdminUsersContent() {
             <button
               key={s || 'all'}
               onClick={() => setStatusFilter(s)}
+              title={s === '' ? getEnglishTooltip('admin.users.filters.all') : undefined}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 statusFilter === s
                   ? 'bg-blue-600 text-white'
@@ -246,12 +251,12 @@ function AdminUsersContent() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 dark:bg-white/5 border-b border-gray-200 dark:border-white/10">
-                  <th className="px-4 py-3 text-left font-medium text-gray-700 dark:text-gray-300">{t('admin.users.columns.user')}</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-700 dark:text-gray-300">{t('admin.users.columns.username')}</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-700 dark:text-gray-300">{t('admin.users.columns.role')}</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-700 dark:text-gray-300">{t('admin.users.columns.status')}</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-700 dark:text-gray-300">{t('admin.users.columns.requested')}</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-700 dark:text-gray-300">{t('admin.users.columns.actions')}</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-700 dark:text-gray-300"><span title={getEnglishTooltip('admin.users.columns.user')}>{t('admin.users.columns.user')}</span></th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-700 dark:text-gray-300"><span title={getEnglishTooltip('admin.users.columns.username')}>{t('admin.users.columns.username')}</span></th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-700 dark:text-gray-300"><span title={getEnglishTooltip('admin.users.columns.role')}>{t('admin.users.columns.role')}</span></th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-700 dark:text-gray-300"><span title={getEnglishTooltip('admin.users.columns.status')}>{t('admin.users.columns.status')}</span></th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-700 dark:text-gray-300"><span title={getEnglishTooltip('admin.users.columns.requested')}>{t('admin.users.columns.requested')}</span></th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-700 dark:text-gray-300"><span title={getEnglishTooltip('admin.users.columns.actions')}>{t('admin.users.columns.actions')}</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -282,6 +287,7 @@ function AdminUsersContent() {
                           <button
                             onClick={() => handleApprove(user.id)}
                             disabled={actionLoading === user.id + '-approve'}
+                            title={getEnglishTooltip('admin.users.actions.approve')}
                             className="px-3 py-1 text-xs bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white rounded transition-colors"
                           >
                             {actionLoading === user.id + '-approve' ? t('admin.users.actions.loading') : t('admin.users.actions.approve')}
@@ -291,6 +297,7 @@ function AdminUsersContent() {
                           <button
                             onClick={() => handleReject(user.id)}
                             disabled={actionLoading === user.id + '-reject'}
+                            title={getEnglishTooltip('admin.users.actions.deactivate')}
                             className="px-3 py-1 text-xs bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white rounded transition-colors"
                           >
                             {actionLoading === user.id + '-reject' ? t('admin.users.actions.loading') : t('admin.users.actions.deactivate')}
@@ -301,6 +308,7 @@ function AdminUsersContent() {
                           <button
                             onClick={() => handleApprove(user.id)}
                             disabled={actionLoading === user.id + '-approve'}
+                            title={getEnglishTooltip('admin.users.actions.reactivate')}
                             className="px-3 py-1 text-xs bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded transition-colors"
                           >
                             {actionLoading === user.id + '-approve' ? t('admin.users.actions.loading') : t('admin.users.actions.reactivate')}
@@ -346,7 +354,7 @@ function AdminUsersContent() {
         )}
 
         <div className="mt-6 text-center">
-          <Link href="/dashboard" className="text-blue-500 hover:text-blue-400 text-sm">
+          <Link href="/dashboard" className="text-blue-500 hover:text-blue-400 text-sm" title={getEnglishTooltip('nav.backToDashboard')}>
             {t('nav.backToDashboard')}
           </Link>
         </div>

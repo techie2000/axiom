@@ -14,6 +14,7 @@ import SortableHeaderCell from '../components/SortableHeaderCell'
 import StatCard from '../components/StatCard'
 import SyncedWideTable from '../components/SyncedWideTable'
 import { useDeferredBooleanPreference } from '../lib/useDeferredBooleanPreference'
+import { useEnglishTooltips } from '../lib/useEnglishTooltips'
 import { useUserPreference } from '../lib/useUserPreference'
 import { Country, normalizeCountriesPayload, summarizeCountriesDataQuality } from './normalization'
 
@@ -83,6 +84,7 @@ const CENTER_ALIGNED_COLUMNS = new Set<CountryColumnKey>(['alpha2', 'alpha3', 'a
 
 export default function CountriesPage() {
   const { t } = useTranslation('common')
+  const { getEnglishTooltip } = useEnglishTooltips()
   const filterBarRef = useRef<HTMLDivElement>(null)
 
   const [countries, setCountries] = useState<Country[]>([])
@@ -127,9 +129,14 @@ export default function CountriesPage() {
   const [columnsSaveVersion, setColumnsSaveVersion] = useState(0)
   const pendingColumns = useRef<Set<CountryColumnKey> | null>(null)
 
-  const effectiveExpandedWidth = expandedWidthPreference.value
+  const [hasHydrated, setHasHydrated] = useState(false)
+  const effectiveExpandedWidth = hasHydrated ? expandedWidthPreference.value : true
   const effectiveVisibleColumns = localColumns ?? visibleColumns
   const showReferenceCodes = referenceDisplayPreference.value
+
+  useEffect(() => {
+    setHasHydrated(true)
+  }, [])
 
   const handleSetVisibleColumns = useCallback((next: Set<CountryColumnKey>) => {
     setLocalColumns(next)
@@ -484,6 +491,19 @@ export default function CountriesPage() {
     return t(column.labelKey)
   }
 
+  const getColumnLabelTranslationKey = (column: ColumnConfig): string => {
+    if (column.key === 'continent') {
+      return showReferenceCodes ? 'countries.columns.continentCode' : 'countries.columns.continentName'
+    }
+    if (column.key === 'languages') {
+      return showReferenceCodes ? 'countries.columns.languageCodes' : 'countries.columns.languageNames'
+    }
+    if (column.key === 'currency_codes') {
+      return showReferenceCodes ? 'countries.columns.currencyCodes' : 'countries.columns.currencyNames'
+    }
+    return column.labelKey
+  }
+
   const continentOptions = Array.from(new Set(countries.map((country) => country.continent).filter(Boolean))).sort((a, b) => a.localeCompare(b))
   const regionOptions = Array.from(
     new Set(
@@ -494,6 +514,7 @@ export default function CountriesPage() {
     )
   ).sort((a, b) => a.localeCompare(b))
   const hasActiveFilters = searchTerm || continentFilter || regionFilter || activeFilter !== 'all'
+  const activeFilterTranslationKey = activeFilter === 'active' ? 'countries.filters.active' : activeFilter === 'inactive' ? 'countries.filters.inactive' : 'countries.filters.all'
 
   const clearFilters = () => {
     setSearchTerm('')
@@ -523,13 +544,15 @@ export default function CountriesPage() {
         <PageHeader
           title={t('countries.title')}
           subtitle={t('countries.subtitle')}
+          titleTooltip={getEnglishTooltip('countries.title')}
+          subtitleTooltip={getEnglishTooltip('countries.subtitle')}
           backHref={backHref}
           actions={
             <>
               <button
                 onClick={expandedWidthPreference.toggle}
                 className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 transition-colors text-white text-sm font-medium"
-                title={effectiveExpandedWidth ? t('referenceLayout.normalWidth') : t('referenceLayout.expandedWidth')}
+                title={effectiveExpandedWidth ? getEnglishTooltip('referenceLayout.normalButton') : getEnglishTooltip('referenceLayout.expandButton')}
               >
                 {effectiveExpandedWidth ? t('referenceLayout.normalButton') : t('referenceLayout.expandButton')}
               </button>
@@ -537,7 +560,7 @@ export default function CountriesPage() {
                 <button
                   onClick={expandedWidthPreference.saveCurrentValue}
                   className="px-3 py-2 rounded-lg bg-green-700 hover:bg-green-600 transition-colors text-white text-xs font-medium"
-                  title="Save current page width as your permanent default"
+                  title={getEnglishTooltip('referenceLayout.savePageWidthDefault')}
                 >
                   💾 Save width
                 </button>
@@ -545,7 +568,7 @@ export default function CountriesPage() {
               <button
                 onClick={referenceDisplayPreference.toggle}
                 className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 transition-colors text-white text-sm font-medium"
-                title={showReferenceCodes ? t('referenceLayout.displayModeCodes') : t('referenceLayout.displayModeNames')}
+                title={showReferenceCodes ? getEnglishTooltip('referenceLayout.displayCodesButton') : getEnglishTooltip('referenceLayout.displayNamesButton')}
               >
                 {showReferenceCodes ? t('referenceLayout.displayCodesButton') : t('referenceLayout.displayNamesButton')}
               </button>
@@ -578,7 +601,7 @@ export default function CountriesPage() {
                         <button
                           onClick={handleSaveColumnsNow}
                           className="shrink-0 whitespace-nowrap px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded hover:bg-green-200 dark:hover:bg-green-800"
-                          title="Save current column selection as your permanent default"
+                          title={getEnglishTooltip('countries.actions.saveAsDefault')}
                         >
                           <span aria-hidden="true">💾 </span>
                           {t('countries.actions.saveAsDefault')}
@@ -597,7 +620,7 @@ export default function CountriesPage() {
                             onChange={() => toggleColumn(column.key)}
                             className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                           />
-                          <span className="text-gray-900 dark:text-white">{getColumnLabel(column)}</span>
+                          <span className="text-gray-900 dark:text-white" title={getEnglishTooltip(getColumnLabelTranslationKey(column))}>{getColumnLabel(column)}</span>
                         </label>
                       ))}
                     </div>
@@ -630,9 +653,9 @@ export default function CountriesPage() {
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <StatCard title={t('countries.stats.totalCountries')} value={countries.length} />
-          <StatCard title={t('countries.stats.filteredResults')} value={filteredCountries.length} />
-          <StatCard title={t('countries.stats.dataStandard')} value={t('countries.stats.iso3166')} />
+          <StatCard title={t('countries.stats.totalCountries')} titleTooltip={getEnglishTooltip('countries.stats.totalCountries')} value={countries.length} />
+          <StatCard title={t('countries.stats.filteredResults')} titleTooltip={getEnglishTooltip('countries.stats.filteredResults')} value={filteredCountries.length} />
+          <StatCard title={t('countries.stats.dataStandard')} titleTooltip={getEnglishTooltip('countries.stats.dataStandard')} value={t('countries.stats.iso3166')} />
         </div>
 
         <div className="mb-6 bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm rounded-lg p-6">
@@ -642,6 +665,7 @@ export default function CountriesPage() {
               <SearchInputWithOverflowTooltip
                 type="text"
                 placeholder={t('countries.searchPlaceholder')}
+                title={getEnglishTooltip('countries.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-white/20 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-white/5 text-gray-900 dark:text-white"
@@ -652,9 +676,10 @@ export default function CountriesPage() {
               <select
                 value={continentFilter}
                 onChange={(e) => setContinentFilter(e.target.value)}
+                title={continentFilter || (showReferenceCodes ? getEnglishTooltip('countries.filters.allContinentCodes') : getEnglishTooltip('countries.filters.allContinents'))}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-white/20 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
               >
-                <option value="" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">{showReferenceCodes ? t('countries.filters.allContinentCodes') : t('countries.filters.allContinents')}</option>
+                <option value="" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white" title={showReferenceCodes ? getEnglishTooltip('countries.filters.allContinentCodes') : getEnglishTooltip('countries.filters.allContinents')}>{showReferenceCodes ? t('countries.filters.allContinentCodes') : t('countries.filters.allContinents')}</option>
                 {continentOptions.map((continent) => (
                   <option key={continent} value={continent} className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">
                     {getContinentDisplay(continent)}
@@ -667,9 +692,10 @@ export default function CountriesPage() {
               <select
                 value={regionFilter}
                 onChange={(e) => setRegionFilter(e.target.value)}
+                title={regionFilter || getEnglishTooltip('countries.filters.allRegions')}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-white/20 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
               >
-                <option value="" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">{t('countries.filters.allRegions')}</option>
+                <option value="" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white" title={getEnglishTooltip('countries.filters.allRegions')}>{t('countries.filters.allRegions')}</option>
                 {regionOptions.map((region) => (
                   <option key={region} value={region} className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">
                     {region}
@@ -682,11 +708,12 @@ export default function CountriesPage() {
               <select
                 value={activeFilter}
                 onChange={(e) => setActiveFilter(e.target.value as 'all' | 'active' | 'inactive')}
+                title={getEnglishTooltip(activeFilterTranslationKey)}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-white/20 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
               >
-                <option value="all" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">{t('countries.filters.all')}</option>
-                <option value="active" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">{t('countries.filters.active')}</option>
-                <option value="inactive" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">{t('countries.filters.inactive')}</option>
+                <option value="all" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white" title={getEnglishTooltip('countries.filters.all')}>{t('countries.filters.all')}</option>
+                <option value="active" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white" title={getEnglishTooltip('countries.filters.active')}>{t('countries.filters.active')}</option>
+                <option value="inactive" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white" title={getEnglishTooltip('countries.filters.inactive')}>{t('countries.filters.inactive')}</option>
               </select>
             </div>
           </div>
@@ -695,6 +722,7 @@ export default function CountriesPage() {
               <button
                 onClick={clearFilters}
                 className="px-6 py-2 rounded-lg bg-white hover:bg-gray-100 dark:bg-gray-600 dark:hover:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-transparent transition-colors font-medium shadow-sm"
+                title={getEnglishTooltip('actions.clearFilters')}
               >
                 {t('actions.clearFilters')}
               </button>
@@ -714,6 +742,7 @@ export default function CountriesPage() {
                   <button
                     onClick={() => setSearchTerm('')}
                     className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors"
+                    title={getEnglishTooltip('filters.searchChip', { value: searchTerm })}
                   >
                     {t('filters.searchChip', { value: searchTerm })}
                   </button>
@@ -730,6 +759,7 @@ export default function CountriesPage() {
                   <button
                     onClick={() => setRegionFilter('')}
                     className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors"
+                    title={getEnglishTooltip('countries.filters.regionChip', { value: regionFilter })}
                   >
                     {t('countries.filters.regionChip', { value: regionFilter })}
                   </button>
@@ -738,6 +768,7 @@ export default function CountriesPage() {
                   <button
                     onClick={() => setActiveFilter('all')}
                     className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors"
+                    title={getEnglishTooltip('countries.filters.statusChip', { value: t(`countries.filters.${activeFilter}`, { lng: 'en' }) })}
                   >
                     {t('countries.filters.statusChip', { value: t(`countries.filters.${activeFilter}`) })}
                   </button>
@@ -746,6 +777,7 @@ export default function CountriesPage() {
               <button
                 onClick={clearFilters}
                 className="px-3 py-1 text-xs rounded-lg bg-white hover:bg-gray-100 dark:bg-blue-600 dark:hover:bg-blue-700 text-blue-900 dark:text-white border border-blue-300 dark:border-transparent transition-colors font-medium shadow-sm"
+                title={getEnglishTooltip('filters.clearAll')}
               >
                 {t('filters.clearAll')}
               </button>
@@ -765,7 +797,7 @@ export default function CountriesPage() {
                     className={`${column.width || 'min-w-32'} px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-800`}
                     align={CENTER_ALIGNED_COLUMNS.has(column.key) ? 'center' : 'left'}
                     sortable={column.key !== 'flag'}
-                    label={getColumnLabel(column)}
+                    label={<span title={getEnglishTooltip(getColumnLabelTranslationKey(column))}>{getColumnLabel(column)}</span>}
                     onSort={column.key === 'flag' ? undefined : () => handleSort(column.key)}
                     isActiveSort={sortField === column.key}
                     sortDirection={sortDirection}

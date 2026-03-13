@@ -11,7 +11,7 @@
 
 import { useEffect } from 'react'
 import { I18nextProvider } from 'react-i18next'
-import i18n, { isRtlLanguage, LANGUAGE_PREF_KEY, SUPPORTED_LANGUAGES } from '../lib/i18n'
+import i18n, { isRtlLanguage } from '../lib/i18n'
 import I18nMissingTranslationsDevTool from './I18nMissingTranslationsDevTool'
 
 interface I18nProviderProps {
@@ -22,20 +22,9 @@ export default function I18nProvider({ children }: I18nProviderProps) {
   useEffect(() => {
     if (typeof window === 'undefined') return
 
-    const stored = (localStorage.getItem(LANGUAGE_PREF_KEY) || '').trim().toLowerCase().split('-')[0]
-    if (!stored) return
-
-    const isSupported = SUPPORTED_LANGUAGES.some((language) => language.code === stored)
-    if (!isSupported || i18n.language === stored) return
-
-    void i18n.changeLanguage(stored)
-  }, [])
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-
     const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080'
     let cancelled = false
+    const approvedKeysByLanguage = new Map<string, Set<string>>()
 
     const setNestedValue = (target: Record<string, unknown>, dottedKey: string, value: string) => {
       const parts = dottedKey.split('.').filter(Boolean)
@@ -127,20 +116,55 @@ export default function I18nProvider({ children }: I18nProviderProps) {
       i18n.addResourceBundle(languageCode, namespace, sanitizedBundle, true, true)
     }
 
+    const deleteNestedValue = (target: Record<string, unknown>, dottedKey: string) => {
+      const parts = dottedKey.split('.').filter(Boolean)
+      if (parts.length === 0) {
+        return
+      }
+
+      let current: Record<string, unknown> = target
+      for (let i = 0; i < parts.length - 1; i += 1) {
+        const part = parts[i]
+        const next = current[part]
+        if (!next || typeof next !== 'object' || Array.isArray(next)) {
+          return
+        }
+        current = next as Record<string, unknown>
+      }
+
+      delete current[parts[parts.length - 1]]
+    }
+
+    const removeApprovedOverlayKeys = (languageCode: string, namespace: string, keys: Set<string>) => {
+      if (keys.size === 0) {
+        return
+      }
+
+      const currentBundle = i18n.getResourceBundle(languageCode, namespace) as Record<string, unknown> | undefined
+      if (!currentBundle || typeof currentBundle !== 'object') {
+        return
+      }
+
+      const nextBundle: Record<string, unknown> = JSON.parse(JSON.stringify(currentBundle))
+      for (const key of keys) {
+        deleteNestedValue(nextBundle, key)
+      }
+
+      i18n.removeResourceBundle(languageCode, namespace)
+      i18n.addResourceBundle(languageCode, namespace, nextBundle, true, true)
+    }
+
     const loadApprovedTranslations = async (languageCode: string) => {
       const normalizedLanguageCode = normalizeLanguageCode(languageCode)
       if (!normalizedLanguageCode || normalizedLanguageCode === 'en') return
 
       try {
-        // Rebuild the bundle from static locale files so removed/rejected overrides
-        // do not linger in memory, then apply current approved overrides.
-        i18n.removeResourceBundle(normalizedLanguageCode, 'common')
-        await i18n.reloadResources([normalizedLanguageCode], ['common'])
         sanitizeResourceBundle(normalizedLanguageCode, 'common')
 
         let offset = 0
         const limit = 200
         const overrides: Record<string, unknown> = {}
+        const nextApprovedKeys = new Set<string>()
 
         while (true) {
           const params = new URLSearchParams({
@@ -165,19 +189,33 @@ export default function I18nProvider({ children }: I18nProviderProps) {
             }
 
             const key = record.translation_key?.trim()
-            const value = record.translation_value ?? ''
             if (!key) continue
+
+            const value = record.translation_value ?? ''
             if (isPlaceholderValue(value, key, 'common')) continue
             setNestedValue(overrides, key, value)
+            nextApprovedKeys.add(key)
           }
 
           if (records.length < limit) break
           offset += records.length
         }
 
-        if (cancelled || Object.keys(overrides).length === 0) return
+        if (cancelled) return
+
+        // Remove only keys that were previously applied as approved overlays,
+        // so rejected/deleted approved translations do not linger.
+        // This preserves any runtime pending translations added in-session.
+        const previousApprovedKeys = approvedKeysByLanguage.get(normalizedLanguageCode) ?? new Set<string>()
+        removeApprovedOverlayKeys(normalizedLanguageCode, 'common', previousApprovedKeys)
+
+        if (Object.keys(overrides).length === 0) {
+          approvedKeysByLanguage.set(normalizedLanguageCode, nextApprovedKeys)
+          return
+        }
 
         i18n.addResourceBundle(normalizedLanguageCode, 'common', overrides, true, true)
+        approvedKeysByLanguage.set(normalizedLanguageCode, nextApprovedKeys)
       } catch {
         // Keep static locale fallback when remote translation overlays are unavailable.
       }

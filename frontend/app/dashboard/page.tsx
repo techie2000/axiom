@@ -13,10 +13,12 @@ import LanguagesRecordsCard from '../components/LanguagesRecordsCard'
 import ProtectedLandingCard from '../components/ProtectedLandingCard'
 import AdminSection from '../components/AdminSection'
 import { getAuthToken } from '../lib/auth-token'
+import { useEnglishTooltips } from '../lib/useEnglishTooltips'
 
 export default function DashboardPage() {
   const router = useRouter()
   const { t } = useTranslation('common')
+  const { getEnglishTooltip } = useEnglishTooltips()
   const [mounted, setMounted] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
 
@@ -58,10 +60,10 @@ export default function DashboardPage() {
                 <span className="inline-block mb-2 text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
                   {t('dashboard.platformLabel')}
                 </span>
-                <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
+                <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white" title={getEnglishTooltip('dashboard.title')}>
                   {t('dashboard.title')}
                 </h1>
-                <p className="mt-2 text-gray-600 dark:text-gray-300">
+                <p className="mt-2 text-gray-600 dark:text-gray-300" title={getEnglishTooltip('dashboard.subtitle')}>
                   {t('dashboard.subtitle')}
                 </p>
               </div>
@@ -71,6 +73,7 @@ export default function DashboardPage() {
               <Link
                 href="/home"
                 className="inline-flex items-center justify-center rounded-md bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-sm font-medium transition-colors"
+                title={getEnglishTooltip('dashboard.publicDataHubButton')}
               >
                 {t('dashboard.publicDataHubButton')}
               </Link>
@@ -79,16 +82,16 @@ export default function DashboardPage() {
         </section>
 
         <section className="mb-8">
-          <h2 className="text-3xl font-bold mb-2 text-gray-900 dark:text-white">{t('dashboard.moduleCatalog.title')}</h2>
-          <p className="text-gray-600 dark:text-gray-300">{t('dashboard.moduleCatalog.subtitle')}</p>
+          <h2 className="text-3xl font-bold mb-2 text-gray-900 dark:text-white" title={getEnglishTooltip('dashboard.moduleCatalog.title')}>{t('dashboard.moduleCatalog.title')}</h2>
+          <p className="text-gray-600 dark:text-gray-300" title={getEnglishTooltip('dashboard.moduleCatalog.subtitle')}>{t('dashboard.moduleCatalog.subtitle')}</p>
         </section>
 
         <section className="mb-12">
           <div className="flex items-center mb-6">
             <span className="text-2xl mr-3">🌍</span>
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('dashboard.publicReferenceData.title')}</h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400">{t('dashboard.publicReferenceData.subtitle')}</p>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white" title={getEnglishTooltip('dashboard.publicReferenceData.title')}>{t('dashboard.publicReferenceData.title')}</h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400" title={getEnglishTooltip('dashboard.publicReferenceData.subtitle')}>{t('dashboard.publicReferenceData.subtitle')}</p>
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 auto-rows-fr">
@@ -103,8 +106,8 @@ export default function DashboardPage() {
           <div className="flex items-center mb-6">
             <span className="text-2xl mr-3">📊</span>
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('dashboard.masterData.title')}</h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400">{t('dashboard.masterData.subtitle')}</p>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white" title={getEnglishTooltip('dashboard.masterData.title')}>{t('dashboard.masterData.title')}</h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400" title={getEnglishTooltip('dashboard.masterData.subtitle')}>{t('dashboard.masterData.subtitle')}</p>
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -112,6 +115,8 @@ export default function DashboardPage() {
               href="/instruments"
               title={t('dashboard.instruments.title')}
               description={t('dashboard.instruments.description')}
+              titleTooltip={getEnglishTooltip('dashboard.instruments.title')}
+              descriptionTooltip={getEnglishTooltip('dashboard.instruments.description')}
               icon="🎯"
             />
 
@@ -119,6 +124,8 @@ export default function DashboardPage() {
               href="/accounts"
               title={t('dashboard.accounts.title')}
               description={t('dashboard.accounts.description')}
+              titleTooltip={getEnglishTooltip('dashboard.accounts.title')}
+              descriptionTooltip={getEnglishTooltip('dashboard.accounts.description')}
               icon="🏦"
             />
 
@@ -126,6 +133,8 @@ export default function DashboardPage() {
               href="/ssi"
               title={t('dashboard.ssi.title')}
               description={t('dashboard.ssi.description')}
+              titleTooltip={getEnglishTooltip('dashboard.ssi.title')}
+              descriptionTooltip={getEnglishTooltip('dashboard.ssi.description')}
               icon="📋"
             />
 
@@ -133,6 +142,8 @@ export default function DashboardPage() {
               href="/code-mappings"
               title={t('dashboard.codeMappings.title')}
               description={t('dashboard.codeMappings.description')}
+              titleTooltip={getEnglishTooltip('dashboard.codeMappings.title')}
+              descriptionTooltip={getEnglishTooltip('dashboard.codeMappings.description')}
               icon="🔄"
             />
           </div>
@@ -142,8 +153,8 @@ export default function DashboardPage() {
           <div className="flex items-center mb-6">
             <span className="text-2xl mr-3">📡</span>
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('dashboard.dataAcquisition.title')}</h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400">{t('dashboard.dataAcquisition.subtitle')}</p>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white" title={getEnglishTooltip('dashboard.dataAcquisition.title')}>{t('dashboard.dataAcquisition.title')}</h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400" title={getEnglishTooltip('dashboard.dataAcquisition.subtitle')}>{t('dashboard.dataAcquisition.subtitle')}</p>
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

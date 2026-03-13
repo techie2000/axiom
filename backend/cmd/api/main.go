@@ -334,6 +334,11 @@ func setupRouter(cfg *config.Config, h *handler.Handlers) *gin.Engine {
 				adminTranslations.POST("/:id/reject", h.UITranslation.RejectTranslation)
 				adminTranslations.DELETE("/:id", h.UITranslation.DeleteTranslation)
 			}
+				adminTranslationList := protected.Group("/admin/translations")
+				adminTranslationList.Use(middleware.AdminRequired())
+				{
+					adminTranslationList.GET("", h.UITranslation.ListAdminTranslations)
+				}
 
 			// Protected write operations for countries and currencies
 			protected.POST("/countries", h.Country.Create)

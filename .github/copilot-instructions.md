@@ -335,6 +335,13 @@ All architecture and technical diagrams must use Mermaid format:
 - Use appropriate diagram types (flowchart, sequence, class, ER, state)
 - Apply consistent styling and color schemes
 
+### Frontend Preference and Popover Behavior (IMPORTANT)
+When implementing frontend preference-driven UX:
+1. **Preference updates must be live**: `useUserPreference` writes should update all mounted consumers immediately (event-driven sync), without requiring page refresh.
+2. **Popover/user-menu placement must be adaptive**: align menus based on trigger position and direction (LTR/RTL) to keep content inside visible layout bounds.
+3. **Viewport safety is required**: add max-width safeguards for popovers to prevent clipping on narrow screens.
+4. **Validation must include RTL + LTR**: test layout in both directions before finalizing UI changes.
+
 ## How to Use These Files in VS Code
 
 ### Instructions (Automatic Application)

@@ -1,19 +1,21 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
-import '../../lib/i18n'
+import i18n, { SUPPORTED_LANGUAGES } from '../../lib/i18n'
 import PageHeader from '../../components/PageHeader'
 import Alert from '../../components/Alert'
 import Badge from '../../components/Badge'
 import LoadingSpinner from '../../components/LoadingSpinner'
 import SearchInputWithOverflowTooltip from '../../components/SearchInputWithOverflowTooltip'
-import { SUPPORTED_LANGUAGES } from '../../lib/i18n'
 import { useDeferredBooleanPreference } from '../../lib/useDeferredBooleanPreference'
 import PreferenceSavePrompt from '../../components/PreferenceSavePrompt'
 import SortableHeaderCell from '../../components/SortableHeaderCell'
+import SyncedWideTable from '../../components/SyncedWideTable'
+import TablePaginationControls from '../../components/TablePaginationControls'
 import { getAuthToken } from '../../lib/auth-token'
+import { useEnglishTooltips } from '../../lib/useEnglishTooltips'
 
 const API_BASE_URL =
   typeof window !== 'undefined'
@@ -62,6 +64,38 @@ function resolveLocaleValue(locale: LocaleNode | null, dottedKey: string): strin
   return typeof current === 'string' ? current : null
 }
 
+function resolveLocaleValueWithAliases(
+  locale: LocaleNode | null,
+  dottedKey: string,
+  visited: Set<string> = new Set()
+): string | null {
+  if (!locale || !dottedKey || visited.has(dottedKey)) return null
+  visited.add(dottedKey)
+
+  const value = resolveLocaleValue(locale, dottedKey)
+  if (!value) return null
+
+  const nestedTarget = extractNestedTranslationKey(value)
+  if (!nestedTarget) {
+    return value
+  }
+
+  return resolveLocaleValueWithAliases(locale, nestedTarget, visited)
+}
+
+function collectAliasTargets(locale: LocaleNode, prefix = ''): Array<{ key: string; target: string }> {
+  return Object.entries(locale).flatMap(([key, value]) => {
+    const nextKey = prefix ? `${prefix}.${key}` : key
+
+    if (typeof value === 'string') {
+      const target = extractNestedTranslationKey(value)
+      return target ? [{ key: nextKey, target }] : []
+    }
+
+    return collectAliasTargets(value, nextKey)
+  })
+}
+
 function statusBadge(status: string, t: (key: string) => string) {
   const variants: Record<string, 'yellow' | 'green' | 'red'> = {
     pending: 'yellow',
@@ -92,9 +126,27 @@ type TranslationSortField = 'translation_key' | 'language_code' | 'english_defau
 const TARGET_TRANSLATION_LANGUAGES = SUPPORTED_LANGUAGES.filter((language) => language.code !== 'en')
 const DEFAULT_TARGET_LANGUAGE = TARGET_TRANSLATION_LANGUAGES[0]?.code ?? 'fr'
 const SEARCH_FETCH_LIMIT = 5000
+const PAGE_SIZE_OPTIONS = [25, 50, 100, 200]
 
 const normalizeLanguageCode = (languageCode: string): string =>
   String(languageCode || '').trim().toLowerCase().split('-')[0]
+
+const NESTED_TRANSLATION_PATTERN = /^\$t\(([^)]+)\)$/
+const SHARED_KEY_PREFIXES = ['referenceLayout.']
+const STATUS_PRIORITY: Record<UITranslation['status'], number> = {
+  approved: 3,
+  pending: 2,
+  rejected: 1,
+}
+
+const extractNestedTranslationKey = (value: string | null): string | null => {
+  if (!value) return null
+  const match = value.trim().match(NESTED_TRANSLATION_PATTERN)
+  return match?.[1]?.trim() || null
+}
+
+const isDirectSharedKey = (translationKey: string): boolean =>
+  SHARED_KEY_PREFIXES.some((prefix) => translationKey.startsWith(prefix))
 
 const getPreferredTargetLanguage = (activeLanguage: string): string => {
   const normalized = normalizeLanguageCode(activeLanguage)
@@ -112,6 +164,8 @@ const createEmptyForm = (defaultLanguage: string): TranslationFormData => ({
 export default function AdminTranslationsPage() {
   const router = useRouter()
   const { t, i18n } = useTranslation('common')
+  const { getEnglishTooltip } = useEnglishTooltips()
+  const filterBarRef = useRef<HTMLDivElement>(null)
   const defaultFormLanguage = useMemo(
     () => getPreferredTargetLanguage(i18n.resolvedLanguage || i18n.language || ''),
     [i18n.language, i18n.resolvedLanguage]
@@ -122,7 +176,8 @@ export default function AdminTranslationsPage() {
     preferenceKey: 'expanded_width',
     defaultValue: false,
   })
-  const effectiveExpandedWidth = expandedWidthPreference.value
+  const [hasHydrated, setHasHydrated] = useState(false)
+  const effectiveExpandedWidth = hasHydrated ? expandedWidthPreference.value : false
 
   const [translations, setTranslations] = useState<UITranslation[]>([])
   const [total, setTotal] = useState(0)
@@ -136,22 +191,30 @@ export default function AdminTranslationsPage() {
   const [statusFilter, setStatusFilter] = useState('')
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(0)
-  const pageSize = 50
+  const [pageSize, setPageSize] = useState(50)
   const [sortField, setSortField] = useState<TranslationSortField | null>(null)
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+  const [filterBarHeight, setFilterBarHeight] = useState(0)
 
   // Form / modal state
   const [showForm, setShowForm] = useState(false)
+  const [showHelpPanel, setShowHelpPanel] = useState(false)
   const [formData, setFormData] = useState<TranslationFormData>(() => createEmptyForm(defaultFormLanguage))
   const [formLoading, setFormLoading] = useState(false)
   const [formError, setFormError] = useState('')
   const [englishLocale, setEnglishLocale] = useState<LocaleNode | null>(null)
   const [translationKeyOptions, setTranslationKeyOptions] = useState<string[]>([])
 
+  useEffect(() => {
+    setHasHydrated(true)
+  }, [])
+
   const getToken = () => getAuthToken()
 
-  const fetchTranslations = useCallback(async () => {
-    setLoading(true)
+  const fetchTranslations = useCallback(async (showLoadingState = true) => {
+    if (showLoadingState) {
+      setLoading(true)
+    }
     setError('')
     const token = getToken()
     if (!token) {
@@ -160,14 +223,16 @@ export default function AdminTranslationsPage() {
     }
     try {
       const hasSearchTerm = Boolean(search.trim())
+      const normalizedSearch = search.trim()
       const params = new URLSearchParams({
         limit: String(hasSearchTerm ? SEARCH_FETCH_LIMIT : pageSize),
         offset: String(hasSearchTerm ? 0 : page * pageSize),
       })
       if (langFilter) params.set('language', langFilter)
       if (statusFilter) params.set('status', statusFilter)
+      if (normalizedSearch) params.set('search', normalizedSearch)
 
-      const res = await fetch(`${API_BASE_URL}/api/v1/translations?${params}`, {
+        const res = await fetch(`${API_BASE_URL}/api/v1/admin/translations?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (res.status === 401) {
@@ -182,12 +247,25 @@ export default function AdminTranslationsPage() {
     } catch {
       setError(t('admin.translations.errors.loadFailed'))
     } finally {
-      setLoading(false)
+      if (showLoadingState) {
+        setLoading(false)
+      }
     }
-  }, [router, langFilter, statusFilter, search, page, t])
+  }, [router, langFilter, statusFilter, search, page, pageSize, t])
 
   useEffect(() => {
     fetchTranslations()
+  }, [fetchTranslations])
+
+  useEffect(() => {
+    const handleTranslationsUpdated = () => {
+      void fetchTranslations(false)
+    }
+
+    window.addEventListener('axiom:translations-updated', handleTranslationsUpdated as EventListener)
+    return () => {
+      window.removeEventListener('axiom:translations-updated', handleTranslationsUpdated as EventListener)
+    }
   }, [fetchTranslations])
 
   useEffect(() => {
@@ -195,7 +273,7 @@ export default function AdminTranslationsPage() {
 
     async function loadEnglishLocale() {
       try {
-        const res = await fetch('/locales/en/common.json')
+        const res = await fetch('/locales/en/common.json', { cache: 'no-store' })
         if (!res.ok) return
 
         const data = (await res.json()) as LocaleNode
@@ -216,21 +294,48 @@ export default function AdminTranslationsPage() {
       }
     }
 
+    const handleFocus = () => {
+      void loadEnglishLocale()
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void loadEnglishLocale()
+      }
+    }
+
     loadEnglishLocale()
+    window.addEventListener('focus', handleFocus)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
 
     return () => {
       cancelled = true
+      window.removeEventListener('focus', handleFocus)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [])
 
-  // Close form on Escape
+  // Close only the top-most local overlay on Escape.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setShowForm(false)
+      if (e.key !== 'Escape') return
+
+      // Help panel should close first and consume Escape so global menus remain open.
+      if (showHelpPanel) {
+        e.preventDefault()
+        e.stopPropagation()
+        e.stopImmediatePropagation()
+        setShowHelpPanel(false)
+        return
+      }
+
+      if (showForm) {
+        setShowForm(false)
+      }
     }
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
-  }, [])
+  }, [showHelpPanel, showForm])
 
   const showSuccess = (msg: string) => {
     setSuccessMessage(msg)
@@ -248,9 +353,65 @@ export default function AdminTranslationsPage() {
     [translations, isStaleTranslationKey]
   )
 
-  const notifyTranslationsUpdated = () => {
+  const preferredTranslationByLanguageAndKey = useMemo(() => {
+    const map = new Map<string, UITranslation>()
+
+    const getTimestamp = (row: UITranslation): number => {
+      const parsed = Date.parse(row.updated_at || row.created_at || '')
+      return Number.isFinite(parsed) ? parsed : 0
+    }
+
+    for (const row of translations) {
+      const normalizedLanguage = normalizeLanguageCode(row.language_code)
+      if (!normalizedLanguage) continue
+
+      const lookupKey = `${normalizedLanguage}::${row.translation_key}`
+      const existing = map.get(lookupKey)
+      if (!existing) {
+        map.set(lookupKey, row)
+        continue
+      }
+
+      const rowPriority = STATUS_PRIORITY[row.status] ?? 0
+      const existingPriority = STATUS_PRIORITY[existing.status] ?? 0
+      const shouldReplace =
+        rowPriority > existingPriority ||
+        (rowPriority === existingPriority && getTimestamp(row) > getTimestamp(existing))
+
+      if (shouldReplace) {
+        map.set(lookupKey, row)
+      }
+    }
+
+    return map
+  }, [translations])
+
+  const resolveTranslationDisplayValue = useCallback((languageCode: string, key: string): string | null => {
+    const normalizedLanguage = normalizeLanguageCode(languageCode)
+    if (!normalizedLanguage || !key) return null
+
+    const visited = new Set<string>()
+    const resolveFromRecords = (targetKey: string): string | null => {
+      if (!targetKey || visited.has(targetKey)) return null
+      visited.add(targetKey)
+
+      const record = preferredTranslationByLanguageAndKey.get(`${normalizedLanguage}::${targetKey}`)
+      if (record) {
+        const nestedTarget = extractNestedTranslationKey(record.translation_value)
+        return nestedTarget ? resolveFromRecords(nestedTarget) : record.translation_value
+      }
+
+      const resource = i18n.getResourceBundle(normalizedLanguage, 'common') as LocaleNode | undefined
+      return resolveLocaleValueWithAliases(resource ?? null, targetKey)
+    }
+
+    return resolveFromRecords(key)
+  }, [i18n, preferredTranslationByLanguageAndKey])
+
+  const notifyTranslationsUpdated = (key?: string, languageCode?: string) => {
     if (typeof window === 'undefined') return
-    window.dispatchEvent(new CustomEvent('axiom:translations-updated'))
+    const detail = key ? { key, language_code: languageCode } : undefined
+    window.dispatchEvent(new CustomEvent('axiom:translations-updated', detail ? { detail } : undefined))
   }
 
   const handleApprove = async (id: string) => {
@@ -264,7 +425,7 @@ export default function AdminTranslationsPage() {
       if (!res.ok) throw new Error(t('admin.translations.errors.approveFailed'))
       showSuccess(t('admin.translations.approveSuccess'))
       notifyTranslationsUpdated()
-      fetchTranslations()
+      fetchTranslations(false)
     } catch {
       setError(t('admin.translations.errors.approveFailed'))
     } finally {
@@ -272,7 +433,7 @@ export default function AdminTranslationsPage() {
     }
   }
 
-  const handleReject = async (id: string) => {
+  const handleReject = async (id: string, key?: string, languageCode?: string) => {
     setActionLoading(id + '-reject')
     const token = getToken()
     try {
@@ -282,8 +443,8 @@ export default function AdminTranslationsPage() {
       })
       if (!res.ok) throw new Error(t('admin.translations.errors.rejectFailed'))
       showSuccess(t('admin.translations.rejectSuccess'))
-      notifyTranslationsUpdated()
-      fetchTranslations()
+      notifyTranslationsUpdated(key, languageCode)
+      fetchTranslations(false)
     } catch {
       setError(t('admin.translations.errors.rejectFailed'))
     } finally {
@@ -291,7 +452,7 @@ export default function AdminTranslationsPage() {
     }
   }
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string, key?: string, languageCode?: string) => {
     if (!window.confirm(t('admin.translations.deleteConfirm'))) return
     setActionLoading(id + '-delete')
     const token = getToken()
@@ -302,8 +463,8 @@ export default function AdminTranslationsPage() {
       })
       if (!res.ok) throw new Error(t('admin.translations.errors.deleteFailed'))
       showSuccess(t('admin.translations.deleteSuccess'))
-      notifyTranslationsUpdated()
-      fetchTranslations()
+      notifyTranslationsUpdated(key, languageCode)
+      fetchTranslations(false)
     } catch {
       setError(t('admin.translations.errors.deleteFailed'))
     } finally {
@@ -316,19 +477,76 @@ export default function AdminTranslationsPage() {
     setFormLoading(true)
     setFormError('')
     const token = getToken()
+    const englishDefaultForKey = resolveLocaleValue(englishLocale, formData.translation_key)
+    const nestedTargetKey = extractNestedTranslationKey(englishDefaultForKey)
+
     try {
-      const res = await fetch(`${API_BASE_URL}/api/v1/translations`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(formData),
-      })
-      if (!res.ok) {
-        const d = await res.json()
-        throw new Error(d.error || t('admin.translations.errors.submitFailed'))
+      const submitTranslationRecord = async (payload: TranslationFormData) => {
+        const res = await fetch(`${API_BASE_URL}/api/v1/translations`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        })
+
+        if (!res.ok) {
+          const d = await res.json()
+          throw new Error(d.error || t('admin.translations.errors.submitFailed'))
+        }
       }
+
+      const submittedLanguage = formData.language_code.trim().toLowerCase().split('-')[0]
+      const activeLanguage = (i18n.resolvedLanguage || i18n.language || '').trim().toLowerCase().split('-')[0]
+
+      if (nestedTargetKey) {
+        const updateMasterRecord = window.confirm(
+          `This key inherits from "${nestedTargetKey}". Update the master record as well?\n\n` +
+          'OK: submit master translation and keep this key as a pointer.\n' +
+          'Cancel: submit this key as an ALIAS override (page-specific value).'
+        )
+
+        if (updateMasterRecord) {
+          await submitTranslationRecord({
+            translation_key: nestedTargetKey,
+            language_code: formData.language_code,
+            translation_value: formData.translation_value,
+            notes: formData.notes,
+          })
+
+          await submitTranslationRecord({
+            translation_key: formData.translation_key,
+            language_code: formData.language_code,
+            translation_value: `$t(${nestedTargetKey})`,
+            notes: formData.notes,
+          })
+
+          if (submittedLanguage && submittedLanguage === activeLanguage && formData.translation_key.trim()) {
+            i18n.addResource(submittedLanguage, 'common', nestedTargetKey, formData.translation_value)
+            i18n.addResource(submittedLanguage, 'common', formData.translation_key.trim(), `$t(${nestedTargetKey})`)
+          }
+        } else {
+          await submitTranslationRecord({
+            ...formData,
+            translation_value: formData.translation_value,
+          })
+
+          if (submittedLanguage && submittedLanguage === activeLanguage && formData.translation_key.trim()) {
+            i18n.addResource(submittedLanguage, 'common', formData.translation_key.trim(), formData.translation_value)
+          }
+        }
+      } else {
+        await submitTranslationRecord({
+          ...formData,
+          translation_value: formData.translation_value,
+        })
+
+        if (submittedLanguage && submittedLanguage === activeLanguage && formData.translation_key.trim()) {
+          i18n.addResource(submittedLanguage, 'common', formData.translation_key.trim(), formData.translation_value)
+        }
+      }
+
       setShowForm(false)
       setFormData(createEmptyForm(defaultFormLanguage))
       showSuccess(t('admin.translations.saveSuccess'))
@@ -474,13 +692,50 @@ export default function AdminTranslationsPage() {
     return left.translation_key.localeCompare(right.translation_key, undefined, { sensitivity: 'base' })
   })
 
+  const aliasReferencesByTarget = useMemo(() => {
+    const references = new Map<string, string[]>()
+    if (!englishLocale) {
+      return references
+    }
+
+    for (const relation of collectAliasTargets(englishLocale)) {
+      const existing = references.get(relation.target)
+      if (existing) {
+        existing.push(relation.key)
+      } else {
+        references.set(relation.target, [relation.key])
+      }
+    }
+
+    return references
+  }, [englishLocale])
+
   const selectedEnglishDefault = resolveLocaleValue(englishLocale, formData.translation_key)
+  const selectedAliasTarget = extractNestedTranslationKey(selectedEnglishDefault)
   const displayedTranslations = normalizedSearch
     ? sortedTranslations.slice(page * pageSize, (page + 1) * pageSize)
     : sortedTranslations
   const visibleTotal = normalizedSearch ? filteredTranslations.length : total
 
   const totalPages = Math.ceil(visibleTotal / pageSize)
+  const currentPage = page + 1
+  const isLastPage = totalPages === 0 || page >= totalPages - 1
+  const hasActiveFilters = Boolean(langFilter || statusFilter || search.trim())
+
+  useEffect(() => {
+    if (!hasActiveFilters) {
+      setFilterBarHeight(0)
+      return
+    }
+
+    const updateHeight = () => {
+      setFilterBarHeight(filterBarRef.current?.offsetHeight || 0)
+    }
+
+    updateHeight()
+    window.addEventListener('resize', updateHeight)
+    return () => window.removeEventListener('resize', updateHeight)
+  }, [hasActiveFilters, langFilter, statusFilter, search])
 
   return (
     <div className="min-h-screen p-8">
@@ -488,6 +743,8 @@ export default function AdminTranslationsPage() {
         <PageHeader
           title={t('admin.translations.title')}
           subtitle={t('admin.translations.subtitle')}
+          titleTooltip={getEnglishTooltip('admin.translations.title')}
+          subtitleTooltip={getEnglishTooltip('admin.translations.subtitle')}
           actions={
             <>
               <button
@@ -495,17 +752,18 @@ export default function AdminTranslationsPage() {
                 className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 transition-colors text-white text-sm font-medium"
                 title={
                   effectiveExpandedWidth
-                    ? t('admin.translations.width.normalTitle')
-                    : t('admin.translations.width.expandedTitle')
+                      ? getEnglishTooltip('referenceLayout.normalButton')
+                      : getEnglishTooltip('referenceLayout.expandButton')
                 }
               >
                 {effectiveExpandedWidth
-                  ? t('admin.translations.width.normalButton')
-                  : t('admin.translations.width.expandedButton')}
+                    ? t('referenceLayout.normalButton')
+                    : t('referenceLayout.expandButton')}
               </button>
               <button
                 onClick={() => handleOpenNewTranslationForm()}
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+                title={getEnglishTooltip('admin.translations.addTranslation')}
               >
                 + {t('admin.translations.addTranslation')}
               </button>
@@ -543,6 +801,7 @@ export default function AdminTranslationsPage() {
             <select
               value={langFilter}
               onChange={(e) => { setLangFilter(e.target.value); setPage(0) }}
+              title={langFilter || getEnglishTooltip('admin.translations.allLanguages')}
               className="bg-white dark:bg-white/5 border border-gray-300 dark:border-white/20 rounded-md text-gray-900 dark:text-white text-sm px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">{t('admin.translations.allLanguages')}</option>
@@ -561,6 +820,7 @@ export default function AdminTranslationsPage() {
             <select
               value={statusFilter}
               onChange={(e) => { setStatusFilter(e.target.value); setPage(0) }}
+              title={statusFilter || getEnglishTooltip('admin.translations.allStatuses')}
               className="bg-white dark:bg-white/5 border border-gray-300 dark:border-white/20 rounded-md text-gray-900 dark:text-white text-sm px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">{t('admin.translations.allStatuses')}</option>
@@ -579,6 +839,7 @@ export default function AdminTranslationsPage() {
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(0) }}
               placeholder={t('admin.translations.searchPlaceholder')}
+              title={getEnglishTooltip('admin.translations.searchPlaceholder')}
               className="w-full bg-white dark:bg-white/5 border border-gray-300 dark:border-white/20 rounded-md text-gray-900 dark:text-white text-sm px-3 py-1.5 placeholder-gray-500 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -587,78 +848,185 @@ export default function AdminTranslationsPage() {
             <button
               onClick={() => { setLangFilter(''); setStatusFilter(''); setSearch(''); setPage(0) }}
               className="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white border border-gray-300 dark:border-white/20 rounded-md transition-colors"
+              title={getEnglishTooltip('common.clearFilters')}
             >
               {t('common.clearFilters')}
             </button>
           )}
+
+          <button
+            onClick={() => setShowHelpPanel(true)}
+            className="ml-auto px-3 py-1.5 text-sm rounded-md border border-cyan-300 text-cyan-800 bg-cyan-50 hover:bg-cyan-100 dark:border-cyan-700/50 dark:text-cyan-200 dark:bg-cyan-900/20 dark:hover:bg-cyan-900/35 transition-colors"
+            title={getEnglishTooltip('admin.translations.help.openButton')}
+          >
+            ? {t('admin.translations.help.openButton')}
+          </button>
         </div>
 
+        {/* Top pagination */}
+        {visibleTotal > 0 && (
+          <TablePaginationControls
+            className="mb-4"
+            currentPage={currentPage}
+            isFirstPage={page === 0}
+            isLastPage={isLastPage}
+            onPrevious={() => setPage((p) => Math.max(0, p - 1))}
+            onNext={() => setPage((p) => p + 1)}
+            pageSize={pageSize}
+            pageSizeOptions={PAGE_SIZE_OPTIONS}
+            onPageSizeChange={(nextSize) => {
+              setPageSize(nextSize)
+              setPage(0)
+            }}
+            pageLabel={t('leiRecords.pagination.page', { page: currentPage })}
+            itemsPerPageLabel={t('leiRecords.pagination.itemsPerPage')}
+            previousLabel={t('leiRecords.pagination.previous')}
+            nextLabel={t('leiRecords.pagination.next')}
+          />
+        )}
+
+        {hasActiveFilters && (
+          <div
+            ref={filterBarRef}
+            className="sticky top-0 z-40 bg-blue-50 dark:bg-blue-900 border-b-2 border-blue-200 dark:border-blue-700 px-4 py-2 shadow-md rounded-t-lg"
+          >
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2 flex-wrap text-sm">
+                <span className="font-medium text-blue-900 dark:text-blue-100">{t('leiRecords.filters.activeFilters')}</span>
+                {langFilter && (
+                  <button
+                    onClick={() => setLangFilter('')}
+                    className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors"
+                  >
+                    {t('admin.translations.filterByLanguage')}: {langFilter.toUpperCase()} <span className="ml-1">✕</span>
+                  </button>
+                )}
+                {statusFilter && (
+                  <button
+                    onClick={() => setStatusFilter('')}
+                    className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors"
+                  >
+                    {t('admin.translations.filterByStatus')}: {statusFilter.toUpperCase()} <span className="ml-1">✕</span>
+                  </button>
+                )}
+                {search.trim() && (
+                  <button
+                    onClick={() => setSearch('')}
+                    className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors"
+                  >
+                    {t('filters.searchChip', { value: search.trim() })} <span className="ml-1">✕</span>
+                  </button>
+                )}
+              </div>
+              <button
+                onClick={() => { setLangFilter(''); setStatusFilter(''); setSearch(''); setPage(0) }}
+                className="px-3 py-1 text-xs rounded-lg bg-white hover:bg-gray-100 dark:bg-blue-600 dark:hover:bg-blue-700 text-blue-900 dark:text-white border border-blue-300 dark:border-transparent transition-colors font-medium shadow-sm"
+              >
+                {t('filters.clearAll')}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Table */}
-        <div className="bg-white dark:bg-white/5 backdrop-blur-sm border-2 border-gray-200 dark:border-white/10 rounded-lg overflow-hidden">
-          {loading ? (
+        {loading ? (
+          <div className="bg-white dark:bg-white/5 backdrop-blur-sm border-2 border-gray-200 dark:border-white/10 rounded-lg">
             <LoadingSpinner message={t('common.loading')} />
-          ) : displayedTranslations.length === 0 ? (
+          </div>
+        ) : displayedTranslations.length === 0 ? (
+          <div className="bg-white dark:bg-white/5 backdrop-blur-sm border-2 border-gray-200 dark:border-white/10 rounded-lg">
             <div className="text-center py-16 text-gray-600 dark:text-gray-400">
               {t('admin.translations.noTranslations')}
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left text-gray-700 dark:text-gray-300">
-                <thead className="text-xs uppercase bg-gray-50 dark:bg-white/5 text-gray-600 dark:text-gray-400">
-                  <tr>
-                    <SortableHeaderCell
-                      className="px-4 py-3"
-                      label={t('admin.translations.keyColumn')}
-                      onSort={() => handleSort('translation_key')}
-                      isActiveSort={sortField === 'translation_key'}
-                      sortDirection={sortDirection}
-                    />
-                    <SortableHeaderCell
-                      className="px-4 py-3"
-                      label={t('admin.translations.languageColumn')}
-                      onSort={() => handleSort('language_code')}
-                      isActiveSort={sortField === 'language_code'}
-                      sortDirection={sortDirection}
-                    />
-                    <SortableHeaderCell
-                      className="px-4 py-3"
-                      label={t('admin.translations.englishDefaultLabel')}
-                      onSort={() => handleSort('english_default')}
-                      isActiveSort={sortField === 'english_default'}
-                      sortDirection={sortDirection}
-                    />
-                    <SortableHeaderCell
-                      className="px-4 py-3"
-                      label={t('admin.translations.valueColumn')}
-                      onSort={() => handleSort('translation_value')}
-                      isActiveSort={sortField === 'translation_value'}
-                      sortDirection={sortDirection}
-                    />
-                    <SortableHeaderCell
-                      className="px-4 py-3"
-                      label={t('admin.translations.notesLabel')}
-                      onSort={() => handleSort('notes')}
-                      isActiveSort={sortField === 'notes'}
-                      sortDirection={sortDirection}
-                    />
-                    <SortableHeaderCell
-                      className="px-4 py-3"
-                      label={t('admin.translations.statusColumn')}
-                      onSort={() => handleSort('status')}
-                      isActiveSort={sortField === 'status'}
-                      sortDirection={sortDirection}
-                    />
-                    <SortableHeaderCell
-                      className="px-4 py-3"
-                      label={t('admin.translations.actionsColumn')}
-                      sortable={false}
-                    />
-                  </tr>
-                </thead>
-                <tbody>
+          </div>
+        ) : (
+          <div className="relative">
+            <SyncedWideTable
+              stickyTopOffset={hasActiveFilters ? filterBarHeight : 0}
+              dependencyKey={`${displayedTranslations.length}-${sortField ?? 'default'}-${sortDirection}-${actionLoading ?? 'idle'}`}
+              tableClassName="min-w-full"
+              tableStyle={{ tableLayout: 'auto', borderCollapse: 'collapse' }}
+              mainHeaderClassName="bg-gray-100 dark:bg-gray-800"
+              stickyHeaderClassName="bg-gray-100 dark:bg-gray-800"
+              bodyClassName="divide-y divide-gray-200 dark:divide-white/10"
+              topScrollbarClassName="mb-1 overflow-x-auto bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 rounded-t-lg"
+              stickyContainerClassName="fixed z-30 overflow-x-auto bg-white border-b-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm shadow-lg transition-all duration-300 ease-in-out"
+              containerClassName="overflow-x-auto bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm shadow-lg"
+              containerStyle={{
+                borderTopLeftRadius: hasActiveFilters ? 0 : '0.5rem',
+                borderTopRightRadius: hasActiveFilters ? 0 : '0.5rem',
+                borderBottomLeftRadius: '0.5rem',
+                borderBottomRightRadius: '0.5rem',
+                borderTop: hasActiveFilters ? 'none' : undefined,
+              }}
+              headerRow={
+                <tr>
+                  <SortableHeaderCell
+                    className="sticky top-0 z-20 bg-gray-100 dark:bg-gray-800 px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300"
+                    label={<span title={getEnglishTooltip('admin.translations.keyColumn')}>{t('admin.translations.keyColumn')}</span>}
+                    onSort={() => handleSort('translation_key')}
+                    isActiveSort={sortField === 'translation_key'}
+                    sortDirection={sortDirection}
+                  />
+                  <SortableHeaderCell
+                    className="sticky top-0 z-20 bg-gray-100 dark:bg-gray-800 px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300"
+                    label={<span title={getEnglishTooltip('admin.translations.languageColumn')}>{t('admin.translations.languageColumn')}</span>}
+                    onSort={() => handleSort('language_code')}
+                    isActiveSort={sortField === 'language_code'}
+                    sortDirection={sortDirection}
+                  />
+                  <SortableHeaderCell
+                    className="sticky top-0 z-20 bg-gray-100 dark:bg-gray-800 px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300"
+                    label={<span title={getEnglishTooltip('admin.translations.englishDefaultLabel')}>{t('admin.translations.englishDefaultLabel')}</span>}
+                    onSort={() => handleSort('english_default')}
+                    isActiveSort={sortField === 'english_default'}
+                    sortDirection={sortDirection}
+                  />
+                  <SortableHeaderCell
+                    className="sticky top-0 z-20 bg-gray-100 dark:bg-gray-800 px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300"
+                    label={<span title={getEnglishTooltip('admin.translations.valueColumn')}>{t('admin.translations.valueColumn')}</span>}
+                    onSort={() => handleSort('translation_value')}
+                    isActiveSort={sortField === 'translation_value'}
+                    sortDirection={sortDirection}
+                  />
+                  <SortableHeaderCell
+                    className="sticky top-0 z-20 bg-gray-100 dark:bg-gray-800 px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300"
+                    label={<span title={getEnglishTooltip('admin.translations.notesLabel')}>{t('admin.translations.notesLabel')}</span>}
+                    onSort={() => handleSort('notes')}
+                    isActiveSort={sortField === 'notes'}
+                    sortDirection={sortDirection}
+                  />
+                  <SortableHeaderCell
+                    className="sticky top-0 z-20 bg-gray-100 dark:bg-gray-800 px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300"
+                    label={<span title={getEnglishTooltip('admin.translations.statusColumn')}>{t('admin.translations.statusColumn')}</span>}
+                    onSort={() => handleSort('status')}
+                    isActiveSort={sortField === 'status'}
+                    sortDirection={sortDirection}
+                  />
+                  <SortableHeaderCell
+                    className="sticky top-0 z-20 bg-gray-100 dark:bg-gray-800 px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300"
+                    label={<span title={getEnglishTooltip('admin.translations.actionsColumn')}>{t('admin.translations.actionsColumn')}</span>}
+                    sortable={false}
+                  />
+                </tr>
+              }
+              bodyRows={
+                <>
                   {displayedTranslations.map((tr) => {
                     const lang = SUPPORTED_LANGUAGES.find((l) => l.code === tr.language_code)
                     const englishDefault = resolveLocaleValue(englishLocale, tr.translation_key)
+                    const aliasTarget = extractNestedTranslationKey(englishDefault)
+                    const displayEnglishDefault = aliasTarget
+                      ? resolveLocaleValueWithAliases(englishLocale, aliasTarget) ?? englishDefault
+                      : resolveLocaleValueWithAliases(englishLocale, tr.translation_key) ?? englishDefault
+                    const referencedBy = aliasReferencesByTarget.get(tr.translation_key) ?? []
+                    const isSharedMaster = !aliasTarget && referencedBy.length > 0
+                    const isSharedDirect = !aliasTarget && !isSharedMaster && isDirectSharedKey(tr.translation_key)
+                    const pointerValue = aliasTarget ? `$t(${aliasTarget})` : null
+                    const isAliasPointerRecord = Boolean(pointerValue && tr.translation_value.trim() === pointerValue)
+                    const resolvedAliasTranslation = aliasTarget
+                      ? resolveTranslationDisplayValue(tr.language_code, aliasTarget)
+                      : null
                     return (
                       <tr
                         key={tr.id}
@@ -666,6 +1034,27 @@ export default function AdminTranslationsPage() {
                       >
                         <td className="px-4 py-3 font-mono text-xs text-gray-700 dark:text-gray-300 whitespace-nowrap">
                           {tr.translation_key}
+                          {aliasTarget && (
+                            <span className="ml-2 inline-block rounded bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 px-1.5 py-0.5 text-[10px] align-middle">
+                              ALIAS
+                            </span>
+                          )}
+                          {isSharedMaster && (
+                            <span
+                              className="ml-2 inline-block rounded bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 px-1.5 py-0.5 text-[10px] align-middle"
+                              title={`Used by: ${referencedBy.join(', ')}`}
+                            >
+                              MASTER
+                            </span>
+                          )}
+                          {isSharedDirect && (
+                            <span
+                              className="ml-2 inline-block rounded bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300 px-1.5 py-0.5 text-[10px] align-middle"
+                              title="Shared key used directly across reference-data pages. Translate once per language unless you intentionally override elsewhere."
+                            >
+                              SHARED
+                            </span>
+                          )}
                           {isStaleTranslationKey(tr.translation_key) && (
                             <span className="ml-2 inline-block rounded bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 px-1.5 py-0.5 text-[10px] align-middle">
                               {t('admin.translations.stale.badge')}
@@ -675,11 +1064,18 @@ export default function AdminTranslationsPage() {
                         <td className="px-4 py-3 whitespace-nowrap">
                           {lang ? `${lang.flag} ${lang.nativeName}` : tr.language_code}
                         </td>
-                        <td className="px-4 py-3 max-w-xs truncate text-gray-600 dark:text-gray-400" title={englishDefault ?? ''}>
-                          {englishDefault ?? '-'}
+                        <td className="px-4 py-3 max-w-xs truncate text-gray-600 dark:text-gray-400" title={displayEnglishDefault ?? ''}>
+                          {displayEnglishDefault ?? '-'}
                         </td>
                         <td className="px-4 py-3 max-w-xs truncate" title={tr.translation_value}>
-                          {tr.translation_value}
+                          {isAliasPointerRecord ? (
+                            <span className="text-purple-700 dark:text-purple-300 font-mono text-xs">
+                              {'->'} {aliasTarget}
+                              {resolvedAliasTranslation ? ` [${resolvedAliasTranslation}]` : ''}
+                            </span>
+                          ) : (
+                            tr.translation_value
+                          )}
                         </td>
                         <td className="px-4 py-3 max-w-xs text-gray-600 dark:text-gray-400 break-words" title={tr.notes ?? ''}>
                           {tr.notes?.trim() ? tr.notes : '-'}
@@ -699,7 +1095,7 @@ export default function AdminTranslationsPage() {
                                   {t('admin.translations.approve')}
                                 </button>
                                 <button
-                                  onClick={() => handleReject(tr.id)}
+                                  onClick={() => handleReject(tr.id, tr.translation_key, tr.language_code)}
                                   disabled={actionLoading !== null}
                                   className="text-xs px-2.5 py-1 rounded bg-amber-100 text-amber-800 hover:bg-amber-200 dark:bg-yellow-600/30 dark:text-yellow-300 dark:hover:bg-yellow-600/50 disabled:opacity-50 transition-colors"
                                 >
@@ -708,7 +1104,7 @@ export default function AdminTranslationsPage() {
                               </>
                             )}
                             <button
-                              onClick={() => handleDelete(tr.id)}
+                              onClick={() => handleDelete(tr.id, tr.translation_key, tr.language_code)}
                               disabled={actionLoading !== null}
                               className="text-xs px-2.5 py-1 rounded bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-600/30 dark:text-red-300 dark:hover:bg-red-600/50 disabled:opacity-50 transition-colors"
                             >
@@ -719,38 +1115,32 @@ export default function AdminTranslationsPage() {
                       </tr>
                     )
                   })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex justify-between items-center mt-4 text-sm text-gray-600 dark:text-gray-400">
-            <span>
-              {visibleTotal === 0
-                ? '0-0'
-                : `${page * pageSize + 1}-${Math.min((page + 1) * pageSize, visibleTotal).toLocaleString()}`}{' '}
-              {t('admin.translations.pagination.of', { count: visibleTotal })}
-            </span>
-            <div className="flex gap-2">
-              <button
-                disabled={page === 0}
-                onClick={() => setPage((p) => p - 1)}
-                className="px-3 py-1.5 rounded border border-gray-300 dark:border-white/20 hover:border-gray-400 dark:hover:border-white/40 disabled:opacity-40 transition-colors"
-              >
-                {t('admin.translations.pagination.prev')}
-              </button>
-              <button
-                disabled={page >= totalPages - 1}
-                onClick={() => setPage((p) => p + 1)}
-                className="px-3 py-1.5 rounded border border-gray-300 dark:border-white/20 hover:border-gray-400 dark:hover:border-white/40 disabled:opacity-40 transition-colors"
-              >
-                {t('admin.translations.pagination.next')}
-              </button>
-            </div>
+                </>
+              }
+            />
           </div>
+        )}
+
+        {/* Bottom pagination */}
+        {visibleTotal > 0 && (
+          <TablePaginationControls
+            className="mt-4"
+            currentPage={currentPage}
+            isFirstPage={page === 0}
+            isLastPage={isLastPage}
+            onPrevious={() => setPage((p) => Math.max(0, p - 1))}
+            onNext={() => setPage((p) => p + 1)}
+            pageSize={pageSize}
+            pageSizeOptions={PAGE_SIZE_OPTIONS}
+            onPageSizeChange={(nextSize) => {
+              setPageSize(nextSize)
+              setPage(0)
+            }}
+            pageLabel={t('leiRecords.pagination.page', { page: currentPage })}
+            itemsPerPageLabel={t('leiRecords.pagination.itemsPerPage')}
+            previousLabel={t('leiRecords.pagination.previous')}
+            nextLabel={t('leiRecords.pagination.next')}
+          />
         )}
       </div>
 
@@ -759,8 +1149,56 @@ export default function AdminTranslationsPage() {
         resetKey={expandedWidthPreference.promptResetKey}
         onSave={expandedWidthPreference.save}
         onDismiss={expandedWidthPreference.dismiss}
-        label={t('admin.translations.width.savePrompt')}
+        label={t('referenceLayout.savePageWidthDefault')}
       />
+
+      {showHelpPanel && (
+        <div className="fixed inset-0 z-40" role="dialog" aria-modal="true" aria-label={t('admin.translations.help.panelTitle')}>
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setShowHelpPanel(false)}
+            aria-label={t('admin.translations.help.closeButton')}
+          />
+          <aside className="absolute right-0 top-0 h-full w-full max-w-md bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-white/10 shadow-2xl p-6 overflow-y-auto">
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{t('admin.translations.help.panelTitle')}</h2>
+              <button
+                type="button"
+                onClick={() => setShowHelpPanel(false)}
+                className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                aria-label={t('admin.translations.help.closeButton')}
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-sm text-gray-700 dark:text-gray-300 mb-4">{t('admin.translations.help.intro')}</p>
+
+            <div className="space-y-4 text-sm">
+              <div className="rounded-lg border border-purple-200 dark:border-purple-900/50 bg-purple-50 dark:bg-purple-900/20 p-3">
+                <p className="font-semibold text-purple-900 dark:text-purple-200">ALIAS</p>
+                <p className="text-purple-800 dark:text-purple-300">{t('admin.translations.help.aliasDescription')}</p>
+              </div>
+
+              <div className="rounded-lg border border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-900/20 p-3">
+                <p className="font-semibold text-blue-900 dark:text-blue-200">MASTER</p>
+                <p className="text-blue-800 dark:text-blue-300">{t('admin.translations.help.masterDescription')}</p>
+              </div>
+
+              <div className="rounded-lg border border-cyan-200 dark:border-cyan-900/50 bg-cyan-50 dark:bg-cyan-900/20 p-3">
+                <p className="font-semibold text-cyan-900 dark:text-cyan-200">SHARED</p>
+                <p className="text-cyan-800 dark:text-cyan-300">{t('admin.translations.help.sharedDescription')}</p>
+              </div>
+            </div>
+
+            <div className="mt-5 rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 p-3 text-sm text-gray-700 dark:text-gray-300">
+              <p className="font-medium mb-1">{t('admin.translations.help.ruleTitle')}</p>
+              <p>{t('admin.translations.help.ruleBody')}</p>
+            </div>
+          </aside>
+        </div>
+      )}
 
       {/* New Translation Modal */}
       {showForm && (
@@ -832,6 +1270,11 @@ export default function AdminTranslationsPage() {
                   placeholder={t('admin.translations.englishDefaultPlaceholder')}
                   className="w-full bg-gray-50 dark:bg-white/5 border border-gray-300 dark:border-white/20 rounded-md text-gray-900 dark:text-gray-200 text-sm px-3 py-2 placeholder-gray-500 focus:outline-none resize-none"
                 />
+                {selectedAliasTarget && (
+                  <p className="mt-1 text-xs text-purple-700 dark:text-purple-300 font-mono">
+                    Alias target: {selectedAliasTarget}
+                  </p>
+                )}
               </div>
 
               <div>
