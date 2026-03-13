@@ -352,6 +352,7 @@ export default function I18nMissingTranslationsDevTool() {
 
   useEffect(() => {
     if (!isEnabled) return
+    const englishLocale = i18n.getResourceBundle('en', 'common') as LocaleNode | undefined
 
     const reconcileResolvedEntries = () => {
       const currentLanguage = normalizeLanguageCode(i18n.resolvedLanguage || i18n.language || '')
@@ -395,13 +396,18 @@ export default function I18nMissingTranslationsDevTool() {
           const ns = store?.[affectedLang]?.common
           if (ns) {
             const parts = affectedKey.split('.')
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            let obj: any = ns
+            let obj: Record<string, unknown> | null = ns
             for (let i = 0; i < parts.length - 1; i++) {
-              if (!obj[parts[i]] || typeof obj[parts[i]] !== 'object') { obj = null; break }
-              obj = obj[parts[i]]
+              const next = obj?.[parts[i]]
+              if (!next || typeof next !== 'object' || Array.isArray(next)) {
+                obj = null
+                break
+              }
+              obj = next as Record<string, unknown>
             }
-            if (obj) delete obj[parts[parts.length - 1]]
+            if (obj) {
+              delete obj[parts[parts.length - 1]]
+            }
           }
         } catch { /* best-effort */ }
 
@@ -410,7 +416,7 @@ export default function I18nMissingTranslationsDevTool() {
 
         // Re-add to entries if we are currently using the affected language.
         if (currentLanguage && currentLanguage === affectedLang) {
-          const englishDefault = i18n.t(affectedKey, { lng: 'en', ns: 'common', defaultValue: '' } as Parameters<typeof i18n.t>[1])
+          const englishDefault = String(i18n.t(affectedKey, { lng: 'en', ns: 'common', defaultValue: '' }))
           if (englishDefault && englishDefault !== affectedKey) {
             const rawResource = i18n.getResource('en', 'common', affectedKey)
             const aliasTarget = typeof rawResource === 'string' ? extractNestedTranslationKey(rawResource) : null
