@@ -185,7 +185,7 @@ i18n
   .init({
     lng: getStoredLanguage() ?? undefined,
     fallbackLng: ['en'],
-    supportedLngs: ['en', 'fr', 'es', 'de', 'ja', 'ar'],
+    supportedLngs: ['en', 'ar', 'zh', 'nl', 'fr', 'de', 'it', 'ja', 'pt', 'es'],
     defaultNS: 'common',
     backend: { loadPath: '/locales/{{lng}}/{{ns}}.json' },
     detection: {
@@ -209,7 +209,7 @@ other preferences (see [ADR-0011](./adr-0011-user-preferences.md)).
 
 ### Database (Translation Review)
 
-Migration `000043_add_ui_translations_table`:
+Migration `000046_add_ui_translations_table`:
 
 ```sql
 CREATE TABLE ui_translations (
@@ -268,6 +268,7 @@ means community-approved translations appear in production without a developer-d
 - [i18n init config](../../frontend/app/lib/i18n.ts)
 - [LanguageSelector component](../../frontend/app/components/LanguageSelector.tsx)
 - [Admin Translations page](../../frontend/app/admin/translations/page.tsx)
+- GitHub Issue: [Internationalisation](https://github.com/techie2000/axiom/issues/121)
 - GitHub Issue: [Internationalisation](https://github.com/techie2000/axiom/issues/154)
 
 ## Revision History
