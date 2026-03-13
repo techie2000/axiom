@@ -110,10 +110,10 @@ After updating, ensure:
 ```text
 ## Architecture Decision Records
 
-- [ADR-0001: Modular Monolith](../../docs/adr/adr-0001-modular-monolith-architecture.md): Architecture pattern choice
+- [ADR-0001: Modular Monolith](docs/adr/adr-0001-modular-monolith-architecture.md): Architecture pattern choice
 ...
-- [ADR-0007: Docker Compose Local Dev](../../docs/adr/adr-0007-docker-compose-local-dev.md): Development environment
-- [ADR-0008: Sticky Headers with Smooth Transitions](../../docs/adr/adr-0008-sticky-headers-with-smooth-transitions.md): UI interaction decision
+- [ADR-0007: Docker Compose Local Dev](docs/adr/adr-0007-docker-compose-local-dev.md): Development environment
+- [ADR-0008: Sticky Headers with Smooth Transitions](docs/adr/adr-0008-sticky-headers-with-smooth-transitions.md): UI interaction decision
 ```
 
 ### Example 2: New Feature Documentation
@@ -125,8 +125,8 @@ Create new section or add to existing relevant section:
 ```text
 ## Core Features
 
-- [LEI Acquisition](../../docs/lei/LEI_ACQUISITION.md): Legal Entity Identifier data acquisition from GLEIF
-- [LEI Data Flow](../../docs/lei/LEI_DATA_FLOW.md): LEI ingestion and processing flow
+- [LEI Acquisition](docs/lei/LEI_ACQUISITION.md): Legal Entity Identifier data acquisition from GLEIF
+- [LEI Data Flow](docs/lei/LEI_DATA_FLOW.md): LEI ingestion and processing flow
 ```
 
 ### Example 3: Documentation Removed
@@ -138,9 +138,9 @@ Remove the corresponding line from `llms.txt`:
 ```text
 ## API Documentation
 
-- [Backend API Entrypoint](../../backend/cmd/api/main.go): API server entrypoint and route bootstrap
-- [Master Data Guide](../../docs/MASTER_DATA.md): Data model and API usage reference
-- [Project Docs Index](../../docs/README.md): Documentation hub
+- [Backend API Entrypoint](backend/cmd/api/main.go): API server entrypoint and route bootstrap
+- [Master Data Guide](docs/MASTER_DATA.md): Data model and API usage reference
+- [Project Docs Index](docs/README.md): Documentation hub
 ```
 
 ### Example 4: Documentation Restructured
@@ -152,9 +152,9 @@ Update all affected paths:
 ```text
 ## API Documentation
 
-- [Backend API Entrypoint](../../backend/cmd/api/main.go): API server entrypoint and route bootstrap
-- [Master Data Guide](../../docs/MASTER_DATA.md): Data model and API usage reference
-- [Project Docs Index](../../docs/README.md): Documentation hub
+- [Backend API Entrypoint](backend/cmd/api/main.go): API server entrypoint and route bootstrap
+- [Master Data Guide](docs/MASTER_DATA.md): Data model and API usage reference
+- [Project Docs Index](docs/README.md): Documentation hub
 ```
 
 ## Commit Message Convention
