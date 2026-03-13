@@ -170,7 +170,8 @@ Exclude files that:
 ## Example Structure Template
 
 **Note**: The example below shows what the OUTPUT `llms.txt` file should contain when created at the repository root.
-File paths are relative to the repository root, not to this prompt file location.
+Links in this prompt include `../../` prefixes only so workspace link validation can resolve them from
+`.github/prompts/`; generated `llms.txt` should still use repository-root-relative paths.
 
 ```txt
 # [Repository Name]
@@ -181,25 +182,25 @@ File paths are relative to the repository root, not to this prompt file location
 
 ## Documentation
 
-- Main README -> README.md: Primary project documentation and getting started guide
-- Architecture -> docs/architecture.md: System architecture and design documentation
-- LEI Quickstart -> docs/LEI_QUICKSTART.md: Quick start guide for LEI integration
+- [Main README](../../README.md): Primary project documentation and getting started guide
+- [Architecture](../../docs/architecture.md): System architecture and design documentation
+- [LEI Quickstart](../../docs/lei/LEI_QUICKSTART.md): Quick start guide for LEI integration
 
 ## Setup and Configuration
 
-- Multi-Environment Setup -> docs/environments/multi-environment-setup.md: Multi-environment configuration guide
-- Environment Port Reference -> docs/environments/environment-port-reference.md: Port mappings for dev, UAT, and production
-- Multi-Environment Quickstart -> docs/environments/multi-environment-quickstart.md: Quick start for environment setup
+- [Multi-Environment Setup](../../docs/environments/multi-environment-setup.md): Multi-environment configuration guide
+- [Environment Port Reference](../../docs/environments/environment-port-reference.md): Port mappings for dev, UAT, and production
+- [Multi-Environment Quickstart](../../docs/environments/multi-environment-quickstart.md): Quick start for environment setup
 
 ## Technical Specifications
 
-- LEI Acquisition -> docs/LEI_ACQUISITION.md: Legal Entity Identifier data acquisition process
-- LEI Implementation Summary -> docs/LEI_IMPLEMENTATION_SUMMARY.md: LEI feature implementation details
+- [LEI Acquisition](../../docs/lei/LEI_ACQUISITION.md): Legal Entity Identifier data acquisition process
+- [LEI Implementation Summary](../../docs/lei/LEI_IMPLEMENTATION_SUMMARY.md): LEI feature implementation details
 
 ## Optional
 
-- Makefile -> Makefile: Build automation and common tasks
-- Docker Setup -> docker/README.md: Container configuration and deployment
+- [Makefile](../../Makefile): Build automation and common tasks
+- [Docker Setup](../../docker/README.md): Container configuration and deployment
 ```
 
 ## Success Criteria
