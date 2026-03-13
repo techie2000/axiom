@@ -1297,10 +1297,19 @@ func NewUITranslationHandler(svc service.UITranslationService) *UITranslationHan
 	return &UITranslationHandler{svc: svc}
 }
 
+// uiTranslationPublicDTO is the public-facing representation of a UI translation.
+// It intentionally includes only fields needed by i18n consumers and omits
+// internal metadata such as submitter or reviewer information.
+type uiTranslationPublicDTO struct {
+	TranslationKey   string `json:"translation_key"`
+	LanguageCode     string `json:"language_code"`
+	TranslationValue string `json:"translation_value"`
+}
+
 // translationListResponse wraps a paginated list of translations.
 type translationListResponse struct {
 	Total   int64                   `json:"total"`
-	Records []*domain.UITranslation `json:"records"`
+	Records []*uiTranslationPublicDTO `json:"records"`
 }
 
 // submitTranslationRequest is the request body for POST /translations.
