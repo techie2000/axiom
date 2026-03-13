@@ -39,16 +39,16 @@ func (Country) TableName() string {
 // Currency represents a currency entity
 type Currency struct {
 	BaseModel
-	Code               string `gorm:"column:code;uniqueIndex;size:3;not null" json:"code" validate:"required,len=3"`
-	Name               string `gorm:"column:name;not null" json:"name" validate:"required"`
-	Symbol             string `json:"symbol"`
-	SymbolNative       string `json:"symbol_native"`
-	DecimalDigits      int    `gorm:"default:2" json:"decimal_digits"`
-	Rounding           int    `gorm:"default:0" json:"rounding"`
-	NamePlural         string `gorm:"column:name_plural" json:"name_plural"`
-	Active             bool   `gorm:"default:true" json:"active"`
-	IsAlertClsAllowed  bool   `gorm:"column:is_alert_cls_allowed;default:false" json:"is_alert_cls_allowed"`
-	IsOfacSanctioned   bool   `gorm:"column:is_ofac_sanctioned;default:false" json:"is_ofac_sanctioned"`
+	Code              string `gorm:"column:code;uniqueIndex;size:3;not null" json:"code" validate:"required,len=3"`
+	Name              string `gorm:"column:name;not null" json:"name" validate:"required"`
+	Symbol            string `json:"symbol"`
+	SymbolNative      string `json:"symbol_native"`
+	DecimalDigits     int    `gorm:"default:2" json:"decimal_digits"`
+	Rounding          int    `gorm:"default:0" json:"rounding"`
+	NamePlural        string `gorm:"column:name_plural" json:"name_plural"`
+	Active            bool   `gorm:"default:true" json:"active"`
+	IsAlertClsAllowed bool   `gorm:"column:is_alert_cls_allowed;default:false" json:"is_alert_cls_allowed"`
+	IsOfacSanctioned  bool   `gorm:"column:is_ofac_sanctioned;default:false" json:"is_ofac_sanctioned"`
 }
 
 // TableName overrides the table name
@@ -371,14 +371,14 @@ func (UserPreference) TableName() string {
 // PreferenceAudit is an append-only record of every preference upsert.
 // old_value is nil when the preference did not previously exist.
 type PreferenceAudit struct {
-	ID            uuid.UUID  `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
-	UserID        uuid.UUID  `gorm:"type:uuid;not null;index" json:"user_id"`
-	PageKey       string     `gorm:"size:100;not null" json:"page_key"`
-	PreferenceKey string     `gorm:"size:100;not null" json:"preference_key"`
-	OldValue      *string    `gorm:"type:text" json:"old_value"`
-	NewValue      string     `gorm:"type:text;not null" json:"new_value"`
-	ChangedAt     time.Time  `gorm:"not null;default:now()" json:"changed_at"`
-	IPAddress     *string    `gorm:"size:45" json:"ip_address"`
+	ID            uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+	UserID        uuid.UUID `gorm:"type:uuid;not null;index" json:"user_id"`
+	PageKey       string    `gorm:"size:100;not null" json:"page_key"`
+	PreferenceKey string    `gorm:"size:100;not null" json:"preference_key"`
+	OldValue      *string   `gorm:"type:text" json:"old_value"`
+	NewValue      string    `gorm:"type:text;not null" json:"new_value"`
+	ChangedAt     time.Time `gorm:"not null;default:now()" json:"changed_at"`
+	IPAddress     *string   `gorm:"size:45" json:"ip_address"`
 }
 
 func (PreferenceAudit) TableName() string {
