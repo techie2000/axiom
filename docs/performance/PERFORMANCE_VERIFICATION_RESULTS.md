@@ -1,4 +1,5 @@
 # Performance Verification Results
+
 **Date**: February 16, 2026  
 **Completed By**: Performance optimization implementation and testing
 
@@ -14,24 +15,31 @@
 ## Test Results
 
 ### Test 1: Minimal Columns (3 columns)
+
 **Query**: `?search=bank&status=ACTIVE&limit=20&columns=id,lei,legal_name`
+
 - **Response Time**: 86ms
 - **Improvement**: 5.7x faster (from 489ms)
 - **Status**: ✅ PASS (under 200ms threshold)
 
 ### Test 2: Medium Columns (12 columns)
+
 **Query**: `?search=bank&status=ACTIVE&limit=20&columns=id,lei,legal_name,transliterated_legal_name,entity_status,entity_category,legal_address_country,legal_address_city,legal_address_region,registration_number,validation_sources,other_names`
+
 - **Response Time**: 97ms
 - **Improvement**: 5x faster (from 489ms)
 - **Status**: ✅ PASS (under 200ms threshold)
 
 ### Test 3: Maximum Columns (24 columns)
+
 **Query**: All 24 available columns
+
 - **Response Time**: 80ms
 - **Improvement**: 6x faster (from 489ms)
 - **Status**: ✅ PASS (under 200ms threshold)
 
 ### Test 4: No SLOW SQL Warnings for Search Queries
+
 **Result**: ✅ No slow SQL warnings logged for any test queries with search filters
 
 ---
@@ -39,24 +47,29 @@
 ## Implementation Verification
 
 ### ✅ Dynamic SELECT Working
+
 **Evidence**: Backend logs show actual SQL queries using column selection:
+
 ```sql
 SELECT id,lei,legal_name,entity_status,entity_category,legal_address_country,last_update_date 
 FROM "lei_raw"."lei_records" 
 WHERE ...
 ```
 
-**Before**: 
+**Before**:
+
 ```sql
 SELECT * FROM "lei_raw"."lei_records" ...
 ```
 
 ### ✅ Column Whitelist Security
+
 - 35 columns validated against whitelist
 - SQL injection prevention working as designed
 - Invalid columns rejected safely
 
 ### ✅ Backward Compatibility
+
 - Default columns work when parameter omitted
 - Frontend integration sends visible columns correctly
 - Detail view still fetches all fields (separate query path)
@@ -68,6 +81,7 @@ SELECT * FROM "lei_raw"."lei_records" ...
 ### ⚠️ Non-Search List Queries Still Slow
 
 **Slow Query Log Entry** (February 16, 2026 15:51:14):
+
 ```text
 SLOW SQL >= 200ms
 [1276.131ms] [rows:51] 
@@ -79,6 +93,7 @@ LIMIT 51
 ```
 
 **Analysis**:
+
 - **Query Type**: Simple list without search filters
 - **Time**: 1276ms (6x slower than optimized search queries)
 - **Root Cause**: ORDER BY legal_name on 3.2M records without search filter
@@ -86,6 +101,7 @@ LIMIT 51
 - **Impact**: Initial page load on LEI Records list view
 
 **Difference from Optimized Queries**:
+
 - ✅ **Search queries** (with `?search=...`): Use trigram indexes → 80-97ms
 - ⚠️ **List queries** (without search): Full table scan for ORDER BY → 1276ms
 
@@ -94,6 +110,7 @@ LIMIT 51
 ## Recommendations for Next Phase
 
 ### Option A: Add B-tree Index for Sorting (Quick Win)
+
 ```sql
 -- Migration: 000011_add_btree_index_for_sorting.up.sql
 CREATE INDEX idx_lei_records_legal_name_btree 
@@ -105,17 +122,20 @@ WHERE deleted_at IS NULL;
 **Trade-off**: Index maintenance overhead on writes (minimal for read-heavy workload)
 
 ### Option B: Change Default Behavior
+
 - **Current**: Frontend loads all records sorted by legal_name on mount
 - **Proposed**: Show empty state or prompt user to search first
 - **Benefit**: Eliminates slow query entirely, encourages search usage
 - **Trade-off**: UX change (may require user education)
 
 ### Option C: Pagination with Cursor
+
 - Implement cursor-based pagination for large result sets
 - Benefit: More efficient for browsing through data
 - Trade-off: More complex implementation
 
 ### Option D: Hybrid Approach
+
 - Default view shows recent updates (fast query: ORDER BY updated_at DESC LIMIT 50)
 - Users must search or filter to see sorted by legal_name
 - Adds index on updated_at (fast for recent data)
@@ -125,7 +145,7 @@ WHERE deleted_at IS NULL;
 ## Performance Metrics Summary
 
 | Scenario | Before | After | Improvement | Status |
-|----------|--------|-------|-------------|--------|
+| -------- | ------ | ----- | ----------- | ------ |
 | Search with 3 cols | 489ms | 86ms | 5.7x | ✅ |
 | Search with 12 cols | 489ms | 97ms | 5.0x | ✅ |
 | Search with 24 cols | 489ms | 80ms | 6.1x | ✅ |
@@ -134,6 +154,7 @@ WHERE deleted_at IS NULL;
 | **Search (Phase 3 verified)** | **80-97ms** | **55.8ms** | **1.5x** | ✅ **OPTIMIZED** |
 
 **Phase 3 Verification** (2026-02-16 16:51 UTC):
+
 - ✅ Hybrid Sorting Approach implemented (Migration 000011)
 - ✅ Unfiltered queries: avg 28.9ms (28.6-29.3ms range) - **44x improvement**
 - ✅ Search queries: avg 55.8ms (53.8-57.8ms range) - **1.5x additional improvement**
@@ -145,17 +166,20 @@ WHERE deleted_at IS NULL;
 ## Implementation Artifacts
 
 ### Files Modified
+
 1. `backend/internal/handler/lei_handler.go` - Added columns parameter extraction
 2. `backend/internal/service/lei_service.go` - Added columns pass-through
 3. `backend/internal/repository/lei_repository.go` - Added validateColumns() and dynamic SELECT
 4. `frontend/app/lei-records/page.tsx` - Added visible columns to API request
 
 ### Documentation Created
+
 1. `docs/DYNAMIC_SELECT_IMPLEMENTATION.md` - Complete implementation guide (343 lines)
 2. `docs/LEI_SEARCH_PERFORMANCE_ANALYSIS.md` - Updated with completion status
 3. `docs/PERFORMANCE_VERIFICATION_RESULTS.md` - This file
 
 ### Database Migrations
+
 - ✅ `000010_optimize_lei_search_filters.up.sql` - Composite indexes for search filters
 - ✅ `000011_add_updated_at_index.up.sql` - B-tree index for Hybrid Sorting Approach (implemented)
 
@@ -164,12 +188,14 @@ WHERE deleted_at IS NULL;
 ## Deployment Status
 
 ### ✅ Development Environment
+
 - Backend: Deployed and tested
 - Frontend: No changes required (already compatible)
 - Database: Migrations applied
 - Performance: Verified with curl tests
 
 ### 📋 Next Steps for UAT/Production
+
 1. Apply database migrations (already in codebase)
 2. Build and deploy backend images
 3. No frontend changes needed (sends columns parameter when available)
@@ -210,6 +236,7 @@ Approach (Option D)**, which shows recently updated records by default (fast: ~2
 when users apply search/filters. Search queries also saw an additional **1.5x improvement** to ~56ms.
 
 **Final Status**: ✅ Both optimizations deployed and verified
+
 - **Phase 2**: Dynamic SELECT (search queries 5-6x faster: 489ms → 80-97ms)
 - **Phase 3**: Hybrid Sorting (initial load 44x faster: 1276ms → 28.9ms)
 - **Bonus**: Search queries further optimized (80-97ms → 55.8ms)
@@ -221,6 +248,7 @@ See [HYBRID_SORTING_IMPLEMENTATION.md](./HYBRID_SORTING_IMPLEMENTATION.md) for d
 ---
 
 ## Related Documentation
+
 - [Dynamic SELECT Implementation Guide](./DYNAMIC_SELECT_IMPLEMENTATION.md)
 - [Hybrid Sorting Implementation Guide](./HYBRID_SORTING_IMPLEMENTATION.md)
 - [LEI Search Performance Analysis](./LEI_SEARCH_PERFORMANCE_ANALYSIS.md)

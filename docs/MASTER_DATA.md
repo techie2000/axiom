@@ -25,6 +25,7 @@ Master data is stored in JSON format at `backend/data/masterdata/`:
 ### Data Coverage
 
 #### Continents (7 entries)
+
 - AF: Africa
 - AN: Antarctica  
 - AS: Asia
@@ -34,13 +35,16 @@ Master data is stored in JSON format at `backend/data/masterdata/`:
 - SA: South America
 
 #### Languages (184 entries)
+
 Includes major world languages with:
+
 - **English name**: "Arabic"
 - **Native name**: "العربية" (in native script)
 - **RTL flag**: true for right-to-left languages (Arabic, Hebrew, Persian, Urdu, etc.)
 - **ISO 639-1 code**: Two-letter code (e.g., "ar", "en", "zh")
 
 Coverage includes:
+
 - European languages (40+): English, Spanish, French, German, Italian, Russian, etc.
 - Asian languages (50+): Chinese, Japanese, Korean, Hindi, Bengali, Thai, etc.
 - Middle Eastern languages (10+): Arabic, Hebrew, Persian, Turkish, Kurdish, etc.
@@ -48,7 +52,9 @@ Coverage includes:
 - Indigenous languages (15+): Navajo, Quechua, Guarani, Maori, etc.
 
 #### Currencies (180 entries)
+
 All active ISO 4217 currencies with detailed attributes:
+
 - **Code**: ISO 4217 three-letter code (e.g., "USD", "EUR")
 - **Name**: English name ("US Dollar")
 - **Symbol**: International symbol ("$")
@@ -61,6 +67,7 @@ All active ISO 4217 currencies with detailed attributes:
 - **Name Plural**: Plural form ("US dollars", "euros")
 
 Coverage by region:
+
 - **Americas**: USD, CAD, BRL, MXN, ARS, CLP, COP, PEN, TTD, JMD, BBD, XCD, etc. (25+ currencies)
 - **Europe**: EUR, GBP, CHF, SEK, NOK, DKK, PLN, CZK, RUB, HUF, RON, BGN, HRK, etc. (30+ currencies)
 - **Asia**: JPY, CNY, INR, SGD, HKD, KRW, THB, MYR, IDR, PHP, VND, PKR, BDT, NPR, etc. (40+ currencies)
@@ -70,7 +77,9 @@ Coverage by region:
 - **Special**: Precious metals (XAU, XAG, XPT, XPD), supranational units (XDR, XSU), investment units
 
 #### Countries (196 entries)
+
 Comprehensive country data including:
+
 - **Code**: ISO 3166-1 alpha-2 (2-letter code)
 - **Alpha3 Code**: ISO 3166-1 alpha-3 (3-letter code)
 - **Name**: Official English name
@@ -83,6 +92,7 @@ Comprehensive country data including:
 - **Region**: Sub-continental geographic region
 
 Coverage by continent:
+
 - Africa: 54 countries (Northern, Western, Eastern, Middle, Southern Africa)
 - Asia: 48 countries (Eastern, Southern, South-Eastern, Western, Central Asia)
 - Europe: 48 countries (Western, Eastern, Northern, Southern Europe)
@@ -93,6 +103,7 @@ Coverage by continent:
 ## Database Schema
 
 ### Countries Table
+
 ```sql
 CREATE TABLE countries (
     id UUID PRIMARY KEY,
@@ -114,6 +125,7 @@ CREATE TABLE countries (
 ```
 
 ### Currencies Table
+
 ```sql
 CREATE TABLE currencies (
     id UUID PRIMARY KEY,
@@ -133,6 +145,7 @@ CREATE TABLE currencies (
 ```
 
 ### Continents Table
+
 ```sql
 CREATE TABLE continents (
     code VARCHAR(2) PRIMARY KEY,
@@ -143,6 +156,7 @@ CREATE TABLE continents (
 ```
 
 ### Languages Table
+
 ```sql
 CREATE TABLE languages (
     code VARCHAR(2) PRIMARY KEY,
@@ -169,6 +183,7 @@ When the application starts, the `MasterDataService` automatically:
    - Countries (references continents, currencies, languages via codes)
 
 Example startup log:
+
 ```text
 {"level":"info","time":"2026-02-18T14:30:00Z","message":"Checking master data..."}
 {"level":"info","count":7,"time":"2026-02-18T14:30:00Z","message":"Continents already loaded, skipping"}
@@ -186,6 +201,7 @@ The scheduler service runs daily syncs in the following order to prevent conflic
 3. **2:00 AM** - LEI full sync downloads and processes data
 
 **Schedule rationale:**
+
 - File cleanup runs FIRST to free disk space before downloads
 - Master data sync runs BEFORE LEI sync to ensure foreign key integrity
 - LEI sync has clean slate with no risk of cleanup interference
@@ -193,6 +209,7 @@ The scheduler service runs daily syncs in the following order to prevent conflic
 The scheduler checks for updates by comparing file timestamps or checksums, reloads data if needed, and logs all actions.
 
 The sync is designed to be:
+
 - **Non-disruptive**: Runs during low-traffic hours (midnight to 2 AM)
 - **Properly ordered**: File cleanup → Master data → LEI sync ensures no conflicts
 - **Safe**: Cleanup completes before any sync starts, preventing file deletion during processing
@@ -200,6 +217,7 @@ The sync is designed to be:
 - **Logged**: All actions are recorded for audit
 
 **Important**: Master data must be loaded before LEI data because:
+
 - LEI records reference countries via foreign keys
 - Countries reference currencies via foreign keys
 - Loading order: Currencies → Countries → LEI data ensures referential integrity
@@ -211,6 +229,7 @@ The sync is designed to be:
 To manually reload master data (e.g., after updating JSON files):
 
 1. **Delete existing data** (optional - service skips if data exists):
+
    ```sql
    -- Development database
    DELETE FROM countries;
@@ -237,6 +256,7 @@ To update master data:
 #### Add a New Currency
 
 Edit `backend/data/masterdata/currencies.json`:
+
 ```json
 {
   "NEW": {
@@ -254,6 +274,7 @@ Edit `backend/data/masterdata/currencies.json`:
 #### Add a New Country
 
 Edit `backend/data/masterdata/countries.json`:
+
 ```json
 {
   "code": "XX",
@@ -272,6 +293,7 @@ Edit `backend/data/masterdata/countries.json`:
 #### Add a New Language
 
 Edit `backend/data/masterdata/languages.json`:
+
 ```json
 {
   "xx": {
@@ -288,11 +310,13 @@ Edit `backend/data/masterdata/languages.json`:
 Master data can be accessed through the REST API:
 
 ### List Countries
+
 ```bash
 GET /api/v1/countries?limit=50&offset=0
 ```
 
 Response:
+
 ```json
 [
   {
@@ -313,11 +337,13 @@ Response:
 ```
 
 ### List Currencies
+
 ```bash
 GET /api/v1/currencies?limit=50&offset=0
 ```
 
 Response:
+
 ```json
 [
   {
@@ -339,6 +365,7 @@ Response:
 The master data schema is created by migration `000015_enhance_masterdata_schema.up.sql`.
 
 To apply this migration:
+
 ```bash
 # Development
 make migrate-dev-up
@@ -351,6 +378,7 @@ make migrate-prod-up
 ```
 
 To rollback:
+
 ```bash
 make migrate-dev-down  # or migrate-uat-down, migrate-prod-down
 ```
@@ -360,6 +388,7 @@ make migrate-dev-down  # or migrate-uat-down, migrate-prod-down
 ### Validation
 
 The service validates data during loading:
+
 - **Required fields**: Code, name must be present
 - **Unique constraints**: Codes must be unique
 - **Format validation**: Codes must match expected length
@@ -368,6 +397,7 @@ The service validates data during loading:
 ### Error Handling
 
 If a record fails to insert (e.g., duplicate code):
+
 - **Warning logged**: Record is skipped with a warning
 - **Continues loading**: Other records are still processed
 - **No partial state**: Transactions ensure consistency
@@ -375,6 +405,7 @@ If a record fails to insert (e.g., duplicate code):
 ### Data Sources
 
 Data is compiled from reliable public sources:
+
 - **ISO 3166** for country codes
 - **ISO 4217** for currency codes
 - **ISO 639-1** for language codes
@@ -389,6 +420,7 @@ Data is compiled from reliable public sources:
 **Symptom**: Application starts but master data tables are empty
 
 **Solutions**:
+
 1. Check file paths: `backend/data/masterdata/` must be accessible
 2. Check JSON format: Validate files with `jq` or JSON validator
 3. Check permissions: Ensure application can read files
@@ -407,6 +439,7 @@ Data is compiled from reliable public sources:
 **Symptom**: Some countries/currencies not appearing
 
 **Solutions**:
+
 1. Verify JSON file is complete and not truncated
 2. Check for JSON syntax errors
 3. Ensure file was committed to repository

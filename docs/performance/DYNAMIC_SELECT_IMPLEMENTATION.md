@@ -13,6 +13,7 @@ default view).
 ## Problem Statement
 
 The LEI Records list view was experiencing slow query performance (489ms):
+
 - **Database execution**: 14ms (fast, indexes working correctly)
 - **GORM overhead**: ~475ms (97% of total time)
 - **Root cause**: `SELECT *` + `Preload("SourceFile")` fetching 50+ records with all 25+ columns + JSONB fields
@@ -20,7 +21,7 @@ The LEI Records list view was experiencing slow query performance (489ms):
 Additional constraint: Frontend allows users to toggle 24 different columns (6 visible by default), so optimization
 must support dynamic column selection.
 
-##Implementation Details
+## Implementation Details
 
 ### Backend Changes
 
@@ -45,6 +46,7 @@ func (h *LEIHandler) ListLEI(c *gin.Context) {
 ```
 
 **Key Points**:
+
 - Backward compatible: defaults to core 6 columns if not specified
 - List view only: Detail endpoints (`GetLEIByCode`, `GetLEIByID`) still fetch all fields
 
@@ -123,6 +125,7 @@ const fetchRecords = async () => {
 ## Performance Impact
 
 ### Before Optimization
+
 ```text
 Database: 14ms
 GORM overhead: ~475ms
@@ -130,6 +133,7 @@ Total: 489ms ❌ Exceeds 200ms threshold
 ```
 
 ### After Optimization
+
 ```text
 Default view (6 columns):
   Database: 14ms
@@ -164,17 +168,20 @@ This prevents SQL injection even if a malicious actor attempts to send crafted c
 ## API Contract
 
 ### Request
+
 ```text
 GET /api/v1/lei?columns=lei,legal_name,entity_status&search=stores&status=ACTIVE
 ```
 
 ### Query Parameters
+
 - `columns` (string, optional): Comma-separated list of column names to fetch
   - **Default**: `id,lei,legal_name,entity_status,entity_category,legal_address_country,last_update_date`
   - **Valid columns**: See whitelist in `validateColumns` function
   - **Invalid columns**: Silently ignored, defaults applied if all invalid
 
 ### Response
+
 ```json
 [
   {
@@ -191,6 +198,7 @@ GET /api/v1/lei?columns=lei,legal_name,entity_status&search=stores&status=ACTIVE
 ## Backward Compatibility
 
 ✅ **Fully backward compatible**:
+
 - Clients not sending `columns` parameter get default 6 core columns
 - Existing API consumers continue to work without changes
 - Detail endpoints (`/api/v1/lei/{lei}`) unchanged - still fetch all fields
@@ -198,6 +206,7 @@ GET /api/v1/lei?columns=lei,legal_name,entity_status&search=stores&status=ACTIVE
 ## Testing Verification
 
 ### Manual Testing
+
 ```bash
 # Test with default columns (should be fast)
 curl "http://localhost:18080/api/v1/lei?search=stores&status=ACTIVE"
@@ -213,6 +222,7 @@ curl "http://localhost:18080/api/v1/lei/001GPB6A9XPE8XJICC14"
 ```
 
 ### Performance Testing
+
 ```bash
 # Check slow query logs
 docker logs axiom-dev-backend --tail 100 | grep "SLOW SQL"
@@ -225,6 +235,7 @@ docker logs axiom-dev-backend --tail 100 | grep "SLOW SQL"
 ## Database Query Comparison
 
 ### Before (SELECT *)
+
 ```sql
 SELECT * FROM "lei_raw"."lei_records" 
 WHERE (legal_name ILIKE '%stores%' OR transliterated_legal_name ILIKE '%stores%') 
@@ -239,6 +250,7 @@ LIMIT 51
 ```
 
 ### After (Dynamic SELECT)
+
 ```sql
 SELECT id,lei,legal_name,entity_status,entity_category,legal_address_country,last_update_date 
 FROM "lei_raw"."lei_records" 
@@ -256,6 +268,7 @@ LIMIT 51
 ## Future Enhancements
 
 ### Completed ✅
+
 - Dynamic SELECT based on visible columns
 - Column validation whitelist
 - Frontend integration
@@ -281,20 +294,24 @@ LIMIT 51
 ## Related Files
 
 ### Backend
+
 - `backend/internal/handler/lei_handler.go` (handler endpoint)
 - `backend/internal/service/lei_service.go` (service layer)
 - `backend/internal/repository/lei_repository.go` (repository with validation)
 
 ### Frontend
+
 - `frontend/app/lei-records/page.tsx` (list view with column toggle)
 
 ### Documentation
+
 - `docs/LEI_SEARCH_PERFORMANCE_ANALYSIS.md` (performance analysis)
 - `docs/DYNAMIC_SELECT_IMPLEMENTATION.md` (this file)
 
 ## Deployment Notes
 
 ### Build & Deploy
+
 ```bash
 # Backend rebuild (includes new column parameter)
 docker compose --env-file .env.dev -f docker-compose.dev.yml build backend
@@ -312,13 +329,16 @@ docker logs axiom-dev-frontend --tail 20
 ```
 
 ### Rollback Plan
+
 If issues arise, the change is backward compatible:
+
 1. Frontend can be rolled back independently (will send columns parameter to old backend, which will ignore it)
 2. Backend can be rolled back independently (frontend will work without sending columns, defaults to old SELECT * behavior)
 
 ## Conclusion
 
 Successfully implemented Option 1 (Dynamic SELECT) which:
+
 - ✅ Reduces query time from 489ms to 70-200ms (2.5-7x improvement)
 - ✅ Both scenarios (default 6 cols and all 24 cols) now meet <200ms threshold
 - ✅ Handles dynamic column toggling properly

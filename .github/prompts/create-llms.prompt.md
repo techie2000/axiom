@@ -1,7 +1,7 @@
 ---
 agent: 'agent'
 description: 'Create an llms.txt file from scratch based on repository structure following the llms.txt specification at https://llmstxt.org/'
-tools: ['search/changes', 'search/codebase', 'edit/editFiles', 'vscode/extensions', 'web/fetch', 'web/githubRepo', 'vscode/openSimpleBrowser', 'read/problems', 'execute/createAndRunTask', 'search', 'search/searchResults', 'read/terminalLastCommand', 'read/terminalSelection', 'execute/testFailure', 'search/usages', 'vscode/vscodeAPI']
+tools: ['search/changes', 'search/codebase', 'edit/editFiles', 'vscode/extensions', 'web/fetch', 'web/githubRepo', 'read/problems', 'execute/createAndRunTask', 'search', 'search/searchResults', 'read/terminalLastCommand', 'read/terminalSelection', 'execute/testFailure', 'search/usages', 'vscode/vscodeAPI']
 ---
 # Create LLMs.txt File from Repository Structure
 
@@ -71,7 +71,9 @@ The `llms.txt` file must follow this exact structure per the specification:
 
 #### File Link Format
 
-Each file link must follow: `\[descriptive-name](relative-url): optional description`
+Each file link in the generated `llms.txt` output must use markdown link syntax with a short description.
+Use this literal structure when writing the file: link text, then relative path, then description.
+Example structure: `[descriptive-name]` + `(relative-url)` + `: optional description`
 
 #### Section Organization
 
@@ -179,25 +181,25 @@ File paths are relative to the repository root, not to this prompt file location
 
 ## Documentation
 
-- [Main README](README.md): Primary project documentation and getting started guide
-- [Architecture](docs/architecture.md): System architecture and design documentation
-- [LEI Quickstart](docs/LEI_QUICKSTART.md): Quick start guide for LEI integration
+- Main README -> README.md: Primary project documentation and getting started guide
+- Architecture -> docs/architecture.md: System architecture and design documentation
+- LEI Quickstart -> docs/LEI_QUICKSTART.md: Quick start guide for LEI integration
 
 ## Setup and Configuration
 
-- [Multi-Environment Setup](docs/environments/multi-environment-setup.md): Multi-environment configuration guide
-- [Environment Port Reference](docs/environments/environment-port-reference.md): Port mappings for dev, UAT, and production
-- [Multi-Environment Quickstart](docs/environments/multi-environment-quickstart.md): Quick start for environment setup
+- Multi-Environment Setup -> docs/environments/multi-environment-setup.md: Multi-environment configuration guide
+- Environment Port Reference -> docs/environments/environment-port-reference.md: Port mappings for dev, UAT, and production
+- Multi-Environment Quickstart -> docs/environments/multi-environment-quickstart.md: Quick start for environment setup
 
 ## Technical Specifications
 
-- [LEI Acquisition](docs/LEI_ACQUISITION.md): Legal Entity Identifier data acquisition process
-- [LEI Implementation Summary](docs/LEI_IMPLEMENTATION_SUMMARY.md): LEI feature implementation details
+- LEI Acquisition -> docs/LEI_ACQUISITION.md: Legal Entity Identifier data acquisition process
+- LEI Implementation Summary -> docs/LEI_IMPLEMENTATION_SUMMARY.md: LEI feature implementation details
 
 ## Optional
 
-- [Makefile](Makefile): Build automation and common tasks
-- [Docker Setup](docker/README.md): Container configuration and deployment
+- Makefile -> Makefile: Build automation and common tasks
+- Docker Setup -> docker/README.md: Container configuration and deployment
 ```
 
 ## Success Criteria
