@@ -1,0 +1,58 @@
+# User Docs Rollout Plan
+
+This plan defines a phased rollout for establishing `docs-user/` as the polished end-user documentation layer.
+
+## Phase 1: Foundation (current PR)
+
+- Create `docs-user/` root and conventions.
+- Add ADR decision for split (`ADR-0013`).
+- Publish IA and migration matrix.
+- Add cross-links from existing doc indexes.
+
+Exit criteria:
+
+- Decision and scope are approved.
+- User-doc directory and governance conventions exist.
+
+## Phase 2: VitePress Bootstrap
+
+- Initialize VitePress in a dedicated docs-user site path.
+- Add sidebar/nav aligned to `INFORMATION_ARCHITECTURE.md`.
+- Configure search and basic theme.
+- Add starter pages for priority wave.
+
+Exit criteria:
+
+- Local build works.
+- Navigation usable for end users.
+- At least 3 high-value workflow pages drafted.
+
+## Phase 3: Core Workflow Coverage
+
+- Complete priority 1 pages.
+- Add screenshots for key workflow transitions.
+- Add data dictionary seed pages for major modules.
+- Add troubleshooting + FAQ baseline.
+
+Exit criteria:
+
+- Core workflows documented end-to-end.
+- Data dictionary exists for top user-facing entities.
+
+## Phase 4: Hardening and Publication
+
+- Link check and markdown linting.
+- Editorial pass for consistency and plain-language quality.
+- Add ownership/review cadence.
+- Publish and announce user docs entry points.
+
+Exit criteria:
+
+- Published site is discoverable.
+- User docs and engineering docs are clearly separated.
+
+## Governance
+
+- User-doc PRs should include task validation from a product/domain owner.
+- Engineering-doc changes should not alter user-doc IA without ADR or explicit review.
+- Screenshot updates should be versioned or tracked to UI release milestones.

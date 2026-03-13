@@ -24,6 +24,12 @@ Those remain in [`docs/`](../docs/README.md).
 - `reference/`
 - `troubleshooting/`
 
+## Planning Artifacts
+
+- [Information Architecture](./INFORMATION_ARCHITECTURE.md)
+- [Migration Matrix](./MIGRATION_MATRIX.md)
+- [Rollout Plan](./ROLLOUT_PLAN.md)
+
 ## Content Style
 
 Each workflow page should follow:
