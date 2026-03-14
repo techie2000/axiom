@@ -12,7 +12,7 @@ REM   scripts\smoke-ssi.cmd uat
 REM   scripts\smoke-ssi.cmd dev --seed --cleanup
 REM
 REM Arguments:
-REM   %1  Environment: dev | uat | prod | main (default: dev)
+REM   %1  Environment: main | dev | uat | prod (default: dev)
 REM   %2+ Optional flags: --seed --cleanup
 REM =============================================================================
 
@@ -32,9 +32,9 @@ if "%ENVIRONMENT:~0,2%"=="--" (
 )
 
 REM Validate environment argument.
-if /I not "%ENVIRONMENT%"=="dev" if /I not "%ENVIRONMENT%"=="uat" if /I not "%ENVIRONMENT%"=="prod" if /I not "%ENVIRONMENT%"=="main" (
+if /I not "%ENVIRONMENT%"=="main" if /I not "%ENVIRONMENT%"=="dev" if /I not "%ENVIRONMENT%"=="uat" if /I not "%ENVIRONMENT%"=="prod" (
   echo [ERROR] Invalid environment: %ENVIRONMENT%
-  echo         Valid values: dev ^| uat ^| prod ^| main
+  echo         Valid values: main ^| dev ^| uat ^| prod
   exit /b 1
 )
 

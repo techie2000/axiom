@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet("dev", "uat", "prod", "main")]
+    [ValidateSet("main", "dev", "uat", "prod")]
     [string]$Environment,
 
     [ValidateSet("up", "down", "force")]
@@ -15,10 +15,10 @@ $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
 
 $composeMap = @{
+    main = @{ EnvFile = ".env.main"; ComposeFile = "docker-compose.main.yml" }
     dev  = @{ EnvFile = ".env.dev"; ComposeFile = "docker-compose.dev.yml" }
     uat  = @{ EnvFile = ".env.uat"; ComposeFile = "docker-compose.uat.yml" }
     prod = @{ EnvFile = ".env.prod"; ComposeFile = "docker-compose.prod.yml" }
-    main = @{ EnvFile = ".env.main"; ComposeFile = "docker-compose.main.yml" }
 }
 
 $config = $composeMap[$Environment]

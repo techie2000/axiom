@@ -17,7 +17,7 @@ The script reads JWT secrets and backend ports from .env.<environment> files
 in the workspace root to avoid hardcoding environment values.
 
 .PARAMETER Environment
-Environment to test: dev, uat, prod, main, or all. Defaults to all.
+Environment to test: main, dev, uat, prod, or all. Defaults to all.
 
 .PARAMETER TimeoutSec
 HTTP timeout in seconds for each request. Defaults to 20.
@@ -48,7 +48,7 @@ Waits up to 120 seconds for API readiness, then runs dev smoke tests.
 
 [CmdletBinding()]
 param(
-    [ValidateSet('dev', 'uat', 'prod', 'main', 'all')]
+    [ValidateSet('main', 'dev', 'uat', 'prod', 'all')]
     [string]$Environment = 'all',
 
     [ValidateRange(5, 120)]
@@ -197,14 +197,14 @@ $workspaceRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $workspaceRoot
 
 $environmentFiles = @{
+    main = '.env.main'
     dev  = '.env.dev'
     uat  = '.env.uat'
     prod = '.env.prod'
-    main = '.env.main'
 }
 
 $targetEnvironments = if ($Environment -eq 'all') {
-    @('dev', 'uat', 'prod', 'main')
+    @('main', 'dev', 'uat', 'prod')
 }
 else {
     @($Environment)

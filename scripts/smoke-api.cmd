@@ -12,7 +12,7 @@ REM   scripts\smoke-api.cmd uat
 REM   scripts\smoke-api.cmd prod --check-login
 REM
 REM Arguments:
-REM   %1  Environment: dev | uat | prod | main | all (default: all)
+REM   %1  Environment: main | dev | uat | prod | all (default: all)
 REM   %2  Optional flag: --check-login
 REM =============================================================================
 
@@ -24,9 +24,9 @@ set "CHECK_LOGIN=%~2"
 if "%ENVIRONMENT%"=="" set "ENVIRONMENT=all"
 
 REM Validate environment argument.
-if /I not "%ENVIRONMENT%"=="dev" if /I not "%ENVIRONMENT%"=="uat" if /I not "%ENVIRONMENT%"=="prod" if /I not "%ENVIRONMENT%"=="main" if /I not "%ENVIRONMENT%"=="all" (
+if /I not "%ENVIRONMENT%"=="main" if /I not "%ENVIRONMENT%"=="dev" if /I not "%ENVIRONMENT%"=="uat" if /I not "%ENVIRONMENT%"=="prod" if /I not "%ENVIRONMENT%"=="all" (
   echo [ERROR] Invalid environment: %ENVIRONMENT%
-  echo         Valid values: dev ^| uat ^| prod ^| main ^| all
+  echo         Valid values: main ^| dev ^| uat ^| prod ^| all
   exit /b 1
 )
 
