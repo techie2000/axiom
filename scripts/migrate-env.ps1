@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet("dev", "uat", "prod")]
+    [ValidateSet("dev", "uat", "prod", "main")]
     [string]$Environment,
 
     [ValidateSet("up", "down", "force")]
@@ -18,6 +18,7 @@ $composeMap = @{
     dev  = @{ EnvFile = ".env.dev"; ComposeFile = "docker-compose.dev.yml" }
     uat  = @{ EnvFile = ".env.uat"; ComposeFile = "docker-compose.uat.yml" }
     prod = @{ EnvFile = ".env.prod"; ComposeFile = "docker-compose.prod.yml" }
+    main = @{ EnvFile = ".env.main"; ComposeFile = "docker-compose.main.yml" }
 }
 
 $config = $composeMap[$Environment]

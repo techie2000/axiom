@@ -2,7 +2,7 @@
 
 [CmdletBinding()]
 param(
-    [ValidateSet('dev', 'uat', 'prod')]
+    [ValidateSet('dev', 'uat', 'prod', 'main')]
     [string]$Environment = 'dev',
 
     [string]$ApiBaseUrl,
@@ -27,6 +27,14 @@ function Get-EnvironmentConfig {
                 ComposeFile = 'docker-compose.dev.yml'
                 ApiBaseUrl = 'http://localhost:18080'
                 Database = 'axiom_dev'
+            }
+        }
+        'main' {
+            return @{
+                EnvFile = '.env.main'
+                ComposeFile = 'docker-compose.main.yml'
+                ApiBaseUrl = 'http://localhost:48080'
+                Database = 'axiom_main'
             }
         }
         'uat' {
