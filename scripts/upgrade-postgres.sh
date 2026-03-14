@@ -9,7 +9,7 @@
 #   ./scripts/upgrade-postgres.sh <environment> [--yes]
 #
 # Arguments:
-#   environment   One of: dev | uat | prod
+#   environment   One of: dev | uat | prod | main
 #   --yes / -y    Skip the confirmation prompt (for scripted runs)
 #
 # Examples:
