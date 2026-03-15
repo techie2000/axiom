@@ -3,6 +3,8 @@
 .PHONY: docker-all-up docker-all-down docker-all-status validate-env
 .PHONY: lint lint-docs lint-docs-fix lint-all install-hooks
 .PHONY: smoke-api smoke-ssi cleanup-stale-translations
+.PHONY: portless-setup portless-setup-main portless-setup-dev portless-setup-uat portless-setup-prod
+.PHONY: portless-list portless-proxy-start portless-proxy-start-https
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
@@ -306,3 +308,51 @@ smoke-ssi: ## Run SSI smoke checks (usage: make smoke-ssi [env=dev|uat|prod] [se
 
 cleanup-stale-translations: ## Delete stale UI translation rows (usage: make cleanup-stale-translations api=http://localhost:18080 token=<JWT> [whatif=1])
 	@pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/cleanup-stale-translations.ps1 -ApiBaseUrl $${api:-http://localhost:18080} -BearerToken "$${token}" $$( [ "$${whatif:-0}" = "1" ] && echo "-WhatIf" )
+
+# Portless — human-friendly .localhost URL aliases (optional developer ergonomics)
+portless-setup: ## Register portless aliases for all environments (requires: npm install -g portless)
+	@if command -v bash >/dev/null 2>&1; then \
+		bash scripts/portless-setup.sh; \
+	elif command -v pwsh >/dev/null 2>&1; then \
+		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/portless-setup.ps1; \
+	else \
+		echo "❌ Neither 'bash' nor 'pwsh' was found. Run scripts/portless-setup.sh or scripts/portless-setup.ps1 directly."; \
+		exit 1; \
+	fi
+
+portless-setup-main: ## Register portless aliases for the main environment only
+	@if command -v bash >/dev/null 2>&1; then \
+		bash scripts/portless-setup.sh main; \
+	elif command -v pwsh >/dev/null 2>&1; then \
+		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/portless-setup.ps1 -Environments main; \
+	fi
+
+portless-setup-dev: ## Register portless aliases for the dev environment only
+	@if command -v bash >/dev/null 2>&1; then \
+		bash scripts/portless-setup.sh dev; \
+	elif command -v pwsh >/dev/null 2>&1; then \
+		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/portless-setup.ps1 -Environments dev; \
+	fi
+
+portless-setup-uat: ## Register portless aliases for the UAT environment only
+	@if command -v bash >/dev/null 2>&1; then \
+		bash scripts/portless-setup.sh uat; \
+	elif command -v pwsh >/dev/null 2>&1; then \
+		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/portless-setup.ps1 -Environments uat; \
+	fi
+
+portless-setup-prod: ## Register portless aliases for the production environment only
+	@if command -v bash >/dev/null 2>&1; then \
+		bash scripts/portless-setup.sh prod; \
+	elif command -v pwsh >/dev/null 2>&1; then \
+		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/portless-setup.ps1 -Environments prod; \
+	fi
+
+portless-list: ## Show currently registered portless aliases
+	@portless list 2>/dev/null || echo "portless is not installed or proxy is not running. Run: npm install -g portless"
+
+portless-proxy-start: ## Start the portless proxy (HTTP on port 1355)
+	@portless proxy start
+
+portless-proxy-start-https: ## Start the portless proxy with HTTPS (port 443; no port suffix in URLs)
+	@portless proxy start --https
