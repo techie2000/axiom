@@ -36,7 +36,8 @@ Located in [contributing/](./contributing/):
 
 ### 👤 User Documentation
 
-- [**User Docs Home**](../docs-user/README.md) - Dedicated end-user documentation space for workflow-driven app usage guidance
+- [**User Docs Home**](../docs-user/README.md) - Dedicated end-user documentation space for workflow-driven app usage
+  guidance
 
 ### 🖼️ Branding Assets
 
@@ -185,4 +186,4 @@ When adding new documentation:
 
 ## Last Updated
 
-March 6, 2026
+March 15, 2026
