@@ -298,6 +298,86 @@ psql -h localhost -p 35432 -U axiom -d axiom_prod
 - UAT: http://localhost:25673 (guest/guest)
 - Production: http://localhost:35673 (guest/guest)
 
+## Human-Friendly URLs with Portless (Optional)
+
+The port-prefixed URLs above are functional, but require memorising which prefix belongs to which
+environment. [Portless](https://github.com/vercel-labs/portless) is an optional npm tool that maps
+stable, named `.localhost` URLs to each service via a lightweight local proxy.
+
+> **This is entirely optional.** Raw `localhost:PORT` URLs continue to work unchanged.
+
+### Quick Setup
+
+```bash
+# 1. Install portless globally (once per machine)
+npm install -g portless
+
+# 2. Start the proxy (once per session, or configure your shell profile to auto-start)
+portless proxy start            # HTTP — URLs become http://<name>.localhost:1355
+# or, for fully portless HTTPS:
+portless proxy start --https    # HTTPS — URLs become https://<name>.localhost
+
+# 3. Register aliases for all Axiom environments
+make portless-setup
+
+# 4. Verify
+portless list
+```
+
+**Safari** requires one additional step after registering aliases:
+
+```bash
+portless hosts sync
+```
+
+### Named URLs
+
+After setup, each environment is accessible by name:
+
+| Environment | Service           | Named URL                                    |
+|-------------|-------------------|----------------------------------------------|
+| main        | Frontend          | `http://axiom-main.localhost:1355`           |
+| main        | Backend API       | `http://api.axiom-main.localhost:1355`       |
+| main        | RabbitMQ Mgmt     | `http://rabbitmq.axiom-main.localhost:1355`  |
+| dev         | Frontend          | `http://axiom-dev.localhost:1355`            |
+| dev         | Backend API       | `http://api.axiom-dev.localhost:1355`        |
+| dev         | RabbitMQ Mgmt     | `http://rabbitmq.axiom-dev.localhost:1355`   |
+| uat         | Frontend          | `http://axiom-uat.localhost:1355`            |
+| uat         | Backend API       | `http://api.axiom-uat.localhost:1355`        |
+| uat         | RabbitMQ Mgmt     | `http://rabbitmq.axiom-uat.localhost:1355`   |
+| prod        | Frontend          | `http://axiom-prod.localhost:1355`           |
+| prod        | Backend API       | `http://api.axiom-prod.localhost:1355`       |
+| prod        | RabbitMQ Mgmt     | `http://rabbitmq.axiom-prod.localhost:1355`  |
+
+With `portless proxy start --https` the `:1355` suffix disappears entirely.
+
+### Per-Environment Makefile Targets
+
+```bash
+make portless-setup           # Register aliases for all environments
+make portless-setup-dev       # Register aliases for dev only
+make portless-setup-uat       # Register aliases for UAT only
+make portless-setup-main      # Register aliases for main only
+make portless-setup-prod      # Register aliases for prod only
+make portless-list            # Show currently registered aliases
+make portless-proxy-start     # Start the HTTP proxy (port 1355)
+make portless-proxy-start-https  # Start the HTTPS proxy (port 443)
+```
+
+### How It Works
+
+Portless runs a local reverse proxy. The `portless alias <name> <port>` command registers a static
+route without requiring portless to start the target process — making it ideal for Docker services
+that are already running on fixed ports.
+
+```text
+Browser → axiom-dev.localhost:1355 → portless proxy → localhost:13000 → axiom-dev-frontend
+Browser → api.axiom-dev.localhost:1355 → portless proxy → localhost:18080 → axiom-dev-backend
+```
+
+See [ADR-0013](../adr/adr-0013-portless-human-friendly-urls.md) for the full decision record
+including pros, cons, and alternatives considered.
+
 ## Container Naming
 
 Containers follow this naming pattern: `axiom-{env}-{service}`

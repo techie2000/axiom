@@ -48,6 +48,8 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
   database (theme, column visibility, page width) with `useUserPreference` hook and `PreferenceSavePrompt` toast
 - [ADR-0012: Internationalisation](docs/adr/adr-0012-internationalisation.md): i18next-based i18n stack, language
   selection on login/register, community translation review workflow, and CI/daily seed integration
+- [ADR-0013: Portless Human-Friendly URLs](docs/adr/adr-0013-portless-human-friendly-urls.md): Optional portless
+  integration for named .localhost URLs replacing port-prefixed local development addresses
 
 ## Deployment and Infrastructure
 
@@ -109,3 +111,7 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
   test stacks with unique project names, ports, and log directories
 - [Postgres Backup Script](scripts/backup-main-postgres.ps1): Creates timestamped pg_dump backups from the
   running main Postgres container
+- [Portless Setup Script (bash)](scripts/portless-setup.sh): Registers named .localhost aliases for all Axiom
+  environments via portless; works on Linux and macOS
+- [Portless Setup Script (PowerShell)](scripts/portless-setup.ps1): Windows equivalent of portless-setup.sh for
+  registering named .localhost aliases via portless
