@@ -2,7 +2,7 @@
 
 This plan defines a phased rollout for establishing `docs-user/` as the polished end-user documentation layer.
 
-## Phase 1: Foundation (current PR)
+## Phase 1: Foundation ✅ Complete
 
 - Create `docs-user/` root and conventions.
 - Add ADR decision for split (`ADR-0013`).
@@ -11,10 +11,10 @@ This plan defines a phased rollout for establishing `docs-user/` as the polished
 
 Exit criteria:
 
-- Decision and scope are approved.
-- User-doc directory and governance conventions exist.
+- Decision and scope are approved. ✅
+- User-doc directory and governance conventions exist. ✅
 
-## Phase 2: VitePress Bootstrap
+## Phase 2: VitePress Bootstrap ✅ Complete
 
 - Initialize VitePress in a dedicated docs-user site path.
 - Add sidebar/nav aligned to `INFORMATION_ARCHITECTURE.md`.
@@ -23,9 +23,18 @@ Exit criteria:
 
 Exit criteria:
 
-- Local build works.
-- Navigation usable for end users.
-- At least 3 high-value workflow pages drafted.
+- Local build works. ✅
+- Navigation usable for end users. ✅
+- At least 3 high-value workflow pages drafted. ✅
+
+Pages delivered in Phase 2:
+
+- `getting-started/sign-in-and-access.md` ✅
+- `getting-started/navigation-basics.md` ✅
+- `workflows/lei-records.md` ✅
+- `workflows/ssi.md` ✅
+- `admin/user-approvals.md` ✅
+- `reference/data-dictionary.md` ✅
 
 ## Phase 3: Core Workflow Coverage
 
