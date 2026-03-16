@@ -105,17 +105,17 @@ jobs:
             BASE_SHA="${{ github.event.pull_request.base.sha }}"
             HEAD_SHA="${{ github.event.pull_request.head.sha }}"
 
-            mapfile -d '' md_files < <(git diff --name-only -z --diff-filter=ACMR "$BASE_SHA" "$HEAD_SHA" -- '*.md')
+            md_files="$(git diff --name-only --diff-filter=ACMR "$BASE_SHA" "$HEAD_SHA" -- '*.md')"
 
-            if [ "${#md_files[@]}" -eq 0 ]; then
+            if [ -z "$md_files" ]; then
               echo "No markdown files changed in this pull request."
               exit 0
             fi
 
             echo "Linting changed markdown files:"
-            printf ' - %s\n' "${md_files[@]}"
+            printf '%s\n' "$md_files" | sed 's/^/ - /'
 
-            printf '%s\0' "${md_files[@]}" | xargs -0 markdownlint --config .markdownlint.yaml
+            printf '%s\n' "$md_files" | xargs markdownlint --config .markdownlint.yaml
           else
             make docs-check
           fi
