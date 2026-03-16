@@ -274,7 +274,8 @@ lint-docs-fix: ## Auto-fix markdown linting issues
 
 docs-check: lint-docs ## Canonical markdown validation gate
 
-docs-check-fix: lint-docs-fix lint-docs ## Auto-fix then enforce clean markdown lint
+docs-check-fix: ## Auto-fix then enforce clean markdown lint
+	$(MAKE) lint-docs-fix && $(MAKE) lint-docs
 
 lint-all: lint lint-docs ## Run all linters (Go + Markdown)
 
