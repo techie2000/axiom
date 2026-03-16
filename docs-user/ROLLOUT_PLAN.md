@@ -36,7 +36,7 @@ Pages delivered in Phase 2:
 - `admin/user-approvals.md` ✅
 - `reference/data-dictionary.md` ✅
 
-## Phase 3: Core Workflow Coverage
+## Phase 3: Core Workflow Coverage ✅ Complete
 
 - Complete priority 1 pages.
 - Add screenshots for key workflow transitions.
@@ -45,8 +45,23 @@ Pages delivered in Phase 2:
 
 Exit criteria:
 
-- Core workflows documented end-to-end.
-- Data dictionary exists for top user-facing entities.
+- Core workflows documented end-to-end. ✅
+- Data dictionary exists for top user-facing entities. ✅
+
+Pages delivered in Phase 3:
+
+- `workflows/countries.md` ✅ — full workflow, fields, filters, common issues
+- `workflows/currencies.md` ✅ — full workflow, compliance filters, fields, common issues
+- `workflows/entities.md` ✅ — full workflow, LEI link, fields, common issues
+- `workflows/instruments.md` ✅ — current Coming Soon state documented with planned fields
+- `workflows/accounts.md` ✅ — current Coming Soon state documented with planned fields
+- `reference/data-dictionary.md` ✅ — expanded with entity, instrument, account, and language fields
+- `reference/statuses-and-states.md` ✅ — translation and file processing statuses added
+- `reference/permissions-and-roles.md` ✅ — what users and admins can and cannot do
+- `admin/translation-review.md` ✅ — full workflow with approval and rejection steps
+- `admin/sync-triggers.md` ✅ — full workflow with monitoring and re-run guidance
+- `troubleshooting/common-errors.md` ✅ — expanded with module-specific and admin errors
+- `troubleshooting/faq.md` ✅ — comprehensive FAQ covering access, data, preferences, and admin
 
 ## Phase 4: Hardening and Publication
 

@@ -49,9 +49,24 @@ This page defines all status and state values used in Axiom.
 | `PENDING` | The user has registered but is awaiting admin approval |
 | `REJECTED` | The user's registration was rejected |
 
+## Translation status
+
+| Status | Meaning |
+| --- | --- |
+| `pending` | The translation has been submitted and is awaiting admin review |
+| `approved` | The translation has been reviewed and approved; it is live in the interface |
+| `rejected` | The translation was reviewed and rejected; it is not shown in the interface |
+
+## File processing status (admin)
+
+| Status | Meaning |
+| --- | --- |
+| `PENDING` | The file has been queued for processing |
+| `IN_PROGRESS` | The file is actively being processed |
+| `COMPLETED` | Processing finished successfully |
+| `FAILED` | Processing encountered an error; see the failure category for details |
+
 ## Related pages
 
 - [Data Dictionary](./data-dictionary)
 - [Permissions & Roles](./permissions-and-roles)
-
-> **Note:** This page is a stub. Full documentation will be added in Phase 3.
