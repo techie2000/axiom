@@ -169,6 +169,7 @@ stateDiagram-v2
 - ✅ **Maintainability**: Update diagrams as code changes
 
 **DO NOT** use:
+
 - ❌ Binary image files (PNG, JPG) for architecture diagrams
 - ❌ External diagram tools (draw.io, Visio) unless absolutely necessary
 - ❌ ASCII art (hard to read and maintain)
@@ -388,7 +389,9 @@ Agents are **invoked explicitly** using the `@` mention syntax in Copilot Chat:
 
 1. **Syntax**: `@[agent-name]` followed by your request
    ```
+
    @adr-generator Create an ADR for choosing RabbitMQ
+
 ```text
 
 2. **Available Agents**:
@@ -403,8 +406,10 @@ Agents are **invoked explicitly** using the `@` mention syntax in Copilot Chat:
 
 4. **Example Workflow**:
    ```
+
    User: @adr-generator Help me document the decision to use Go
    Agent: [Creates structured ADR with options, rationale, and consequences]
+
 ```text
 
 ### Prompts (Slash Commands)
@@ -413,9 +418,11 @@ Prompts are **invoked using slash commands** in Copilot Chat:
 
 1. **Syntax**: `/[prompt-name]` (auto-completes as you type)
    ```
+
    /review-and-refactor
    /create-llms
    /create-architectural-decision-record
+
 ```text
 
 2. **Interactive Configuration**: Many prompts have variables:
@@ -432,7 +439,9 @@ Prompts are **invoked using slash commands** in Copilot Chat:
 
 4. **Prompt Chaining**: Combine prompts for complex workflows:
    ```
+
    /create-architectural-decision-record → /create-llms → /review-and-refactor
+
 ```text
 
 ### Skills (On-Demand Loading)
@@ -447,40 +456,50 @@ Skills are **loaded automatically** when relevant topics are mentioned:
 
 3. **Usage Example**:
    ```
+
    User: Create a bug report issue for the authentication timeout
    Copilot: [Loads github-issues skill, uses templates, creates formatted issue]
+
 ```text
 
 ### Practical Usage Patterns
 
 #### For Code Generation
 ```
+
 1. Open file matching an instruction (e.g., main.go)
 2. Use Copilot inline suggestions → Follows go.instructions.md patterns
 3. Or ask in chat: "Create a CSV parser with error handling"
    → Applies go.instructions.md + security-and-owasp.instructions.md
+
 ```text
 
 #### For Code Review
 ```
+
 1. Select code block to review
 2. Chat: /review-and-refactor
    → Reviews against ALL applicable instruction files
    → Suggests improvements following documented patterns
+
 ```text
 
 #### For Workflow Automation
 ```
+
 1. Chat: @adr-generator Create ADR for RabbitMQ choice
    → Executes structured ADR creation workflow
    → Generates comprehensive decision document
+
 ```text
 
 #### For Documentation
 ```
+
 1. Chat: /create-llms
    → Scans repo structure
    → Generates llms.txt with all key documentation links
+
 ```text
 
 ### Best Practices
