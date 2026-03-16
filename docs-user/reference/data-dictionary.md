@@ -37,7 +37,7 @@ This page defines the key fields used across Axiom's data entities.
 | Languages | Languages spoken in the country (ISO codes) | `en` |
 | Currency Codes | Currencies used in the country (ISO 4217) | `GBP` |
 | Phone Codes | International dialling codes | `+44` |
-| Active | Whether the record is active in Axiom | `true` |
+| Active | Whether the record is active in Axiom | `Active` / `Inactive` |
 
 ## Currency fields
 
@@ -48,8 +48,8 @@ This page defines the key fields used across Axiom's data entities.
 | Name | Official currency name | `US Dollar` |
 | Symbol | Currency symbol | `$` |
 | Minor Unit (Decimals) | Number of decimal places for the currency | `2` |
-| ALERT CLS Allowed | Eligible for Continuous Linked Settlement | `true` |
-| OFAC Sanctioned | Associated with OFAC-sanctioned jurisdiction | `false` |
+| ALERT CLS Allowed | Eligible for Continuous Linked Settlement | `Allowed` / `—` |
+| OFAC Sanctioned | Associated with OFAC-sanctioned jurisdiction | `Sanctioned` / `—` |
 
 ## Entity fields
 
