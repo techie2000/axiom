@@ -85,6 +85,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -95,7 +97,28 @@ jobs:
         run: npm install -g markdownlint-cli
 
       - name: Run markdown docs check
-        run: make docs-check
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+
+            mapfile -d '' md_files < <(git diff --name-only -z --diff-filter=ACMR "$BASE_SHA" "$HEAD_SHA" -- '*.md')
+
+            if [ "${#md_files[@]}" -eq 0 ]; then
+              echo "No markdown files changed in this pull request."
+              exit 0
+            fi
+
+            echo "Linting changed markdown files:"
+            printf ' - %s\n' "${md_files[@]}"
+
+            printf '%s\0' "${md_files[@]}" | xargs -0 markdownlint --config .markdownlint.yaml
+          else
+            make docs-check
+          fi
 
   validate-migrations:
     name: Validate DB Migrations
