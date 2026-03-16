@@ -79,6 +79,47 @@ jobs:
           docker run --rm -i hadolint/hadolint < ./docker/Dockerfile.backend
           docker run --rm -i hadolint/hadolint < ./docker/Dockerfile.frontend
 
+  lint-docs:
+    name: Markdown Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install markdownlint-cli
+        run: npm install -g markdownlint-cli
+
+      - name: Run markdown docs check
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+
+            md_files="$(git diff --name-only --diff-filter=ACMR "$BASE_SHA" "$HEAD_SHA" -- '*.md')"
+
+            if [ -z "$md_files" ]; then
+              echo "No markdown files changed in this pull request."
+              exit 0
+            fi
+
+            echo "Linting changed markdown files:"
+            printf '%s\n' "$md_files" | sed 's/^/ - /'
+
+            printf '%s\n' "$md_files" | xargs markdownlint --config .markdownlint.yaml
+          else
+            make docs-check
+          fi
+
   validate-migrations:
     name: Validate DB Migrations
     runs-on: ubuntu-latest
@@ -249,7 +290,7 @@ jobs:
   ci-summary:
     name: CI Summary (${{ needs.detect-environment.outputs.environment || 'none' }})
     runs-on: ubuntu-latest
-    needs: [detect-environment, lint-go, lint-docker, validate-migrations, build-go, test-go, build-frontend]
+    needs: [detect-environment, lint-go, lint-docker, lint-docs, validate-migrations, build-go, test-go, build-frontend]
     if: always()
     steps:
       - name: Report CI result
@@ -257,6 +298,7 @@ jobs:
           ENV="${{ needs.detect-environment.outputs.environment }}"
           LINT_GO="${{ needs.lint-go.result }}"
           LINT_DOCKER="${{ needs.lint-docker.result }}"
+          LINT_DOCS="${{ needs.lint-docs.result }}"
           MIGRATIONS="${{ needs.validate-migrations.result }}"
           BUILD="${{ needs.build-go.result }}"
           TEST="${{ needs.test-go.result }}"
@@ -265,6 +307,7 @@ jobs:
           echo "Environment : $ENV"
           echo "Go Lint     : $LINT_GO"
           echo "Docker Lint : $LINT_DOCKER"
+          echo "Docs Lint   : $LINT_DOCS"
           echo "Migrations  : $MIGRATIONS"
           echo "Build       : $BUILD"
           echo "Tests       : $TEST"
@@ -272,6 +315,7 @@ jobs:
 
           if [ "$LINT_GO" != "success" ] || \
              [ "$LINT_DOCKER" != "success" ] || \
+             [ "$LINT_DOCS" != "success" ] || \
              [ "$MIGRATIONS" != "success" ] || \
              [ "$BUILD" != "success" ] || \
              [ "$TEST" != "success" ] || \

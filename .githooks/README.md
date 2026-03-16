@@ -42,6 +42,9 @@ git commit -m "Update docs"
 # Pre-commit hook runs automatically
 ```
 
+The hook fails fast if `markdownlint-cli` is not installed. This is intentional so markdown
+non-compliance is caught before review, not during review.
+
 ### Bypassing Hooks
 
 **Not recommended**, but if you need to skip validation:
@@ -63,10 +66,16 @@ If the pre-commit hook fails:
 2. **Check manually:**
 
    ```bash
-   make lint-docs
+   make docs-check
    ```
 
-3. **Common fixes:**
+3. **Auto-fix then re-check:**
+
+   ```bash
+   make docs-check-fix
+   ```
+
+4. **Common fixes:**
    - MD013: Break long lines at 120 characters
    - MD040: Add language to code blocks (e.g., ` ```bash`, ` ```json`, ` ```text`)
    - MD060: Ensure table columns have proper spacing
