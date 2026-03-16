@@ -1,7 +1,7 @@
 .PHONY: help build run test clean migrate-up migrate-down docker-up docker-down
 .PHONY: docker-main-up docker-main-down docker-dev-up docker-dev-down docker-uat-up docker-uat-down docker-prod-up docker-prod-down
 .PHONY: docker-all-up docker-all-down docker-all-status validate-env
-.PHONY: lint lint-docs lint-docs-fix lint-all install-hooks
+.PHONY: lint lint-docs lint-docs-fix docs-check docs-check-fix lint-all install-hooks
 .PHONY: smoke-api smoke-ssi cleanup-stale-translations
 
 help: ## Show this help message
@@ -271,6 +271,10 @@ lint-docs-fix: ## Auto-fix markdown linting issues
 		echo "❌ markdownlint-cli not installed. Run: make install-tools"; \
 		exit 1; \
 	fi
+
+docs-check: lint-docs ## Canonical markdown validation gate
+
+docs-check-fix: lint-docs-fix lint-docs ## Auto-fix then enforce clean markdown lint
 
 lint-all: lint lint-docs ## Run all linters (Go + Markdown)
 

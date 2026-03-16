@@ -273,6 +273,19 @@ Modular domain knowledge packages that AI can load on-demand:
 
 ## Special Instructions
 
+### Markdown Compliance Gate (REQUIRED)
+
+When an agent edits any `*.md` file, it must run this loop before commit or PR update:
+
+1. `make docs-check-fix`
+2. `make docs-check`
+3. If lint still fails, fix remaining issues and rerun `make docs-check` until clean
+
+Rules:
+
+- Do not commit markdown changes while markdown lint is failing.
+- Treat markdown lint failures as blocking, not advisory.
+
 ### Self-Explanatory Code
 `self-explanatory-code-commenting.instructions.md` emphasizes:
 - Code that speaks for itself

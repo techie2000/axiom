@@ -5,10 +5,10 @@
 echo "Running markdown linting..."
 
 # Check if markdownlint-cli is installed
-if ! command -v markdownlint &> /dev/null; then
-    echo "⚠️  markdownlint-cli not found. Install with: npm install -g markdownlint-cli"
-    echo "   Skipping markdown validation..."
-    exit 0
+if ! command -v markdownlint > /dev/null 2>&1; then
+    echo "❌ markdownlint-cli not found. Install with: npm install -g markdownlint-cli"
+    echo "   or run: make install-tools"
+    exit 1
 fi
 
 # Get list of staged markdown files
