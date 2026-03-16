@@ -34,6 +34,11 @@ Located in [contributing/](./contributing/):
 
 - [**UI Patterns Guide**](./ui-patterns.md) - Reusable frontend patterns and component templates ⭐ **For UI development**
 
+### 👤 User Documentation
+
+- [**User Docs Home**](../docs-user/README.md) - Dedicated end-user documentation space for workflow-driven app usage
+  guidance
+
 ### 🖼️ Branding Assets
 
 Located in [assets/branding/](./assets/branding/):
@@ -115,6 +120,10 @@ Located in [performance/](./performance/):
 4. **Building UI components?** → [UI Patterns Guide](./ui-patterns.md) ⭐ **New!**
 5. **Performance tuning?** → [LEI Search Performance Analysis](./performance/LEI_SEARCH_PERFORMANCE_ANALYSIS.md)
 
+### For End Users
+
+1. **How do I use the app?** → [User Docs Home](../docs-user/README.md)
+
 ### For System Administrators
 
 1. **Deploy multi-environment setup** → [Multi-Environment Setup](./environments/multi-environment-setup.md)
@@ -177,4 +186,4 @@ When adding new documentation:
 
 ## Last Updated
 
-March 6, 2026
+March 15, 2026
