@@ -14,7 +14,7 @@ export default defineConfig({
 
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
-    logo: '/logo.svg',
+    logo: '/logo.png',
 
     nav: [
       { text: 'Getting Started', link: '/getting-started/' },

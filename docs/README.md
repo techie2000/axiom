@@ -30,11 +30,6 @@ Located in [contributing/](./contributing/):
 - [**Branching Strategy**](./contributing/BRANCHING_STRATEGY.md) - Branch naming, promotion workflow,
   protection rules, and hotfix procedure
 
-### 👤 User Documentation
-
-- [**User Docs Home**](../docs-user/README.md) - Dedicated end-user documentation space for workflow-driven app usage
-  guidance
-
 ### 🎨 Frontend Patterns
 
 - [**UI Patterns Guide**](./ui-patterns.md) - Reusable frontend patterns and component templates ⭐ **For UI development**
