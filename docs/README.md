@@ -39,6 +39,11 @@ Located in [contributing/](./contributing/):
 
 - [**UI Patterns Guide**](./ui-patterns.md) - Reusable frontend patterns and component templates ⭐ **For UI development**
 
+### 👤 User Documentation
+
+- [**User Docs Home**](../docs-user/README.md) - Dedicated end-user documentation space for workflow-driven app usage
+  guidance
+
 ### 🖼️ Branding Assets
 
 Located in [assets/branding/](./assets/branding/):
