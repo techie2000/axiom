@@ -11,6 +11,14 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
 ## Main Documentation
 
 - [README](README.md): Primary project documentation with setup instructions and architecture overview
+- [User Documentation Home](docs-user/README.md): Dedicated end-user docs space for workflow and screen-based
+  app usage guidance
+- [User Docs Information Architecture](docs-user/INFORMATION_ARCHITECTURE.md): Audience-first site structure
+  for end-user guides
+- [User Docs Migration Matrix](docs-user/MIGRATION_MATRIX.md): Mapping of current mixed docs to user-doc actions and
+  priorities
+- [User Docs Rollout Plan](docs-user/ROLLOUT_PLAN.md): Phased delivery plan for bootstrap, workflow coverage, and
+  publication
 - [Architecture](docs/architecture.md): System architecture, design patterns, and component interactions
 - [Changelog](CHANGELOG.md): Version history and notable changes
 
@@ -48,6 +56,8 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
   database (theme, column visibility, page width) with `useUserPreference` hook and `PreferenceSavePrompt` toast
 - [ADR-0012: Internationalisation](docs/adr/adr-0012-internationalisation.md): i18next-based i18n stack, language
   selection on login/register, community translation review workflow, and CI/daily seed integration
+- [ADR-0013: Dedicated User Documentation Site](docs/adr/adr-0013-user-documentation-site.md): decision to
+  introduce top-level `docs-user/` for polished end-user docs while keeping `docs/` engineering-focused
 
 ## Deployment and Infrastructure
 
