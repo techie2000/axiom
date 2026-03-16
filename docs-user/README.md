@@ -64,7 +64,12 @@ Each workflow page follows:
 5. Common issues
 6. Related tasks
 
+## Governance
+
+See [GOVERNANCE.md](./GOVERNANCE.md) for ownership, review cadence, and contribution workflow.
+
 ## Status
 
-Phase 2 (VitePress Bootstrap) is complete. The site builds locally and includes priority-wave
-workflow pages. See [Rollout Plan](./ROLLOUT_PLAN.md) for the full roadmap.
+Phase 4 (Hardening and Publication) is complete. All priority workflow, admin, reference, and
+troubleshooting pages are published. The site builds cleanly via `make docs-user-check` and is
+verified in CI on every pull request. See [Rollout Plan](./ROLLOUT_PLAN.md) for the full roadmap.

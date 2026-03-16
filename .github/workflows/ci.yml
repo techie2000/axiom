@@ -287,10 +287,32 @@ jobs:
         run: go test ./... -v -count=1
         working-directory: ./backend
 
+  build-docs-user:
+    name: Build User Documentation (VitePress)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: 'docs-user/package-lock.json'
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ./docs-user
+
+      - name: Build user documentation site
+        run: npm run docs:build
+        working-directory: ./docs-user
+
   ci-summary:
     name: CI Summary (${{ needs.detect-environment.outputs.environment || 'none' }})
     runs-on: ubuntu-latest
-    needs: [detect-environment, lint-go, lint-docker, lint-docs, validate-migrations, build-go, test-go, build-frontend]
+    needs: [detect-environment, lint-go, lint-docker, lint-docs, validate-migrations, build-go, test-go, build-frontend, build-docs-user]
     if: always()
     steps:
       - name: Report CI result
@@ -303,6 +325,7 @@ jobs:
           BUILD="${{ needs.build-go.result }}"
           TEST="${{ needs.test-go.result }}"
           BUILD_FRONTEND="${{ needs.build-frontend.result }}"
+          BUILD_DOCS_USER="${{ needs.build-docs-user.result }}"
 
           echo "Environment : $ENV"
           echo "Go Lint     : $LINT_GO"
@@ -312,6 +335,7 @@ jobs:
           echo "Build       : $BUILD"
           echo "Tests       : $TEST"
           echo "Frontend    : $BUILD_FRONTEND"
+          echo "User Docs   : $BUILD_DOCS_USER"
 
           if [ "$LINT_GO" != "success" ] || \
              [ "$LINT_DOCKER" != "success" ] || \
@@ -319,7 +343,8 @@ jobs:
              [ "$MIGRATIONS" != "success" ] || \
              [ "$BUILD" != "success" ] || \
              [ "$TEST" != "success" ] || \
-             [ "$BUILD_FRONTEND" != "success" ]; then
+             [ "$BUILD_FRONTEND" != "success" ] || \
+             [ "$BUILD_DOCS_USER" != "success" ]; then
             echo "❌ CI failed — see individual job logs above."
             exit 1
           fi

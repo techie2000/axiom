@@ -2,7 +2,7 @@
 .PHONY: docker-main-up docker-main-down docker-dev-up docker-dev-down docker-uat-up docker-uat-down docker-prod-up docker-prod-down
 .PHONY: docker-all-up docker-all-down docker-all-status validate-env
 .PHONY: lint lint-docs lint-docs-fix docs-check docs-check-fix lint-all install-hooks
-.PHONY: smoke-api smoke-ssi cleanup-stale-translations docs-user-install docs-user-build docs-user-dev
+.PHONY: smoke-api smoke-ssi cleanup-stale-translations docs-user-install docs-user-build docs-user-dev docs-user-check
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
@@ -290,6 +290,9 @@ docs-user-build: ## Build the user documentation site (VitePress)
 docs-user-dev: ## Start the user documentation dev server
 	@echo "Starting user documentation dev server..."
 	cd docs-user && npm run docs:dev
+
+docs-user-check: docs-user-install docs-user-build ## Install deps, build VitePress site, and verify no dead links
+	@echo "✅ User documentation check complete"
 
 lint-all: lint lint-docs ## Run all linters (Go + Markdown)
 
