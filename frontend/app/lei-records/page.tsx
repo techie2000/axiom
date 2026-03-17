@@ -530,7 +530,6 @@ export default function LEIRecordsPage() {
     effectiveVisibleColumns,
     itemsPerPage,
     normalizeStatusFilterForAPI,
-    normalizeLeiCode,
     sortDirection,
     sortField,
     statusFilter,

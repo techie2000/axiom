@@ -144,7 +144,7 @@ export default function SyncedWideTable({
       document.removeEventListener('scroll', updateDimensions, true)
       window.removeEventListener('resize', updateDimensions)
     }
-  }, [stickyTopOffset, headerHeight, dependencyKey])
+  }, [stickyTopOffset, headerHeight, dependencyKey, onMainHeaderWidthsChange])
 
   return (
     <>
