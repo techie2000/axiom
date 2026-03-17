@@ -13,7 +13,8 @@ RUN npm run docs:build
 
 FROM nginx:1.27-alpine AS runtime
 
-# Serve the built VitePress site as static files.
-COPY --from=build /app/.vitepress/dist /usr/share/nginx/html
+# Serve the built VitePress site at /docs-user/ path.
+RUN mkdir -p /usr/share/nginx/html/docs-user
+COPY --from=build /app/.vitepress/dist /usr/share/nginx/html/docs-user
 
 EXPOSE 80

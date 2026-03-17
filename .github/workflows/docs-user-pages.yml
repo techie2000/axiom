@@ -40,11 +40,16 @@ jobs:
       - name: Build VitePress docs
         working-directory: docs-user
         env:
+          # For GitHub Pages project sites, use /{owner}/{repo}/docs-user/ base path
+          # This matches how the artifact is structured in _site/docs-user/
+          # The site will be accessible at https://{owner}.github.io/{repo}/docs-user/
           DOCS_BASE: /${{ github.event.repository.name }}/docs-user/
         run: npm run docs:build
 
       - name: Prepare artifact root
         run: |
+          # Structure artifact so GitHub Pages publishes docs under /docs-user/ path
+          # This matches the DOCS_BASE path used in the VitePress build
           mkdir -p _site/docs-user
           cp -R docs-user/.vitepress/dist/* _site/docs-user/
 
