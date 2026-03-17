@@ -89,7 +89,7 @@ export default defineConfig({
 
     footer: {
       message: 'Axiom Financial Services Static Data Platform',
-      copyright: 'User Documentation — see <a href="https://github.com/techie2000/axiom/blob/main/docs-user/GOVERNANCE.md">Governance</a> for review and contribution guidance.',
+      copyright: 'User Documentation — see <a href="/GOVERNANCE">Governance</a> for review and contribution guidance.',
     },
 
     editLink: {
