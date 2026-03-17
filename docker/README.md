@@ -63,7 +63,7 @@ Uses `npm start` to run pre-built static assets from multi-stage build.
 **Dev profile usage:**
 
 ```bash
-docker compose -f docker-compose.dev.yml --env-file .env.dev --profile docs up -d docs-user
+docker compose --env-file .env.dev -f docker-compose.dev.yml --profile docs up -d docs-user
 ```
 
 Then open `http://localhost:15173/docs-user/`.
@@ -71,7 +71,7 @@ Then open `http://localhost:15173/docs-user/`.
 **Main profile usage:**
 
 ```bash
-docker compose -f docker-compose.main.yml --env-file .env.main --profile docs up -d docs-user
+docker compose --env-file .env.main -f docker-compose.main.yml --profile docs up -d docs-user
 ```
 
 Then open `http://localhost:45173/docs-user/`.

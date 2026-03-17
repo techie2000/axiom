@@ -126,8 +126,8 @@ services:
 
   docs-user:
     build:
-      context: .
-      dockerfile: docker/Dockerfile.docs-user
+      context: ./docs-user
+      dockerfile: ../docker/Dockerfile.docs-user
     container_name: ${COMPOSE_PROJECT_NAME}-docs-user
     ports:
       - "${DOCS_USER_PORT}:80"
