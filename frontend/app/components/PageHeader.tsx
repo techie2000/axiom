@@ -19,6 +19,15 @@ interface PageHeaderProps {
   actions?: React.ReactNode
 }
 
+export function resolveHydrationSafeLabel(
+  explicitLabel: string | undefined,
+  hasHydrated: boolean,
+  translatedLabel: string,
+  fallbackLabel: string,
+) {
+  return explicitLabel ?? (hasHydrated ? translatedLabel : fallbackLabel)
+}
+
 export default function PageHeader({
   title,
   subtitle,
@@ -40,8 +49,18 @@ export default function PageHeader({
 
   const fallbackBackLabel = backHref === '/dashboard' ? '← Back to Dashboard' : '← Back to Home'
   const translatedBackLabel = backHref === '/dashboard' ? t('nav.backToDashboard') : t('nav.backToHome')
-  const resolvedBackLabel =
-    backLabel ?? (hasHydrated ? translatedBackLabel : fallbackBackLabel)
+  const resolvedBackLabel = resolveHydrationSafeLabel(
+    backLabel,
+    hasHydrated,
+    translatedBackLabel,
+    fallbackBackLabel,
+  )
+  const resolvedDocsLabel = resolveHydrationSafeLabel(
+    docsLabel,
+    hasHydrated,
+    t('nav.documentation'),
+    'Documentation',
+  )
 
   return (
     <div className="mb-8 flex justify-between items-start">
@@ -55,7 +74,7 @@ export default function PageHeader({
         {subtitle && <p className="opacity-70" title={subtitleTooltip}>{subtitle}</p>}
       </div>
       <div className="flex items-center gap-4">
-        {docsHref && <ContextDocsLink href={docsHref} label={docsLabel} />}
+        {docsHref && <ContextDocsLink href={docsHref} label={resolvedDocsLabel} />}
         {actions}
         <UserBadge />
       </div>
