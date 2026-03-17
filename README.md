@@ -147,6 +147,7 @@ until translations are approved.
 Axiom supports running multiple environments simultaneously on the same machine. Each environment uses a unique port
 prefix to avoid conflicts:
 
+- **Main**: Port prefix 4 (e.g., 48080, 43000, 45432, 45173 for docs)
 - **Development (dev)**: Port prefix 1 (e.g., 18080, 13000, 15432)
 - **UAT**: Port prefix 2 (e.g., 28080, 23000, 25432)
 - **Production (prod)**: Port prefix 3 (e.g., 38080, 33000, 35432)
@@ -359,6 +360,15 @@ This ensures rows removed from the active locale key set are also removed from `
 
 Once started, each environment is accessible at:
 
+**Main Environment:**
+
+- Frontend: http://localhost:43000
+- Backend API: http://localhost:48080
+- Swagger UI: http://localhost:48080/swagger/index.html
+- PostgreSQL: localhost:45432
+- RabbitMQ Management: http://localhost:45673
+- User Docs (optional profile): http://localhost:45173/docs-user/
+
 **Development Environment:**
 
 - Frontend: http://localhost:13000
@@ -366,6 +376,7 @@ Once started, each environment is accessible at:
 - Swagger UI: http://localhost:18080/swagger/index.html
 - PostgreSQL: localhost:15432
 - RabbitMQ Management: http://localhost:15673
+- User Docs (optional profile): http://localhost:15173/docs-user/
 
 **UAT Environment:**
 

@@ -1,10 +1,12 @@
 import { defineConfig } from 'vitepress'
 
+const docsBase = process.env.DOCS_BASE || '/docs-user/'
+
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   title: 'Axiom User Documentation',
   description: 'End-user documentation for the Axiom financial services static data platform.',
-  base: '/docs-user/',
+  base: docsBase,
 
   // Ignore dead links pointing to engineering docs outside this site root
   ignoreDeadLinks: [

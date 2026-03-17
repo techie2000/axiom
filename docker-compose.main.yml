@@ -113,6 +113,19 @@ services:
     networks:
       - axiom-main
 
+  docs-user:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.docs-user
+    container_name: ${COMPOSE_PROJECT_NAME}-docs-user
+    ports:
+      - "${DOCS_USER_PORT}:80"
+    profiles:
+      - docs
+    restart: unless-stopped
+    networks:
+      - axiom-main
+
 volumes:
   rabbitmq_data_main:
   rabbitmq_log_main:

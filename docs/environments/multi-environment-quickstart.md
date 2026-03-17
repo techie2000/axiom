@@ -103,6 +103,7 @@ make migrate-prod-up
 - **Frontend**: http://localhost:43000
 - **Backend API**: http://localhost:48080/api/v1
 - **Swagger UI**: http://localhost:48080/swagger/index.html
+- **User Docs (optional profile)**: http://localhost:45173/docs-user/
 - **RabbitMQ Management**: http://localhost:45673 (guest/guest)
 - **PostgreSQL**: `psql -h localhost -p 45432 -U axiom -d axiom_main`
 
@@ -111,6 +112,7 @@ make migrate-prod-up
 - **Frontend**: http://localhost:13000
 - **Backend API**: http://localhost:18080/api/v1
 - **Swagger UI**: http://localhost:18080/swagger/index.html
+- **User Docs (optional profile)**: http://localhost:15173/docs-user/
 - **RabbitMQ Management**: http://localhost:15673 (guest/guest)
 - **PostgreSQL**: `psql -h localhost -p 15432 -U axiom -d axiom_dev`
 
@@ -132,12 +134,12 @@ make migrate-prod-up
 
 ## Port Reference
 
-| Environment | Frontend | Backend | PostgreSQL | RabbitMQ | RabbitMQ Mgmt |
-|-------------|----------|---------|------------|----------|---------------|
-| Main        | 43000    | 48080   | 45432      | 45672    | 45673         |
-| Development | 13000    | 18080   | 15432      | 15672    | 15673         |
-| UAT         | 23000    | 28080   | 25432      | 25672    | 25673         |
-| Production  | 33000    | 38080   | 35432      | 35672    | 35673         |
+| Environment | Frontend | Backend | PostgreSQL | RabbitMQ | RabbitMQ Mgmt | User Docs (optional) |
+|-------------|----------|---------|------------|----------|---------------|----------------------|
+| Main        | 43000    | 48080   | 45432      | 45672    | 45673         | 45173                |
+| Development | 13000    | 18080   | 15432      | 15672    | 15673         | 15173                |
+| UAT         | 23000    | 28080   | 25432      | 25672    | 25673         | N/A                  |
+| Production  | 33000    | 38080   | 35432      | 35672    | 35673         | N/A                  |
 
 ## Common Workflows
 

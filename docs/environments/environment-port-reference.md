@@ -11,6 +11,7 @@ Quick reference card for Axiom multi-environment port mappings.
 | **PostgreSQL**           | 45432 | 15432       | 25432 | 35432      |
 | **RabbitMQ AMQP**        | 45672 | 15672       | 25672 | 35672      |
 | **RabbitMQ Management**  | 45673 | 15673       | 25673 | 35673      |
+| **User Docs (optional)** | 45173 | 15173       | N/A   | N/A        |
 
 ## Quick Access URLs
 
@@ -22,6 +23,7 @@ Backend API:        http://localhost:48080
 API Health:         http://localhost:48080/health
 Swagger:            http://localhost:48080/swagger/index.html
 RabbitMQ Mgmt:      http://localhost:45673
+User Docs (opt):    http://localhost:45173/docs-user/
 Database:           psql -h localhost -p 45432 -U axiom -d axiom_main
 ```
 
@@ -33,6 +35,7 @@ Backend API:        http://localhost:18080
 API Health:         http://localhost:18080/health
 Swagger:            http://localhost:18080/swagger/index.html
 RabbitMQ Mgmt:      http://localhost:15673
+User Docs (opt):    http://localhost:15173/docs-user/
 Database:           psql -h localhost -p 15432 -U axiom -d axiom_dev
 ```
 
