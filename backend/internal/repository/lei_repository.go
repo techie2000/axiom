@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"github.com/techie2000/axiom/internal/domain"
+	"gorm.io/gorm/clause"
 	"gorm.io/gorm"
 )
 
@@ -183,8 +184,37 @@ func normalizeExactLEISearchInput(search string) string {
 }
 
 // validateColumns validates and filters requested columns against allowed LEI record fields
-// Returns validated comma-separated column string or default columns if invalid
-func validateColumns(columns string) string {
+// Returns validated select columns or defaults if invalid.
+func validateColumns(columns string) []clause.Column {
+	toClauseColumns := func(names []string) []clause.Column {
+		result := make([]clause.Column, 0, len(names))
+		for _, name := range names {
+			result = append(result, clause.Column{Name: name})
+		}
+		return result
+	}
+
+	defaultColumns := []string{
+		"id",
+		"lei",
+		"legal_name",
+		"other_names",
+		"entity_status",
+		"entity_category",
+		"legal_address_country",
+		"last_update_date",
+	}
+
+	fallbackColumns := []string{
+		"id",
+		"lei",
+		"legal_name",
+		"entity_status",
+		"entity_category",
+		"legal_address_country",
+		"last_update_date",
+	}
+
 	// Whitelist of allowed LEI record columns (prevents SQL injection)
 	validColumns := map[string]bool{
 		"id":                        true,
@@ -226,8 +256,7 @@ func validateColumns(columns string) string {
 	}
 
 	if columns == "" {
-		// Default to core columns including other_names for name search display
-		return "id,lei,legal_name,other_names,entity_status,entity_category,legal_address_country,last_update_date"
+		return toClauseColumns(defaultColumns)
 	}
 
 	// Split requested columns and validate each one
@@ -243,7 +272,7 @@ func validateColumns(columns string) string {
 
 	// If no valid columns found, return defaults
 	if len(validatedCols) == 0 {
-		return "id,lei,legal_name,entity_status,entity_category,legal_address_country,last_update_date"
+		return toClauseColumns(fallbackColumns)
 	}
 
 	// Always include id if not already present (needed for frontend row keys)
@@ -258,7 +287,44 @@ func validateColumns(columns string) string {
 		validatedCols = append([]string{"id"}, validatedCols...)
 	}
 
-	return strings.Join(validatedCols, ",")
+	return toClauseColumns(validatedCols)
+}
+
+func (r *leiRepository) hydrateLinkedLEINames(records []*domain.LEIRecord) error {
+	if len(records) == 0 {
+		return nil
+	}
+
+	codeSet := make(map[string]struct{})
+	for _, record := range records {
+		if code := strings.TrimSpace(record.ManagingLOU); code != "" {
+			codeSet[code] = struct{}{}
+		}
+		if code := strings.TrimSpace(record.SuccessorLEI); code != "" {
+			codeSet[code] = struct{}{}
+		}
+	}
+
+	if len(codeSet) == 0 {
+		return nil
+	}
+
+	codes := make([]string, 0, len(codeSet))
+	for code := range codeSet {
+		codes = append(codes, code)
+	}
+
+	namesByCode, err := r.FindLegalNamesByLEICodes(codes)
+	if err != nil {
+		return err
+	}
+
+	for _, record := range records {
+		record.ManagingLOULegalName = namesByCode[strings.TrimSpace(record.ManagingLOU)]
+		record.SuccessorLEILegalName = namesByCode[strings.TrimSpace(record.SuccessorLEI)]
+	}
+
+	return nil
 }
 
 // FindAllLEIWithFilters retrieves LEI records with search and filters
@@ -269,14 +335,9 @@ func (r *leiRepository) FindAllLEIWithFilters(limit, offset int, search, status,
 		query := r.db.Limit(limit).Offset(offset)
 
 		// Dynamic SELECT optimization: only fetch requested columns
-		// Validates columns against whitelist to prevent SQL injection
+		// Validates columns against whitelist and emits structured columns.
 		validatedColumns := validateColumns(columns)
-		if includeLinkedNames {
-			validatedColumns = validatedColumns +
-				", (SELECT ref.legal_name FROM lei_raw.lei_records ref WHERE BTRIM(ref.lei) = BTRIM(lei_raw.lei_records.managing_lou) LIMIT 1) AS managing_lou_legal_name" +
-				", (SELECT ref.legal_name FROM lei_raw.lei_records ref WHERE BTRIM(ref.lei) = BTRIM(lei_raw.lei_records.successor_lei) LIMIT 1) AS successor_lei_legal_name"
-		}
-		query = query.Select(validatedColumns)
+		query = query.Clauses(clause.Select{Columns: validatedColumns})
 
 		// Remove Preload for list view - only needed for detail view
 		// Saves ~50-100ms per query by not fetching source_file records
@@ -373,9 +434,15 @@ func (r *leiRepository) FindAllLEIWithFilters(limit, offset int, search, status,
 		}
 
 		if validSortFields[resolvedSortBy] {
-			query = query.Order(resolvedSortBy + " " + resolvedSortOrder)
+			query = query.Order(clause.OrderByColumn{
+				Column: clause.Column{Name: resolvedSortBy},
+				Desc:   resolvedSortOrder == "desc",
+			})
 		} else {
-			query = query.Order("updated_at desc")
+			query = query.Order(clause.OrderByColumn{
+				Column: clause.Column{Name: "updated_at"},
+				Desc:   true,
+			})
 		}
 
 		return query
@@ -391,9 +458,19 @@ func (r *leiRepository) FindAllLEIWithFilters(limit, offset int, search, status,
 			if fallbackErr := fallbackQuery.Find(&records).Error; fallbackErr != nil {
 				return nil, fallbackErr
 			}
+			if includeLinkedNames {
+				if hydrateErr := r.hydrateLinkedLEINames(records); hydrateErr != nil {
+					return nil, hydrateErr
+				}
+			}
 			return records, nil
 		}
 		return nil, err
+	}
+	if includeLinkedNames {
+		if hydrateErr := r.hydrateLinkedLEINames(records); hydrateErr != nil {
+			return nil, hydrateErr
+		}
 	}
 	return records, nil
 }
