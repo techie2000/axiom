@@ -22,20 +22,24 @@ This enables side-by-side comparison and testing across environments without con
 graph TB
     subgraph "Main Environment (Port Prefix: 4)"
         MainFE[Frontend<br/>:43000]
+      MainDocs[User Docs<br/>:45173 (optional)]
         MainBE[Backend<br/>:48080]
         MainPG[(PostgreSQL<br/>:45432)]
         MainRMQ[RabbitMQ<br/>:45672/:45673]
         MainFE --> MainBE
+      MainDocs -.-> MainFE
         MainBE --> MainPG
         MainBE --> MainRMQ
     end
 
     subgraph "Development Environment (Port Prefix: 1)"
         DevFE[Frontend<br/>:13000]
+      DevDocs[User Docs<br/>:15173 (optional)]
         DevBE[Backend<br/>:18080]
         DevPG[(PostgreSQL<br/>:15432)]
         DevRMQ[RabbitMQ<br/>:15672/:15673]
         DevFE --> DevBE
+      DevDocs -.-> DevFE
         DevBE --> DevPG
         DevBE --> DevRMQ
     end
@@ -62,7 +66,9 @@ graph TB
 
     User[User/Developer]
     User -.-> MainFE
+   User -.-> MainDocs
     User -.-> DevFE
+   User -.-> DevDocs
     User -.-> UATFE
     User -.-> ProdFE
 
@@ -93,6 +99,7 @@ Each environment uses a unique port prefix to avoid conflicts:
 | Service             | Internal Port | External Port |
 |---------------------|---------------|---------------|
 | Frontend            | 3000          | 43000         |
+| User Docs (optional)| 80            | 45173         |
 | Backend API         | 8080          | 48080         |
 | PostgreSQL          | 5432          | 45432         |
 | RabbitMQ AMQP       | 5672          | 45672         |
@@ -103,6 +110,7 @@ Each environment uses a unique port prefix to avoid conflicts:
 | Service             | Internal Port | External Port |
 |---------------------|---------------|---------------|
 | Frontend            | 3000          | 13000         |
+| User Docs (optional)| 80            | 15173         |
 | Backend API         | 8080          | 18080         |
 | PostgreSQL          | 5432          | 15432         |
 | RabbitMQ AMQP       | 5672          | 15672         |
@@ -152,6 +160,7 @@ RABBITMQ_PORT={prefix}5672
 RABBITMQ_MGMT_PORT={prefix}15672
 BACKEND_PORT={prefix}8080
 FRONTEND_PORT={prefix}3000
+DOCS_USER_PORT={prefix}5173  # optional docs profile in main/dev
 
 # Database credentials
 POSTGRES_USER=axiom
@@ -260,6 +269,11 @@ make migrate-prod-down # Production database
 - Development: http://localhost:13000
 - UAT: http://localhost:23000
 - Production: http://localhost:33000
+
+### User Documentation (Optional Profile)
+
+- Main: http://localhost:45173/docs-user/
+- Development: http://localhost:15173/docs-user/
 
 ### Backend APIs
 
