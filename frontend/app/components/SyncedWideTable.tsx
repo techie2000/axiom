@@ -44,6 +44,7 @@ export default function SyncedWideTable({
   const stickyHeaderScrollRef = useRef<HTMLDivElement>(null)
   const topScrollbarRef = useRef<HTMLDivElement>(null)
   const isSyncingHorizontalScrollRef = useRef(false)
+  const onMainHeaderWidthsChangeRef = useRef(onMainHeaderWidthsChange)
 
   const [showStickyHeader, setShowStickyHeader] = useState(false)
   const [stickyHeaderStyle, setStickyHeaderStyle] = useState<{ left: number, width: number }>({ left: 0, width: 0 })
@@ -90,6 +91,10 @@ export default function SyncedWideTable({
   }
 
   useEffect(() => {
+    onMainHeaderWidthsChangeRef.current = onMainHeaderWidthsChange
+  }, [onMainHeaderWidthsChange])
+
+  useEffect(() => {
     const updateDimensions = () => {
       if (!tableContainerRef.current || !tableRef.current) return
 
@@ -127,9 +132,7 @@ export default function SyncedWideTable({
         })
       }
 
-      if (onMainHeaderWidthsChange) {
-        onMainHeaderWidthsChange(widths)
-      }
+      onMainHeaderWidthsChangeRef.current?.(widths)
 
       syncHorizontalScroll('table', tableContainerRef.current.scrollLeft)
     }
@@ -144,7 +147,7 @@ export default function SyncedWideTable({
       document.removeEventListener('scroll', updateDimensions, true)
       window.removeEventListener('resize', updateDimensions)
     }
-  }, [stickyTopOffset, headerHeight, dependencyKey])
+  }, [stickyTopOffset, headerHeight, dependencyKey, onMainHeaderWidthsChange])
 
   return (
     <>
