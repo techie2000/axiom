@@ -132,6 +132,98 @@ Follow these guidelines for formatting and structuring your markdown content:
   ```
   ~~~
 
+### Additional High-Frequency Lint Failures (PR160)
+
+- `MD009` trailing spaces
+
+  - ✅ **GOOD**
+
+    ~~~markdown
+    - Item one
+    - Item two
+    ~~~
+
+  - ❌ **BAD**
+
+    ~~~markdown
+    - Item one 
+    - Item two 
+    ~~~
+
+- `MD049` emphasis style (use asterisks, not underscores)
+
+  - ✅ **GOOD**
+
+    ~~~markdown
+    This is *emphasized text* in this repository style.
+    ~~~
+
+  - ❌ **BAD**
+
+    ~~~markdown
+    This is _emphasized text_ and triggers MD049.
+    ~~~
+
+- `MD060` table column style (spaces around pipes)
+
+  - ✅ **GOOD**
+
+    ~~~markdown
+    | Option | Status | Notes |
+    | ------ | ------ | ----- |
+    | A      | Done   | Safe  |
+    ~~~
+
+  - ❌ **BAD**
+
+    ~~~markdown
+    |Option|Status|Notes|
+    |------|------|-----|
+    |A|Done|Safe|
+    ~~~
+
+- `MD022` headings need blank lines above and below
+
+  - ✅ **GOOD**
+
+    ~~~markdown
+    Intro paragraph.
+
+    ### Section Title
+
+    Section body text.
+    ~~~
+
+  - ❌ **BAD**
+
+    ~~~markdown
+    Intro paragraph.
+    ### Section Title
+    Section body text.
+    ~~~
+
+- `MD032` lists need blank lines around them
+
+  - ✅ **GOOD**
+
+    ~~~markdown
+    Intro paragraph.
+
+    - First item
+    - Second item
+
+    Closing paragraph.
+    ~~~
+
+  - ❌ **BAD**
+
+    ~~~markdown
+    Intro paragraph.
+    - First item
+    - Second item
+    Closing paragraph.
+    ~~~
+
 ### Nested Markdown Example Safety (MD022/MD031)
 
 When documenting markdown templates that contain headings and fenced blocks, use `~~~markdown` for the outer

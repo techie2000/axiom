@@ -81,7 +81,7 @@ and merge to deploy to the dev environment. If no promotion is needed that day, 
 without creating a PR. If a promotion PR is already open, no duplicate is created.
 
 You can also trigger the workflow manually from **Actions → Nightly Promote main → dev →
-Run workflow**. A `dry_run` option is available to see whether a PR _would_ be created without
+Run workflow**. A `dry_run` option is available to see whether a PR *would* be created without
 actually creating one.
 
 To promote immediately outside the nightly window, open a PR manually:
