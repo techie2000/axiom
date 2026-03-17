@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import UserBadge from './UserBadge'
+import ContextDocsLink from './ContextDocsLink'
 
 interface PageHeaderProps {
   title: string
@@ -13,6 +14,8 @@ interface PageHeaderProps {
   backHref?: string
   backLabel?: string
   showBackLink?: boolean
+  docsHref?: string
+  docsLabel?: string
   actions?: React.ReactNode
 }
 
@@ -24,6 +27,8 @@ export default function PageHeader({
   backHref = '/home',
   backLabel,
   showBackLink = true,
+  docsHref,
+  docsLabel,
   actions,
 }: PageHeaderProps) {
   const { t } = useTranslation('common')
@@ -50,6 +55,7 @@ export default function PageHeader({
         {subtitle && <p className="opacity-70" title={subtitleTooltip}>{subtitle}</p>}
       </div>
       <div className="flex items-center gap-4">
+        {docsHref && <ContextDocsLink href={docsHref} label={docsLabel} />}
         {actions}
         <UserBadge />
       </div>

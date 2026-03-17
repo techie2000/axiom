@@ -8,6 +8,7 @@ import PageHeader from '../../components/PageHeader'
 import Alert from '../../components/Alert'
 import LoadingSpinner from '../../components/LoadingSpinner'
 import { getAuthToken } from '../../lib/auth-token'
+import { buildDocsUrl } from '../../lib/docsLinks'
 import { useEnglishTooltips } from '../../lib/useEnglishTooltips'
 
 const API_BASE_URL =
@@ -198,6 +199,7 @@ function AdminUsersContent() {
           titleTooltip={getEnglishTooltip('admin.users.title')}
           subtitleTooltip={getEnglishTooltip('admin.users.subtitle')}
           backHref="/dashboard"
+          docsHref={buildDocsUrl('admin/user-approvals/')}
         />
 
         {isBootstrap && (

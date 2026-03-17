@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import Alert from '../components/Alert'
 import LoadingSpinner from '../components/LoadingSpinner'
 import PageHeader from '../components/PageHeader'
+import { buildDocsUrl } from '../lib/docsLinks'
 
 interface SourceFile {
   id: string
@@ -859,6 +860,7 @@ export default function LEIStatusPage() {
           title="LEI Data Processing"
           subtitle="Real-time monitoring of GLEIF data synchronization"
           backHref={backHref}
+          docsHref={buildDocsUrl('workflows/entities/')}
           actions={
             <>
               <button

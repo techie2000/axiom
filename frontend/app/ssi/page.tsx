@@ -4,6 +4,7 @@ import Link from 'next/link'
 import PageHeader from '../components/PageHeader'
 import { useTranslation } from 'react-i18next'
 import { useEnglishTooltips } from '../lib/useEnglishTooltips'
+import { buildDocsUrl } from '../lib/docsLinks'
 
 export default function SSIPage() {
   const { t } = useTranslation('common')
@@ -19,6 +20,7 @@ export default function SSIPage() {
           titleTooltip={getEnglishTooltip('ssi.title')}
           subtitleTooltip={getEnglishTooltip('ssi.subtitle')}
           backHref="/dashboard"
+          docsHref={buildDocsUrl('workflows/ssi/')}
         />
 
         {/* Coming Soon Notice */}
