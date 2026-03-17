@@ -4,7 +4,7 @@ layout: home
 hero:
   name: Axiom
   text: User Documentation
-  tagline: Financial services static data management — reference guides, workflows, and admin help.
+  tagline: Financial services static data management - reference guides, workflows, and admin help.
   actions:
     - theme: brand
       text: Get Started

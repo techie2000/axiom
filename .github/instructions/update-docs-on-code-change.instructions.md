@@ -213,7 +213,7 @@ with the application whenever user-visible behaviour changes.
 - A new error or common failure mode is identified
   - Add an entry to `docs-user/troubleshooting/common-errors.md`
 
-**`docs-user/` directory → topic mapping:**
+**`docs-user/` directory to topic mapping:**
 
 | Area of change | docs-user path |
 | --- | --- |
