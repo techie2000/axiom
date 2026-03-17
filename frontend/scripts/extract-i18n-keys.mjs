@@ -105,6 +105,10 @@ function setNestedValue(target, dottedKey, defaultValue) {
   }
 
   const leaf = parts[parts.length - 1]
+  if (BLOCKED_PATH_SEGMENTS.has(leaf)) {
+    return false
+  }
+
   if (!hasOwn(cursor, leaf) || cursor[leaf] === undefined) {
     cursor[leaf] = defaultValue
     return true
