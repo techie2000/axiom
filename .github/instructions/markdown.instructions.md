@@ -132,6 +132,39 @@ Follow these guidelines for formatting and structuring your markdown content:
   ```
   ~~~
 
+### Nested Markdown Example Safety (MD022/MD031)
+
+When documenting markdown templates that contain headings and fenced blocks, use `~~~markdown` for the outer
+example and keep blank lines around inner headings and fences.
+
+- ✅ **GOOD nested markdown example**
+
+  ~~~~markdown
+  ~~~markdown
+  ## Template Title
+
+  ### Usage
+
+  ```bash
+  make docs-user-build
+  ```
+  ~~~
+  ~~~~
+
+- ❌ **BAD nested markdown example**
+
+  ~~~~markdown
+  ```text
+  ### Usage
+  ```bash
+  make docs-user-build
+  ```
+  ```
+  ~~~~
+
+Use the GOOD pattern to avoid accidental MD022 (blank lines around headings) and MD031
+(blank lines around fences) violations in instruction files.
+
 ### Mandatory Pre-Submission Checks (for any edited `.md` file)
 
 - Treat MD013 as a hard gate for non-code-block markdown lines: do not finish
