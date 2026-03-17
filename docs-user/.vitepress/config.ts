@@ -1,6 +1,22 @@
 import { defineConfig } from 'vitepress'
 
-const docsBase = process.env.DOCS_BASE || '/docs-user/'
+const rawDocsBase = process.env.DOCS_BASE || '/docs-user/'
+
+function normalizeBase(base: string): string {
+  let normalized = base.trim()
+
+  if (!normalized.startsWith('/')) {
+    normalized = `/${normalized}`
+  }
+
+  if (!normalized.endsWith('/')) {
+    normalized = `${normalized}/`
+  }
+
+  return normalized
+}
+
+const docsBase = normalizeBase(rawDocsBase)
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
@@ -91,7 +107,7 @@ export default defineConfig({
 
     footer: {
       message: 'Axiom Financial Services Static Data Platform',
-      copyright: 'User Documentation — see <a href="/GOVERNANCE">Governance</a> for review and contribution guidance.',
+      copyright: 'User Documentation — see <a href="../GOVERNANCE">Governance</a> for review and contribution guidance.',
     },
 
     editLink: {
