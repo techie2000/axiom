@@ -648,6 +648,49 @@ Please read [CONTRIBUTING.md](docs/CONTRIBUTING.md) for details on our developme
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+## User Documentation
+
+End-user and operations documentation is available in [`docs-user/`](docs-user/README.md),
+powered by VitePress. This covers workflows, admin tasks, reference data, and troubleshooting
+written for non-engineering audiences.
+
+**Getting Started:**
+
+- [Sign In & Access](docs-user/getting-started/sign-in-and-access.md)
+- [Navigation Basics](docs-user/getting-started/navigation-basics.md)
+
+**Core Workflows:**
+
+- [LEI Records](docs-user/workflows/lei-records.md)
+- [Countries](docs-user/workflows/countries.md)
+- [Currencies](docs-user/workflows/currencies.md)
+- [Entities](docs-user/workflows/entities.md)
+- [Settlement Instructions (SSI)](docs-user/workflows/ssi.md)
+
+**Admin Workflows:**
+
+- [User Approvals](docs-user/admin/user-approvals.md)
+- [Translation Review](docs-user/admin/translation-review.md)
+- [Sync Triggers](docs-user/admin/sync-triggers.md)
+
+**Reference:**
+
+- [Data Dictionary](docs-user/reference/data-dictionary.md)
+- [Statuses & States](docs-user/reference/statuses-and-states.md)
+- [Permissions & Roles](docs-user/reference/permissions-and-roles.md)
+
+To preview the user documentation site locally:
+
+```bash
+make docs-user-dev
+```
+
+To build and validate the site:
+
+```bash
+make docs-user-check
+```
+
 ## Documentation
 
 Detailed documentation is available in the `docs/` directory:

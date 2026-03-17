@@ -63,17 +63,27 @@ Pages delivered in Phase 3:
 - `troubleshooting/common-errors.md` ✅ — expanded with module-specific and admin errors
 - `troubleshooting/faq.md` ✅ — comprehensive FAQ covering access, data, preferences, and admin
 
-## Phase 4: Hardening and Publication
+## Phase 4: Hardening and Publication ✅ Complete
 
-- Link check and markdown linting.
-- Editorial pass for consistency and plain-language quality.
-- Add ownership/review cadence.
-- Publish and announce user docs entry points.
+- Link check and markdown linting — CI enforced on every pull request.
+- Editorial pass for consistency and plain-language quality — all pages reviewed.
+- Add ownership/review cadence — documented in `GOVERNANCE.md`.
+- Publish and announce user docs entry points — main README updated, `llms.txt` updated,
+  CI build job added.
 
 Exit criteria:
 
-- Published site is discoverable.
-- User docs and engineering docs are clearly separated.
+- Published site is discoverable. ✅
+- User docs and engineering docs are clearly separated. ✅
+
+Artifacts delivered in Phase 4:
+
+- `GOVERNANCE.md` ✅ — ownership, review cadence, contribution workflow
+- `README.md` status updated ✅
+- `llms.txt` updated with all docs-user pages ✅
+- Main project `README.md` user documentation section updated ✅
+- `Makefile` `docs-user-check` target added ✅
+- CI VitePress build job added ✅
 
 ## Governance
 
