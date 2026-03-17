@@ -363,62 +363,51 @@ If `apply-doc-quality-standard == true`, then apply the following configurable i
 
 ### Code Example Format
 
-```text
-```markdown
+````markdown
 ### Example: [Clear description of what example demonstrates]
-```text
 
-```
-\`\`\`language
+```language
 // Include necessary imports/setup
 import { function } from 'package';
-```text
 
-```
 // Complete, runnable example
 const result = function(parameter);
 console.log(result);
-\`\`\`
-```text
+```
 
-    **Output:**
-```
-\`\`\`
-expected output
-\`\`\`
+**Output:**
+
 ```text
+expected output
 ```
+````
 
 ### API Documentation Format
 
-```text
-```markdown
+````markdown
 ### `functionName(param1, param2)`
-```text
 
-```
 Brief description of what the function does.
-```text
 
-    **Parameters:**
-    - `param1` (type): Description of parameter
-    - `param2` (type, optional): Description with default value
+**Parameters:**
 
-    **Returns:**
-    - `type`: Description of return value
+- `param1` (type): Description of parameter
+- `param2` (type, optional): Description with default value
 
-    **Example:**
-```
-\`\`\`language
+**Returns:**
+
+- `type`: Description of return value
+
+**Example:**
+
+```language
 const result = functionName('value', 42);
-\`\`\`
-```text
+```
 
-    **Throws:**
-    - `ErrorType`: When and why error is thrown
-```
-```text
-```
+**Throws:**
+
+- `ErrorType`: When and why error is thrown
+````
 
 ## Automation and Tooling `apply-automation-tooling`
 
@@ -461,84 +450,57 @@ If `apply-doc-patterns == true`, then apply the following configurable instructi
 
 ### Feature Documentation Template
 
-```text
-```markdown
+````markdown
 ## Feature Name
-```text
 
-```
 Brief description of the feature.
-```text
 
-```
 ### Usage
-```text
 
-```
 Basic usage example with code snippet.
-```text
 
-```
 ### Configuration
-```text
 
-```
 Configuration options with examples.
-```text
 
-```
 ### Advanced Usage
-```text
 
-```
 Complex scenarios and edge cases.
-```text
 
-```
 ### Troubleshooting
-```text
 
-```
 Common issues and solutions.
-```text
-```
+````
 
 ### API Endpoint Documentation Template
 
-```text
-```markdown
+````markdown
 ### `HTTP_METHOD /api/endpoint`
-```text
 
-```
 Description of what the endpoint does.
-```text
 
-    **Request:**
-```
-\`\`\`json
+**Request:**
+
+```json
 {
   "param": "value"
 }
-\`\`\`
-```text
-
-    **Response:**
 ```
-\`\`\`json
+
+**Response:**
+
+```json
 {
   "result": "value"
 }
-\`\`\`
-```text
+```
 
-    **Status Codes:**
-    - 200: Success
-    - 400: Bad request
-    - 401: Unauthorized
-```
-```text
-```
+**Status Codes:**
+
+- 200: Success
+- 400: Bad request
+- 401: Unauthorized
+````
 
 ## Best Practices `apply-best-practices`
 
@@ -573,14 +535,12 @@ Example scripts to apply to your project for documentation validation:
 ```json
 {
   "scripts": {
-```
-"docs:build": "Build documentation",
-"docs:test": "Test code examples in docs",
-"docs:lint": "Lint documentation files",
-"docs:links": "Check for broken links",
-"docs:spell": "Spell check documentation",
-"docs:validate": "Run all documentation checks"
-```text
+    "docs:build": "Build documentation",
+    "docs:test": "Test code examples in docs",
+    "docs:lint": "Lint documentation files",
+    "docs:links": "Check for broken links",
+    "docs:spell": "Spell check documentation",
+    "docs:validate": "Run all documentation checks"
   }
 }
 ```
