@@ -665,6 +665,8 @@ End-user and operations documentation is available in [`docs-user/`](docs-user/R
 powered by VitePress. This covers workflows, admin tasks, reference data, and troubleshooting
 written for non-engineering audiences.
 
+Published site: <https://techie2000.github.io/axiom/docs-user/>
+
 **Getting Started:**
 
 - [Sign In & Access](docs-user/getting-started/sign-in-and-access.md)

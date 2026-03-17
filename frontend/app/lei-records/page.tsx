@@ -12,6 +12,7 @@ import SearchInputWithOverflowTooltip from '../components/SearchInputWithOverflo
 import StatCard from '../components/StatCard'
 import SyncedWideTable from '../components/SyncedWideTable'
 import { useDeferredBooleanPreference } from '../lib/useDeferredBooleanPreference'
+import { buildDocsUrl } from '../lib/docsLinks'
 import { useEnglishTooltips } from '../lib/useEnglishTooltips'
 import { useUserPreference } from '../lib/useUserPreference'
 import { formatEnumDisplayValue, formatLEICellValue, getStatusBadgePresentation, normalizeRecordNullLikeValues } from './null-utils'
@@ -1157,6 +1158,7 @@ export default function LEIRecordsPage() {
           titleTooltip={getEnglishTooltip('leiRecords.title')}
           subtitleTooltip={getEnglishTooltip('leiRecords.subtitle')}
           backHref={backHref}
+          docsHref={buildDocsUrl('workflows/lei-records/')}
           actions={
             <>
               <button

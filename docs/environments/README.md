@@ -81,6 +81,10 @@ Optional user docs profile ports follow the same prefix rule:
 - Main docs-user: `45173`
 - Dev docs-user: `15173`
 
+Published user docs site:
+
+- <https://techie2000.github.io/axiom/docs-user/>
+
 ## Getting Started
 
 1. Start with the [Quick Start Guide](multi-environment-quickstart.md) for immediate usage

@@ -15,6 +15,7 @@ import SortableHeaderCell from '../../components/SortableHeaderCell'
 import SyncedWideTable from '../../components/SyncedWideTable'
 import TablePaginationControls from '../../components/TablePaginationControls'
 import { getAuthToken } from '../../lib/auth-token'
+import { buildDocsUrl } from '../../lib/docsLinks'
 import { useEnglishTooltips } from '../../lib/useEnglishTooltips'
 
 const API_BASE_URL =
@@ -745,6 +746,7 @@ export default function AdminTranslationsPage() {
           subtitle={t('admin.translations.subtitle')}
           titleTooltip={getEnglishTooltip('admin.translations.title')}
           subtitleTooltip={getEnglishTooltip('admin.translations.subtitle')}
+          docsHref={buildDocsUrl('admin/translation-review/')}
           actions={
             <>
               <button

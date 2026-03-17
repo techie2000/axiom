@@ -16,6 +16,7 @@ import SyncedWideTable from '../components/SyncedWideTable'
 import { useDeferredBooleanPreference } from '../lib/useDeferredBooleanPreference'
 import { useEnglishTooltips } from '../lib/useEnglishTooltips'
 import { useUserPreference } from '../lib/useUserPreference'
+import { buildDocsUrl } from '../lib/docsLinks'
 import { Country, normalizeCountriesPayload, summarizeCountriesDataQuality } from './normalization'
 
 type CountryColumnKey =
@@ -547,6 +548,7 @@ export default function CountriesPage() {
           titleTooltip={getEnglishTooltip('countries.title')}
           subtitleTooltip={getEnglishTooltip('countries.subtitle')}
           backHref={backHref}
+          docsHref={buildDocsUrl('workflows/countries/')}
           actions={
             <>
               <button

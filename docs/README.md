@@ -38,6 +38,7 @@ Located in [contributing/](./contributing/):
 
 - [**User Docs Home**](../docs-user/README.md) - Dedicated end-user documentation space for workflow-driven app usage
   guidance
+- [**Published User Docs Site**](https://techie2000.github.io/axiom/docs-user/) - Publicly hosted docs experience
 
 ### 🖼️ Branding Assets
 
@@ -123,6 +124,7 @@ Located in [performance/](./performance/):
 ### For End Users
 
 1. **How do I use the app?** → [User Docs Home](../docs-user/README.md)
+2. **Live published site** → [https://techie2000.github.io/axiom/docs-user/](https://techie2000.github.io/axiom/docs-user/)
 
 ### For System Administrators
 

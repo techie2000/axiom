@@ -13,6 +13,7 @@ import SortableHeaderCell from '../components/SortableHeaderCell'
 import StatCard from '../components/StatCard'
 import SyncedWideTable from '../components/SyncedWideTable'
 import { useDeferredBooleanPreference } from '../lib/useDeferredBooleanPreference'
+import { buildDocsUrl } from '../lib/docsLinks'
 import { useEnglishTooltips } from '../lib/useEnglishTooltips'
 
 interface Currency {
@@ -225,6 +226,7 @@ export default function CurrenciesPage() {
           titleTooltip={getEnglishTooltip('currencies.title')}
           subtitleTooltip={getEnglishTooltip('currencies.subtitle')}
           backHref={backHref}
+          docsHref={buildDocsUrl('workflows/currencies/')}
           actions={
             <>
               <button
