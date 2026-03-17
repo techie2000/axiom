@@ -461,7 +461,103 @@ step-by-step guide and integration checklist.
 
 ## Accessibility
 
+### WCAG 2.2 AA Baseline (Required)
+
+The Axiom frontend targets **WCAG 2.2 Level AA**. Every pull request that touches shared components
+or adds new interactive elements must satisfy the criteria below. The full developer reference is at
+`docs/accessibility/WCAG_COMPLIANCE.md`.
+
+#### SC 1.4.3 — Contrast (Minimum)
+
+- Normal text must achieve **≥ 4.5:1** contrast against its background.
+- Large/bold text (≥ 18 pt or ≥ 14 pt bold) must achieve **≥ 3:1**.
+- **Always use** `text-blue-600 dark:text-blue-400` for links and interactive text.
+- **Never use** `text-blue-400` on light/white backgrounds — its contrast ratio (~3.0:1) fails for
+  normal text.
+- **Never use** `opacity-*` to dim text without first verifying the resulting contrast ratio.
+
+```tsx
+// ✅ CORRECT — 4.84:1 on white
+<Link className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 ...">
+  ← Back to Home
+</Link>
+
+// ❌ INCORRECT — ~3.0:1 on white
+<Link className="text-blue-400 hover:text-blue-300 ...">← Back to Home</Link>
+```
+
+#### SC 1.4.11 — Non-text Contrast
+
+- UI component boundaries (button borders, input borders, focus indicators) need **≥ 3:1** contrast.
+- Icon-only controls must use `border-gray-400/50 dark:border-white/20` — NOT `border-white/20` alone
+  (the latter is invisible on light backgrounds).
+
+#### SC 2.4.7 / 2.4.11 — Focus Visible
+
+Every focusable element must show a **visible keyboard focus ring**. Use `focus-visible:` to avoid
+displaying the ring on mouse clicks:
+
+```tsx
+// Standard — apply to buttons, links, and most interactive elements
+className="focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+
+// Compact — use in tight layouts (toolbars, table header cells)
+className="focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
+```
+
+- **Never** add `focus:outline-none` without a replacement focus indicator.
+- Do **not** use `focus:ring-*` alone — pair with `focus-visible:ring-*` so the ring only appears on
+  keyboard focus.
+
+#### Loading Spinners (Required)
+
+```tsx
+// ✅ CORRECT — full ring, both modes, screen reader label
+<div
+  className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 dark:border-gray-700 border-t-blue-600 dark:border-t-blue-400"
+  role="status"
+  aria-label="Loading..."
+/>
+
+// ❌ INCORRECT — single edge, nearly invisible on white backgrounds
+<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+```
+
+#### Icon-only Buttons (Required)
+
+```tsx
+// ✅ CORRECT — visible border both themes, aria-label, focus ring
+<button
+  aria-label="Switch to dark mode"
+  className="h-9 w-9 border border-gray-400/50 dark:border-white/20
+             hover:bg-white/20 transition-all rounded-lg
+             focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
+>
+  🌙
+</button>
+
+// ❌ INCORRECT — invisible border on light bg, title-only is inaccessible, no focus ring
+<button className="border border-white/20" title="Switch to dark mode">🌙</button>
+```
+
+#### WCAG PR Checklist
+
+Add this block to your PR description whenever you touch interactive UI elements:
+
+```markdown
+## Accessibility Checklist
+
+- [ ] All new text uses colours with ≥ 4.5:1 contrast on their background.
+- [ ] All new interactive elements have a `focus-visible:ring-*` focus indicator.
+- [ ] Icon-only buttons carry an `aria-label` attribute.
+- [ ] Loading indicators use the full-ring spinner with `role="status"` and `aria-label`.
+- [ ] UI tested visually in both light and dark themes.
+- [ ] No new uses of `text-blue-400` on light-mode backgrounds.
+- [ ] No new uses of `border-white/20` as the sole border in light mode.
+```
+
 ### ARIA Labels
+
 - Use semantic HTML elements (`<button>`, `<nav>`, `<main>`)
 - Add `aria-label` for icon-only buttons
 - Use proper heading hierarchy (`<h1>`, `<h2>`, etc.)
@@ -783,7 +879,13 @@ useEffect(() => {
 - [React TypeScript Cheatsheet](https://react-typescript-cheatsheet.netlify.app/)
 - [Tailwind CSS Documentation](https://tailwindcss.com/docs)
 - [ISO 8601 Date Format](https://en.wikipedia.org/wiki/ISO_8601)
-- [Web Content Accessibility Guidelines (WCAG)](https://www.w3.org/WAI/WCAG21/quickref/)
+- [WCAG 2.2 Specification](https://www.w3.org/TR/WCAG22/)
+- [WCAG 2.2 Quick Reference](https://www.w3.org/WAI/WCAG22/quickref/)
+- [Understanding SC 1.4.3 Contrast (Minimum)](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html)
+- [Understanding SC 1.4.11 Non-text Contrast](https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html)
+- [Understanding SC 2.4.7 Focus Visible](https://www.w3.org/WAI/WCAG22/Understanding/focus-visible.html)
+- [WebAIM Contrast Checker](https://webaim.org/resources/contrastchecker/)
+- Axiom WCAG Compliance Guide: docs/accessibility/WCAG_COMPLIANCE.md
 - Axiom UI Patterns Guide: docs/ui-patterns.md
 
 ---

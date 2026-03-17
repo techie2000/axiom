@@ -45,7 +45,8 @@ export default function ThemeToggle() {
     <>
       <button
         onClick={toggleTheme}
-        className="h-9 w-9 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 transition-all"
+        className="h-9 w-9 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 border border-gray-400/50 dark:border-white/20 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
+        aria-label={`Switch to ${effectiveTheme === 'dark' ? 'light' : 'dark'} mode`}
         title={`Switch to ${effectiveTheme === 'dark' ? 'light' : 'dark'} mode`}
       >
         <span className="text-base leading-none">{effectiveTheme === 'dark' ? '☀️' : '🌙'}</span>
