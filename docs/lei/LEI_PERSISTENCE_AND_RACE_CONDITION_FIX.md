@@ -161,12 +161,12 @@ Database survives container rebuilds. ✅
 1. **.env.uat**
    - `LEI_DATADIR=/root/data/lei`
 
-1. **docker-compose.prod.yml**
+2. **docker-compose.prod.yml**
    - `LEI_DATADIR` environment variable
    - `lei_data_prod:/root/data/lei` **volume mount** (better performance)
    - `lei_data_prod` named volume
 
-1. **.env.prod**
+3. **.env.prod**
    - `LEI_DATADIR=/root/data/lei`
 
 ### Storage Strategy Summary

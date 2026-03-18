@@ -99,38 +99,38 @@ Follow these guidelines for formatting and structuring your markdown content:
 
 - ✅ **GOOD list spacing**
 
-  ~~~markdown
+  ````markdown
   Paragraph introducing a list.
 
   - First item
   - Second item
-  ~~~
+  ````
 
 - ✅ **GOOD fenced-code spacing**
 
-  ~~~markdown
+  ````markdown
   Paragraph introducing code.
 
   ```sql
   SELECT 1;
   ```
-  ~~~
+  ````
 
 - ❌ **BAD list spacing**
 
-  ~~~markdown
+  ````markdown
   Paragraph introducing a list.
   - First item
-  ~~~
+  ````
 
 - ❌ **BAD fenced-code spacing**
 
-  ~~~markdown
+  ````markdown
   Paragraph introducing code.
   ```sql
   SELECT 1;
   ```
-  ~~~
+  ````
 
 ### Additional High-Frequency Lint Failures (PR160)
 
@@ -138,101 +138,101 @@ Follow these guidelines for formatting and structuring your markdown content:
 
   - ✅ **GOOD**
 
-    ~~~markdown
+    ````markdown
     - Item one
     - Item two
-    ~~~
+    ````
 
   - ❌ **BAD**
 
-    ~~~markdown
+    ````markdown
     - Item one 
     - Item two 
-    ~~~
+    ````
 
 - `MD049` emphasis style (use asterisks, not underscores)
 
   - ✅ **GOOD**
 
-    ~~~markdown
+    ````markdown
     This is *emphasized text* in this repository style.
-    ~~~
+    ````
 
   - ❌ **BAD**
 
-    ~~~markdown
+    ````markdown
     This is _emphasized text_ and triggers MD049.
-    ~~~
+    ````
 
 - `MD060` table column style (spaces around pipes)
 
   - ✅ **GOOD**
 
-    ~~~markdown
+    ````markdown
     | Option | Status | Notes |
     | ------ | ------ | ----- |
     | A      | Done   | Safe  |
-    ~~~
+    ````
 
   - ❌ **BAD**
 
-    ~~~markdown
+    ````markdown
     |Option|Status|Notes|
     |------|------|-----|
     |A|Done|Safe|
-    ~~~
+    ````
 
 - `MD022` headings need blank lines above and below
 
   - ✅ **GOOD**
 
-    ~~~markdown
+    ````markdown
     Intro paragraph.
 
     ### Section Title
 
     Section body text.
-    ~~~
+    ````
 
   - ❌ **BAD**
 
-    ~~~markdown
+    ````markdown
     Intro paragraph.
     ### Section Title
     Section body text.
-    ~~~
+    ````
 
 - `MD032` lists need blank lines around them
 
   - ✅ **GOOD**
 
-    ~~~markdown
+    ````markdown
     Intro paragraph.
 
     - First item
     - Second item
 
     Closing paragraph.
-    ~~~
+    ````
 
   - ❌ **BAD**
 
-    ~~~markdown
+    ````markdown
     Intro paragraph.
     - First item
     - Second item
     Closing paragraph.
-    ~~~
+    ````
 
 ### Nested Markdown Example Safety (MD022/MD031)
 
-When documenting markdown templates that contain headings and fenced blocks, use `~~~markdown` for the outer
+When documenting markdown templates that contain headings and fenced blocks, use backtick fences for the outer
 example and keep blank lines around inner headings and fences.
 
 - ✅ **GOOD nested markdown example**
 
-  ~~~~markdown
-  ~~~markdown
+  `````markdown
+  ````markdown
   ## Template Title
 
   ### Usage
@@ -240,19 +240,19 @@ example and keep blank lines around inner headings and fences.
   ```bash
   make docs-user-build
   ```
-  ~~~
-  ~~~~
+  ````
+  `````
 
 - ❌ **BAD nested markdown example**
 
-  ~~~~markdown
+  `````markdown
   ```text
   ### Usage
   ```bash
   make docs-user-build
   ```
   ```
-  ~~~~
+  `````
 
 Use the GOOD pattern to avoid accidental MD022 (blank lines around headings) and MD031
 (blank lines around fences) violations in instruction files.
