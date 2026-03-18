@@ -104,14 +104,17 @@ Follow these guidelines for formatting and structuring your markdown content:
 - ✅ **GOOD list spacing**
 
   ````markdown
+  ````markdown
   Paragraph introducing a list.
 
   - First item
   - Second item
   ````
+  ````
 
 - ✅ **GOOD fenced-code spacing**
 
+  ````markdown
   ````markdown
   Paragraph introducing code.
 
@@ -119,16 +122,20 @@ Follow these guidelines for formatting and structuring your markdown content:
   SELECT 1;
   ```
   ````
+  ````
 
 - ❌ **BAD list spacing**
 
   ````markdown
+  ````markdown
   Paragraph introducing a list.
   - First item
+  ````
   ````
 
 - ❌ **BAD fenced-code spacing**
 
+  ````markdown
   ````markdown
   Paragraph introducing code.
   ```sql
@@ -384,10 +391,13 @@ Follow these guidelines for formatting and structuring your markdown content:
 ### Nested Markdown Example Safety (MD022/MD031)
 
 When documenting markdown templates that contain headings and fenced blocks, use backtick fences for the outer
+When documenting markdown templates that contain headings and fenced blocks, use backtick fences for the outer
 example and keep blank lines around inner headings and fences.
 
 - ✅ **GOOD nested markdown example**
 
+  `````markdown
+  ````markdown
   `````markdown
   ````markdown
   ## Template Title
@@ -399,9 +409,12 @@ example and keep blank lines around inner headings and fences.
   ```
   ````
   `````
+  ````
+  `````
 
 - ❌ **BAD nested markdown example**
 
+  `````markdown
   `````markdown
   ```text
   ### Usage
@@ -409,6 +422,7 @@ example and keep blank lines around inner headings and fences.
   make docs-user-build
   ```
   ```
+  `````
   `````
 
 Use the GOOD pattern to avoid accidental MD022 (blank lines around headings) and MD031
