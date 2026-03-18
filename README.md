@@ -583,7 +583,7 @@ server:
 
 | Variable | Default | Description |
 | -------- | ------- | ----------- |
-| `LOG_FILE_PATH` | _(unset)_ | Log file path. Unset = stdout only. `.env.*` files set this per environment. |
+| `LOG_FILE_PATH` | *(unset)* | Log file path. Unset = stdout only. `.env.*` files set this per environment. |
 | `LOG_MAX_SIZE_MB` | `10` | Max log file size in MB before rotation. |
 | `LOG_MAX_BACKUPS` | `3` | Max number of rotated log files to retain. |
 | `LOG_MAX_AGE_DAYS` | `7` | Max age in days for rotated log files. |
