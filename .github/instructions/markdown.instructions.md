@@ -24,9 +24,13 @@ Use this as a fast lookup for the MD rules configured in this repo:
 | MD032 | Blank lines around lists | enabled |
 | MD033 | Inline HTML usage | restricted allowlist (`details`, `summary`, `img`, `br`, `sub`, `sup`) |
 | MD034 | Bare URLs without markdown links | disabled |
+| MD035 | Horizontal rule style | `---` |
 | MD040 | Language info on fenced code blocks | enabled |
 | MD041 | First line must be top-level heading | disabled |
 | MD046 | Code block style | `fenced` only |
+| MD048 | Code fence marker style | `backtick` |
+| MD049 | Emphasis marker style | `asterisk` |
+| MD050 | Strong marker style | `asterisk` |
 
 1. **Headings**: Use appropriate heading levels (H2, H3, etc.) to structure your content. Do not use an H1 heading,
    as this will be generated based on the title.
@@ -224,6 +228,159 @@ Follow these guidelines for formatting and structuring your markdown content:
     Closing paragraph.
     ````
 
+- `MD029` ordered-list numbering style (`1/2/3`)
+
+  - ✅ **GOOD**
+
+    ````markdown
+    1. First step
+    2. Second step
+    3. Third step
+    ````
+
+  - ❌ **BAD**
+
+    ````markdown
+    1. First step
+    1. Second step
+    1. Third step
+    ````
+
+- `MD030` spaces after list markers (single space)
+
+  - ✅ **GOOD**
+
+    ````markdown
+    - Item one
+    1. Step one
+    ````
+
+  - ❌ **BAD**
+
+    ````markdown
+    -  Item one
+    1.  Step one
+    ````
+
+- `MD035` horizontal rule style (`---`)
+
+  - ✅ **GOOD**
+
+    ````markdown
+    Section A
+
+    ---
+
+    Section B
+    ````
+
+  - ❌ **BAD**
+
+    ````markdown
+    Section A
+
+    ***
+
+    Section B
+    ````
+
+- `MD046` use fenced code blocks, not indented code blocks
+
+  - ✅ **GOOD**
+
+    ````markdown
+    ```bash
+    make docs-check
+    ```
+    ````
+
+  - ❌ **BAD**
+
+    ````markdown
+        make docs-check
+    ````
+
+- `MD048` code fence marker style must use backticks
+
+  - ✅ **GOOD**
+
+    ````markdown
+    ```yaml
+    key: value
+    ```
+    ````
+
+  - ❌ **BAD**
+
+    ````markdown
+    ~~~yaml
+    key: value
+    ~~~
+    ````
+
+- `MD050` strong emphasis style (use `**`, not `__`)
+
+  - ✅ **GOOD**
+
+    ````markdown
+    This is **important**.
+    ````
+
+  - ❌ **BAD**
+
+    ````markdown
+    This is __important__.
+    ````
+
+- `MD010` hard tabs are not allowed
+
+  - ✅ **GOOD**
+
+    ````markdown
+    - Item one
+      - Nested item with spaces
+    ````
+
+  - ❌ **BAD**
+
+    ````markdown
+    [tab]- Item one
+    [tab][tab]- Nested item with tabs
+    ````
+
+- `MD012` multiple consecutive blank lines
+
+  - ✅ **GOOD**
+
+    ````markdown
+    First paragraph.
+
+    Second paragraph.
+    ````
+
+  - ❌ **BAD**
+
+    ````markdown
+    First paragraph.
+
+
+    Second paragraph.
+    ````
+
+- `MD045` images must include alt text
+
+  - ✅ **GOOD**
+
+    ````markdown
+    ![LEI sync dashboard screenshot](docs/assets/lei-dashboard.png)
+    ````
+
+  - ❌ **BAD**
+
+    ````markdown
+    ![](docs/assets/lei-dashboard.png)
+    ````
+
 ### Nested Markdown Example Safety (MD022/MD031)
 
 When documenting markdown templates that contain headings and fenced blocks, use backtick fences for the outer
@@ -246,12 +403,12 @@ example and keep blank lines around inner headings and fences.
 - ❌ **BAD nested markdown example**
 
   `````markdown
-  ```text
+  ````markdown
   ### Usage
   ```bash
   make docs-user-build
   ```
-  ```
+  ````
   `````
 
 Use the GOOD pattern to avoid accidental MD022 (blank lines around headings) and MD031
