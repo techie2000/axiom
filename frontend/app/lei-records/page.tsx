@@ -1784,6 +1784,7 @@ export default function LEIRecordsPage() {
           className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
           onClick={() => setSelectedRecord(null)}
         >
+          {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/click-events-have-key-events -- role=dialog is interactive per ARIA spec; jsx-a11y does not recognise it as such; stopPropagation is required to prevent backdrop click-to-close from firing on inner clicks */}
           <div
             role="dialog"
             aria-modal="true"
