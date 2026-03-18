@@ -70,3 +70,8 @@ MD041: false
 # Require fenced code blocks instead of indented blocks.
 MD046:
   style: fenced
+
+# MD049 - Emphasis style
+# Enforce asterisk (*) for emphasis markers.
+MD049:
+  style: asterisk
