@@ -39,16 +39,16 @@ func (Country) TableName() string {
 // Currency represents a currency entity
 type Currency struct {
 	BaseModel
-	Code               string `gorm:"column:code;uniqueIndex;size:3;not null" json:"code" validate:"required,len=3"`
-	Name               string `gorm:"column:name;not null" json:"name" validate:"required"`
-	Symbol             string `json:"symbol"`
-	SymbolNative       string `json:"symbol_native"`
-	DecimalDigits      int    `gorm:"default:2" json:"decimal_digits"`
-	Rounding           int    `gorm:"default:0" json:"rounding"`
-	NamePlural         string `gorm:"column:name_plural" json:"name_plural"`
-	Active             bool   `gorm:"default:true" json:"active"`
-	IsAlertClsAllowed  bool   `gorm:"column:is_alert_cls_allowed;default:false" json:"is_alert_cls_allowed"`
-	IsOfacSanctioned   bool   `gorm:"column:is_ofac_sanctioned;default:false" json:"is_ofac_sanctioned"`
+	Code              string `gorm:"column:code;uniqueIndex;size:3;not null" json:"code" validate:"required,len=3"`
+	Name              string `gorm:"column:name;not null" json:"name" validate:"required"`
+	Symbol            string `json:"symbol"`
+	SymbolNative      string `json:"symbol_native"`
+	DecimalDigits     int    `gorm:"default:2" json:"decimal_digits"`
+	Rounding          int    `gorm:"default:0" json:"rounding"`
+	NamePlural        string `gorm:"column:name_plural" json:"name_plural"`
+	Active            bool   `gorm:"default:true" json:"active"`
+	IsAlertClsAllowed bool   `gorm:"column:is_alert_cls_allowed;default:false" json:"is_alert_cls_allowed"`
+	IsOfacSanctioned  bool   `gorm:"column:is_ofac_sanctioned;default:false" json:"is_ofac_sanctioned"`
 }
 
 // TableName overrides the table name
