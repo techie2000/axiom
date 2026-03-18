@@ -79,6 +79,178 @@ jobs:
           docker run --rm -i hadolint/hadolint < ./docker/Dockerfile.backend
           docker run --rm -i hadolint/hadolint < ./docker/Dockerfile.frontend
 
+  lint-docs:
+    name: Markdown Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install markdownlint-cli
+        run: npm install -g markdownlint-cli
+
+      - name: Run markdown docs check
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+
+            md_files="$(git diff --name-only --diff-filter=ACMR "$BASE_SHA" "$HEAD_SHA" -- '*.md')"
+
+            if [ -z "$md_files" ]; then
+              echo "No markdown files changed in this pull request."
+              exit 0
+            fi
+
+            echo "Linting changed markdown files:"
+            printf '%s\n' "$md_files" | sed 's/^/ - /'
+
+            printf '%s\n' "$md_files" | xargs markdownlint --config .markdownlint.yaml
+          else
+            make docs-check
+          fi
+
+  validate-migrations:
+    name: Validate DB Migrations
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: axiom_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d axiom_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate migration version uniqueness
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Check for duplicate version numbers within up migrations
+          up_versions_all=$(find backend/migrations -maxdepth 1 -name "*.up.sql" -type f \
+            | sed -E 's#.*/([0-9]+)_.*#\1#' \
+            | sort)
+
+          # Check for duplicate version numbers within down migrations
+          down_versions_all=$(find backend/migrations -maxdepth 1 -name "*.down.sql" -type f \
+            | sed -E 's#.*/([0-9]+)_.*#\1#' \
+            | sort)
+
+          up_duplicates=$(printf '%s\n' "$up_versions_all" | uniq -d)
+          down_duplicates=$(printf '%s\n' "$down_versions_all" | uniq -d)
+
+          if [ -n "$up_duplicates" ] || [ -n "$down_duplicates" ]; then
+            echo "Duplicate migration version numbers detected:"
+            [ -n "$up_duplicates" ] && echo "  Duplicate .up.sql versions: $up_duplicates"
+            [ -n "$down_duplicates" ] && echo "  Duplicate .down.sql versions: $down_duplicates"
+            exit 1
+          fi
+
+          # Ensure every version has exactly one up and one down migration
+          # sort -u ensures the inputs to comm are sorted unique lists
+          up_versions=$(printf '%s\n' "$up_versions_all" | sort -u)
+          down_versions=$(printf '%s\n' "$down_versions_all" | sort -u)
+
+          # Versions with an up but no matching down
+          missing_down=$(comm -23 <(printf '%s\n' "$up_versions") <(printf '%s\n' "$down_versions"))
+          # Versions with a down but no matching up
+          missing_up=$(comm -13 <(printf '%s\n' "$up_versions") <(printf '%s\n' "$down_versions"))
+
+          if [ -n "$missing_down" ] || [ -n "$missing_up" ]; then
+            echo "Migration up/down mismatch detected:"
+            if [ -n "$missing_down" ]; then
+              echo "  Versions with .up.sql but missing .down.sql:"
+              echo "$missing_down"
+            fi
+            if [ -n "$missing_up" ]; then
+              echo "  Versions with .down.sql but missing .up.sql:"
+              echo "$missing_up"
+            fi
+            exit 1
+          fi
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'backend/go.mod'
+          cache: true
+          cache-dependency-path: 'backend/go.sum'
+
+      - name: Install migrate CLI
+        run: go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.18.1
+
+      - name: Run migration smoke test
+        shell: bash
+        run: |
+          set -euo pipefail
+          for i in {1..20}; do
+            if $HOME/go/bin/migrate -path backend/migrations -database "postgres://postgres:postgres@localhost:5432/axiom_ci?sslmode=disable" version >/dev/null 2>&1; then
+              break
+            fi
+            sleep 2
+          done
+          $HOME/go/bin/migrate -path backend/migrations -database "postgres://postgres:postgres@localhost:5432/axiom_ci?sslmode=disable" up
+
+  build-frontend:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+
+      - name: Restore Next.js build cache
+        uses: actions/cache@v4
+        with:
+          path: frontend/.next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('frontend/package-lock.json', 'frontend/next.config.js', 'frontend/tsconfig.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci --legacy-peer-deps
+          else
+            npm install --legacy-peer-deps
+          fi
+        working-directory: ./frontend
+
+      - name: Verify i18n catalogs are complete and up to date (non-blocking temporary)
+        continue-on-error: true
+        run: npm run i18n:verify
+        working-directory: ./frontend
+
+      - name: Build frontend
+        run: npm run build
+        working-directory: ./frontend
+
   build-go:
     name: Build Go Backend
     runs-on: ubuntu-latest
@@ -115,10 +287,32 @@ jobs:
         run: go test ./... -v -count=1
         working-directory: ./backend
 
+  build-docs-user:
+    name: Build User Documentation (VitePress)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: 'docs-user/package-lock.json'
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ./docs-user
+
+      - name: Build user documentation site
+        run: npm run docs:build
+        working-directory: ./docs-user
+
   ci-summary:
     name: CI Summary (${{ needs.detect-environment.outputs.environment || 'none' }})
     runs-on: ubuntu-latest
-    needs: [detect-environment, lint-go, lint-docker, build-go, test-go]
+    needs: [detect-environment, lint-go, lint-docker, lint-docs, validate-migrations, build-go, test-go, build-frontend, build-docs-user]
     if: always()
     steps:
       - name: Report CI result
@@ -126,19 +320,31 @@ jobs:
           ENV="${{ needs.detect-environment.outputs.environment }}"
           LINT_GO="${{ needs.lint-go.result }}"
           LINT_DOCKER="${{ needs.lint-docker.result }}"
+          LINT_DOCS="${{ needs.lint-docs.result }}"
+          MIGRATIONS="${{ needs.validate-migrations.result }}"
           BUILD="${{ needs.build-go.result }}"
           TEST="${{ needs.test-go.result }}"
+          BUILD_FRONTEND="${{ needs.build-frontend.result }}"
+          BUILD_DOCS_USER="${{ needs.build-docs-user.result }}"
 
           echo "Environment : $ENV"
           echo "Go Lint     : $LINT_GO"
           echo "Docker Lint : $LINT_DOCKER"
+          echo "Docs Lint   : $LINT_DOCS"
+          echo "Migrations  : $MIGRATIONS"
           echo "Build       : $BUILD"
           echo "Tests       : $TEST"
+          echo "Frontend    : $BUILD_FRONTEND"
+          echo "User Docs   : $BUILD_DOCS_USER"
 
           if [ "$LINT_GO" != "success" ] || \
              [ "$LINT_DOCKER" != "success" ] || \
+             [ "$LINT_DOCS" != "success" ] || \
+             [ "$MIGRATIONS" != "success" ] || \
              [ "$BUILD" != "success" ] || \
-             [ "$TEST" != "success" ]; then
+             [ "$TEST" != "success" ] || \
+             [ "$BUILD_FRONTEND" != "success" ] || \
+             [ "$BUILD_DOCS_USER" != "success" ]; then
             echo "❌ CI failed — see individual job logs above."
             exit 1
           fi

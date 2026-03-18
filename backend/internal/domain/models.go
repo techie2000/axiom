@@ -39,16 +39,16 @@ func (Country) TableName() string {
 // Currency represents a currency entity
 type Currency struct {
 	BaseModel
-	Code               string `gorm:"column:code;uniqueIndex;size:3;not null" json:"code" validate:"required,len=3"`
-	Name               string `gorm:"column:name;not null" json:"name" validate:"required"`
-	Symbol             string `json:"symbol"`
-	SymbolNative       string `json:"symbol_native"`
-	DecimalDigits      int    `gorm:"default:2" json:"decimal_digits"`
-	Rounding           int    `gorm:"default:0" json:"rounding"`
-	NamePlural         string `gorm:"column:name_plural" json:"name_plural"`
-	Active             bool   `gorm:"default:true" json:"active"`
-	IsAlertClsAllowed  bool   `gorm:"column:is_alert_cls_allowed;default:false" json:"is_alert_cls_allowed"`
-	IsOfacSanctioned   bool   `gorm:"column:is_ofac_sanctioned;default:false" json:"is_ofac_sanctioned"`
+	Code              string `gorm:"column:code;uniqueIndex;size:3;not null" json:"code" validate:"required,len=3"`
+	Name              string `gorm:"column:name;not null" json:"name" validate:"required"`
+	Symbol            string `json:"symbol"`
+	SymbolNative      string `json:"symbol_native"`
+	DecimalDigits     int    `gorm:"default:2" json:"decimal_digits"`
+	Rounding          int    `gorm:"default:0" json:"rounding"`
+	NamePlural        string `gorm:"column:name_plural" json:"name_plural"`
+	Active            bool   `gorm:"default:true" json:"active"`
+	IsAlertClsAllowed bool   `gorm:"column:is_alert_cls_allowed;default:false" json:"is_alert_cls_allowed"`
+	IsOfacSanctioned  bool   `gorm:"column:is_ofac_sanctioned;default:false" json:"is_ofac_sanctioned"`
 }
 
 // TableName overrides the table name
@@ -350,6 +350,51 @@ type User struct {
 // TableName overrides the table name
 func (User) TableName() string {
 	return "users"
+}
+
+// UserPreference stores a single UI preference for a user on a specific page.
+// page_key="global" is used for cross-page preferences (e.g. theme).
+type UserPreference struct {
+	ID              uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+	UserID          uuid.UUID `gorm:"type:uuid;not null;index" json:"user_id"`
+	PageKey         string    `gorm:"size:100;not null" json:"page_key"`
+	PreferenceKey   string    `gorm:"size:100;not null" json:"preference_key"`
+	PreferenceValue string    `gorm:"type:text;not null" json:"preference_value"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
+}
+
+func (UserPreference) TableName() string {
+	return "user_preferences"
+}
+
+// TranslationStatus represents the review lifecycle of a UI translation.
+type TranslationStatus string
+
+const (
+	TranslationStatusPending  TranslationStatus = "pending"
+	TranslationStatusApproved TranslationStatus = "approved"
+	TranslationStatusRejected TranslationStatus = "rejected"
+)
+
+// UITranslation stores a community-contributed UI translation that goes
+// through a review workflow before being shipped as a locale JSON file.
+type UITranslation struct {
+	ID               uuid.UUID         `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+	TranslationKey   string            `gorm:"size:500;not null;index" json:"translation_key"`
+	LanguageCode     string            `gorm:"size:10;not null;index" json:"language_code"`
+	TranslationValue string            `gorm:"type:text;not null" json:"translation_value"`
+	Status           TranslationStatus `gorm:"type:varchar(20);not null;default:'pending'" json:"status"`
+	Notes            string            `gorm:"type:text" json:"notes,omitempty"`
+	SubmittedBy      *uuid.UUID        `gorm:"type:uuid" json:"submitted_by,omitempty"`
+	ReviewedBy       *uuid.UUID        `gorm:"type:uuid" json:"reviewed_by,omitempty"`
+	ReviewedAt       *time.Time        `json:"reviewed_at,omitempty"`
+	CreatedAt        time.Time         `json:"created_at"`
+	UpdatedAt        time.Time         `json:"updated_at"`
+}
+
+func (UITranslation) TableName() string {
+	return "ui_translations"
 }
 
 // CodeMappingAudit represents the complete audit history of code mapping changes

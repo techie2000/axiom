@@ -71,7 +71,8 @@ Match the file to the appropriate `llms.txt` section:
 
 ### Step 3: Write Descriptive Link Text
 
-Format: `[descriptive-name](relative-url): brief description`
+Format the generated `llms.txt` entries as: descriptive name, relative URL, then brief description.
+Literal structure: `[descriptive-name]` + `(relative-url)` + `: brief description`
 
 **Guidelines:**
 - Use clear, descriptive link text (not just "Documentation" or "README")
@@ -95,7 +96,7 @@ After updating, ensure:
 - [ ] H1 header remains unchanged (project name)
 - [ ] Blockquote summary is still accurate
 - [ ] All sections use H2 headers (`##`)
-- [ ] Link format is correct: `[name](path): description`
+- [ ] Link format is correct: link text + relative path + description
 - [ ] No broken links (all referenced files exist)
 - [ ] File passes markdown linting (run `make lint-docs`)
 
@@ -106,13 +107,13 @@ After updating, ensure:
 **Scenario**: New ADR created at `docs/adr/adr-0008-grpc-microservices.md`
 
 **Update Required**:
-```markdown
+```text
 ## Architecture Decision Records
 
 - [ADR-0001: Modular Monolith](docs/adr/adr-0001-modular-monolith-architecture.md): Architecture pattern choice
 ...
 - [ADR-0007: Docker Compose Local Dev](docs/adr/adr-0007-docker-compose-local-dev.md): Development environment
-- [ADR-0008: gRPC Microservices](docs/adr/adr-0008-grpc-microservices.md): Migration to gRPC for inter-service communication
+- [ADR-0008: Sticky Headers with Smooth Transitions](docs/adr/adr-0008-sticky-headers-with-smooth-transitions.md): UI interaction decision
 ```
 
 ### Example 2: New Feature Documentation
@@ -121,11 +122,11 @@ After updating, ensure:
 
 **Update Required**:
 Create new section or add to existing relevant section:
-```markdown
+```text
 ## Core Features
 
-- [LEI Acquisition](docs/LEI_ACQUISITION.md): Legal Entity Identifier data acquisition from GLEIF
-- [Trade Matching](docs/TRADE_MATCHING.md): Automated trade matching and reconciliation system
+- [LEI Acquisition](docs/lei/LEI_ACQUISITION.md): Legal Entity Identifier data acquisition from GLEIF
+- [LEI Data Flow](docs/lei/LEI_DATA_FLOW.md): LEI ingestion and processing flow
 ```
 
 ### Example 3: Documentation Removed
@@ -134,12 +135,12 @@ Create new section or add to existing relevant section:
 
 **Update Required**:
 Remove the corresponding line from `llms.txt`:
-```markdown
+```text
 ## API Documentation
 
-- [REST API Guide](docs/API_GUIDE.md): RESTful API endpoints and usage
-- [DEPRECATED_API](docs/DEPRECATED_API.md): Old API (remove this line)
-- [GraphQL Schema](docs/GRAPHQL_SCHEMA.md): GraphQL API schema
+- [Backend API Entrypoint](backend/cmd/api/main.go): API server entrypoint and route bootstrap
+- [Master Data Guide](docs/MASTER_DATA.md): Data model and API usage reference
+- [Project Docs Index](docs/README.md): Documentation hub
 ```
 
 ### Example 4: Documentation Restructured
@@ -148,12 +149,12 @@ Remove the corresponding line from `llms.txt`:
 
 **Update Required**:
 Update all affected paths:
-```markdown
+```text
 ## API Documentation
 
-- [REST API Guide](docs/api/REST_API_GUIDE.md): RESTful API endpoints (updated path)
-- [GraphQL Schema](docs/api/GRAPHQL_SCHEMA.md): GraphQL API schema (updated path)
-- [WebSocket Protocol](docs/api/WEBSOCKET.md): Real-time WebSocket communication (updated path)
+- [Backend API Entrypoint](backend/cmd/api/main.go): API server entrypoint and route bootstrap
+- [Master Data Guide](docs/MASTER_DATA.md): Data model and API usage reference
+- [Project Docs Index](docs/README.md): Documentation hub
 ```
 
 ## Commit Message Convention

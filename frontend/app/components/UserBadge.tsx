@@ -1,36 +1,70 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-
-interface StoredUser {
-  id: string
-  email: string
-  username: string
-  full_name: string
-  role: string
-  status: string
-}
+import { useTranslation } from 'react-i18next'
+import { readStoredUser, StoredUser } from '../lib/stored-user'
+import { resetPreferencesCache } from '../lib/useUserPreference'
+import { useEnglishTooltips } from '../lib/useEnglishTooltips'
+import ThemeToggle from './ThemeToggle'
+import LanguageSelector from './LanguageSelector'
 
 export default function UserBadge() {
   const router = useRouter()
+  const { t } = useTranslation('common')
+  const {
+    englishTooltipsPreferenceEnabled,
+    setEnglishTooltipsPreferenceEnabled,
+  } = useEnglishTooltips()
   const [user, setUser] = useState<StoredUser | null>(null)
   const [mounted, setMounted] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [menuAlign, setMenuAlign] = useState<'left' | 'right'>('right')
+  const menuRef = useRef<HTMLDivElement | null>(null)
+  const buttonRef = useRef<HTMLButtonElement | null>(null)
 
   useEffect(() => {
     setMounted(true)
-    try {
-      const raw = localStorage.getItem('axiom_user')
-      if (raw) setUser(JSON.parse(raw))
-    } catch {
-      // ignore malformed data
-    }
+    setUser(readStoredUser())
   }, [])
+
+  useEffect(() => {
+    if (!menuOpen) return
+
+    const buttonRect = buttonRef.current?.getBoundingClientRect()
+    if (buttonRect) {
+      // Open toward the viewport center to keep the panel visually inside content bounds.
+      setMenuAlign(buttonRect.left > window.innerWidth / 2 ? 'right' : 'left')
+    }
+
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (!menuRef.current) return
+      if (event.target instanceof Node && !menuRef.current.contains(event.target)) {
+        setMenuOpen(false)
+      }
+    }
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleOutsideClick)
+    document.addEventListener('keydown', handleEscape)
+
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick)
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [menuOpen])
 
   const handleSignOut = () => {
     localStorage.removeItem('axiom_token')
     localStorage.removeItem('axiom_user')
-    router.push('/login')
+    // Clear in-memory preference cache so the next login starts fresh.
+    resetPreferencesCache()
+    router.replace('/')
   }
 
   if (!mounted || !user) return null
@@ -42,8 +76,15 @@ export default function UserBadge() {
     : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
 
   return (
-    <div className="flex items-center gap-2">
-      <div className="flex items-center gap-2 h-9 px-3 rounded-lg bg-white/10 border border-white/20 text-sm">
+    <div className="relative" ref={menuRef}>
+      <button
+        ref={buttonRef}
+        onClick={() => setMenuOpen((open) => !open)}
+        className="flex items-center gap-2 h-9 px-3 rounded-lg bg-white/10 border border-white/20 text-sm hover:bg-white/20 transition-colors"
+        title={t('preferences.openUserMenu')}
+        aria-haspopup="menu"
+        aria-expanded={menuOpen}
+      >
         <span className="text-base leading-none" aria-hidden="true">👤</span>
         <span className="font-medium text-gray-900 dark:text-white">{displayName}</span>
         <span
@@ -51,14 +92,55 @@ export default function UserBadge() {
         >
           {user.role}
         </span>
-      </div>
-      <button
-        onClick={handleSignOut}
-        className="h-9 px-3 text-sm rounded-lg bg-white/10 border border-white/20 hover:bg-red-500/20 hover:border-red-400/40 hover:text-red-300 transition-colors text-gray-700 dark:text-gray-300"
-        title="Sign out"
-      >
-        Sign out
+        <span className="text-xs text-gray-700 dark:text-gray-300" aria-hidden="true">
+          {menuOpen ? '▲' : '▼'}
+        </span>
       </button>
+
+      {menuOpen && (
+        <div
+          className={`absolute mt-2 w-[320px] max-w-[calc(100vw-1rem)] rounded-xl border border-gray-200 dark:border-white/20 bg-white dark:bg-gray-900 shadow-2xl p-4 z-50 ${menuAlign === 'right' ? 'right-0' : 'left-0'}`}
+          role="menu"
+          aria-label="User menu"
+        >
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">
+            {t('preferences.menuLabel')}
+          </p>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm text-gray-700 dark:text-gray-300">{t('preferences.language')}</span>
+              <LanguageSelector className="justify-end" compact />
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm text-gray-700 dark:text-gray-300">{t('preferences.theme')}</span>
+              <ThemeToggle />
+            </div>
+            <label className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <span className="block text-sm text-gray-700 dark:text-gray-300">{t('preferences.englishTooltips')}</span>
+                <span className="block text-xs text-gray-500 dark:text-gray-400">{t('preferences.englishTooltipsDescription')}</span>
+              </div>
+              <input
+                type="checkbox"
+                checked={englishTooltipsPreferenceEnabled}
+                onChange={(event) => setEnglishTooltipsPreferenceEnabled(event.target.checked)}
+                className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+            </label>
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-gray-200 dark:border-white/10">
+            <button
+              onClick={handleSignOut}
+              className="w-full h-9 px-3 text-sm rounded-lg bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 dark:bg-red-600/20 dark:text-red-300 dark:border-red-500/30 dark:hover:bg-red-600/30 transition-colors"
+              title={t('preferences.signOut')}
+            >
+              {t('preferences.signOut')}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

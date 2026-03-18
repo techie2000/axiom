@@ -11,35 +11,39 @@ import (
 
 // Services holds all service interfaces
 type Services struct {
-	Auth        AuthService
-	Country     CountryService
-	Currency    CurrencyService
-	Language    LanguageService
-	Entity      EntityService
-	Instrument  InstrumentService
-	Account     AccountService
-	SSI         SSIService
-	LEI         LEIService
-	LEILevel2   LEILevel2Service
-	MasterData  MasterDataService
-	CodeMapping CodeMappingService
+	Auth           AuthService
+	Country        CountryService
+	Currency       CurrencyService
+	Language       LanguageService
+	Entity         EntityService
+	Instrument     InstrumentService
+	Account        AccountService
+	SSI            SSIService
+	LEI            LEIService
+	LEILevel2      LEILevel2Service
+	MasterData     MasterDataService
+	CodeMapping    CodeMappingService
+	UserPreference UserPreferenceService
+	UITranslation  UITranslationService
 }
 
 // NewServices creates a new services instance
 func NewServices(repos *repository.Repositories, db *gorm.DB, leiDataDir string, masterDataDir string, jwtSecret string, jwtExpiry time.Duration) *Services {
 	return &Services{
-		Auth:        NewAuthService(repos.User, jwtSecret, jwtExpiry),
-		Country:     NewCountryService(repos.Country),
-		Currency:    NewCurrencyService(repos.Currency),
-		Language:    NewLanguageService(repos.Language),
-		Entity:      NewEntityService(repos.Entity),
-		Instrument:  NewInstrumentService(repos.Instrument),
-		Account:     NewAccountService(repos.Account),
-		SSI:         NewSSIService(repos.SSI),
-		LEI:         NewLEIService(repos.LEI, repos.Country, leiDataDir),
-		LEILevel2:   NewLEILevel2Service(repos.LEILevel2, repos.LEI, leiDataDir),
-		MasterData:  NewMasterDataService(db, masterDataDir),
-		CodeMapping: NewCodeMappingService(repos.CodeMapping),
+		Auth:           NewAuthService(repos.User, jwtSecret, jwtExpiry),
+		Country:        NewCountryService(repos.Country),
+		Currency:       NewCurrencyService(repos.Currency),
+		Language:       NewLanguageService(repos.Language),
+		Entity:         NewEntityService(repos.Entity),
+		Instrument:     NewInstrumentService(repos.Instrument),
+		Account:        NewAccountService(repos.Account),
+		SSI:            NewSSIService(repos.SSI),
+		LEI:            NewLEIService(repos.LEI, repos.Country, leiDataDir),
+		LEILevel2:      NewLEILevel2Service(repos.LEILevel2, repos.LEI, leiDataDir),
+		MasterData:     NewMasterDataService(db, masterDataDir),
+		CodeMapping:    NewCodeMappingService(repos.CodeMapping),
+		UserPreference: NewUserPreferenceService(repos.UserPreference),
+		UITranslation:  NewUITranslationService(repos.UITranslation),
 	}
 }
 

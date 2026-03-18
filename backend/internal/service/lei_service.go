@@ -93,6 +93,7 @@ type LEIService interface {
 	// File download and management
 	DownloadFullFile() (*domain.SourceFile, error)
 	DownloadDeltaFile() (*domain.SourceFile, error)
+	SourceFileExists(sourceFileID uuid.UUID) (bool, error)
 
 	// File processing
 	ProcessSourceFile(sourceFileID uuid.UUID) error
@@ -105,14 +106,16 @@ type LEIService interface {
 	// Record management
 	CreateLEIRecord(record *domain.LEIRecord) error
 	GetLEIByCode(lei string) (*domain.LEIRecord, error)
+	GetPredecessorLEIs(lei string) ([]*domain.LEIRecord, error)
 	GetLEIByID(id string) (*domain.LEIRecord, error)
 	GetAllLEI(limit, offset int) ([]*domain.LEIRecord, error)
-	GetAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string) ([]*domain.LEIRecord, error)
+	GetAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string, includeLinkedNames bool) ([]*domain.LEIRecord, error)
 	CountLEIRecords() (int64, error)
 	GetDistinctCountries() ([]domain.Country, error)
 	GetDistinctCategories() ([]string, error)
 	GetDistinctRegions() ([]string, error)
 	GetDistinctLegalForms() ([]string, error)
+	GetLegalNamesByLEICodes(codes []string) (map[string]string, error)
 	UpdateLEIRecord(record *domain.LEIRecord) error
 
 	// Audit and history
@@ -156,6 +159,34 @@ func cloneStringSlice(values []string) []string {
 	cloned := make([]string, len(values))
 	copy(cloned, values)
 	return cloned
+}
+
+func statusJobTypeFromFileType(fileType string) string {
+	switch strings.ToUpper(strings.TrimSpace(fileType)) {
+	case "FULL":
+		return "DAILY_FULL"
+	case "DELTA":
+		return "DAILY_DELTA"
+	default:
+		return ""
+	}
+}
+
+func (s *leiService) setProgressMessage(jobType, message string) {
+	if strings.TrimSpace(jobType) == "" {
+		return
+	}
+
+	status, err := s.GetProcessingStatus(jobType)
+	if err != nil {
+		log.Warn().Err(err).Str("job_type", jobType).Msg("Unable to set progress message: status not found")
+		return
+	}
+
+	status.ProgressMessage = strings.TrimSpace(message)
+	if err := s.UpdateProcessingStatus(status); err != nil {
+		log.Warn().Err(err).Str("job_type", jobType).Msg("Unable to persist progress message")
+	}
 }
 
 // progressWriter wraps an io.Writer to log extraction progress periodically
@@ -274,6 +305,12 @@ func (s *leiService) DownloadDeltaFile() (*domain.SourceFile, error) {
 // downloadFile downloads a file from GLEIF and creates a SourceFile record
 func (s *leiService) downloadFile(url, fileType, publishedAt string, expectedRecordCount int) (*domain.SourceFile, error) {
 	log.Info().Str("url", url).Str("type", fileType).Msg("Starting file download from GLEIF")
+	jobType := statusJobTypeFromFileType(fileType)
+	remoteFileName := filepath.Base(strings.TrimSpace(url))
+	if remoteFileName == "." || remoteFileName == "" || remoteFileName == "/" {
+		remoteFileName = "latest file"
+	}
+	s.setProgressMessage(jobType, fmt.Sprintf("Downloading %s", remoteFileName))
 
 	// Create data directory if it doesn't exist
 	if err := os.MkdirAll(s.dataDir, 0755); err != nil {
@@ -328,6 +365,7 @@ func (s *leiService) downloadFile(url, fileType, publishedAt string, expectedRec
 		Int64("size", fileSize).
 		Str("hash", fileHash).
 		Msg("File downloaded successfully")
+	s.setProgressMessage(jobType, fmt.Sprintf("Downloaded %s", fileName))
 
 	// Check if we already have a completed file with this hash
 	existingFile, err := s.repo.FindSourceFileByHash(fileHash)
@@ -361,12 +399,12 @@ func (s *leiService) downloadFile(url, fileType, publishedAt string, expectedRec
 	}
 
 	// Create SourceFile record
-	jobType := domain.JobTypeFromFileType(fileType)
+	sourceFileJobType := domain.JobTypeFromFileType(fileType)
 	sourceFile := &domain.SourceFile{
 		FileName:         fileName,
 		FileType:         fileType,
-		JobType:          jobType,
-		JobLabel:         domain.JobTypeDisplayName(jobType),
+		JobType:          sourceFileJobType,
+		JobLabel:         domain.JobTypeDisplayName(sourceFileJobType),
 		FileURL:          url,
 		FileSize:         fileSize,
 		FileHash:         fileHash,
@@ -379,6 +417,8 @@ func (s *leiService) downloadFile(url, fileType, publishedAt string, expectedRec
 	if err := s.repo.CreateSourceFile(sourceFile); err != nil {
 		return nil, fmt.Errorf("failed to create source file record: %w", err)
 	}
+
+	s.setProgressMessage(jobType, fmt.Sprintf("Extracting %s", fileName))
 
 	return sourceFile, nil
 }
@@ -397,6 +437,9 @@ func (s *leiService) ProcessSourceFileWithResume(sourceFileID uuid.UUID, resumeF
 	if err != nil {
 		return fmt.Errorf("failed to find source file: %w", err)
 	}
+
+	jobType := statusJobTypeFromFileType(sourceFile.FileType)
+	s.setProgressMessage(jobType, fmt.Sprintf("Extracting %s", sourceFile.FileName))
 
 	// Update status to IN_PROGRESS and clear any historical failure data
 	sourceFile.ProcessingStatus = "IN_PROGRESS"
@@ -444,8 +487,10 @@ func (s *leiService) ProcessSourceFileWithResume(sourceFileID uuid.UUID, resumeF
 			return fmt.Errorf("failed to extract file: %w", extractErr)
 		}
 		log.Info().Str("json_path", jsonPath).Msg("File extracted successfully")
+		s.setProgressMessage(jobType, fmt.Sprintf("Processing records from %s", sourceFile.FileName))
 	} else {
 		log.Info().Str("json_path", jsonPath).Msg("Using previously extracted file")
+		s.setProgressMessage(jobType, fmt.Sprintf("Processing records from %s", sourceFile.FileName))
 	}
 	defer func() {
 		if err := os.Remove(jsonPath); err != nil {
@@ -604,6 +649,24 @@ func (s *leiService) ResetFailedFileForRetry(fileID uuid.UUID) error {
 // UpdateSourceFile updates a source file record
 func (s *leiService) UpdateSourceFile(file *domain.SourceFile) error {
 	return s.repo.UpdateSourceFile(file)
+}
+
+// SourceFileExists checks whether the source file record exists and its file is present on disk
+func (s *leiService) SourceFileExists(sourceFileID uuid.UUID) (bool, error) {
+	sourceFile, err := s.repo.FindSourceFileByID(sourceFileID.String())
+	if err != nil {
+		return false, err
+	}
+
+	filePath := filepath.Join(s.dataDir, sourceFile.FileName)
+	if _, err := os.Stat(filePath); err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return true, nil
 }
 
 // processJSONFile parses and processes the LEI JSON file
@@ -1312,6 +1375,20 @@ func (s *leiService) GetLEIByCode(lei string) (*domain.LEIRecord, error) {
 	return record, nil
 }
 
+// GetPredecessorLEIs retrieves LEI records that reference the provided LEI as successor.
+func (s *leiService) GetPredecessorLEIs(lei string) ([]*domain.LEIRecord, error) {
+	records, err := s.repo.FindPredecessorLEIsBySuccessor(lei)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, record := range records {
+		normalizeLEIRecordNullLikeFields(record)
+	}
+
+	return records, nil
+}
+
 // GetLEIByID retrieves an LEI record by ID
 func (s *leiService) GetLEIByID(id string) (*domain.LEIRecord, error) {
 	record, err := s.repo.FindLEIByID(id)
@@ -1339,8 +1416,8 @@ func (s *leiService) GetAllLEI(limit, offset int) ([]*domain.LEIRecord, error) {
 }
 
 // GetAllLEIWithFilters retrieves LEI records with search and filters
-func (s *leiService) GetAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string) ([]*domain.LEIRecord, error) {
-	records, err := s.repo.FindAllLEIWithFilters(limit, offset, search, status, category, country, sortBy, sortOrder, columns)
+func (s *leiService) GetAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string, includeLinkedNames bool) ([]*domain.LEIRecord, error) {
+	records, err := s.repo.FindAllLEIWithFilters(limit, offset, search, status, category, country, sortBy, sortOrder, columns, includeLinkedNames)
 	if err != nil {
 		return nil, err
 	}
@@ -1355,6 +1432,12 @@ func (s *leiService) GetAllLEIWithFilters(limit, offset int, search, status, cat
 // CountLEIRecords returns the total count of LEI records
 func (s *leiService) CountLEIRecords() (int64, error) {
 	return s.repo.CountLEIRecords()
+}
+
+// GetLegalNamesByLEICodes returns a map of LEI code → legal name for a batch of codes.
+// Codes not found in the database are simply absent from the returned map.
+func (s *leiService) GetLegalNamesByLEICodes(codes []string) (map[string]string, error) {
+	return s.repo.FindLegalNamesByLEICodes(codes)
 }
 
 // GetDistinctCountries returns a sorted list of active countries from the countries reference table
@@ -1485,6 +1568,12 @@ func (s *leiService) UpdateProcessingStatus(status *domain.FileProcessingStatus)
 			status.DependsOnJobLabel = domain.JobTypeDisplayName(status.DependsOnJobType)
 		} else {
 			status.DependsOnJobLabel = ""
+		}
+		if status.CurrentSourceFileID == nil {
+			status.CurrentSourceFile = nil
+		}
+		if status.Status != "RUNNING" {
+			status.ProgressMessage = ""
 		}
 	}
 	return s.repo.UpdateProcessingStatus(status)

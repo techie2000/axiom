@@ -203,6 +203,22 @@ type level2RepoStub struct {
 	gotOffset   int
 }
 
+type leiRepoUpdateStub struct {
+	repository.LEIRepository
+	updateCalls int
+	lastFile    *domain.SourceFile
+	updateErr   error
+}
+
+func (r *leiRepoUpdateStub) UpdateSourceFile(file *domain.SourceFile) error {
+	r.updateCalls++
+	if file != nil {
+		copied := *file
+		r.lastFile = &copied
+	}
+	return r.updateErr
+}
+
 func (r *level2RepoStub) ListProcessingFailures(jobType string, openOnly bool, limit, offset int) ([]*domain.LEILevel2ProcessingFailure, error) {
 	r.gotJobType = jobType
 	r.gotOpenOnly = openOnly
@@ -396,5 +412,216 @@ func TestGetProcessingFailures_ResolvedAndOpenFailures(t *testing.T) {
 	}
 	if got[1].Resolved != true || got[1].ResolvedNote != "Resolved by subsequent successful upsert" {
 		t.Fatalf("second failure should be resolved: %+v", got[1])
+	}
+}
+
+func TestShouldPersistLevel2ProgressCheckpoint(t *testing.T) {
+	tests := []struct {
+		name              string
+		previousProcessed int
+		processed         int
+		previousFailed    int
+		failed            int
+		force             bool
+		expected          bool
+	}{
+		{
+			name:              "no change does not persist",
+			previousProcessed: 100,
+			processed:         100,
+			previousFailed:    0,
+			failed:            0,
+			force:             false,
+			expected:          false,
+		},
+		{
+			name:              "failure count change always persists",
+			previousProcessed: 100,
+			processed:         100,
+			previousFailed:    0,
+			failed:            1,
+			force:             false,
+			expected:          true,
+		},
+		{
+			name:              "processed in same checkpoint interval does not persist",
+			previousProcessed: 100,
+			processed:         999,
+			previousFailed:    0,
+			failed:            0,
+			force:             false,
+			expected:          false,
+		},
+		{
+			name:              "crossing checkpoint interval persists",
+			previousProcessed: 999,
+			processed:         1000,
+			previousFailed:    0,
+			failed:            0,
+			force:             false,
+			expected:          true,
+		},
+		{
+			name:              "forced persist with changes",
+			previousProcessed: 10,
+			processed:         11,
+			previousFailed:    0,
+			failed:            0,
+			force:             true,
+			expected:          true,
+		},
+		{
+			name:              "forced persist with no changes is skipped",
+			previousProcessed: 10,
+			processed:         10,
+			previousFailed:    1,
+			failed:            1,
+			force:             true,
+			expected:          false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := shouldPersistLevel2ProgressCheckpoint(
+				tt.previousProcessed,
+				tt.processed,
+				tt.previousFailed,
+				tt.failed,
+				tt.force,
+			)
+
+			if got != tt.expected {
+				t.Fatalf("expected %v, got %v", tt.expected, got)
+			}
+		})
+	}
+}
+
+func TestPersistLevel2Progress(t *testing.T) {
+	tests := []struct {
+		name               string
+		initialProcessed   int
+		initialFailed      int
+		initialTotal       int
+		nextProcessed      int
+		nextFailed         int
+		force              bool
+		expectedCalls      int
+		expectedProcessed  int
+		expectedFailed     int
+		expectedTotal      int
+	}{
+		{
+			name:              "checkpoint interval not crossed does not persist",
+			initialProcessed:  100,
+			initialFailed:     0,
+			initialTotal:      2000,
+			nextProcessed:     500,
+			nextFailed:        0,
+			force:             false,
+			expectedCalls:     0,
+			expectedProcessed: 100,
+			expectedFailed:    0,
+			expectedTotal:     2000,
+		},
+		{
+			name:              "crossing checkpoint persists",
+			initialProcessed:  999,
+			initialFailed:     0,
+			initialTotal:      2000,
+			nextProcessed:     1000,
+			nextFailed:        0,
+			force:             false,
+			expectedCalls:     1,
+			expectedProcessed: 1000,
+			expectedFailed:    0,
+			expectedTotal:     2000,
+		},
+		{
+			name:              "failed count change persists immediately",
+			initialProcessed:  200,
+			initialFailed:     0,
+			initialTotal:      2000,
+			nextProcessed:     200,
+			nextFailed:        1,
+			force:             false,
+			expectedCalls:     1,
+			expectedProcessed: 200,
+			expectedFailed:    1,
+			expectedTotal:     2000,
+		},
+		{
+			name:              "force persists changed state",
+			initialProcessed:  10,
+			initialFailed:     0,
+			initialTotal:      2000,
+			nextProcessed:     11,
+			nextFailed:        0,
+			force:             true,
+			expectedCalls:     1,
+			expectedProcessed: 11,
+			expectedFailed:    0,
+			expectedTotal:     2000,
+		},
+		{
+			name:              "force without state change is skipped",
+			initialProcessed:  10,
+			initialFailed:     0,
+			initialTotal:      2000,
+			nextProcessed:     10,
+			nextFailed:        0,
+			force:             true,
+			expectedCalls:     0,
+			expectedProcessed: 10,
+			expectedFailed:    0,
+			expectedTotal:     2000,
+		},
+		{
+			name:              "total records is expanded when processed exceeds total",
+			initialProcessed:  5,
+			initialFailed:     0,
+			initialTotal:      5,
+			nextProcessed:     7,
+			nextFailed:        0,
+			force:             true,
+			expectedCalls:     1,
+			expectedProcessed: 7,
+			expectedFailed:    0,
+			expectedTotal:     7,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			leiRepo := &leiRepoUpdateStub{}
+			svc := &leiLevel2Service{leiRepo: leiRepo}
+			sourceFile := &domain.SourceFile{
+				ID:               uuid.New(),
+				ProcessedRecords: tt.initialProcessed,
+				FailedRecords:    tt.initialFailed,
+				TotalRecords:     tt.initialTotal,
+			}
+
+			svc.persistLevel2Progress(sourceFile, tt.nextProcessed, tt.nextFailed, tt.force)
+
+			if leiRepo.updateCalls != tt.expectedCalls {
+				t.Fatalf("expected %d update call(s), got %d", tt.expectedCalls, leiRepo.updateCalls)
+			}
+
+			if sourceFile.ProcessedRecords != tt.expectedProcessed {
+				t.Fatalf("expected processed %d, got %d", tt.expectedProcessed, sourceFile.ProcessedRecords)
+			}
+			if sourceFile.FailedRecords != tt.expectedFailed {
+				t.Fatalf("expected failed %d, got %d", tt.expectedFailed, sourceFile.FailedRecords)
+			}
+			if sourceFile.TotalRecords != tt.expectedTotal {
+				t.Fatalf("expected total %d, got %d", tt.expectedTotal, sourceFile.TotalRecords)
+			}
+
+			if tt.expectedCalls > 0 && leiRepo.lastFile == nil {
+				t.Fatal("expected repository to receive updated source file")
+			}
+		})
 	}
 }

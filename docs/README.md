@@ -34,6 +34,18 @@ Located in [contributing/](./contributing/):
 
 - [**UI Patterns Guide**](./ui-patterns.md) - Reusable frontend patterns and component templates ⭐ **For UI development**
 
+### 👤 User Documentation
+
+- [**User Docs Home**](../docs-user/README.md) - Dedicated end-user documentation space for workflow-driven app usage
+  guidance
+- [**Published User Docs Site**](https://techie2000.github.io/axiom/docs-user/) - Publicly hosted docs experience
+
+### 🖼️ Branding Assets
+
+Located in [assets/branding/](./assets/branding/):
+
+- [**Branding Assets README**](./assets/branding/README.md) - Source logo files and generated favicon/logo outputs
+
 ### 💳 SSI (Standard Settlement Instructions)
 
 Located in [ssi/](./ssi/):
@@ -109,6 +121,11 @@ Located in [performance/](./performance/):
 4. **Building UI components?** → [UI Patterns Guide](./ui-patterns.md) ⭐ **New!**
 5. **Performance tuning?** → [LEI Search Performance Analysis](./performance/LEI_SEARCH_PERFORMANCE_ANALYSIS.md)
 
+### For End Users
+
+1. **How do I use the app?** → [User Docs Home](../docs-user/README.md)
+2. **Live published site** → [https://techie2000.github.io/axiom/docs-user/](https://techie2000.github.io/axiom/docs-user/)
+
 ### For System Administrators
 
 1. **Deploy multi-environment setup** → [Multi-Environment Setup](./environments/multi-environment-setup.md)
@@ -171,4 +188,4 @@ When adding new documentation:
 
 ## Last Updated
 
-February 25, 2026
+March 15, 2026

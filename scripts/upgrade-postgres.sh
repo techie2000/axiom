@@ -9,7 +9,7 @@
 #   ./scripts/upgrade-postgres.sh <environment> [--yes]
 #
 # Arguments:
-#   environment   One of: dev | uat | prod
+#   environment   One of: dev | uat | prod | main
 #   --yes / -y    Skip the confirmation prompt (for scripted runs)
 #
 # Examples:
@@ -85,6 +85,18 @@ PG_DB=$(parse_env "POSTGRES_DB")
 CONTAINER_NAME="${PROJECT_NAME}-postgres"
 VOLUME_NAME="${PROJECT_NAME}_postgres_data_${ENVIRONMENT}"
 
+POSTGRES_DATA_DIR=$(parse_env "POSTGRES_DATA_DIR")
+
+# Determine storage type: bind mount (main/dev) vs named Docker volume (uat/prod).
+# If POSTGRES_DATA_DIR is set in the env file the environment uses a host bind mount.
+if [[ -n "$POSTGRES_DATA_DIR" ]]; then
+    USE_BIND_MOUNT=true
+    DATA_SRC="$POSTGRES_DATA_DIR"
+else
+    USE_BIND_MOUNT=false
+    DATA_SRC="$VOLUME_NAME"
+fi
+
 # ── Header ────────────────────────────────────────────────────────────────────
 echo ""
 echo "======================================"
@@ -93,22 +105,39 @@ echo "======================================"
 echo ""
 info "Project:   $PROJECT_NAME"
 info "Container: $CONTAINER_NAME"
-info "Volume:    $VOLUME_NAME"
+if [[ "$USE_BIND_MOUNT" == true ]]; then
+    info "Data:      $DATA_SRC (bind mount)"
+else
+    info "Volume:    $VOLUME_NAME"
+fi
 info "Target PG: $TARGET_PG_VERSION"
 echo ""
 
-# ── Check volume exists ───────────────────────────────────────────────────────
-if ! docker volume inspect "$VOLUME_NAME" &>/dev/null; then
-    success "Volume '$VOLUME_NAME' does not exist — no existing data to migrate."
-    success "The postgres:${TARGET_PG_VERSION}-alpine container will initialise a fresh database on first start."
-    exit 0
+# ── Check data exists ─────────────────────────────────────────────────────────
+if [[ "$USE_BIND_MOUNT" == true ]]; then
+    if [[ ! -d "$DATA_SRC" ]] || [[ -z "$(ls -A "$DATA_SRC" 2>/dev/null)" ]]; then
+        success "Bind-mount directory '$DATA_SRC' does not exist or is empty — no existing data to migrate."
+        success "The postgres:${TARGET_PG_VERSION}-alpine container will initialise a fresh database on first start."
+        exit 0
+    fi
+else
+    if ! docker volume inspect "$VOLUME_NAME" &>/dev/null; then
+        success "Volume '$VOLUME_NAME' does not exist — no existing data to migrate."
+        success "The postgres:${TARGET_PG_VERSION}-alpine container will initialise a fresh database on first start."
+        exit 0
+    fi
 fi
 
-# ── Read PG_VERSION from volume ───────────────────────────────────────────────
-CURRENT_PG_VERSION=$(docker run --rm \
-    -v "${VOLUME_NAME}:/var/lib/postgresql/data" \
-    alpine:latest \
-    sh -c "cat /var/lib/postgresql/data/PG_VERSION 2>/dev/null || echo 'unknown'")
+# ── Read PG_VERSION ───────────────────────────────────────────────────────────
+if [[ "$USE_BIND_MOUNT" == true ]]; then
+    # For bind mounts the data directory is on the host, so we can read PG_VERSION directly.
+    CURRENT_PG_VERSION=$(cat "${DATA_SRC}/PG_VERSION" 2>/dev/null || echo "unknown")
+else
+    CURRENT_PG_VERSION=$(docker run --rm \
+        -v "${VOLUME_NAME}:/var/lib/postgresql/data" \
+        alpine:latest \
+        sh -c "cat /var/lib/postgresql/data/PG_VERSION 2>/dev/null || echo 'unknown'")
+fi
 
 info "Detected data version: PostgreSQL $CURRENT_PG_VERSION"
 
@@ -118,8 +147,13 @@ if [[ "$CURRENT_PG_VERSION" == "$TARGET_PG_VERSION" ]]; then
 fi
 
 if [[ "$CURRENT_PG_VERSION" == "unknown" ]]; then
-    warn "Could not read PG_VERSION from volume. The volume may be empty or uninitialised."
-    warn "If so, you can remove it safely: docker volume rm $VOLUME_NAME"
+    if [[ "$USE_BIND_MOUNT" == true ]]; then
+        warn "Could not read PG_VERSION from ${DATA_SRC}. The directory may be empty or uninitialised."
+        warn "If so, you can remove it safely: rm -rf ${DATA_SRC}"
+    else
+        warn "Could not read PG_VERSION from volume. The volume may be empty or uninitialised."
+        warn "If so, you can remove it safely: docker volume rm $VOLUME_NAME"
+    fi
     exit 1
 fi
 
@@ -129,7 +163,11 @@ warn "PostgreSQL data upgrade required: v${CURRENT_PG_VERSION} → v${TARGET_PG_
 warn "This will:"
 echo "   1. Stop any running environment services"
 echo "   2. Back up all databases to ${BACKUP_DIR}/"
-echo "   3. Remove the existing volume (${VOLUME_NAME})"
+if [[ "$USE_BIND_MOUNT" == true ]]; then
+    echo "   3. Rename the existing data directory to a timestamped backup"
+else
+    echo "   3. Remove the existing volume (${VOLUME_NAME})"
+fi
 echo "   4. Start postgres:${TARGET_PG_VERSION}-alpine and restore the backup"
 echo ""
 
@@ -155,13 +193,23 @@ TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 BACKUP_FILE="${BACKUP_DIR}/postgres-${ENVIRONMENT}-v${CURRENT_PG_VERSION}-${TIMESTAMP}.sql"
 
 info "Step 2/5: Starting temporary postgres:${CURRENT_PG_VERSION}-alpine container to take backup..."
+
+# For bind mounts docker requires an absolute path; resolve it from the host working directory.
+if [[ "$USE_BIND_MOUNT" == true ]]; then
+    DATA_ABS="$(cd "$DATA_SRC" 2>/dev/null && pwd)" \
+        || error "Cannot resolve bind-mount path: $DATA_SRC"
+    MOUNT_ARG="${DATA_ABS}:/var/lib/postgresql/data"
+else
+    MOUNT_ARG="${VOLUME_NAME}:/var/lib/postgresql/data"
+fi
+
 docker run -d \
     --name "$TEMP_CONTAINER" \
     -e POSTGRES_USER="$PG_USER" \
     -e POSTGRES_PASSWORD="$PG_PASSWORD" \
     -e POSTGRES_DB="$PG_DB" \
     -e PGDATA=/var/lib/postgresql/data \
-    -v "${VOLUME_NAME}:/var/lib/postgresql/data" \
+    -v "${MOUNT_ARG}" \
     "postgres:${CURRENT_PG_VERSION}-alpine" >/dev/null
 
 info "Waiting for temporary container to be ready..."
@@ -183,10 +231,18 @@ docker rm -f "$TEMP_CONTAINER" >/dev/null
 BACKUP_SIZE=$(du -sh "$BACKUP_FILE" | cut -f1)
 success "Backup saved: $BACKUP_FILE ($BACKUP_SIZE)"
 
-# ── Step 3: Remove old volume ─────────────────────────────────────────────────
-info "Step 3/5: Removing old volume (${VOLUME_NAME})..."
-docker volume rm "$VOLUME_NAME"
-success "Old volume removed."
+# ── Step 3: Remove or rename old data ────────────────────────────────────────
+if [[ "$USE_BIND_MOUNT" == true ]]; then
+    BAK_DIR="${DATA_SRC}.bak.${TIMESTAMP}"
+    info "Step 3/5: Renaming data directory to ${BAK_DIR}..."
+    mv "$DATA_SRC" "$BAK_DIR" \
+        || error "Failed to rename $DATA_SRC to $BAK_DIR — check permissions and disk space, then retry."
+    success "Data directory backed up to: $BAK_DIR"
+else
+    info "Step 3/5: Removing old volume (${VOLUME_NAME})..."
+    docker volume rm "$VOLUME_NAME"
+    success "Old volume removed."
+fi
 
 # ── Step 4: Start new postgres (v17) ─────────────────────────────────────────
 info "Step 4/5: Starting postgres:${TARGET_PG_VERSION}-alpine..."
@@ -217,7 +273,10 @@ echo " PostgreSQL upgrade complete!"
 echo -e "======================================${NC}"
 echo ""
 success "Data migrated: v${CURRENT_PG_VERSION} → v${TARGET_PG_VERSION}"
-success "Backup retained at: ${BACKUP_FILE}"
+success "SQL backup retained at: ${BACKUP_FILE}"
+if [[ "$USE_BIND_MOUNT" == true ]]; then
+    success "Old data directory backed up to: ${DATA_SRC}.bak.${TIMESTAMP}"
+fi
 echo ""
 info "Start the full environment with:"
 echo "   docker compose --env-file ${ENV_FILE} -f ${COMPOSE_FILE} up -d"

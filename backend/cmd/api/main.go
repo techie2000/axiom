@@ -283,15 +283,20 @@ func setupRouter(cfg *config.Config, h *handler.Handlers) *gin.Engine {
 		v1.GET("/currencies/:id", h.Currency.Get)
 		v1.GET("/languages", h.Language.List)
 
+		// Public approved translations (read-only, no auth required)
+		v1.GET("/translations", h.UITranslation.ListTranslations)
+
 		// Public LEI data routes (read-only, no auth required)
 		v1.GET("/lei", h.LEI.ListLEI)
 		v1.GET("/lei/import-failures", h.LEI.GetImportProcessingFailures)
 		v1.GET("/lei/level2/failures", h.LEI.GetLevel2ProcessingFailures)
+		v1.GET("/lei/names", h.LEI.GetLegalNamesByLEICodes)
 		v1.GET("/lei-countries", h.LEI.GetDistinctCountries)
 		v1.GET("/lei-categories", h.LEI.GetDistinctCategories)
 		v1.GET("/lei-regions", h.LEI.GetDistinctRegions)
 		v1.GET("/lei-legal-forms", h.LEI.GetDistinctLegalForms)
 		v1.GET("/lei/record/:id", h.LEI.GetLEIByID)
+		v1.GET("/lei/:lei/predecessors", h.LEI.GetPredecessorLEIs)
 		v1.GET("/lei/:lei/audit", h.LEI.GetAuditHistory)
 		v1.GET("/lei/:lei", h.LEI.GetLEIByCode)
 
@@ -307,6 +312,32 @@ func setupRouter(cfg *config.Config, h *handler.Handlers) *gin.Engine {
 				adminAuth.POST("/users/:id/approve", h.Auth.ApproveUser)
 				adminAuth.POST("/users/:id/reject", h.Auth.RejectUser)
 				adminAuth.PUT("/users/:id/role", h.Auth.UpdateUserRole)
+			}
+
+			// User preference routes (any authenticated user)
+			prefs := protected.Group("/preferences")
+			{
+				prefs.GET("", h.UserPreference.GetPreferences)
+				prefs.PUT("", h.UserPreference.SetPreference)
+				prefs.DELETE("", h.UserPreference.DeletePreference)
+			}
+
+			// Translation routes: public listing, authenticated submission, admin review/delete
+			translations := protected.Group("/translations")
+			{
+				translations.POST("", h.UITranslation.SubmitTranslation)
+			}
+			adminTranslations := protected.Group("/translations")
+			adminTranslations.Use(middleware.AdminRequired())
+			{
+				adminTranslations.POST("/:id/approve", h.UITranslation.ApproveTranslation)
+				adminTranslations.POST("/:id/reject", h.UITranslation.RejectTranslation)
+				adminTranslations.DELETE("/:id", h.UITranslation.DeleteTranslation)
+			}
+			adminTranslationList := protected.Group("/admin/translations")
+			adminTranslationList.Use(middleware.AdminRequired())
+			{
+				adminTranslationList.GET("", h.UITranslation.ListAdminTranslations)
 			}
 
 			// Protected write operations for countries and currencies

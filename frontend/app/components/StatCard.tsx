@@ -1,7 +1,8 @@
 interface StatCardProps {
   title: string
   value: string | number
-  accent?: 'green' | 'red' | 'blue' | 'yellow' | 'default'
+  accent?: 'green' | 'red' | 'blue' | 'yellow' | 'purple' | 'gray' | 'default'
+  titleTooltip?: string
 }
 
 const accentClasses: Record<NonNullable<StatCardProps['accent']>, { border: string; text: string; label: string }> = {
@@ -9,14 +10,16 @@ const accentClasses: Record<NonNullable<StatCardProps['accent']>, { border: stri
   red:     { border: 'border-red-200 dark:border-red-500/30',     text: 'text-red-700 dark:text-red-400',     label: 'text-red-700 dark:text-red-400'     },
   blue:    { border: 'border-blue-200 dark:border-blue-500/30',   text: 'text-blue-700 dark:text-blue-400',   label: 'text-blue-700 dark:text-blue-400'   },
   yellow:  { border: 'border-yellow-200 dark:border-yellow-500/30', text: 'text-yellow-700 dark:text-yellow-400', label: 'text-yellow-700 dark:text-yellow-400' },
+  purple:  { border: 'border-purple-200 dark:border-purple-500/30', text: 'text-purple-700 dark:text-purple-400', label: 'text-purple-700 dark:text-purple-400' },
+  gray:    { border: 'border-slate-200 dark:border-slate-500/30', text: 'text-slate-700 dark:text-slate-300', label: 'text-slate-700 dark:text-slate-300' },
   default: { border: 'border-gray-200 dark:border-white/10',      text: 'text-gray-900 dark:text-white',      label: 'text-gray-600 dark:text-gray-400'   },
 }
 
-export default function StatCard({ title, value, accent = 'default' }: StatCardProps) {
+export default function StatCard({ title, value, accent = 'default', titleTooltip }: StatCardProps) {
   const { border, text, label } = accentClasses[accent]
   return (
     <div className={`bg-white dark:bg-white/5 rounded-lg shadow p-6 border-2 ${border}`}>
-      <h3 className={`text-sm font-medium ${label}`}>{title}</h3>
+      <h3 className={`text-sm font-medium ${label}`} title={titleTooltip}>{title}</h3>
       <p className={`text-3xl font-bold mt-2 ${text}`}>{value}</p>
     </div>
   )

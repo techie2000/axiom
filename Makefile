@@ -1,8 +1,8 @@
 .PHONY: help build run test clean migrate-up migrate-down docker-up docker-down
 .PHONY: docker-main-up docker-main-down docker-dev-up docker-dev-down docker-uat-up docker-uat-down docker-prod-up docker-prod-down
 .PHONY: docker-all-up docker-all-down docker-all-status validate-env
-.PHONY: lint lint-docs lint-docs-fix lint-all install-hooks
-.PHONY: smoke-api smoke-ssi
+.PHONY: lint lint-docs lint-docs-fix docs-check docs-check-fix lint-all install-hooks
+.PHONY: smoke-api smoke-ssi cleanup-stale-translations docs-user-install docs-user-ci-install docs-user-build docs-user-check docs-user-dev
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
@@ -40,11 +40,13 @@ docker-logs: ## Show logs from all services (default/legacy)
 # Main branch environment (intraday development/fixes)
 docker-main-up: ## Start main branch environment (ports: 48080, 43000, 45432)
 	@if command -v bash >/dev/null 2>&1; then \
+		bash scripts/ensure-bind-mounts.sh main; \
 		bash scripts/upgrade-postgres.sh main --yes; \
 	elif command -v pwsh >/dev/null 2>&1; then \
+		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/ensure-bind-mounts.ps1 -Environment main; \
 		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/upgrade-postgres.ps1 -Environment main -Yes; \
 	else \
-		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run PostgreSQL upgrade precheck."; \
+		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run bind-mount setup or PostgreSQL upgrade precheck."; \
 		exit 1; \
 	fi
 	docker-compose --env-file .env.main -f docker-compose.main.yml up -d
@@ -57,11 +59,13 @@ docker-main-logs: ## Show logs from main branch environment
 
 docker-main-restart: ## Restart main branch environment
 	@if command -v bash >/dev/null 2>&1; then \
+		bash scripts/ensure-bind-mounts.sh main; \
 		bash scripts/upgrade-postgres.sh main --yes; \
 	elif command -v pwsh >/dev/null 2>&1; then \
+		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/ensure-bind-mounts.ps1 -Environment main; \
 		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/upgrade-postgres.ps1 -Environment main -Yes; \
 	else \
-		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run PostgreSQL upgrade precheck."; \
+		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run bind-mount setup or PostgreSQL upgrade precheck."; \
 		exit 1; \
 	fi
 	docker-compose --env-file .env.main -f docker-compose.main.yml restart
@@ -69,11 +73,13 @@ docker-main-restart: ## Restart main branch environment
 # Development environment
 docker-dev-up: ## Start development environment (ports: 18080, 13000, 15432)
 	@if command -v bash >/dev/null 2>&1; then \
+		bash scripts/ensure-bind-mounts.sh dev; \
 		bash scripts/upgrade-postgres.sh dev --yes; \
 	elif command -v pwsh >/dev/null 2>&1; then \
+		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/ensure-bind-mounts.ps1 -Environment dev; \
 		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/upgrade-postgres.ps1 -Environment dev -Yes; \
 	else \
-		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run PostgreSQL upgrade precheck."; \
+		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run bind-mount setup or PostgreSQL upgrade precheck."; \
 		exit 1; \
 	fi
 	docker-compose --env-file .env.dev -f docker-compose.dev.yml up -d
@@ -86,11 +92,13 @@ docker-dev-logs: ## Show logs from development environment
 
 docker-dev-restart: ## Restart development environment
 	@if command -v bash >/dev/null 2>&1; then \
+		bash scripts/ensure-bind-mounts.sh dev; \
 		bash scripts/upgrade-postgres.sh dev --yes; \
 	elif command -v pwsh >/dev/null 2>&1; then \
+		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/ensure-bind-mounts.ps1 -Environment dev; \
 		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/upgrade-postgres.ps1 -Environment dev -Yes; \
 	else \
-		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run PostgreSQL upgrade precheck."; \
+		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run bind-mount setup or PostgreSQL upgrade precheck."; \
 		exit 1; \
 	fi
 	docker-compose --env-file .env.dev -f docker-compose.dev.yml restart
@@ -248,7 +256,7 @@ lint: ## Run linter
 lint-docs: ## Lint markdown documentation
 	@echo "Linting markdown files..."
 	@if command -v markdownlint > /dev/null 2>&1; then \
-		markdownlint --config .markdownlint.yaml '**/*.md' --ignore node_modules; \
+		markdownlint --config .markdownlint.yaml '**/*.md'; \
 	else \
 		echo "❌ markdownlint-cli not installed. Run: make install-tools"; \
 		exit 1; \
@@ -257,12 +265,39 @@ lint-docs: ## Lint markdown documentation
 lint-docs-fix: ## Auto-fix markdown linting issues
 	@echo "Auto-fixing markdown files..."
 	@if command -v markdownlint > /dev/null 2>&1; then \
-		markdownlint --config .markdownlint.yaml '**/*.md' --ignore node_modules --fix; \
+		markdownlint --config .markdownlint.yaml '**/*.md' --fix; \
 		echo "✅ Markdown auto-fix complete"; \
 	else \
 		echo "❌ markdownlint-cli not installed. Run: make install-tools"; \
 		exit 1; \
 	fi
+
+docs-check: lint-docs ## Canonical markdown validation gate
+
+docs-check-fix: ## Auto-fix then enforce clean markdown lint
+	$(MAKE) lint-docs-fix && $(MAKE) lint-docs
+
+docs-user-install: ## Install user documentation dependencies
+	@echo "Installing user documentation dependencies..."
+	cd docs-user && npm install
+	@echo "✅ User documentation dependencies installed"
+
+docs-user-ci-install: ## Install user documentation dependencies deterministically (CI-style)
+	@echo "Installing user documentation dependencies (npm ci)..."
+	cd docs-user && npm ci
+	@echo "✅ User documentation dependencies installed (CI mode)"
+
+docs-user-build: ## Build the user documentation site (VitePress)
+	@echo "Building user documentation site..."
+	cd docs-user && npm run docs:build
+	@echo "✅ User documentation built in docs-user/.vitepress/dist/"
+
+docs-user-check: docs-user-ci-install docs-user-build ## Canonical local verification gate for docs-user
+	@echo "✅ User documentation check complete"
+
+docs-user-dev: ## Start the user documentation dev server
+	@echo "Starting user documentation dev server..."
+	cd docs-user && npm run docs:dev
 
 lint-all: lint lint-docs ## Run all linters (Go + Markdown)
 
@@ -295,3 +330,6 @@ smoke-api: ## Run API smoke checks (usage: make smoke-api [env=dev|uat|prod|all]
 
 smoke-ssi: ## Run SSI smoke checks (usage: make smoke-ssi [env=dev|uat|prod] [seed=1] [cleanup=1] [timeout=25])
 	@pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/smoke-ssi.ps1 -Environment $${env:-dev} -TimeoutSec $${timeout:-25} $$( [ "$${seed:-0}" = "1" ] && echo "-SeedSmokeData" ) $$( [ "$${cleanup:-0}" = "1" ] && echo "-CleanupSmokeData" )
+
+cleanup-stale-translations: ## Delete stale UI translation rows (usage: make cleanup-stale-translations api=http://localhost:18080 token=<JWT> [whatif=1])
+	@pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/cleanup-stale-translations.ps1 -ApiBaseUrl $${api:-http://localhost:18080} -BearerToken "$${token}" $$( [ "$${whatif:-0}" = "1" ] && echo "-WhatIf" )

@@ -98,6 +98,9 @@ const API_BASE_URL = typeof window !== 'undefined'
 - All components must support dark mode by default
 - Use transparent backgrounds with opacity: `bg-white/5`
 - Avoid hardcoded light-mode colors like `bg-white`, `bg-gray-50`, `text-gray-900`
+- For dark utility panels, overlays, dropdowns, and dev helper surfaces, prefer `zinc`/`neutral`
+  tokens (for example `dark:bg-zinc-900`, `dark:border-zinc-700`, `dark:text-zinc-100`) over cool
+  `gray`/`slate` tones when a blue cast would conflict with the adopted black/grey visual direction.
 - Include `<ThemeToggle />` component in page headers
 - **Dropdowns/Select Elements**: Add explicit dark styling to both select and option elements:
   ```tsx
@@ -179,10 +182,16 @@ EVERY visual change:
 ```tsx
 {/* ✅ CORRECT: Visible in both modes */}
 {loading && (
-  <div className="absolute inset-0 bg-white/70 dark:bg-gray-900/70 backdrop-blur-sm z-50 flex items-center justify-center">
+  <div
+    className="absolute inset-0 bg-white/70 dark:bg-gray-900/70 backdrop-blur-sm z-50 flex items-center justify-center"
+  >
     <div className="bg-white dark:bg-gray-800 px-6 py-4 rounded-lg shadow-lg border-2 border-blue-500">
-      <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 dark:border-gray-700 border-t-blue-600 dark:border-t-blue-400"></div>
-      <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 mt-2">Loading...</p>
+      <div
+        className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 dark:border-gray-700 border-t-blue-600 dark:border-t-blue-400"
+      ></div>
+      <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 mt-2">
+        Loading...
+      </p>
     </div>
   </div>
 )}
@@ -218,6 +227,17 @@ EVERY visual change:
 - Include `Select All` and `Reset Default` actions in the selector.
 - The `Columns` count should reflect current visible column count.
 - Use the LEI Records pattern as the baseline implementation for grouped or ungrouped column selectors.
+- **Column visibility must be backed by `useUserPreference`** (see User Preference Standard below).
+- All visible selector labels/actions must be rendered through i18n keys (`t('...')`).
+  Do not hardcode user-facing labels such as `Save as default`, `Select All`, `Reset`, `Columns`, or group names.
+- Keep icons/decorations outside translation keys where possible (e.g., render `aria-hidden` icon + translated text)
+  so translators only translate semantic text.
+- The selector header action row must use a stable split layout: left group for selection controls, right-aligned
+  persistent save action. Avoid `ml-auto` + `flex-wrap` combinations that misalign under longer translations.
+- Dark/light mode styling must be parity-tested for selector container, sticky header, action buttons, group headers,
+  checkbox rows, hover/focus states, and scrollable regions. No page-specific theme shortcuts.
+- Prefer a shared column selector component in `frontend/app/components/` for repeated selector UI patterns.
+  If a page temporarily inlines selector markup, it must match the shared visual and accessibility behavior exactly.
 
 ### Table Width Toggle Standard (Required)
 - Pages with wide data tables and optional columns must provide an `Expand/Normal` width toggle in the page header.
@@ -227,6 +247,97 @@ EVERY visual change:
   otherwise force immediate horizontal scrolling.
 - Keep horizontal scrolling as a fallback only; do not rely on horizontal scrolling as the primary
   way to access newly enabled columns.
+- **Page width must be backed by `useUserPreference`** (see User Preference Standard below).
+
+### User Preference Standard (Required)
+
+Any page-level setting that a user may reasonably want preserved across sessions and devices
+**must** be wired through the `useUserPreference` hook and accompanied by a `PreferenceSavePrompt`
+toast. Currently mandatory for all pages that expose an `Expand/Normal` width toggle or a column
+selector.
+
+#### Key rules
+
+- Import `useUserPreference` from `frontend/app/lib/useUserPreference.ts`.
+- Import `PreferenceSavePrompt` from `frontend/app/components/PreferenceSavePrompt.tsx`.
+- Use the page's URL slug as the `page_key` (e.g. `'countries'`, `'currencies'`, `'languages'`).
+  Use `'global'` only for truly cross-page preferences such as `theme`.
+- Compute `DEFAULT_VISIBLE_KEYS` **outside** the component (module-level constant) so it is stable.
+- Maintain two layers of state:
+  - **Pending local state** – applied immediately to keep the UI responsive.
+  - **Saved preference** – persisted via `setStoredExpanded` / `setStoredColumns` only when the
+    user confirms the `PreferenceSavePrompt`.
+- Use `effectiveExpandedWidth = localExpanded ?? expandedWidth` (pending takes priority).
+- Place `<PreferenceSavePrompt>` elements **outside** the `max-w-*` container so they are not
+  clipped by overflow or max-width styles.
+- Clear pending refs and local state inside `handleSave*` callbacks.
+- Do **not** clear local state in `handleDismiss*` callbacks — the UI change persists for the
+  session even when the user declines to save.
+
+#### Quick-start
+
+```tsx
+// 1. Expanded width preference
+const [storedExpanded, setStoredExpanded] = useUserPreference('my-page', 'expanded_width', 'true')
+const expandedWidth = storedExpanded === 'true'
+const [localExpanded, setLocalExpanded] = useState<boolean | null>(null)
+const [showWidthPrompt, setShowWidthPrompt] = useState(false)
+const pendingExpanded = useRef<boolean | null>(null)
+const effectiveExpandedWidth = localExpanded ?? expandedWidth
+
+const handleSetExpandedWidth = useCallback((value: boolean) => {
+  setLocalExpanded(value); pendingExpanded.current = value; setShowWidthPrompt(true)
+}, [])
+const handleSaveWidth = useCallback(() => {
+  if (pendingExpanded.current !== null) {
+    setStoredExpanded(String(pendingExpanded.current))
+    setLocalExpanded(null); pendingExpanded.current = null
+  }
+  setShowWidthPrompt(false)
+}, [setStoredExpanded])
+const handleDismissWidth = useCallback(() => { setShowWidthPrompt(false) }, [])
+
+// 2. Column visibility preference (column-selector pages only)
+const DEFAULT_VISIBLE_KEYS = AVAILABLE_COLUMNS.filter((c) => c.defaultVisible).map((c) => c.key).join(',')
+const [storedColumns, setStoredColumns] = useUserPreference('my-page', 'visible_columns', DEFAULT_VISIBLE_KEYS)
+const visibleColumns = useMemo(() => new Set(storedColumns.split(',').filter(Boolean)), [storedColumns])
+const [localColumns, setLocalColumns] = useState<Set<MyColumnKey> | null>(null)
+const [showColumnsPrompt, setShowColumnsPrompt] = useState(false)
+const pendingColumns = useRef<Set<MyColumnKey> | null>(null)
+const effectiveVisibleColumns = localColumns ?? visibleColumns
+```
+
+See docs/ui-patterns.md (User Preferences section) for the full
+step-by-step guide and integration checklist.
+
+#### Reference implementations
+
+| File | Preferences wired |
+| ---- | ----------------- |
+| `frontend/app/lei-records/page.tsx` | `expanded_width`, `visible_columns` |
+| `frontend/app/countries/page.tsx` | `expanded_width`, `visible_columns` |
+| `frontend/app/currencies/page.tsx` | `expanded_width` |
+| `frontend/app/languages/page.tsx` | `expanded_width` |
+
+### Live Preference Reactivity (Required)
+- Preference toggles must apply immediately across mounted components and pages.
+- Any `useUserPreference` write path must emit a global client event
+  (for example `axiom:preference-updated`) with `pageKey`,
+  `preferenceKey`, and `value`.
+- Any `useUserPreference` read path must subscribe to that event and update
+  local state when the same preference key changes elsewhere.
+- Do not rely on page refresh or remount to pick up updated preferences.
+- Keep the server persistence call asynchronous and best-effort; UI state must update first.
+
+### Popover Alignment (Required)
+- User menus/popovers must adapt placement to viewport position and
+  document direction so they stay inside visible content bounds.
+- Avoid hardcoded single-edge anchoring (`right-0` only or `left-0` only) for shared popovers.
+- Prefer dynamic alignment at open time:
+  - anchor right when trigger is on right side of viewport;
+  - anchor left when trigger is on left side of viewport.
+- Apply a viewport-safe max width (for example `max-w-[calc(100vw-1rem)]`) to prevent overflow on narrow screens.
+- Verify both LTR and RTL layouts for overflow, clipping, and visual containment in normal/expanded page-width modes.
 
 ### Wide Table Scroll & Freeze Standard (Required)
 - Wide data tables must provide a **top horizontal scrollbar** synchronized with the main table body scrollbar.
@@ -238,13 +349,16 @@ EVERY visual change:
   above the table header that remains visible during vertical scroll.
 - The Active Filters bar must show removable filter chips and include a single **Clear All** action (LEI pattern).
 - The sticky header offset must account for the Active Filters bar height so header and bar do not overlap.
-- Freeze primary identity columns using sticky positioning so key context remains visible during horizontal scrolling.
+- Freeze primary identity columns using sticky positioning so key context remains
+  visible during horizontal scrolling.
 - For LEI-style entity tables, freeze `LEI` and `Legal Name` by default when visible.
 - Apply the same sticky/frozen behavior consistently to both header (`th`) and body (`td`) cells.
-- Ensure frozen cells define explicit background and z-index layers so content does not bleed through during scroll.
+- Ensure frozen cells define explicit background and z-index layers so content
+  does not bleed through during scroll.
 - Frozen column widths and left offsets must be derived from measured rendered header widths
   (not hard-coded constants alone) to prevent seam drift during horizontal scroll.
-- Add an explicit light+dark separator seam on frozen columns (for example border or inset shadow)
+- Add an explicit light+dark separator seam on frozen columns
+  (for example border or inset shadow)
   so horizontally scrolled cells cannot bleed through divider boundaries.
 - Use the **same seam rendering technique** for both frozen header (`th`) and body (`td`) cells;
   do not mix different seam primitives between header and body.
@@ -527,7 +641,8 @@ export default function MyComponent() {
 **Always** use the shared components from `frontend/app/components/` — do **not** duplicate inline
 markup that already exists as a component. See the full reference in
 docs/ui-patterns.md.
-Keep this as plain text (not a markdown link) because the prompts diagnostics provider can report a false missing-file error.
+Keep this as plain text (not a markdown link) because the prompts diagnostics
+provider can report a false missing-file error.
 
 ### PageHeader
 

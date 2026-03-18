@@ -1,13 +1,22 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import Alert from '../components/Alert'
 import Badge from '../components/Badge'
 import CountryFlag from '../components/CountryFlag'
 import LoadingSpinner from '../components/LoadingSpinner'
 import PageHeader from '../components/PageHeader'
+import PreferenceSavePrompt from '../components/PreferenceSavePrompt'
+import ReferenceDetailList from '../components/ReferenceDetailList'
+import SearchInputWithOverflowTooltip from '../components/SearchInputWithOverflowTooltip'
+import SortableHeaderCell from '../components/SortableHeaderCell'
 import StatCard from '../components/StatCard'
 import SyncedWideTable from '../components/SyncedWideTable'
+import { useDeferredBooleanPreference } from '../lib/useDeferredBooleanPreference'
+import { useEnglishTooltips } from '../lib/useEnglishTooltips'
+import { useUserPreference } from '../lib/useUserPreference'
+import { buildDocsUrl } from '../lib/docsLinks'
 import { Country, normalizeCountriesPayload, summarizeCountriesDataQuality } from './normalization'
 
 type CountryColumnKey =
@@ -27,26 +36,28 @@ type CountryColumnKey =
 
 interface ColumnConfig {
   key: CountryColumnKey
-  label: string
+  labelKey: string
   defaultVisible: boolean
   width?: string
 }
 
 const AVAILABLE_COLUMNS: ColumnConfig[] = [
-  { key: 'flag', label: 'Flag', defaultVisible: true, width: 'w-20' },
-  { key: 'name', label: 'Name', defaultVisible: true, width: 'min-w-56' },
-  { key: 'native_name', label: 'Native Name', defaultVisible: false, width: 'min-w-56' },
-  { key: 'alpha2', label: 'Alpha-2 (Primary)', defaultVisible: true, width: 'w-32' },
-  { key: 'alpha3', label: 'Alpha-3 (Secondary)', defaultVisible: true, width: 'w-36' },
-  { key: 'numeric_code', label: 'Numeric', defaultVisible: false, width: 'w-28' },
-  { key: 'capital', label: 'Capital', defaultVisible: false, width: 'w-40' },
-  { key: 'continent', label: 'Continent', defaultVisible: true, width: 'w-28' },
-  { key: 'region', label: 'Region', defaultVisible: true, width: 'w-44' },
-  { key: 'languages', label: 'Languages', defaultVisible: false, width: 'min-w-36' },
-  { key: 'currency_codes', label: 'Currency Codes', defaultVisible: false, width: 'min-w-36' },
-  { key: 'phone_codes', label: 'Phone Codes', defaultVisible: false, width: 'min-w-40' },
-  { key: 'active', label: 'Active', defaultVisible: false, width: 'w-24' },
+  { key: 'flag', labelKey: 'countries.columns.flag', defaultVisible: true, width: 'w-20' },
+  { key: 'name', labelKey: 'countries.columns.name', defaultVisible: true, width: 'min-w-56' },
+  { key: 'native_name', labelKey: 'countries.columns.nativeName', defaultVisible: false, width: 'min-w-56' },
+  { key: 'alpha2', labelKey: 'countries.columns.alpha2Primary', defaultVisible: true, width: 'w-32' },
+  { key: 'alpha3', labelKey: 'countries.columns.alpha3Secondary', defaultVisible: true, width: 'w-36' },
+  { key: 'numeric_code', labelKey: 'countries.columns.numeric', defaultVisible: false, width: 'w-28' },
+  { key: 'capital', labelKey: 'countries.columns.capital', defaultVisible: false, width: 'w-40' },
+  { key: 'continent', labelKey: 'countries.columns.continent', defaultVisible: true, width: 'w-36' },
+  { key: 'region', labelKey: 'countries.columns.region', defaultVisible: true, width: 'w-44' },
+  { key: 'languages', labelKey: 'countries.columns.languages', defaultVisible: false, width: 'min-w-36' },
+  { key: 'currency_codes', labelKey: 'countries.columns.currencyCodes', defaultVisible: false, width: 'min-w-36' },
+  { key: 'phone_codes', labelKey: 'countries.columns.phoneCodes', defaultVisible: false, width: 'min-w-40' },
+  { key: 'active', labelKey: 'countries.columns.active', defaultVisible: false, width: 'w-24' },
 ]
+
+const DEFAULT_VISIBLE_KEYS = AVAILABLE_COLUMNS.filter((c) => c.defaultVisible).map((c) => c.key).join(',')
 
 const CONTINENT_NAMES: Record<string, string> = {
   AF: 'Africa',
@@ -61,9 +72,20 @@ const CONTINENT_NAMES: Record<string, string> = {
 interface LanguageOption {
   code: string
   name: string
+  [key: string]: unknown
 }
 
+interface CurrencyOption {
+  code: string
+  name: string
+  [key: string]: unknown
+}
+
+const CENTER_ALIGNED_COLUMNS = new Set<CountryColumnKey>(['alpha2', 'alpha3', 'active'])
+
 export default function CountriesPage() {
+  const { t } = useTranslation('common')
+  const { getEnglishTooltip } = useEnglishTooltips()
   const filterBarRef = useRef<HTMLDivElement>(null)
 
   const [countries, setCountries] = useState<Country[]>([])
@@ -74,24 +96,86 @@ export default function CountriesPage() {
   const [continentFilter, setContinentFilter] = useState('')
   const [regionFilter, setRegionFilter] = useState('')
   const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('all')
-  const [languagesByCode, setLanguagesByCode] = useState<Map<string, string>>(new Map())
-  const [showReferenceCodes, setShowReferenceCodes] = useState(false)
-  const [expandedWidth, setExpandedWidth] = useState(true)
+  const [sortField, setSortField] = useState<CountryColumnKey | null>(null)
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+  const [languagesByCode, setLanguagesByCode] = useState<Map<string, LanguageOption>>(new Map())
+  const [currenciesByCode, setCurrenciesByCode] = useState<Map<string, CurrencyOption>>(new Map())
   const [showColumnSelector, setShowColumnSelector] = useState(false)
   const [filterBarHeight, setFilterBarHeight] = useState(0)
-  const [visibleColumns, setVisibleColumns] = useState<Set<CountryColumnKey>>(
-    new Set(AVAILABLE_COLUMNS.filter((column) => column.defaultVisible).map((column) => column.key))
-  )
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+
+  // Preference-backed states
+  const expandedWidthPreference = useDeferredBooleanPreference({
+    pageKey: 'countries',
+    preferenceKey: 'expanded_width',
+    defaultValue: true,
+  })
+  const [storedColumns, setStoredColumns] = useUserPreference('countries', 'visible_columns', DEFAULT_VISIBLE_KEYS)
+  const referenceDisplayPreference = useDeferredBooleanPreference({
+    pageKey: 'countries',
+    preferenceKey: 'display_reference_codes',
+    defaultValue: false,
+  })
+
+  const visibleColumns = useMemo<Set<CountryColumnKey>>(() => {
+    if (!storedColumns) return new Set(AVAILABLE_COLUMNS.filter((c) => c.defaultVisible).map((c) => c.key))
+    return new Set(storedColumns.split(',').filter(Boolean) as CountryColumnKey[])
+  }, [storedColumns])
+
+  // Pending preference state (applies immediately, saves on user confirmation)
+  const [localColumns, setLocalColumns] = useState<Set<CountryColumnKey> | null>(null)
+  const [showColumnsPrompt, setShowColumnsPrompt] = useState(false)
+  // Incrementing this counter resets the 8-second auto-dismiss timer so users
+  // always get 8 s from their *last* column change rather than their first.
+  const [columnsSaveVersion, setColumnsSaveVersion] = useState(0)
+  const pendingColumns = useRef<Set<CountryColumnKey> | null>(null)
+
+  const [hasHydrated, setHasHydrated] = useState(false)
+  const effectiveExpandedWidth = hasHydrated ? expandedWidthPreference.value : true
+  const effectiveVisibleColumns = localColumns ?? visibleColumns
+  const showReferenceCodes = referenceDisplayPreference.value
+
+  useEffect(() => {
+    setHasHydrated(true)
+  }, [])
+
+  const handleSetVisibleColumns = useCallback((next: Set<CountryColumnKey>) => {
+    setLocalColumns(next)
+    pendingColumns.current = next
+    setShowColumnsPrompt(true)
+    setColumnsSaveVersion(v => v + 1)
+  }, [])
+
+  const handleSaveColumns = useCallback(() => {
+    if (pendingColumns.current) {
+      setStoredColumns(Array.from(pendingColumns.current).join(','))
+      setLocalColumns(null)
+      pendingColumns.current = null
+    }
+    setShowColumnsPrompt(false)
+  }, [setStoredColumns])
+
+  const handleDismissColumns = useCallback(() => { setShowColumnsPrompt(false) }, [])
+
+  // Saves the current effective column selection immediately as the stored default,
+  // without requiring a new toast cycle. Column preferences cannot reuse the
+  // hook's saveCurrentValue because they are Set-based (serialised as a
+  // comma-separated string), not a simple boolean managed by the hook.
+  const handleSaveColumnsNow = useCallback(() => {
+    setStoredColumns(Array.from(effectiveVisibleColumns).join(','))
+    setLocalColumns(null)
+    pendingColumns.current = null
+    setShowColumnsPrompt(false)
+  }, [effectiveVisibleColumns, setStoredColumns])
 
   const API_BASE_URL = typeof window !== 'undefined'
     ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080')
     : 'http://backend:8080'
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      fetchCountries()
-      fetchLanguages()
-    }
+    const rawToken = localStorage.getItem('axiom_token')
+    const normalizedToken = rawToken?.replace(/^Bearer\s+/i, '').trim() ?? ''
+    setIsLoggedIn(normalizedToken !== '' && normalizedToken !== 'undefined' && normalizedToken !== 'null')
   }, [])
 
   useEffect(() => {
@@ -128,7 +212,7 @@ export default function CountriesPage() {
     }
   }, [showColumnSelector])
 
-  const fetchLanguages = async () => {
+  const fetchLanguages = useCallback(async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/v1/languages?limit=500&offset=0`, {
         headers: {
@@ -141,21 +225,46 @@ export default function CountriesPage() {
       }
 
       const data = await response.json()
-      const map = new Map<string, string>()
+      const map = new Map<string, LanguageOption>()
       ;(Array.isArray(data) ? data : []).forEach((language: LanguageOption) => {
         const code = String(language?.code || '').trim().toLowerCase()
-        const name = String(language?.name || '').trim()
-        if (code && name) {
-          map.set(code, name)
+        if (code) {
+          map.set(code, language)
         }
       })
       setLanguagesByCode(map)
     } catch {
       // Non-blocking: languages can still render as codes
     }
-  }
+  }, [API_BASE_URL])
 
-  const fetchCountries = async () => {
+  const fetchCurrencies = useCallback(async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/currencies`, {
+        headers: {
+          'Accept': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        return
+      }
+
+      const data = await response.json()
+      const map = new Map<string, CurrencyOption>()
+      ;(Array.isArray(data) ? data : []).forEach((currency: CurrencyOption) => {
+        const code = String(currency?.code || '').trim().toUpperCase()
+        if (code) {
+          map.set(code, currency)
+        }
+      })
+      setCurrenciesByCode(map)
+    } catch {
+      // Non-blocking: currencies can still render as codes
+    }
+  }, [API_BASE_URL])
+
+  const fetchCountries = useCallback(async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/v1/countries`, {
         headers: {
@@ -193,6 +302,34 @@ export default function CountriesPage() {
     } finally {
       setLoading(false)
     }
+  }, [API_BASE_URL])
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      fetchCountries()
+      fetchLanguages()
+      fetchCurrencies()
+    }
+  }, [fetchCountries, fetchLanguages, fetchCurrencies])
+
+  const handleSort = (field: CountryColumnKey) => {
+    if (field === 'flag') {
+      return
+    }
+
+    if (sortField !== field) {
+      setSortField(field)
+      setSortDirection('asc')
+      return
+    }
+
+    if (sortDirection === 'asc') {
+      setSortDirection('desc')
+      return
+    }
+
+    setSortField(null)
+    setSortDirection('asc')
   }
 
   const filteredCountries = countries
@@ -209,41 +346,118 @@ export default function CountriesPage() {
       if (activeFilter === 'active') return country.active
       return !country.active
     })
-    .sort((left, right) => left.name.localeCompare(right.name, undefined, { sensitivity: 'base' }))
+    .sort((left, right) => {
+      if (!sortField) {
+        const defaultNameCompare = left.name.localeCompare(right.name, undefined, { sensitivity: 'base' })
+        if (defaultNameCompare !== 0) {
+          return defaultNameCompare
+        }
 
-  const visibleColumnsInOrder = AVAILABLE_COLUMNS.filter((column) => visibleColumns.has(column.key))
+        return left.alpha2.localeCompare(right.alpha2, undefined, { sensitivity: 'base' })
+      }
+
+      const normalizeCodeList = (values: string[]) => values.map((value) => String(value || '').trim().toUpperCase()).filter(Boolean)
+
+      const getComparableValue = (country: Country): string | number => {
+        switch (sortField) {
+          case 'name':
+            return country.name || ''
+          case 'alpha2':
+            return country.alpha2 || ''
+          case 'alpha3':
+            return country.alpha3 || ''
+          case 'numeric_code':
+            return country.numeric_code || ''
+          case 'native_name':
+            return country.native_name || ''
+          case 'capital':
+            return country.capital || ''
+          case 'continent': {
+            const normalizedCode = String(country.continent || '').trim().toUpperCase()
+            if (showReferenceCodes) {
+              return normalizedCode
+            }
+            return CONTINENT_NAMES[normalizedCode] || normalizedCode
+          }
+          case 'region':
+            return country.region || ''
+          case 'phone_codes':
+            return country.phone_codes.map((value) => String(value || '').trim()).filter(Boolean).map((value) => (value.startsWith('+') ? value : `+${value}`)).join(', ')
+          case 'currency_codes': {
+            const normalizedValues = normalizeCodeList(country.currency_codes)
+            if (showReferenceCodes) {
+              return normalizedValues.join(', ')
+            }
+            return normalizedValues.map((code) => getCurrencyName(code)).join(', ')
+          }
+          case 'languages': {
+            const normalizedValues = country.languages.map((value) => String(value || '').trim().toLowerCase()).filter(Boolean)
+            if (showReferenceCodes) {
+              return normalizedValues.join(', ')
+            }
+            return normalizedValues.map((code) => getLanguageName(code)).join(', ')
+          }
+          case 'active':
+            return Number(country.active)
+          case 'flag':
+          default:
+            return country.name || ''
+        }
+      }
+
+      const leftValue = getComparableValue(left)
+      const rightValue = getComparableValue(right)
+
+      let comparison = 0
+      if (typeof leftValue === 'number' && typeof rightValue === 'number') {
+        comparison = leftValue - rightValue
+      } else {
+        comparison = String(leftValue).localeCompare(String(rightValue), undefined, { sensitivity: 'base', numeric: true })
+      }
+
+      if (comparison === 0) {
+        comparison = left.name.localeCompare(right.name, undefined, { sensitivity: 'base' })
+      }
+
+      if (comparison === 0) {
+        comparison = left.alpha2.localeCompare(right.alpha2, undefined, { sensitivity: 'base' })
+      }
+
+      return sortDirection === 'asc' ? comparison : -comparison
+    })
+
+  const visibleColumnsInOrder = AVAILABLE_COLUMNS.filter((column) => effectiveVisibleColumns.has(column.key))
 
   const toggleColumn = (columnKey: CountryColumnKey) => {
-    const next = new Set(visibleColumns)
+    const next = new Set(effectiveVisibleColumns)
     if (next.has(columnKey)) {
       next.delete(columnKey)
     } else {
       next.add(columnKey)
     }
-    setVisibleColumns(next)
+    handleSetVisibleColumns(next)
   }
 
-  const formatListValue = (values: string[]): string => {
-    if (!values || values.length === 0) return '-'
-    return values.join(', ')
-  }
-
-  const formatLanguageListValue = (values: string[]): string => {
-    if (!values || values.length === 0) return '-'
-
-    if (showReferenceCodes) {
-      return values
-        .map((code) => String(code || '').trim().toLowerCase())
-        .filter(Boolean)
-        .join(', ')
+  const getLanguageName = (code: string): string => {
+    const normalizedCode = String(code || '').trim().toLowerCase()
+    if (!normalizedCode) {
+      return code
     }
 
-    return values
-      .map((code) => {
-        const normalizedCode = String(code || '').trim().toLowerCase()
-        return languagesByCode.get(normalizedCode) || code
-      })
-      .join(', ')
+    const details = languagesByCode.get(normalizedCode)
+    const name = String(details?.name || '').trim()
+    return name || code
+  }
+
+  const getCurrencyName = (code: string): string => {
+    const normalizedCode = String(code || '').trim().toUpperCase()
+    if (!normalizedCode) {
+      return code
+    }
+
+    const details = currenciesByCode.get(normalizedCode)
+    const name = String(details?.name || '').trim()
+    return name || code
   }
 
   const formatPhoneCodeListValue = (values: string[]): string => {
@@ -267,12 +481,28 @@ export default function CountriesPage() {
 
   const getColumnLabel = (column: ColumnConfig): string => {
     if (column.key === 'continent') {
-      return showReferenceCodes ? 'Continent Code' : 'Continent Name'
+      return showReferenceCodes ? t('countries.columns.continentCode') : t('countries.columns.continentName')
     }
     if (column.key === 'languages') {
-      return showReferenceCodes ? 'Language Codes' : 'Language Names'
+      return showReferenceCodes ? t('countries.columns.languageCodes') : t('countries.columns.languageNames')
     }
-    return column.label
+    if (column.key === 'currency_codes') {
+      return showReferenceCodes ? t('countries.columns.currencyCodes') : t('countries.columns.currencyNames')
+    }
+    return t(column.labelKey)
+  }
+
+  const getColumnLabelTranslationKey = (column: ColumnConfig): string => {
+    if (column.key === 'continent') {
+      return showReferenceCodes ? 'countries.columns.continentCode' : 'countries.columns.continentName'
+    }
+    if (column.key === 'languages') {
+      return showReferenceCodes ? 'countries.columns.languageCodes' : 'countries.columns.languageNames'
+    }
+    if (column.key === 'currency_codes') {
+      return showReferenceCodes ? 'countries.columns.currencyCodes' : 'countries.columns.currencyNames'
+    }
+    return column.labelKey
   }
 
   const continentOptions = Array.from(new Set(countries.map((country) => country.continent).filter(Boolean))).sort((a, b) => a.localeCompare(b))
@@ -285,6 +515,7 @@ export default function CountriesPage() {
     )
   ).sort((a, b) => a.localeCompare(b))
   const hasActiveFilters = searchTerm || continentFilter || regionFilter || activeFilter !== 'all'
+  const activeFilterTranslationKey = activeFilter === 'active' ? 'countries.filters.active' : activeFilter === 'inactive' ? 'countries.filters.inactive' : 'countries.filters.all'
 
   const clearFilters = () => {
     setSearchTerm('')
@@ -303,54 +534,81 @@ export default function CountriesPage() {
   }, [hasActiveFilters, searchTerm, continentFilter, regionFilter, activeFilter])
 
   if (loading) {
-    return <LoadingSpinner message="Loading countries..." />
+    return <LoadingSpinner message={t('countries.loading')} />
   }
+
+  const backHref = isLoggedIn ? '/dashboard' : '/home'
 
   return (
     <div className="min-h-screen p-8">
-      <div className={`${expandedWidth ? 'max-w-full' : 'max-w-7xl'} mx-auto transition-all duration-300`}>
+      <div className={`${effectiveExpandedWidth ? 'max-w-full' : 'max-w-7xl'} mx-auto transition-all duration-300`}>
         <PageHeader
-          title="Countries"
-          subtitle="Browse ISO 3166 country codes and reference data"
+          title={t('countries.title')}
+          subtitle={t('countries.subtitle')}
+          titleTooltip={getEnglishTooltip('countries.title')}
+          subtitleTooltip={getEnglishTooltip('countries.subtitle')}
+          backHref={backHref}
+          docsHref={buildDocsUrl('workflows/countries/')}
           actions={
             <>
               <button
-                onClick={() => setExpandedWidth(!expandedWidth)}
+                onClick={expandedWidthPreference.toggle}
                 className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 transition-colors text-white text-sm font-medium"
-                title={expandedWidth ? 'Normal Width' : 'Expanded Width'}
+                title={effectiveExpandedWidth ? getEnglishTooltip('referenceLayout.normalButton') : getEnglishTooltip('referenceLayout.expandButton')}
               >
-                {expandedWidth ? '⬅️ Normal' : '↔️ Expand'}
+                {effectiveExpandedWidth ? t('referenceLayout.normalButton') : t('referenceLayout.expandButton')}
               </button>
+              {expandedWidthPreference.hasUnsavedChanges && (
+                <button
+                  onClick={expandedWidthPreference.saveCurrentValue}
+                  className="px-3 py-2 rounded-lg bg-green-700 hover:bg-green-600 transition-colors text-white text-xs font-medium"
+                  title={getEnglishTooltip('referenceLayout.savePageWidthDefault')}
+                >
+                  💾 Save width
+                </button>
+              )}
               <button
-                onClick={() => setShowReferenceCodes(!showReferenceCodes)}
+                onClick={referenceDisplayPreference.toggle}
                 className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 transition-colors text-white text-sm font-medium"
-                title={showReferenceCodes ? 'Display mode: codes' : 'Display mode: names'}
+                title={showReferenceCodes ? getEnglishTooltip('referenceLayout.displayCodesButton') : getEnglishTooltip('referenceLayout.displayNamesButton')}
               >
-                {showReferenceCodes ? '🏷️ Display: Codes' : '🏷️ Display: Names'}
+                {showReferenceCodes ? t('referenceLayout.displayCodesButton') : t('referenceLayout.displayNamesButton')}
               </button>
               <div className="relative">
                 <button
                   onClick={() => setShowColumnSelector(!showColumnSelector)}
-                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 transition-colors text-white text-sm font-medium"
+                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors text-white text-sm font-medium"
                 >
-                  ⚙️ Columns ({visibleColumns.size})
+                  {t('countries.actions.columns', { count: effectiveVisibleColumns.size })}
                 </button>
 
                 {showColumnSelector && (
                   <div className="absolute right-0 mt-2 w-72 max-h-96 overflow-y-auto bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-white/20 rounded-lg shadow-xl z-50 p-3">
-                    <div className="flex gap-2 text-xs mb-3">
-                      <button
-                        onClick={() => setVisibleColumns(new Set(AVAILABLE_COLUMNS.map((column) => column.key)))}
-                        className="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded hover:bg-blue-200 dark:hover:bg-blue-800"
-                      >
-                        Select All
-                      </button>
-                      <button
-                        onClick={() => setVisibleColumns(new Set(AVAILABLE_COLUMNS.filter((column) => column.defaultVisible).map((column) => column.key)))}
-                        className="px-2 py-1 bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-                      >
-                        Reset
-                      </button>
+                    <div className="mb-3 flex items-start justify-between gap-2 text-xs">
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={() => handleSetVisibleColumns(new Set(AVAILABLE_COLUMNS.map((column) => column.key)))}
+                          className="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-gray-700 dark:text-gray-100 rounded hover:bg-blue-200 dark:hover:bg-gray-600"
+                        >
+                          {t('countries.actions.selectAll')}
+                        </button>
+                        <button
+                          onClick={() => handleSetVisibleColumns(new Set(AVAILABLE_COLUMNS.filter((column) => column.defaultVisible).map((column) => column.key)))}
+                          className="px-2 py-1 bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                        >
+                          {t('countries.actions.reset')}
+                        </button>
+                      </div>
+                      {localColumns !== null && (
+                        <button
+                          onClick={handleSaveColumnsNow}
+                          className="shrink-0 whitespace-nowrap px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded hover:bg-green-200 dark:hover:bg-green-800"
+                          title={getEnglishTooltip('countries.actions.saveAsDefault')}
+                        >
+                          <span aria-hidden="true">💾 </span>
+                          {t('countries.actions.saveAsDefault')}
+                        </button>
+                      )}
                     </div>
                     <div className="space-y-1">
                       {AVAILABLE_COLUMNS.map((column) => (
@@ -360,11 +618,11 @@ export default function CountriesPage() {
                         >
                           <input
                             type="checkbox"
-                            checked={visibleColumns.has(column.key)}
+                            checked={effectiveVisibleColumns.has(column.key)}
                             onChange={() => toggleColumn(column.key)}
                             className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                           />
-                          <span className="text-gray-900 dark:text-white">{getColumnLabel(column)}</span>
+                          <span className="text-gray-900 dark:text-white" title={getEnglishTooltip(getColumnLabelTranslationKey(column))}>{getColumnLabel(column)}</span>
                         </label>
                       ))}
                     </div>
@@ -378,44 +636,52 @@ export default function CountriesPage() {
         {error && (
           <Alert
             variant={error.includes('No countries data') ? 'warning' : 'error'}
-            title={error.includes('No countries data') ? '📋 Notice:' : '⚠️ Error:'}
+            title={error.includes('No countries data') ? t('countries.noticeTitle') : t('countries.errorTitle')}
             className="mb-6"
           >
             {error}
             {error.includes('No countries data') && (
               <p className="text-sm mt-2 opacity-80">
-                💡 Tip: Countries data is typically loaded during initial system setup. Contact your administrator if this data should be available.
+                {t('countries.noDataTip')}
               </p>
             )}
           </Alert>
         )}
 
         {dataQualityWarning && (
-          <Alert variant="warning" title="⚠️ Data Quality:" className="mb-6">
+          <Alert variant="warning" title={t('countries.dataQualityTitle')} className="mb-6">
             {dataQualityWarning}
           </Alert>
         )}
 
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <StatCard title={t('countries.stats.totalCountries')} titleTooltip={getEnglishTooltip('countries.stats.totalCountries')} value={countries.length} />
+          <StatCard title={t('countries.stats.filteredResults')} titleTooltip={getEnglishTooltip('countries.stats.filteredResults')} value={filteredCountries.length} />
+          <StatCard title={t('countries.stats.dataStandard')} titleTooltip={getEnglishTooltip('countries.stats.dataStandard')} value={t('countries.stats.iso3166')} />
+        </div>
+
         <div className="mb-6 bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm rounded-lg p-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
             <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Search</label>
-              <input
+              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">{t('countries.filters.search')}</label>
+              <SearchInputWithOverflowTooltip
                 type="text"
-                placeholder="Search by name or code..."
+                placeholder={t('countries.searchPlaceholder')}
+                title={getEnglishTooltip('countries.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-white/20 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-white/5 text-gray-900 dark:text-white"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Continent</label>
+              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">{t('countries.filters.continent')}</label>
               <select
                 value={continentFilter}
                 onChange={(e) => setContinentFilter(e.target.value)}
+                title={continentFilter || (showReferenceCodes ? getEnglishTooltip('countries.filters.allContinentCodes') : getEnglishTooltip('countries.filters.allContinents'))}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-white/20 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
               >
-                <option value="" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">{showReferenceCodes ? 'All Continent Codes' : 'All Continents'}</option>
+                <option value="" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white" title={showReferenceCodes ? getEnglishTooltip('countries.filters.allContinentCodes') : getEnglishTooltip('countries.filters.allContinents')}>{showReferenceCodes ? t('countries.filters.allContinentCodes') : t('countries.filters.allContinents')}</option>
                 {continentOptions.map((continent) => (
                   <option key={continent} value={continent} className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">
                     {getContinentDisplay(continent)}
@@ -424,13 +690,14 @@ export default function CountriesPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Region</label>
+              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">{t('countries.filters.region')}</label>
               <select
                 value={regionFilter}
                 onChange={(e) => setRegionFilter(e.target.value)}
+                title={regionFilter || getEnglishTooltip('countries.filters.allRegions')}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-white/20 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
               >
-                <option value="" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">All Regions</option>
+                <option value="" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white" title={getEnglishTooltip('countries.filters.allRegions')}>{t('countries.filters.allRegions')}</option>
                 {regionOptions.map((region) => (
                   <option key={region} value={region} className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">
                     {region}
@@ -439,15 +706,16 @@ export default function CountriesPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Status</label>
+              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">{t('countries.filters.status')}</label>
               <select
                 value={activeFilter}
                 onChange={(e) => setActiveFilter(e.target.value as 'all' | 'active' | 'inactive')}
+                title={getEnglishTooltip(activeFilterTranslationKey)}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-white/20 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
               >
-                <option value="all" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">All</option>
-                <option value="active" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">Active</option>
-                <option value="inactive" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">Inactive</option>
+                <option value="all" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white" title={getEnglishTooltip('countries.filters.all')}>{t('countries.filters.all')}</option>
+                <option value="active" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white" title={getEnglishTooltip('countries.filters.active')}>{t('countries.filters.active')}</option>
+                <option value="inactive" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white" title={getEnglishTooltip('countries.filters.inactive')}>{t('countries.filters.inactive')}</option>
               </select>
             </div>
           </div>
@@ -456,17 +724,12 @@ export default function CountriesPage() {
               <button
                 onClick={clearFilters}
                 className="px-6 py-2 rounded-lg bg-white hover:bg-gray-100 dark:bg-gray-600 dark:hover:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-transparent transition-colors font-medium shadow-sm"
+                title={getEnglishTooltip('actions.clearFilters')}
               >
-                ✕ Clear Filters
+                {t('actions.clearFilters')}
               </button>
             </div>
           )}
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <StatCard title="Total Countries" value={countries.length} />
-          <StatCard title="Filtered Results" value={filteredCountries.length} />
-          <StatCard title="Data Standard" value="ISO 3166" />
         </div>
 
         {hasActiveFilters && (
@@ -476,13 +739,14 @@ export default function CountriesPage() {
           >
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-semibold text-blue-900 dark:text-blue-100">Active Filters:</span>
+                <span className="text-xs font-semibold text-blue-900 dark:text-blue-100">{t('filters.activeFilters')}</span>
                 {searchTerm && (
                   <button
                     onClick={() => setSearchTerm('')}
                     className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors"
+                    title={getEnglishTooltip('filters.searchChip', { value: searchTerm })}
                   >
-                    Search: {searchTerm} ✕
+                    {t('filters.searchChip', { value: searchTerm })}
                   </button>
                 )}
                 {continentFilter && (
@@ -490,31 +754,34 @@ export default function CountriesPage() {
                     onClick={() => setContinentFilter('')}
                     className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors"
                   >
-                    Continent: {getContinentDisplay(continentFilter)} ✕
+                    {t('countries.filters.continentChip', { value: getContinentDisplay(continentFilter) })}
                   </button>
                 )}
                 {regionFilter && (
                   <button
                     onClick={() => setRegionFilter('')}
                     className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors"
+                    title={getEnglishTooltip('countries.filters.regionChip', { value: regionFilter })}
                   >
-                    Region: {regionFilter} ✕
+                    {t('countries.filters.regionChip', { value: regionFilter })}
                   </button>
                 )}
                 {activeFilter !== 'all' && (
                   <button
                     onClick={() => setActiveFilter('all')}
                     className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors"
+                    title={getEnglishTooltip('countries.filters.statusChip', { value: t(`countries.filters.${activeFilter}`, { lng: 'en' }) })}
                   >
-                    Status: {activeFilter} ✕
+                    {t('countries.filters.statusChip', { value: t(`countries.filters.${activeFilter}`) })}
                   </button>
                 )}
               </div>
               <button
                 onClick={clearFilters}
                 className="px-3 py-1 text-xs rounded-lg bg-white hover:bg-gray-100 dark:bg-blue-600 dark:hover:bg-blue-700 text-blue-900 dark:text-white border border-blue-300 dark:border-transparent transition-colors font-medium shadow-sm"
+                title={getEnglishTooltip('filters.clearAll')}
               >
-                ✕ Clear All
+                {t('filters.clearAll')}
               </button>
             </div>
           </div>
@@ -523,16 +790,20 @@ export default function CountriesPage() {
         <div className="bg-white dark:bg-white/5 rounded-lg shadow border-2 border-gray-200 dark:border-white/10">
           <SyncedWideTable
             stickyTopOffset={hasActiveFilters ? filterBarHeight : 0}
-            dependencyKey={`${expandedWidth}-${showReferenceCodes}-${visibleColumnsInOrder.map((column) => column.key).join('|')}-${filteredCountries.length}`}
+            dependencyKey={`${effectiveExpandedWidth}-${showReferenceCodes}-${visibleColumnsInOrder.map((column) => column.key).join('|')}-${filteredCountries.length}`}
             headerRow={(
               <tr>
                 {visibleColumnsInOrder.map((column) => (
-                  <th
+                  <SortableHeaderCell
                     key={column.key}
-                    className={`${column.width || 'min-w-32'} px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-800`}
-                  >
-                    {getColumnLabel(column)}
-                  </th>
+                    className={`${column.width || 'min-w-32'} px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-800`}
+                    align={CENTER_ALIGNED_COLUMNS.has(column.key) ? 'center' : 'left'}
+                    sortable={column.key !== 'flag'}
+                    label={<span title={getEnglishTooltip(getColumnLabelTranslationKey(column))}>{getColumnLabel(column)}</span>}
+                    onSort={column.key === 'flag' ? undefined : () => handleSort(column.key)}
+                    isActiveSort={sortField === column.key}
+                    sortDirection={sortDirection}
+                  />
                 ))}
               </tr>
             )}
@@ -545,7 +816,7 @@ export default function CountriesPage() {
                         switch (column.key) {
                           case 'flag':
                             return (
-                              <td key={column.key} className="px-6 py-4 whitespace-nowrap" title={country.name}>
+                              <td key={column.key} className="px-6 py-4 whitespace-nowrap align-top" title={country.name}>
                                 <CountryFlag
                                   countryCode={country.alpha2 || country.code}
                                   title={country.name}
@@ -555,79 +826,102 @@ export default function CountriesPage() {
                             )
                           case 'name':
                             return (
-                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white align-top">
                                 {country.name}
                               </td>
                             )
                           case 'alpha2':
                             return (
-                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-center align-top">
                                 <Badge variant="blue" mono>{country.alpha2 || '-'}</Badge>
                               </td>
                             )
                           case 'alpha3':
                             return (
-                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-center align-top">
                                 <Badge variant="green" mono>{country.alpha3 || '-'}</Badge>
                               </td>
                             )
                           case 'numeric_code':
                             return (
-                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 font-mono">
+                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 font-mono align-top">
                                 {country.numeric_code || '-'}
                               </td>
                             )
                           case 'native_name':
                             return (
-                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 align-top">
                                 {country.native_name || '-'}
                               </td>
                             )
                           case 'capital':
                             return (
-                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 align-top">
                                 {country.capital || '-'}
                               </td>
                             )
                           case 'continent':
                             return (
-                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 align-top">
                                 {getContinentDisplay(country.continent)}
                               </td>
                             )
                           case 'region':
                             return (
-                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 align-top">
                                 {country.region || '-'}
                               </td>
                             )
                           case 'phone_codes':
                             return (
-                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 align-top">
                                 {formatPhoneCodeListValue(country.phone_codes)}
                               </td>
                             )
                           case 'currency_codes':
                             return (
-                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                                {formatListValue(country.currency_codes)}
+                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 whitespace-normal break-words align-top">
+                                <ReferenceDetailList
+                                  values={country.currency_codes}
+                                  normalizeValue={(value) => String(value || '').trim().toUpperCase()}
+                                  getDisplayValue={(normalizedValue) => (showReferenceCodes ? normalizedValue : getCurrencyName(normalizedValue))}
+                                  getDetails={(normalizedValue) => currenciesByCode.get(normalizedValue)}
+                                  preferredOrder={[
+                                    'code',
+                                    'name',
+                                    'symbol',
+                                    'symbol_native',
+                                    'decimal_digits',
+                                    'rounding',
+                                    'name_plural',
+                                    'active',
+                                    'is_alert_cls_allowed',
+                                    'is_ofac_sanctioned',
+                                  ]}
+                                />
                               </td>
                             )
                           case 'languages':
                             return (
-                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                                {formatLanguageListValue(country.languages)}
+                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 whitespace-normal break-words align-top">
+                                <ReferenceDetailList
+                                  values={country.languages}
+                                  normalizeValue={(value) => String(value || '').trim().toLowerCase()}
+                                  getDisplayValue={(normalizedValue) => (showReferenceCodes ? normalizedValue : getLanguageName(normalizedValue))}
+                                  getDetails={(normalizedValue) => languagesByCode.get(normalizedValue)}
+                                  preferredOrder={['code', 'name', 'native', 'rtl']}
+                                />
                               </td>
                             )
                           case 'active':
                             return (
-                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm">
-                                {country.active ? <Badge variant="green" shape="pill">Active</Badge> : <Badge variant="gray" shape="pill">Inactive</Badge>}
+                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-center">
+                                {country.active ? <Badge variant="green" shape="pill">{t('countries.filters.active')}</Badge> : <Badge variant="gray" shape="pill">{t('countries.filters.inactive')}</Badge>}
                               </td>
                             )
                           default:
                             return (
-                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">-
+                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 align-top">-
                               </td>
                             )
                         }
@@ -637,7 +931,7 @@ export default function CountriesPage() {
                 ) : (
                   <tr>
                     <td colSpan={visibleColumnsInOrder.length || 1} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
-                      No countries found matching your search
+                      {t('countries.emptyWithSearch')}
                     </td>
                   </tr>
                 )}
@@ -647,9 +941,31 @@ export default function CountriesPage() {
         </div>
 
         <div className="mt-6 text-center text-sm text-gray-500">
-          <p>Data source: ISO 3166 Country Codes • Public reference data</p>
+          <p>{t('countries.footer')}</p>
         </div>
       </div>
+
+      <PreferenceSavePrompt
+        visible={expandedWidthPreference.showPrompt}
+        resetKey={expandedWidthPreference.promptResetKey}
+        onSave={expandedWidthPreference.save}
+        onDismiss={expandedWidthPreference.dismiss}
+        label={t('referenceLayout.savePageWidthDefault')}
+      />
+      <PreferenceSavePrompt
+        visible={showColumnsPrompt}
+        resetKey={columnsSaveVersion}
+        onSave={handleSaveColumns}
+        onDismiss={handleDismissColumns}
+        label={t('countries.prompts.saveColumnsDefault')}
+      />
+      <PreferenceSavePrompt
+        visible={referenceDisplayPreference.showPrompt}
+        resetKey={referenceDisplayPreference.promptResetKey}
+        onSave={referenceDisplayPreference.save}
+        onDismiss={referenceDisplayPreference.dismiss}
+        label={t('referenceLayout.saveDisplayModeDefault')}
+      />
     </div>
   )
 }

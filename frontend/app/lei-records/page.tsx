@@ -1,14 +1,22 @@
 'use client'
 
-import { useEffect, useMemo, useState, useRef } from 'react'
+import { MouseEvent as ReactMouseEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import Alert from '../components/Alert'
 import CountryFlag from '../components/CountryFlag'
+import LEIOtherNamesList from '../components/LEIOtherNamesList'
 import PageHeader from '../components/PageHeader'
+import PreferenceSavePrompt from '../components/PreferenceSavePrompt'
+import ReferenceDetailList from '../components/ReferenceDetailList'
 import SearchInputWithOverflowTooltip from '../components/SearchInputWithOverflowTooltip'
 import StatCard from '../components/StatCard'
 import SyncedWideTable from '../components/SyncedWideTable'
+import { useDeferredBooleanPreference } from '../lib/useDeferredBooleanPreference'
+import { buildDocsUrl } from '../lib/docsLinks'
+import { useEnglishTooltips } from '../lib/useEnglishTooltips'
+import { useUserPreference } from '../lib/useUserPreference'
 import { formatEnumDisplayValue, formatLEICellValue, getStatusBadgePresentation, normalizeRecordNullLikeValues } from './null-utils'
+import { useTranslation } from 'react-i18next'
 
 interface LEIRecord {
   id: string
@@ -50,6 +58,8 @@ interface LEIRecord {
   // Associated Entities
   managing_lou: string
   successor_lei: string
+  managing_lou_legal_name?: string
+  successor_lei_legal_name?: string
   
   // Dates
   registration_date: string
@@ -62,17 +72,30 @@ interface LEIRecord {
   validation_authority: string
 }
 
+interface RelatedLEIReference {
+  lei: string
+  legal_name: string
+}
+
 interface Country {
   code: string
   name: string
+  alpha3_code?: string
   region?: string
   active: boolean
+  [key: string]: unknown
+}
+
+interface LanguageOption {
+  code: string
+  name: string
+  [key: string]: unknown
 }
 
 interface ColumnConfig {
   key: keyof LEIRecord
-  label: string
-  group: string
+  labelKey: string
+  groupKey: string
   defaultVisible: boolean
   width?: string
 }
@@ -83,53 +106,60 @@ const VIRTUAL_COLUMN_DEPENDENCIES: Partial<Record<keyof LEIRecord, Array<keyof L
 
 const AVAILABLE_COLUMNS: ColumnConfig[] = [
   // Core fields
-  { key: 'lei', label: 'LEI', group: 'Core', defaultVisible: true, width: 'w-44' },
-  { key: 'legal_name', label: 'Legal Name', group: 'Core', defaultVisible: true, width: 'min-w-64' },
-  { key: 'entity_status', label: 'Status', group: 'Core', defaultVisible: true, width: 'w-32' },
-  { key: 'entity_category', label: 'Category', group: 'Core', defaultVisible: true, width: 'w-40' },
-  { key: 'country_flag', label: 'Country Flag', group: 'Core', defaultVisible: false, width: 'w-20' },
-  { key: 'legal_address_country', label: 'Country', group: 'Core', defaultVisible: true, width: 'w-24' },
-  { key: 'last_update_date', label: 'Last Updated', group: 'Core', defaultVisible: true, width: 'w-32' },
+  { key: 'lei', labelKey: 'leiRecords.columns.labels.lei', groupKey: 'leiRecords.columns.groups.core', defaultVisible: true, width: 'w-44' },
+  { key: 'legal_name', labelKey: 'leiRecords.columns.labels.legalName', groupKey: 'leiRecords.columns.groups.core', defaultVisible: true, width: 'min-w-96' },
+  { key: 'entity_status', labelKey: 'leiRecords.columns.labels.status', groupKey: 'leiRecords.columns.groups.core', defaultVisible: true, width: 'w-32' },
+  { key: 'entity_category', labelKey: 'leiRecords.columns.labels.category', groupKey: 'leiRecords.columns.groups.core', defaultVisible: true, width: 'w-40' },
+  { key: 'country_flag', labelKey: 'leiRecords.columns.labels.countryFlag', groupKey: 'leiRecords.columns.groups.core', defaultVisible: false, width: 'w-20' },
+  { key: 'legal_address_country', labelKey: 'leiRecords.columns.labels.countryName', groupKey: 'leiRecords.columns.groups.core', defaultVisible: true, width: 'w-24' },
+  { key: 'last_update_date', labelKey: 'leiRecords.columns.labels.lastUpdated', groupKey: 'leiRecords.columns.groups.core', defaultVisible: true, width: 'w-32' },
   
   // Additional Entity Info
-  { key: 'transliterated_legal_name', label: 'Transliterated Name', group: 'Entity', defaultVisible: false, width: 'min-w-64' },
-  { key: 'entity_sub_category', label: 'Sub Category', group: 'Entity', defaultVisible: false, width: 'w-40' },
-  { key: 'entity_legal_form', label: 'Legal Form', group: 'Entity', defaultVisible: false, width: 'w-40' },
+  { key: 'transliterated_legal_name', labelKey: 'leiRecords.columns.labels.transliteratedName', groupKey: 'leiRecords.columns.groups.entity', defaultVisible: false, width: 'min-w-64' },
+  { key: 'entity_sub_category', labelKey: 'leiRecords.columns.labels.subCategory', groupKey: 'leiRecords.columns.groups.entity', defaultVisible: false, width: 'w-40' },
+  { key: 'entity_legal_form', labelKey: 'leiRecords.columns.labels.legalFormName', groupKey: 'leiRecords.columns.groups.entity', defaultVisible: false, width: 'w-40' },
   
   // Legal Address (natural order: address lines, then city/region/country/postal)
-  { key: 'legal_address_line_1', label: 'Address Line 1', group: 'Legal Address', defaultVisible: false, width: 'min-w-48' },
-  { key: 'legal_address_line_2', label: 'Address Line 2', group: 'Legal Address', defaultVisible: false, width: 'min-w-48' },
-  { key: 'legal_address_line_3', label: 'Address Line 3', group: 'Legal Address', defaultVisible: false, width: 'min-w-48' },
-  { key: 'legal_address_line_4', label: 'Address Line 4', group: 'Legal Address', defaultVisible: false, width: 'min-w-48' },
-  { key: 'legal_address_city', label: 'City', group: 'Legal Address', defaultVisible: false, width: 'w-40' },
-  { key: 'legal_address_region', label: 'Region', group: 'Legal Address', defaultVisible: false, width: 'w-32' },
-  { key: 'legal_address_postal_code', label: 'Postal Code', group: 'Legal Address', defaultVisible: false, width: 'w-28' },
+  { key: 'legal_address_line_1', labelKey: 'leiRecords.columns.labels.legalAddressLine1', groupKey: 'leiRecords.columns.groups.legalAddress', defaultVisible: false, width: 'min-w-48' },
+  { key: 'legal_address_line_2', labelKey: 'leiRecords.columns.labels.legalAddressLine2', groupKey: 'leiRecords.columns.groups.legalAddress', defaultVisible: false, width: 'min-w-48' },
+  { key: 'legal_address_line_3', labelKey: 'leiRecords.columns.labels.legalAddressLine3', groupKey: 'leiRecords.columns.groups.legalAddress', defaultVisible: false, width: 'min-w-48' },
+  { key: 'legal_address_line_4', labelKey: 'leiRecords.columns.labels.legalAddressLine4', groupKey: 'leiRecords.columns.groups.legalAddress', defaultVisible: false, width: 'min-w-48' },
+  { key: 'legal_address_city', labelKey: 'leiRecords.columns.labels.legalCity', groupKey: 'leiRecords.columns.groups.legalAddress', defaultVisible: false, width: 'w-40' },
+  { key: 'legal_address_region', labelKey: 'leiRecords.columns.labels.regionName', groupKey: 'leiRecords.columns.groups.legalAddress', defaultVisible: false, width: 'w-32' },
+  { key: 'legal_address_postal_code', labelKey: 'leiRecords.columns.labels.legalPostalCode', groupKey: 'leiRecords.columns.groups.legalAddress', defaultVisible: false, width: 'w-28' },
   
   // HQ Address (natural order: address lines, then city/region/country/postal)
-  { key: 'hq_address_line_1', label: 'HQ Address Line 1', group: 'HQ Address', defaultVisible: false, width: 'min-w-48' },
-  { key: 'hq_address_line_2', label: 'HQ Address Line 2', group: 'HQ Address', defaultVisible: false, width: 'min-w-48' },
-  { key: 'hq_address_line_3', label: 'HQ Address Line 3', group: 'HQ Address', defaultVisible: false, width: 'min-w-48' },
-  { key: 'hq_address_line_4', label: 'HQ Address Line 4', group: 'HQ Address', defaultVisible: false, width: 'min-w-48' },
-  { key: 'hq_address_city', label: 'HQ City', group: 'HQ Address', defaultVisible: false, width: 'w-40' },
-  { key: 'hq_address_region', label: 'HQ Region', group: 'HQ Address', defaultVisible: false, width: 'w-32' },
-  { key: 'hq_address_country', label: 'HQ Country', group: 'HQ Address', defaultVisible: false, width: 'w-24' },
-  { key: 'hq_address_postal_code', label: 'HQ Postal Code', group: 'HQ Address', defaultVisible: false, width: 'w-28' },
+  { key: 'hq_address_line_1', labelKey: 'leiRecords.columns.labels.hqAddressLine1', groupKey: 'leiRecords.columns.groups.hqAddress', defaultVisible: false, width: 'min-w-48' },
+  { key: 'hq_address_line_2', labelKey: 'leiRecords.columns.labels.hqAddressLine2', groupKey: 'leiRecords.columns.groups.hqAddress', defaultVisible: false, width: 'min-w-48' },
+  { key: 'hq_address_line_3', labelKey: 'leiRecords.columns.labels.hqAddressLine3', groupKey: 'leiRecords.columns.groups.hqAddress', defaultVisible: false, width: 'min-w-48' },
+  { key: 'hq_address_line_4', labelKey: 'leiRecords.columns.labels.hqAddressLine4', groupKey: 'leiRecords.columns.groups.hqAddress', defaultVisible: false, width: 'min-w-48' },
+  { key: 'hq_address_city', labelKey: 'leiRecords.columns.labels.hqCity', groupKey: 'leiRecords.columns.groups.hqAddress', defaultVisible: false, width: 'w-40' },
+  { key: 'hq_address_region', labelKey: 'leiRecords.columns.labels.hqRegionName', groupKey: 'leiRecords.columns.groups.hqAddress', defaultVisible: false, width: 'w-32' },
+  { key: 'hq_address_country', labelKey: 'leiRecords.columns.labels.hqCountryName', groupKey: 'leiRecords.columns.groups.hqAddress', defaultVisible: false, width: 'w-24' },
+  { key: 'hq_address_postal_code', labelKey: 'leiRecords.columns.labels.hqPostalCode', groupKey: 'leiRecords.columns.groups.hqAddress', defaultVisible: false, width: 'w-28' },
   
   // Registration
-  { key: 'registration_authority', label: 'Registration Authority', group: 'Registration', defaultVisible: false, width: 'w-48' },
-  { key: 'registration_number', label: 'Registration Number', group: 'Registration', defaultVisible: false, width: 'w-40' },
-  { key: 'initial_registration_date', label: 'Initial Registration', group: 'Registration', defaultVisible: false, width: 'w-36' },
-  { key: 'next_renewal_date', label: 'Next Renewal', group: 'Registration', defaultVisible: false, width: 'w-32' },
+  { key: 'registration_authority', labelKey: 'leiRecords.columns.labels.registrationAuthority', groupKey: 'leiRecords.columns.groups.registration', defaultVisible: false, width: 'w-48' },
+  { key: 'registration_number', labelKey: 'leiRecords.columns.labels.registrationNumber', groupKey: 'leiRecords.columns.groups.registration', defaultVisible: false, width: 'w-40' },
+  { key: 'initial_registration_date', labelKey: 'leiRecords.columns.labels.initialRegistration', groupKey: 'leiRecords.columns.groups.registration', defaultVisible: false, width: 'w-36' },
+  { key: 'next_renewal_date', labelKey: 'leiRecords.columns.labels.nextRenewal', groupKey: 'leiRecords.columns.groups.registration', defaultVisible: false, width: 'w-32' },
   
   // Associated Entities
-  { key: 'managing_lou', label: 'Managing LOU', group: 'Associated', defaultVisible: false, width: 'w-40' },
-  { key: 'successor_lei', label: 'Successor LEI', group: 'Associated', defaultVisible: false, width: 'w-44' },
-  
+  { key: 'managing_lou', labelKey: 'leiRecords.columns.labels.managingLou', groupKey: 'leiRecords.columns.groups.associated', defaultVisible: false, width: 'w-40' },
+  { key: 'successor_lei', labelKey: 'leiRecords.columns.labels.successorLei', groupKey: 'leiRecords.columns.groups.associated', defaultVisible: false, width: 'w-44' },
+
   // Validation
-  { key: 'validation_authority', label: 'Validation Authority', group: 'Validation', defaultVisible: false, width: 'w-40' },
+  { key: 'validation_authority', labelKey: 'leiRecords.columns.labels.validationAuthority', groupKey: 'leiRecords.columns.groups.validation', defaultVisible: false, width: 'w-40' },
 ]
 
+// Pre-computed default visible column keys for use as preference default value.
+const DEFAULT_VISIBLE_KEYS = AVAILABLE_COLUMNS.filter(col => col.defaultVisible).map(col => col.key).join(',')
+const COUNTRY_DETAIL_ORDER = ['code', 'name', 'alpha3_code', 'region', 'active']
+
 export default function LEIRecordsPage() {
+  const { t } = useTranslation('common')
+  const { getEnglishTooltip } = useEnglishTooltips()
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [records, setRecords] = useState<LEIRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -143,7 +173,7 @@ export default function LEIRecordsPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [totalRecords, setTotalRecords] = useState(0)
   const [countryOptions, setCountryOptions] = useState<Country[]>([])
-  const [categoryOptionsFromAPI, setCategoryOptionsFromAPI] = useState<string[]>([])
+  const [languagesByCode, setLanguagesByCode] = useState<Map<string, LanguageOption>>(new Map())
   const [regionNameByCode, setRegionNameByCode] = useState<Map<string, string>>(new Map())
   const [legalFormNameByCode, setLegalFormNameByCode] = useState<Map<string, string>>(new Map())
   const [itemsPerPage, setItemsPerPage] = useState(50)
@@ -153,48 +183,117 @@ export default function LEIRecordsPage() {
   const [filterBarHeight, setFilterBarHeight] = useState(0)
   const countryDropdownRef = useRef<HTMLDivElement>(null)
   const filterBarRef = useRef<HTMLDivElement>(null)
-  const [stickyColumnWidths, setStickyColumnWidths] = useState<number[]>([])
-  
+
+  // Preference-backed column visibility – serialised as a comma-separated list in the store.
+  const [storedColumns, setStoredColumns] = useUserPreference('lei-records', 'visible_columns', DEFAULT_VISIBLE_KEYS)
+  const expandedWidthPreference = useDeferredBooleanPreference({
+    pageKey: 'lei-records',
+    preferenceKey: 'expanded_width',
+    defaultValue: false,
+  })
+  const locationDisplayPreference = useDeferredBooleanPreference({
+    pageKey: 'lei-records',
+    preferenceKey: 'display_location_codes',
+    defaultValue: false,
+  })
+
+  const visibleColumns = useMemo<Set<keyof LEIRecord>>(() => {
+    if (!storedColumns) return new Set(AVAILABLE_COLUMNS.filter(col => col.defaultVisible).map(col => col.key))
+    return new Set(storedColumns.split(',').filter(Boolean) as Array<keyof LEIRecord>)
+  }, [storedColumns])
+
+  // Prompt to save preference when user changes columns or width.
+  const [showColumnSavePrompt, setShowColumnSavePrompt] = useState(false)
+  // Incrementing these counters resets the 8-second auto-dismiss timer in
+  // PreferenceSavePrompt so users always get 8 s from their *last* change.
+  const [columnSaveVersion, setColumnSaveVersion] = useState(0)
+  // Track whether the current value differs from the stored preference.
+  const pendingColumns = useRef<Set<keyof LEIRecord> | null>(null)
+
+  // Apply pending column changes immediately (local state) even before saving.
+  const [localColumns, setLocalColumns] = useState<Set<keyof LEIRecord> | null>(null)
+
+  const effectiveVisibleColumns = localColumns ?? visibleColumns
+  const [hasHydrated, setHasHydrated] = useState(false)
+  const effectiveExpandedWidth = hasHydrated ? expandedWidthPreference.value : false
+  const showLocationCodes = locationDisplayPreference.value
+
+  useEffect(() => {
+    setHasHydrated(true)
+  }, [])
+
+  const handleSetVisibleColumns = useCallback((newCols: Set<keyof LEIRecord>) => {
+    setLocalColumns(newCols)
+    pendingColumns.current = newCols
+    setShowColumnSavePrompt(true)
+    setColumnSaveVersion(v => v + 1)
+  }, [])
+
+  const handleSaveColumns = useCallback(() => {
+    if (pendingColumns.current) {
+      setStoredColumns(Array.from(pendingColumns.current).join(','))
+      setLocalColumns(null)
+      pendingColumns.current = null
+    }
+    setShowColumnSavePrompt(false)
+  }, [setStoredColumns])
+
+  const handleDismissColumns = useCallback(() => {
+    setShowColumnSavePrompt(false)
+  }, [])
+
+  const toggleLocationDisplayMode = locationDisplayPreference.toggle
+
   // New features
-  const [visibleColumns, setVisibleColumns] = useState<Set<keyof LEIRecord>>(
-    new Set(AVAILABLE_COLUMNS.filter(col => col.defaultVisible).map(col => col.key))
-  )
-  const [expandedWidth, setExpandedWidth] = useState(false)
   const [selectedRecord, setSelectedRecord] = useState<LEIRecord | null>(null)
   const [showColumnSelector, setShowColumnSelector] = useState(false)
   const [managingLouName, setManagingLouName] = useState<string | null>(null)
-  const [managingLouNames, setManagingLouNames] = useState<Map<string, string>>(new Map())
+  const [managingLouNameLoading, setManagingLouNameLoading] = useState(false)
+  const [managingLouNames, setManagingLouNames] = useState<Map<string, string | null>>(new Map())
+  const [successorLeiName, setSuccessorLeiName] = useState<string | null>(null)
+  const [successorLeiNameLoading, setSuccessorLeiNameLoading] = useState(false)
+  const [successorLeiNames, setSuccessorLeiNames] = useState<Map<string, string | null>>(new Map())
+  const [predecessorLeiReferences, setPredecessorLeiReferences] = useState<RelatedLEIReference[]>([])
+  const [predecessorLeiCache, setPredecessorLeiCache] = useState<Map<string, RelatedLEIReference[]>>(new Map())
+  const [predecessorLeiLoading, setPredecessorLeiLoading] = useState(false)
+  const [stickyColumnWidths, setStickyColumnWidths] = useState<number[]>([])
   const [dateDisplayMode, setDateDisplayMode] = useState<'relative' | 'absolute'>('relative')
-  const [showLocationCodes, setShowLocationCodes] = useState(false)
+  const recordsRequestControllerRef = useRef<AbortController | null>(null)
 
   const API_BASE_URL = typeof window !== 'undefined' 
     ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080')
     : 'http://backend:8080'
 
+  const normalizeLeiCode = useCallback((value: string | null | undefined): string => {
+    return String(value || '').trim().toUpperCase()
+  }, [])
+
   const statusOptions = ['ACTIVE', 'INACTIVE', 'LAPSED', 'MERGED', 'RETIRED', 'NULL']
 
-  const isNotSetStatusFilterValue = (value: string): boolean => {
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const rawToken = localStorage.getItem('axiom_token')
+    const normalizedToken = rawToken?.replace(/^Bearer\s+/i, '').trim() ?? ''
+    setIsLoggedIn(normalizedToken !== '' && normalizedToken !== 'undefined' && normalizedToken !== 'null')
+  }, [])
+
+  const backHref = isLoggedIn ? '/dashboard' : '/home'
+
+  const isNotSetStatusFilterValue = useCallback((value: string): boolean => {
     const normalized = value.trim().replaceAll(' ', '_').toUpperCase()
     return normalized === 'NULL' || normalized === 'NOT_SET'
-  }
+  }, [])
 
-  const formatStatusFilterLabel = (value: string): string => {
+  const formatStatusFilterLabel = useCallback((value: string): string => {
     return isNotSetStatusFilterValue(value) ? 'Not Set' : value
-  }
+  }, [isNotSetStatusFilterValue])
 
-  const normalizeStatusFilterForAPI = (value: string): string => {
+  const normalizeStatusFilterForAPI = useCallback((value: string): string => {
     return isNotSetStatusFilterValue(value) ? 'NULL' : value
-  }
+  }, [isNotSetStatusFilterValue])
 
   const categoryOptions = useMemo(() => {
     const values = new Set<string>()
-
-    categoryOptionsFromAPI.forEach((category) => {
-      const trimmed = (category || '').trim()
-      if (trimmed && trimmed.toUpperCase() !== 'NULL') {
-        values.add(trimmed)
-      }
-    })
 
     records.forEach((record) => {
       const category = (record.entity_category || '').trim()
@@ -208,36 +307,67 @@ export default function LEIRecordsPage() {
     }
 
     return Array.from(values).sort((lhs, rhs) => lhs.localeCompare(rhs))
-  }, [categoryOptionsFromAPI, categoryFilter, records])
+  }, [categoryFilter, records])
 
-  // Fetch countries and categories list on mount
+  const countryByCode = useMemo(() => {
+    const map = new Map<string, Country>()
+    countryOptions.forEach((country) => {
+      const code = String(country?.code || '').trim().toUpperCase()
+      if (code) {
+        map.set(code, country)
+      }
+    })
+    return map
+  }, [countryOptions])
+
+  // Fetch country list on mount.
   useEffect(() => {
     const fetchFilterOptions = async () => {
       try {
-        const [countriesResponse, categoriesResponse] = await Promise.all([
-          fetch(`${API_BASE_URL}/api/v1/lei-countries`),
-          fetch(`${API_BASE_URL}/api/v1/lei-categories`),
-        ])
+        const countriesResult = await fetch(`${API_BASE_URL}/api/v1/lei-countries`)
 
-        if (countriesResponse.ok) {
-          const data: Country[] = await countriesResponse.json()
+        if (countriesResult.ok) {
+          const data: Country[] = await countriesResult.json()
           // Sort by country name
           const sortedCountries = (data || []).sort((a, b) => a.name.localeCompare(b.name))
           setCountryOptions(sortedCountries)
         }
-
-        if (categoriesResponse.ok) {
-          const data: string[] = await categoriesResponse.json()
-          const sanitized = (data || [])
-            .map((category) => (category || '').trim())
-            .filter((category) => category !== '' && category.toUpperCase() !== 'NULL')
-          setCategoryOptionsFromAPI(sanitized)
-        }
-      } catch (err) {
-        console.error('Failed to fetch LEI filter options:', err)
+      } catch {
+        // Optional filter metadata should not block page rendering.
       }
     }
     fetchFilterOptions()
+  }, [API_BASE_URL])
+
+  // Fetch language metadata for rendering other_names.language values.
+  useEffect(() => {
+    const fetchLanguages = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/v1/languages?limit=500&offset=0`, {
+          headers: {
+            Accept: 'application/json',
+          },
+        })
+
+        if (!response.ok) {
+          return
+        }
+
+        const data = await response.json()
+        const map = new Map<string, LanguageOption>()
+        ;(Array.isArray(data) ? data : []).forEach((language: LanguageOption) => {
+          const code = String(language?.code || '').trim().toLowerCase()
+          if (code) {
+            map.set(code, language)
+          }
+        })
+        setLanguagesByCode(map)
+      } catch {
+        // Non-blocking: other_names can still render language codes.
+      }
+    }
+
+    fetchLanguages()
   }, [API_BASE_URL])
 
   // Fetch total records count from API
@@ -261,56 +391,6 @@ export default function LEIRecordsPage() {
     // Refresh every 30 seconds to get live updates during sync
     const interval = setInterval(fetchTotalRecords, 30000)
     return () => clearInterval(interval)
-  }, [API_BASE_URL])
-
-  // Fetch region and legal form resolver maps from backend metadata endpoints
-  useEffect(() => {
-    const fetchDisplayResolvers = async () => {
-      try {
-        const [regionsResponse, legalFormsResponse] = await Promise.all([
-          fetch(`${API_BASE_URL}/api/v1/lei-regions`),
-          fetch(`${API_BASE_URL}/api/v1/lei-legal-forms`),
-        ])
-
-        if (regionsResponse.ok) {
-          const regionsData: string[] = await regionsResponse.json()
-          const nextRegionMap = new Map<string, string>()
-
-          ;(regionsData || []).forEach((region) => {
-            const rawValue = typeof region === 'string' ? region.trim() : ''
-            if (!rawValue) return
-
-            const normalizedCode = rawValue.toUpperCase()
-            if (!nextRegionMap.has(normalizedCode)) {
-              nextRegionMap.set(normalizedCode, rawValue)
-            }
-          })
-
-          setRegionNameByCode(nextRegionMap)
-        }
-
-        if (legalFormsResponse.ok) {
-          const legalFormsData: string[] = await legalFormsResponse.json()
-          const nextLegalFormMap = new Map<string, string>()
-
-          ;(legalFormsData || []).forEach((legalForm) => {
-            const rawValue = typeof legalForm === 'string' ? legalForm.trim() : ''
-            if (!rawValue) return
-
-            const normalizedCode = rawValue.toUpperCase()
-            if (!nextLegalFormMap.has(normalizedCode)) {
-              nextLegalFormMap.set(normalizedCode, rawValue)
-            }
-          })
-
-          setLegalFormNameByCode(nextLegalFormMap)
-        }
-      } catch (err) {
-        console.error('Failed to fetch display resolver metadata:', err)
-      }
-    }
-
-    fetchDisplayResolvers()
   }, [API_BASE_URL])
 
   // Close country dropdown when clicking outside
@@ -351,14 +431,15 @@ export default function LEIRecordsPage() {
     return () => clearTimeout(timer)
   }, [searchTerm])
 
-  // Fetch records when filters, page, or visible columns change
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      fetchRecords()
+  const fetchRecords = useCallback(async () => {
+    if (recordsRequestControllerRef.current) {
+      recordsRequestControllerRef.current.abort()
     }
-  }, [currentPage, debouncedSearch, statusFilter, categoryFilter, countryFilter, itemsPerPage, sortField, sortDirection, visibleColumns])
 
-  const fetchRecords = async () => {
+    const controller = new AbortController()
+    recordsRequestControllerRef.current = controller
+    const timeoutId = window.setTimeout(() => controller.abort(), 15000)
+
     try {
       setLoading(true)
       const offset = (currentPage - 1) * itemsPerPage
@@ -373,14 +454,18 @@ export default function LEIRecordsPage() {
       if (statusFilter) params.append('status', normalizeStatusFilterForAPI(statusFilter))
       if (categoryFilter) params.append('category', categoryFilter)
       if (countryFilter) params.append('country', countryFilter)
-      if (sortField && !isVirtualColumnKey(sortField)) params.append('sortBy', sortField)
-      if (sortDirection) params.append('sortOrder', sortDirection)
+
+      // Preserve backend default ordering unless user explicitly chooses a column sort.
+      if (sortField && !isVirtualColumnKey(sortField)) {
+        params.append('sortBy', sortField)
+        params.append('sortOrder', sortDirection)
+      }
       
       // Send visible columns for dynamic SELECT optimization
       // Backend will fetch only the columns requested
       // Always include other_names for search result display (shown inline with legal_name)
-      const columnsToFetch = Array.from(visibleColumns).filter(key => !isVirtualColumnKey(key))
-      const dependentColumns = getDependentColumnsForVisibleColumns(visibleColumns)
+      const columnsToFetch = Array.from(effectiveVisibleColumns).filter(key => !isVirtualColumnKey(key))
+      const dependentColumns = getDependentColumnsForVisibleColumns(effectiveVisibleColumns)
       dependentColumns.forEach((column) => {
         if (!columnsToFetch.includes(column)) {
           columnsToFetch.push(column)
@@ -397,7 +482,8 @@ export default function LEIRecordsPage() {
         {
           headers: {
             'Accept': 'application/json'
-          }
+          },
+          signal: controller.signal,
         }
       )
 
@@ -420,12 +506,50 @@ export default function LEIRecordsPage() {
         setError(`API returned ${response.status}: ${response.statusText}`)
       }
     } catch (err) {
-      console.error('LEI Records fetch error:', err)
-      setError('Unable to connect to backend API.')
+      if (controller.signal.aborted) {
+        if (recordsRequestControllerRef.current !== controller) {
+          return
+        }
+        setError('The LEI request took too long. Please retry or narrow your filters.')
+      } else {
+        console.error('LEI Records fetch error:', err)
+        setError('Unable to connect to backend API.')
+      }
     } finally {
-      setLoading(false)
+      window.clearTimeout(timeoutId)
+      if (recordsRequestControllerRef.current === controller) {
+        recordsRequestControllerRef.current = null
+        setLoading(false)
+      }
     }
-  }
+  }, [
+    API_BASE_URL,
+    categoryFilter,
+    countryFilter,
+    currentPage,
+    debouncedSearch,
+    effectiveVisibleColumns,
+    itemsPerPage,
+    normalizeStatusFilterForAPI,
+    sortDirection,
+    sortField,
+    statusFilter,
+  ])
+
+  useEffect(() => {
+    return () => {
+      if (recordsRequestControllerRef.current) {
+        recordsRequestControllerRef.current.abort()
+      }
+    }
+  }, [])
+
+  // Fetch records when filters, page, or visible columns change
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      fetchRecords()
+    }
+  }, [fetchRecords])
 
   const clearFilters = () => {
     setSearchTerm('')
@@ -451,13 +575,13 @@ export default function LEIRecordsPage() {
   }
 
   const toggleColumn = (columnKey: keyof LEIRecord) => {
-    const newColumns = new Set(visibleColumns)
+    const newColumns = new Set(effectiveVisibleColumns)
     if (newColumns.has(columnKey)) {
       newColumns.delete(columnKey)
     } else {
       newColumns.add(columnKey)
     }
-    setVisibleColumns(newColumns)
+    handleSetVisibleColumns(newColumns)
   }
 
   // Calculate relative time from a date
@@ -543,14 +667,36 @@ export default function LEIRecordsPage() {
     }
   }
 
+  const handleLinkedLeiClick = async (event: ReactMouseEvent, leiCode: string) => {
+    event.stopPropagation()
+    const normalizedLeiCode = (leiCode || '').trim()
+    if (!normalizedLeiCode) {
+      return
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/lei/${normalizedLeiCode}`)
+      if (response.ok) {
+        const fullRecord = await response.json()
+        setSelectedRecord(normalizeRecordNullLikeValues(fullRecord))
+      }
+    } catch {
+      // Best-effort navigation to related LEI detail.
+    }
+  }
+
   // Fetch managing LOU name when modal opens
   useEffect(() => {
     const fetchManagingLouName = async () => {
       if (!selectedRecord?.managing_lou) {
         setManagingLouName(null)
+        setManagingLouNameLoading(false)
         return
       }
-      
+
+      setManagingLouNameLoading(true)
+      setManagingLouName(null)
+
       try {
         const response = await fetch(`${API_BASE_URL}/api/v1/lei/${selectedRecord.managing_lou}`)
         if (response.ok) {
@@ -562,90 +708,190 @@ export default function LEIRecordsPage() {
       } catch (err) {
         console.error('Failed to fetch managing LOU name:', err)
         setManagingLouName(null)
+      } finally {
+        setManagingLouNameLoading(false)
       }
     }
-    
+
     fetchManagingLouName()
   }, [selectedRecord, API_BASE_URL])
 
-  // Fetch managing LOU names for all records in table
+  // Fetch successor LEI name when modal opens
+  useEffect(() => {
+    const fetchSuccessorLeiName = async () => {
+      if (!selectedRecord?.successor_lei) {
+        setSuccessorLeiName(null)
+        setSuccessorLeiNameLoading(false)
+        return
+      }
+
+      setSuccessorLeiNameLoading(true)
+      setSuccessorLeiName(null)
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/v1/lei/${selectedRecord.successor_lei}`)
+        if (response.ok) {
+          const data = await response.json()
+          setSuccessorLeiName(data.legal_name || null)
+        } else {
+          setSuccessorLeiName(null)
+        }
+      } catch {
+        setSuccessorLeiName(null)
+      } finally {
+        setSuccessorLeiNameLoading(false)
+      }
+    }
+
+    fetchSuccessorLeiName()
+  }, [selectedRecord, API_BASE_URL])
+
+  // Fetch predecessor LEI references that point to the selected LEI as successor.
+  useEffect(() => {
+    const fetchPredecessorLeiReferences = async () => {
+      if (!selectedRecord?.lei) {
+        setPredecessorLeiReferences([])
+        setPredecessorLeiLoading(false)
+        return
+      }
+
+      const selectedLei = selectedRecord.lei.trim()
+      const cachedReferences = predecessorLeiCache.get(selectedLei)
+      if (cachedReferences) {
+        setPredecessorLeiReferences(cachedReferences)
+        setPredecessorLeiLoading(false)
+        return
+      }
+
+      setPredecessorLeiLoading(true)
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/v1/lei/${selectedLei}/predecessors`)
+        if (!response.ok) {
+          setPredecessorLeiReferences([])
+          setPredecessorLeiCache((previous) => {
+            const next = new Map(previous)
+            next.set(selectedLei, [])
+            return next
+          })
+          return
+        }
+
+        const data: LEIRecord[] = await response.json()
+        const references = (data || [])
+          .filter((record) => (record?.lei || '').trim() !== '')
+          .map((record) => ({
+            lei: String(record.lei || '').trim(),
+            legal_name: String(record.legal_name || '').trim(),
+          }))
+
+        setPredecessorLeiReferences(references)
+        setPredecessorLeiCache((previous) => {
+          const next = new Map(previous)
+          next.set(selectedLei, references)
+          return next
+        })
+      } catch {
+        setPredecessorLeiReferences([])
+        setPredecessorLeiCache((previous) => {
+          const next = new Map(previous)
+          next.set(selectedLei, [])
+          return next
+        })
+      } finally {
+        setPredecessorLeiLoading(false)
+      }
+    }
+
+    fetchPredecessorLeiReferences()
+  }, [selectedRecord?.lei, API_BASE_URL, predecessorLeiCache])
+
+  // Shared helper: batch-fetch legal names for a set of LEI codes using a single HTTP request.
+  // Returns a map of LEI code → legal name for codes found in the database.
+  const fetchLegalNamesBatch = useCallback(async (codes: string[]): Promise<Map<string, string>> => {
+    if (codes.length === 0) return new Map()
+    const params = new URLSearchParams({ codes: codes.join(',') })
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/lei/names?${params}`)
+      if (!response.ok) return new Map()
+      const data: Record<string, string> = await response.json()
+      return new Map(Object.entries(data))
+    } catch {
+      return new Map()
+    }
+  }, [API_BASE_URL])
+
+  const mergeNameCacheWithMisses = useCallback(
+    (
+      previous: Map<string, string | null>,
+      requestedCodes: string[],
+      fetched: Map<string, string>
+    ): Map<string, string | null> => {
+      const next = new Map(previous)
+      requestedCodes.forEach((code) => {
+        next.set(code, fetched.get(code) ?? null)
+      })
+      return next
+    },
+    []
+  )
+
+  // Fetch managing LOU names for all records in table (single batch request).
   useEffect(() => {
     const fetchManagingLouNamesForTable = async () => {
-      // Get unique managing LOU codes from current records
       const uniqueLouCodes = Array.from(
         new Set(
           records
-            .filter(r => r.managing_lou && r.managing_lou.trim() !== '')
-            .map(r => r.managing_lou)
+            .map((r) => normalizeLeiCode(r.managing_lou))
+            .filter((code): code is string => code !== '')
         )
       )
-      
+
       if (uniqueLouCodes.length === 0) return
-      
-      // Only fetch codes we don't have yet
-      const codesToFetch = uniqueLouCodes.filter(code => !managingLouNames.has(code))
+
+      const codesToFetch = uniqueLouCodes.filter((code) => !managingLouNames.has(code))
       if (codesToFetch.length === 0) return
-      
-      // Fetch names for missing codes
-      const newNames = new Map(managingLouNames)
-      await Promise.all(
-        codesToFetch.map(async (code) => {
-          try {
-            const response = await fetch(`${API_BASE_URL}/api/v1/lei/${code}`)
-            if (response.ok) {
-              const data = await response.json()
-              if (data.legal_name) {
-                newNames.set(code, data.legal_name)
-              }
-            }
-          } catch (err) {
-            console.error(`Failed to fetch LOU name for ${code}:`, err)
-          }
-        })
-      )
-      
-      setManagingLouNames(newNames)
+
+      const fetched = await fetchLegalNamesBatch(codesToFetch)
+
+      setManagingLouNames((prev) => {
+        return mergeNameCacheWithMisses(prev, codesToFetch, fetched)
+      })
     }
-    
+
     if (records.length > 0) {
       fetchManagingLouNamesForTable()
     }
-  }, [records, API_BASE_URL])
+  }, [records, managingLouNames, fetchLegalNamesBatch, mergeNameCacheWithMisses, normalizeLeiCode])
 
-  // Parse other_names JSONB field
-  interface OtherName {
-    name: string
-    type: string
-    language?: string
-  }
+  // Fetch successor LEI names for all records in table (single batch request).
+  useEffect(() => {
+    const fetchSuccessorLeiNamesForTable = async () => {
+      const uniqueSuccessorLeiCodes = Array.from(
+        new Set(
+          records
+            .map((r) => normalizeLeiCode(r.successor_lei))
+            .filter((code): code is string => code !== '')
+        )
+      )
 
-  const parseOtherNames = (otherNamesData: any): OtherName[] => {
-    // Handle null/undefined
-    if (!otherNamesData) return []
-    
-    // If it's already an array (fetch() auto-parsed JSON), use it directly
-    if (Array.isArray(otherNamesData)) {
-      return otherNamesData
+      if (uniqueSuccessorLeiCodes.length === 0) return
+
+      const codesToFetch = uniqueSuccessorLeiCodes.filter((code) => !successorLeiNames.has(code))
+      if (codesToFetch.length === 0) return
+
+      const fetched = await fetchLegalNamesBatch(codesToFetch)
+
+      setSuccessorLeiNames((prev) => {
+        return mergeNameCacheWithMisses(prev, codesToFetch, fetched)
+      })
     }
-    
-    // If it's a string, try to parse it
-    if (typeof otherNamesData === 'string') {
-      if (otherNamesData === '[]' || otherNamesData === 'null' || otherNamesData === '') return []
-      if (otherNamesData.startsWith('Array(')) return [] // Handle "Array(0)" etc
-      
-      try {
-        const parsed = JSON.parse(otherNamesData)
-        return Array.isArray(parsed) ? parsed : []
-      } catch (e) {
-        console.error('Failed to parse other_names string:', otherNamesData, e)
-        return []
-      }
+
+    if (records.length > 0) {
+      fetchSuccessorLeiNamesForTable()
     }
-    
-    // Unknown type
-    console.error('Unexpected other_names type:', typeof otherNamesData, otherNamesData)
-    return []
-  }
+  }, [records, successorLeiNames, fetchLegalNamesBatch, mergeNameCacheWithMisses, normalizeLeiCode])
+
 
   const formatCellValue = (value: any, key: keyof LEIRecord): string => {
     return formatLEICellValue(value, key)
@@ -674,7 +920,14 @@ export default function LEIRecordsPage() {
     const normalizedCode = (countryCode || '').trim().toUpperCase()
     if (!normalizedCode) return null
 
-    return countryOptions.find(c => c.code.toUpperCase() === normalizedCode)?.name || null
+    return countryByCode.get(normalizedCode)?.name || null
+  }
+
+  const getCountryDetailsByCode = (countryCode: string): Country | undefined => {
+    const normalizedCode = (countryCode || '').trim().toUpperCase()
+    if (!normalizedCode) return undefined
+
+    return countryByCode.get(normalizedCode)
   }
 
   const getRegionNameByCode = (regionCode: string): string | null => {
@@ -735,21 +988,40 @@ export default function LEIRecordsPage() {
 
   const getColumnLabel = (column: ColumnConfig): string => {
     if (column.key === 'entity_legal_form') {
-      return showLocationCodes ? 'Legal Form Code' : 'Legal Form Name'
+      return showLocationCodes ? t('leiRecords.columns.labels.legalFormCode') : t('leiRecords.columns.labels.legalFormName')
     }
     if (column.key === 'legal_address_region') {
-      return showLocationCodes ? 'Region Code' : 'Region Name'
+      return showLocationCodes ? t('leiRecords.columns.labels.regionCode') : t('leiRecords.columns.labels.regionName')
     }
     if (column.key === 'hq_address_region') {
-      return showLocationCodes ? 'HQ Region Code' : 'HQ Region Name'
+      return showLocationCodes ? t('leiRecords.columns.labels.hqRegionCode') : t('leiRecords.columns.labels.hqRegionName')
     }
     if (column.key === 'legal_address_country') {
-      return showLocationCodes ? 'Country Code' : 'Country Name'
+      return showLocationCodes ? t('leiRecords.columns.labels.countryCode') : t('leiRecords.columns.labels.countryName')
     }
     if (column.key === 'hq_address_country') {
-      return showLocationCodes ? 'HQ Country Code' : 'HQ Country Name'
+      return showLocationCodes ? t('leiRecords.columns.labels.hqCountryCode') : t('leiRecords.columns.labels.hqCountryName')
     }
-    return column.label
+    return t(column.labelKey)
+  }
+
+  const getColumnLabelTranslationKey = (column: ColumnConfig): string => {
+    if (column.key === 'entity_legal_form') {
+      return showLocationCodes ? 'leiRecords.columns.labels.legalFormCode' : 'leiRecords.columns.labels.legalFormName'
+    }
+    if (column.key === 'legal_address_region') {
+      return showLocationCodes ? 'leiRecords.columns.labels.regionCode' : 'leiRecords.columns.labels.regionName'
+    }
+    if (column.key === 'hq_address_region') {
+      return showLocationCodes ? 'leiRecords.columns.labels.hqRegionCode' : 'leiRecords.columns.labels.hqRegionName'
+    }
+    if (column.key === 'legal_address_country') {
+      return showLocationCodes ? 'leiRecords.columns.labels.countryCode' : 'leiRecords.columns.labels.countryName'
+    }
+    if (column.key === 'hq_address_country') {
+      return showLocationCodes ? 'leiRecords.columns.labels.hqCountryCode' : 'leiRecords.columns.labels.hqCountryName'
+    }
+    return column.labelKey
   }
 
   const isHqAddressSameAsLegal = (record: LEIRecord): boolean => {
@@ -774,17 +1046,17 @@ export default function LEIRecordsPage() {
   const getColumnsByGroup = () => {
     const groups: Record<string, ColumnConfig[]> = {}
     AVAILABLE_COLUMNS.forEach(col => {
-      if (!groups[col.group]) groups[col.group] = []
-      groups[col.group].push(col)
+      if (!groups[col.groupKey]) groups[col.groupKey] = []
+      groups[col.groupKey].push(col)
     })
     return groups
   }
 
-  const toggleGroupColumns = (group: string) => {
-    const groupColumns = AVAILABLE_COLUMNS.filter(col => col.group === group)
-    const allGroupColumnsVisible = groupColumns.every(col => visibleColumns.has(col.key))
-    
-    const newVisibleColumns = new Set(visibleColumns)
+  const toggleGroupColumns = (groupKey: string) => {
+    const groupColumns = AVAILABLE_COLUMNS.filter(col => col.groupKey === groupKey)
+    const allGroupColumnsVisible = groupColumns.every(col => effectiveVisibleColumns.has(col.key))
+
+    const newVisibleColumns = new Set(effectiveVisibleColumns)
     if (allGroupColumnsVisible) {
       // If all are visible, hide them all
       groupColumns.forEach(col => newVisibleColumns.delete(col.key))
@@ -792,27 +1064,25 @@ export default function LEIRecordsPage() {
       // If some or none are visible, show them all
       groupColumns.forEach(col => newVisibleColumns.add(col.key))
     }
-    setVisibleColumns(newVisibleColumns)
+    handleSetVisibleColumns(newVisibleColumns)
   }
 
-  const isGroupFullySelected = (group: string) => {
-    const groupColumns = AVAILABLE_COLUMNS.filter(col => col.group === group)
-    return groupColumns.every(col => visibleColumns.has(col.key))
+  const isGroupFullySelected = (groupKey: string) => {
+    const groupColumns = AVAILABLE_COLUMNS.filter(col => col.groupKey === groupKey)
+    return groupColumns.every(col => effectiveVisibleColumns.has(col.key))
   }
 
-  const isGroupPartiallySelected = (group: string) => {
-    const groupColumns = AVAILABLE_COLUMNS.filter(col => col.group === group)
-    const visibleCount = groupColumns.filter(col => visibleColumns.has(col.key)).length
+  const isGroupPartiallySelected = (groupKey: string) => {
+    const groupColumns = AVAILABLE_COLUMNS.filter(col => col.groupKey === groupKey)
+    const visibleCount = groupColumns.filter(col => effectiveVisibleColumns.has(col.key)).length
     return visibleCount > 0 && visibleCount < groupColumns.length
   }
 
   const totalPages = Math.ceil(totalRecords / itemsPerPage)
   const hasActiveFilters = debouncedSearch || statusFilter || categoryFilter || countryFilter
-  const visibleColumnsInOrder = AVAILABLE_COLUMNS.filter((col) => visibleColumns.has(col.key))
+  const visibleColumnsInOrder = AVAILABLE_COLUMNS.filter((col) => effectiveVisibleColumns.has(col.key))
   const LEI_COLUMN_WIDTH_PX = 184
-  const LEGAL_NAME_COLUMN_WIDTH_PX = 320
   const leiColumnIndex = visibleColumnsInOrder.findIndex((column) => column.key === 'lei')
-  const legalNameColumnIndex = visibleColumnsInOrder.findIndex((column) => column.key === 'legal_name')
 
   const getMeasuredColumnWidth = (columnIndex: number, fallbackWidth: number): number => {
     if (columnIndex < 0) {
@@ -828,11 +1098,9 @@ export default function LEIRecordsPage() {
   }
 
   const leiColumnWidth = getMeasuredColumnWidth(leiColumnIndex, LEI_COLUMN_WIDTH_PX)
-  const legalNameColumnWidth = getMeasuredColumnWidth(legalNameColumnIndex, LEGAL_NAME_COLUMN_WIDTH_PX)
 
   const getPinnedColumnWidth = (columnKey: keyof LEIRecord): number | null => {
     if (columnKey === 'lei') return leiColumnWidth
-    if (columnKey === 'legal_name') return legalNameColumnWidth
     return null
   }
 
@@ -873,7 +1141,7 @@ export default function LEIRecordsPage() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center py-20">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            <p className="mt-4 opacity-70">Loading LEI records...</p>
+            <p className="mt-4 opacity-70">{t('leiRecords.loading')}</p>
           </div>
         </div>
       </div>
@@ -882,71 +1150,79 @@ export default function LEIRecordsPage() {
 
   return (
     <div className="min-h-screen p-8">
-      <div className={`${expandedWidth ? 'max-w-full' : 'max-w-7xl'} mx-auto transition-all duration-300`}>
+      <div className={`${effectiveExpandedWidth ? 'max-w-full' : 'max-w-7xl'} mx-auto transition-all duration-300`}>
         <PageHeader
-          title="LEI Records"
-          subtitle="GLEIF Legal Entity Identifiers (ISO 17442)"
+          title={t('leiRecords.title')}
+          subtitle={t('leiRecords.subtitle')}
+          titleTooltip={getEnglishTooltip('leiRecords.title')}
+          subtitleTooltip={getEnglishTooltip('leiRecords.subtitle')}
+          backHref={backHref}
+          docsHref={buildDocsUrl('workflows/lei-records/')}
           actions={
             <>
               <button
-                onClick={() => setExpandedWidth(!expandedWidth)}
+                onClick={expandedWidthPreference.toggle}
                 className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 transition-colors text-white text-sm font-medium flex items-center gap-2"
-                title={expandedWidth ? 'Normal Width' : 'Expanded Width'}
+                 title={effectiveExpandedWidth ? getEnglishTooltip('referenceLayout.normalButton') : getEnglishTooltip('referenceLayout.expandButton')}
               >
-                {expandedWidth ? '⬅️ Normal' : '↔️ Expand'}
+                 {effectiveExpandedWidth ? t('referenceLayout.normalButton') : t('referenceLayout.expandButton')}
               </button>
 
               <div className="relative">
                 <button
                   onClick={() => setShowColumnSelector(!showColumnSelector)}
-                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 transition-colors text-white text-sm font-medium flex items-center gap-2"
+                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors text-white text-sm font-medium flex items-center gap-2"
+                  title={getEnglishTooltip('leiRecords.columns.button')}
                 >
-                  ⚙️ Columns ({visibleColumns.size})
+                  {t('leiRecords.columns.button', { count: effectiveVisibleColumns.size })}
                 </button>
 
                 {showColumnSelector && (
                   <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-white/20 rounded-lg shadow-xl z-50">
                     <div className="sticky top-0 bg-white dark:bg-gray-800 border-b-2 border-gray-200 dark:border-white/10 p-3">
                       <div className="flex justify-between items-center mb-2">
-                        <h3 className="font-semibold text-gray-900 dark:text-white">Select Columns</h3>
+                        <h3 className="font-semibold text-gray-900 dark:text-white">{t('leiRecords.columns.selector.title')}</h3>
                         <button
                           onClick={() => setShowColumnSelector(false)}
                           className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                          title={t('common.close')}
                         >
                           ✕
                         </button>
                       </div>
                       <div className="flex gap-2 text-xs">
                         <button
-                          onClick={() => setVisibleColumns(new Set(AVAILABLE_COLUMNS.map(c => c.key)))}
-                          className="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded hover:bg-blue-200 dark:hover:bg-blue-800"
+                          onClick={() => handleSetVisibleColumns(new Set(AVAILABLE_COLUMNS.map(c => c.key)))}
+                          className="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-gray-700 dark:text-gray-100 rounded hover:bg-blue-200 dark:hover:bg-gray-600"
+                          title={getEnglishTooltip('leiRecords.columns.selector.selectAll')}
                         >
-                          Select All
+                          {t('leiRecords.columns.selector.selectAll')}
                         </button>
                         <button
-                          onClick={() => setVisibleColumns(new Set(AVAILABLE_COLUMNS.filter(c => c.defaultVisible).map(c => c.key)))}
+                          onClick={() => handleSetVisibleColumns(new Set(AVAILABLE_COLUMNS.filter(c => c.defaultVisible).map(c => c.key)))}
                           className="px-2 py-1 bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                          title={getEnglishTooltip('leiRecords.columns.selector.resetToDefault')}
                         >
-                          Reset to Default
+                          {t('leiRecords.columns.selector.resetToDefault')}
                         </button>
                       </div>
                     </div>
 
-                    {Object.entries(getColumnsByGroup()).map(([group, columns]) => (
-                      <div key={group} className="border-b border-gray-200 dark:border-white/10 last:border-b-0">
+                    {Object.entries(getColumnsByGroup()).map(([groupKey, columns]) => (
+                      <div key={groupKey} className="border-b border-gray-200 dark:border-white/10 last:border-b-0">
                         <div
-                          onClick={() => toggleGroupColumns(group)}
+                          onClick={() => toggleGroupColumns(groupKey)}
                           className="px-3 py-2.5 bg-gray-50 dark:bg-gray-700 font-semibold text-sm text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors flex items-center justify-between gap-3"
-                          title={`Click to toggle all ${group} columns`}
+                          title={getEnglishTooltip('leiRecords.columns.selector.toggleGroup')}
                         >
                           <span className="flex items-center gap-2.5">
                             <span className="text-base leading-none">
-                              {isGroupFullySelected(group) ? '☑' : isGroupPartiallySelected(group) ? '◐' : '☐'}
+                              {isGroupFullySelected(groupKey) ? '☑' : isGroupPartiallySelected(groupKey) ? '◐' : '☐'}
                             </span>
-                            <span>{group}</span>
+                            <span>{t(groupKey)}</span>
                           </span>
                           <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">
-                            {columns.filter(c => visibleColumns.has(c.key)).length}/{columns.length}
+                            {columns.filter(c => effectiveVisibleColumns.has(c.key)).length}/{columns.length}
                           </span>
                         </div>
                         <div className="p-2">
@@ -957,11 +1233,16 @@ export default function LEIRecordsPage() {
                             >
                               <input
                                 type="checkbox"
-                                checked={visibleColumns.has(column.key)}
+                                checked={effectiveVisibleColumns.has(column.key)}
                                 onChange={() => toggleColumn(column.key)}
                                 className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                               />
-                              <span className="text-gray-900 dark:text-white">{getColumnLabel(column)}</span>
+                              <span
+                                className="text-gray-900 dark:text-white"
+                                title={getEnglishTooltip(getColumnLabelTranslationKey(column))}
+                              >
+                                {getColumnLabel(column)}
+                              </span>
                             </label>
                           ))}
                         </div>
@@ -972,11 +1253,11 @@ export default function LEIRecordsPage() {
               </div>
 
               <button
-                onClick={() => setShowLocationCodes(!showLocationCodes)}
+                onClick={toggleLocationDisplayMode}
                 className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 transition-colors text-white text-sm font-medium"
-                title={showLocationCodes ? 'Display mode: codes' : 'Display mode: names'}
+                title={showLocationCodes ? getEnglishTooltip('leiRecords.display.codes') : getEnglishTooltip('leiRecords.display.names')}
               >
-                {showLocationCodes ? '🏷️ Display: Codes' : '🏷️ Display: Names'}
+                {showLocationCodes ? t('leiRecords.display.codes') : t('leiRecords.display.names')}
               </button>
             </>
           }
@@ -993,48 +1274,49 @@ export default function LEIRecordsPage() {
         )}
 
         <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <StatCard title="Total Records" value={totalRecords.toLocaleString()} />
+          <StatCard title={t('leiRecords.stats.totalRecords')} titleTooltip={getEnglishTooltip('leiRecords.stats.totalRecords')} value={totalRecords.toLocaleString()} />
           <StatCard
-            title="Current Page"
-            value={`${currentPage} ${hasActiveFilters ? '(filtered)' : `of ${totalPages.toLocaleString()}`}`}
+            title={t('leiRecords.stats.currentPage')}
+            titleTooltip={getEnglishTooltip('leiRecords.stats.currentPage')}
+            value={`${currentPage} ${hasActiveFilters ? t('leiRecords.stats.currentPageFiltered', { page: currentPage }) : t('leiRecords.stats.currentPageOf', { page: currentPage, total: totalPages.toLocaleString() })}`}
           />
           <StatCard
-            title="Showing"
+            title={t('leiRecords.stats.showing')}
+            titleTooltip={getEnglishTooltip('leiRecords.stats.showing')}
             value={`${((currentPage - 1) * itemsPerPage) + 1}-${Math.min(currentPage * itemsPerPage, totalRecords)}`}
           />
         </div>
 
         {/* Info message about sorting behavior (Hybrid Approach) */}
         {!hasActiveFilters && (
-          <Alert variant="info" title="ℹ️ Showing recently updated records" className="mb-6">
-            Results are sorted by most recent updates for fast browsing. Use search or filters to sort by name.
+          <Alert variant="info" title={t('leiRecords.infoAlert.title')} className="mb-6">
+            {t('leiRecords.infoAlert.message')}
           </Alert>
         )}
 
         <div className="relative z-40 mb-6 bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm rounded-lg p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Search</label>
+              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">{t('leiRecords.filters.search')}</label>
               <SearchInputWithOverflowTooltip
                 type="text"
-                placeholder="LEI code, legal name, or other names..."
+                placeholder={t('leiRecords.filters.searchPlaceholder')}
+                title={getEnglishTooltip('leiRecords.filters.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full px-4 py-2 rounded-lg border-2 border-gray-300 bg-gray-50 text-gray-900 placeholder-gray-500 dark:border-white/20 dark:bg-white/5 dark:text-white dark:placeholder-gray-400 focus:border-blue-500 focus:outline-none"
               />
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                Searches LEI code, legal name, and other names.
-              </p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Status</label>
+              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">{t('leiRecords.filters.status')}</label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
+                title={statusFilter || getEnglishTooltip('leiRecords.filters.allStatuses')}
                 className="w-full px-4 py-2 rounded-lg border-2 border-gray-300 bg-gray-50 text-gray-900 dark:border-white/20 dark:bg-white/5 dark:text-white focus:border-blue-500 focus:outline-none"
               >
-                <option value="" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">All Statuses</option>
+                <option value="" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">{t('leiRecords.filters.allStatuses')}</option>
                 {statusOptions.map(status => (
                   <option key={status} value={status} className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">
                     {formatStatusFilterLabel(status)}
@@ -1044,13 +1326,14 @@ export default function LEIRecordsPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Category</label>
+              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">{t('leiRecords.filters.category')}</label>
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
+                title={categoryFilter || getEnglishTooltip('leiRecords.filters.allCategories')}
                 className="w-full px-4 py-2 rounded-lg border-2 border-gray-300 bg-gray-50 text-gray-900 dark:border-white/20 dark:bg-white/5 dark:text-white focus:border-blue-500 focus:outline-none"
               >
-                <option value="" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">All Categories</option>
+                <option value="" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">{t('leiRecords.filters.allCategories')}</option>
                 {categoryOptions.map(category => (
                   <option key={category} value={category} className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">{formatEnumDisplayValue(category)}</option>
                 ))}
@@ -1058,11 +1341,12 @@ export default function LEIRecordsPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Country</label>
+              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">{t('leiRecords.filters.country')}</label>
               <div className="relative z-50" ref={countryDropdownRef}>
                 <SearchInputWithOverflowTooltip
                   type="text"
-                  placeholder="Search countries..."
+                  placeholder={t('leiRecords.filters.countryPlaceholder')}
+                  title={getEnglishTooltip('leiRecords.filters.countryPlaceholder')}
                   value={countrySearch}
                   onChange={(e) => {
                     setCountrySearch(e.target.value)
@@ -1082,7 +1366,7 @@ export default function LEIRecordsPage() {
                       }}
                       className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700"
                     >
-                      All Countries
+                      {t('leiRecords.filters.allCountries')}
                     </button>
                     {countryOptions
                       .filter(country => 
@@ -1113,7 +1397,7 @@ export default function LEIRecordsPage() {
                       country.code.toLowerCase().includes(countrySearch.toLowerCase())
                     ).length === 0 && (
                       <div className="px-4 py-2 text-gray-500 dark:text-gray-400 text-sm">
-                        No countries found
+                        {t('leiRecords.filters.noCountriesFound')}
                       </div>
                     )}
                   </div>
@@ -1121,7 +1405,7 @@ export default function LEIRecordsPage() {
                 
                 {countryFilter && (
                   <div className="mt-1 text-xs text-gray-600 dark:text-gray-400">
-                    Filtered by: {countryOptions.find(c => c.code === countryFilter)?.name || countryFilter}
+                    {t('leiRecords.filters.filteredBy', { name: countryOptions.find(c => c.code === countryFilter)?.name || countryFilter })}
                   </div>
                 )}
               </div>
@@ -1134,7 +1418,7 @@ export default function LEIRecordsPage() {
                 onClick={clearFilters}
                 className="px-6 py-2 rounded-lg bg-white hover:bg-gray-100 dark:bg-gray-600 dark:hover:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-transparent transition-colors font-medium shadow-sm"
               >
-                ✕ Clear Filters
+                ✕ {t('common.clearFilters')}
               </button>
             )}
           </div>
@@ -1147,17 +1431,19 @@ export default function LEIRecordsPage() {
               disabled={currentPage === 1}
               className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-500 dark:disabled:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-white"
             >
-              ← Previous
+              {t('leiRecords.pagination.previous')}
             </button>
             <span className="text-gray-700 dark:text-gray-300">
-                Page {currentPage} {hasActiveFilters ? `(showing ${records.length} of ${records.length})` : `of ${totalPages.toLocaleString()}`}
+                {hasActiveFilters
+                  ? t('leiRecords.pagination.pageFiltered', { page: currentPage, count: records.length })
+                  : t('leiRecords.pagination.pageOf', { page: currentPage, total: totalPages.toLocaleString() })}
             </span>
             <button
               onClick={() => setCurrentPage(p => p + 1)}
               disabled={isLastPage}
               className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-500 dark:disabled:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-white"
             >
-              Next →
+              {t('leiRecords.pagination.next')}
             </button>
           </div>
         )}
@@ -1167,13 +1453,13 @@ export default function LEIRecordsPage() {
           <div ref={filterBarRef} className="sticky top-0 z-40 bg-blue-50 dark:bg-blue-900 border-b-2 border-blue-200 dark:border-blue-700 px-6 py-3 shadow-md rounded-t-lg">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-3 flex-wrap text-sm">
-                <span className="font-medium text-blue-900 dark:text-blue-100">🔍 Active Filters:</span>
+                <span className="font-medium text-blue-900 dark:text-blue-100">{t('leiRecords.filters.activeFilters')}</span>
                 {debouncedSearch && (
                   <button
                     onClick={() => setSearchTerm('')}
                     className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors flex items-center gap-1"
                   >
-                    Search: "{debouncedSearch}" <span className="ml-1">✕</span>
+                    {t('leiRecords.filters.searchChip', { value: debouncedSearch })} <span className="ml-1">✕</span>
                   </button>
                 )}
                 {statusFilter && (
@@ -1181,7 +1467,7 @@ export default function LEIRecordsPage() {
                     onClick={() => setStatusFilter('')}
                     className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors flex items-center gap-1"
                   >
-                    Status: {formatStatusFilterLabel(statusFilter)} <span className="ml-1">✕</span>
+                    {t('leiRecords.filters.statusChip', { value: formatStatusFilterLabel(statusFilter) })} <span className="ml-1">✕</span>
                   </button>
                 )}
                 {categoryFilter && (
@@ -1189,7 +1475,7 @@ export default function LEIRecordsPage() {
                     onClick={() => setCategoryFilter('')}
                     className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors flex items-center gap-1"
                   >
-                    Category: {formatEnumDisplayValue(categoryFilter)} <span className="ml-1">✕</span>
+                    {t('leiRecords.filters.categoryChip', { value: formatEnumDisplayValue(categoryFilter) })} <span className="ml-1">✕</span>
                   </button>
                 )}
                 {countryFilter && (
@@ -1197,7 +1483,7 @@ export default function LEIRecordsPage() {
                     onClick={() => setCountryFilter('')}
                     className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors flex items-center gap-1"
                   >
-                    Country: {countryOptions.find(c => c.code === countryFilter)?.name || countryFilter} <span className="ml-1">✕</span>
+                    {t('leiRecords.filters.countryChip', { name: countryOptions.find(c => c.code === countryFilter)?.name || countryFilter })} <span className="ml-1">✕</span>
                   </button>
                 )}
               </div>
@@ -1205,7 +1491,7 @@ export default function LEIRecordsPage() {
                 onClick={clearFilters}
                 className="px-3 py-1 text-xs rounded-lg bg-white hover:bg-gray-100 dark:bg-blue-600 dark:hover:bg-blue-700 text-blue-900 dark:text-white border border-blue-300 dark:border-transparent transition-colors font-medium shadow-sm"
               >
-                ✕ Clear All
+                ✕ {t('common.clearFilters')}
               </button>
             </div>
           </div>
@@ -1218,15 +1504,15 @@ export default function LEIRecordsPage() {
               <div className="fixed inset-0 bg-black/30 dark:bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
                 <div className="flex flex-col items-center gap-3 bg-white dark:bg-gray-800 px-8 py-6 rounded-lg shadow-2xl border-2 border-blue-500 dark:border-blue-400">
                   <div className="animate-spin rounded-full h-16 w-16 border-4 border-gray-200 dark:border-gray-700 border-t-blue-600 dark:border-t-blue-400"></div>
-                  <p className="text-base font-semibold text-gray-900 dark:text-gray-100">Loading results...</p>
+                  <p className="text-base font-semibold text-gray-900 dark:text-gray-100">{t('leiRecords.loadingResults')}</p>
                 </div>
               </div>
             )}
 
             <SyncedWideTable
               stickyTopOffset={hasActiveFilters ? filterBarHeight : 0}
-              dependencyKey={`${expandedWidth}-${showLocationCodes}-${visibleColumnsInOrder.map((column) => column.key).join('|')}-${records.length}-${currentPage}-${loading}`}
-              tableClassName="w-full"
+              dependencyKey={`${effectiveExpandedWidth}-${showLocationCodes}-${visibleColumnsInOrder.map((column) => column.key).join('|')}-${records.length}-${currentPage}-${loading}`}
+              tableClassName="min-w-full"
               tableStyle={{ tableLayout: 'auto', borderCollapse: 'collapse' }}
               stickyHeaderClassName="bg-gray-100 dark:bg-gray-800"
               mainHeaderClassName="bg-gray-100 dark:bg-gray-800"
@@ -1255,7 +1541,7 @@ export default function LEIRecordsPage() {
               }}
               headerRow={(
                 <tr>
-                  {visibleColumnsInOrder.map((column, columnIndex) => (
+                  {visibleColumnsInOrder.map((column) => (
                     <th
                       key={String(column.key)}
                       onClick={() => handleSort(column.key)}
@@ -1273,19 +1559,13 @@ export default function LEIRecordsPage() {
                           }
                         }
 
-                        if (stickyColumnWidths[columnIndex]) {
-                          return {
-                            ...getPinnedColumnStyle(column.key, true),
-                            width: `${stickyColumnWidths[columnIndex]}px`,
-                            minWidth: `${stickyColumnWidths[columnIndex]}px`,
-                            maxWidth: `${stickyColumnWidths[columnIndex]}px`,
-                          }
-                        }
-
                         return getPinnedColumnStyle(column.key, true)
                       })()}
                     >
-                      <div className={`flex items-center gap-1 ${column.key === 'lei' || column.key === 'legal_name' ? 'overflow-hidden whitespace-nowrap text-ellipsis' : ''}`}>
+                      <div
+                        className={`flex items-center gap-1 ${column.key === 'lei' || column.key === 'legal_name' ? 'overflow-hidden whitespace-nowrap text-ellipsis' : ''}`}
+                        title={getEnglishTooltip(getColumnLabelTranslationKey(column))}
+                      >
                         {getColumnLabel(column)}
                         {sortField === column.key && (
                           <span className="text-blue-600 dark:text-blue-400">{sortDirection === 'asc' ? '↑' : '↓'}</span>
@@ -1310,9 +1590,11 @@ export default function LEIRecordsPage() {
                         {visibleColumnsInOrder.map((column) => {
                           const value = record[column.key]
                           const isStatus = column.key === 'entity_status'
+                          const isLeiColumn = column.key === 'lei'
                           const isLegalName = column.key === 'legal_name'
                           const isLegalFormColumn = column.key === 'entity_legal_form'
                           const isManagingLou = column.key === 'managing_lou'
+                          const isSuccessorLei = column.key === 'successor_lei'
                           const isCountryFlagColumn = column.key === 'country_flag'
                           const isRegionColumn = column.key === 'legal_address_region' || column.key === 'hq_address_region'
                           const isCountryColumn = column.key === 'legal_address_country' || column.key === 'hq_address_country'
@@ -1339,7 +1621,11 @@ export default function LEIRecordsPage() {
                                 return getPinnedColumnStyle(column.key, false)
                               })()}
                             >
-                              {isStatus ? (
+                              {isLeiColumn ? (
+                                <div>
+                                  <div className="font-mono">{formatCellValue(value, column.key)}</div>
+                                </div>
+                              ) : isStatus ? (
                                 (() => {
                                   const statusPresentation = getStatusBadgePresentation(value)
                                   return (
@@ -1354,38 +1640,61 @@ export default function LEIRecordsPage() {
                                 })()
                               ) : isManagingLou ? (
                                 <div>
-                                  <div className="font-mono">{formatCellValue(value, column.key)}</div>
-                                  {value && managingLouNames.has(String(value)) && (
-                                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                      {managingLouNames.get(String(value))}
-                                    </div>
-                                  )}
-                                </div>
-                              ) : isLegalName ? (
-                                <div>
-                                  <div>{formatCellValue(value, column.key)}</div>
+                                  <button
+                                    type="button"
+                                    onClick={(event) => handleLinkedLeiClick(event, normalizeLeiCode(String(value || '')))}
+                                    className="font-mono text-left text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+                                  >
+                                    {formatCellValue(value, column.key)}
+                                  </button>
                                   {(() => {
-                                    const otherNames = parseOtherNames(record.other_names)
-                                    if (otherNames.length === 0) return null
+                                    const normalizedValue = value ? normalizeLeiCode(String(value)) : ''
+                                    const cachedName = normalizedValue ? managingLouNames.get(normalizedValue) : null
+                                    if (!cachedName) return null
                                     return (
                                       <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                        <div>Other names:</div>
-                                        {otherNames.map((n, i) => (
-                                          <div key={i} className="ml-2">
-                                            {n.name}
-                                            {n.type && (
-                                              <span className="ml-1 text-gray-400 dark:text-gray-500">
-                                                ({n.type.replace(/_/g, ' ')})
-                                              </span>
-                                            )}
-                                          </div>
-                                        ))}
+                                        {cachedName}
                                       </div>
                                     )
                                   })()}
                                 </div>
+                              ) : isSuccessorLei ? (
+                                <div>
+                                  <button
+                                    type="button"
+                                    onClick={(event) => handleLinkedLeiClick(event, normalizeLeiCode(String(value || '')))}
+                                    className="font-mono text-left text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+                                  >
+                                    {formatCellValue(value, column.key)}
+                                  </button>
+                                  {(() => {
+                                    const normalizedValue = value ? normalizeLeiCode(String(value)) : ''
+                                    const cachedName = normalizedValue ? successorLeiNames.get(normalizedValue) : null
+                                    if (!cachedName) return null
+                                    return (
+                                      <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                        {cachedName}
+                                      </div>
+                                    )
+                                  })()}
+                                </div>
+                              ) : isLegalName ? (
+                                <div>
+                                  <div>{formatCellValue(value, column.key)}</div>
+                                  <LEIOtherNamesList
+                                    otherNamesData={record.other_names}
+                                    showCodes={showLocationCodes}
+                                    languagesByCode={languagesByCode}
+                                  />
+                                </div>
                               ) : isCountryColumn ? (
-                                formatCountryDisplay(String(value || ''))
+                                <ReferenceDetailList
+                                  values={[String(value || '')]}
+                                  normalizeValue={(rawValue) => String(rawValue || '').trim().toUpperCase()}
+                                  getDisplayValue={(normalizedValue) => formatCountryDisplay(normalizedValue)}
+                                  getDetails={(normalizedValue) => getCountryDetailsByCode(normalizedValue)}
+                                  preferredOrder={COUNTRY_DETAIL_ORDER}
+                                />
                               ) : isCountryFlagColumn ? (
                                 <CountryFlag
                                   countryCode={String(record.legal_address_country || '')}
@@ -1411,7 +1720,7 @@ export default function LEIRecordsPage() {
           </div>
         ) : (
             <div className="text-center py-12 bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm rounded-lg">
-              <p className="text-xl text-gray-600 dark:text-gray-400">No records found with current filters</p>
+              <p className="text-xl text-gray-600 dark:text-gray-400">{t('leiRecords.noRecordsFound')}</p>
             </div>
           )}
 
@@ -1422,14 +1731,14 @@ export default function LEIRecordsPage() {
               disabled={currentPage === 1}
               className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-500 dark:disabled:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-white"
             >
-              ← Previous
+              {t('leiRecords.pagination.previous')}
             </button>
             <div className="flex items-center gap-4">
               <span className="text-gray-700 dark:text-gray-300">
-                Page {currentPage} {hasActiveFilters && `(showing ${records.length})`}
+                {t('leiRecords.pagination.page', { page: currentPage })}{hasActiveFilters && ` (${t('leiRecords.stats.showing').toLowerCase()} ${records.length})`}
               </span>
               <div className="flex items-center gap-2">
-                <label htmlFor="items-per-page" className="text-sm text-gray-700 dark:text-gray-300">Items per page:</label>
+                <label htmlFor="items-per-page" className="text-sm text-gray-700 dark:text-gray-300">{t('leiRecords.pagination.itemsPerPage')}</label>
                 <select
                   id="items-per-page"
                   value={itemsPerPage}
@@ -1451,17 +1760,17 @@ export default function LEIRecordsPage() {
               disabled={isLastPage}
               className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-500 dark:disabled:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-white"
             >
-              Next →
+              {t('leiRecords.pagination.next')}
             </button>
           </div>
         )}
 
         <div className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">
-          <p>Data source: GLEIF Golden Copy Files • Updated via scheduled sync jobs</p>
+          <p>{t('leiRecords.dataSource')}</p>
           <p className="mt-2">
-            Total database contains {totalRecords.toLocaleString()} LEI records • 
+            {t('leiRecords.totalDatabase', { count: totalRecords })} |
             <Link href="/lei" className="ml-1 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 underline">
-              View sync status
+              {t('leiRecords.viewSyncStatus')}
             </Link>
           </p>
         </div>
@@ -1481,31 +1790,31 @@ export default function LEIRecordsPage() {
             <div className="sticky top-0 bg-white dark:bg-gray-900 border-b-2 border-gray-200 dark:border-white/10 p-6 z-10">
               <div className="flex justify-between items-start mb-4">
                 <div className="flex-1">
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">LEI Record Details</h2>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{t('leiRecords.modal.title')}</h2>
                   <p className="text-lg font-mono text-blue-600 dark:text-blue-400">{selectedRecord.lei}</p>
                 </div>
                 <button
                   onClick={() => setSelectedRecord(null)}
                   className="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors text-gray-900 dark:text-white font-medium"
                 >
-                  ✕ Close
+                  {t('leiRecords.modal.close')}
                 </button>
               </div>
               {/* Date Display Mode Toggle */}
               <div className="flex items-center gap-2 text-sm">
-                <span className="text-gray-600 dark:text-gray-400">Date display:</span>
+                <span className="text-gray-600 dark:text-gray-400">{t('leiRecords.modal.dateDisplay')}</span>
                 <button
                   onClick={() => setDateDisplayMode(dateDisplayMode === 'relative' ? 'absolute' : 'relative')}
                   className="px-3 py-1 rounded-lg bg-blue-100 hover:bg-blue-200 dark:bg-blue-900 dark:hover:bg-blue-800 text-blue-900 dark:text-blue-100 transition-colors font-medium"
                 >
-                  {dateDisplayMode === 'relative' ? '📅 Relative' : '🔢 Days only'}
+                  {dateDisplayMode === 'relative' ? t('leiRecords.modal.dateRelative') : t('leiRecords.modal.dateDaysOnly')}
                 </button>
-                <span className="text-gray-600 dark:text-gray-400 ml-2">Display:</span>
+                <span className="text-gray-600 dark:text-gray-400 ml-2">{t('leiRecords.modal.display')}</span>
                 <button
-                  onClick={() => setShowLocationCodes(!showLocationCodes)}
+                  onClick={toggleLocationDisplayMode}
                   className="px-3 py-1 rounded-lg bg-indigo-100 hover:bg-indigo-200 dark:bg-indigo-900 dark:hover:bg-indigo-800 text-indigo-900 dark:text-indigo-100 transition-colors font-medium"
                 >
-                  {showLocationCodes ? '🏷️ Codes' : '🏷️ Names'}
+                  {showLocationCodes ? t('leiRecords.display.codes') : t('leiRecords.display.names')}
                 </button>
               </div>
             </div>
@@ -1515,7 +1824,7 @@ export default function LEIRecordsPage() {
               {/* Core Information */}
               <section className="bg-white dark:bg-gray-900 p-6 pb-0">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 pb-2 border-b border-gray-200 dark:border-white/10">
-                  Core Information
+                  {t('leiRecords.modal.coreInformation')}
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white dark:bg-gray-900">
                   <div>
@@ -1562,40 +1871,31 @@ export default function LEIRecordsPage() {
                     </div>
                   )}
                 </div>
-                {(() => {
-                  const otherNames = parseOtherNames(selectedRecord.other_names)
-                  if (otherNames.length === 0) return null
-                  return (
-                    <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/10">
-                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Other Names</label>
-                      <div className="mt-2 space-y-1">
-                        {otherNames.map((n, i) => (
-                          <div key={i} className="text-sm text-gray-900 dark:text-white">
-                            {n.name}
-                            {n.type && (
-                              <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
-                                ({n.type.replace(/_/g, ' ')})
-                              </span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )
-                })()}
+                <LEIOtherNamesList
+                  otherNamesData={selectedRecord.other_names}
+                  showCodes={showLocationCodes}
+                  languagesByCode={languagesByCode}
+                  className="mt-4 pt-4 border-t border-gray-200 dark:border-white/10"
+                  showLabel={true}
+                  label="Other Names"
+                  labelClassName="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase"
+                  listClassName="mt-2 space-y-1"
+                  itemClassName="text-sm text-gray-900 dark:text-white"
+                  languageClassName="ml-2 text-xs text-gray-500 dark:text-gray-400"
+                />
               </section>
 
               {/* Addresses - Side by Side with Aligned Fields */}
               <section className="bg-white dark:bg-gray-900 p-6 pb-0">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 pb-2 border-b border-gray-200 dark:border-white/10">
-                  Addresses
+                  {t('leiRecords.modal.addresses')}
                 </h3>
                 
                 {/* Column Headers */}
                 <div className="grid grid-cols-2 gap-6 mb-4 bg-white dark:bg-gray-900">
                   <div className="flex items-center justify-between">
                     <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
-                      Legal Address
+                      {t('leiRecords.modal.legalAddress')}
                     </h4>
                     {selectedRecord.legal_address_city && (
                       <button
@@ -1612,13 +1912,13 @@ export default function LEIRecordsPage() {
                         className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-xs font-medium flex items-center gap-1 transition-colors"
                         title="View on OpenStreetMap"
                       >
-                        🗺️ View on Map
+                        {t('leiRecords.modal.viewOnMap')}
                       </button>
                     )}
                   </div>
                   <div className="flex items-center justify-between">
                     <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
-                      Headquarters Address
+                      {t('leiRecords.modal.hqAddress')}
                     </h4>
                     {!isHqAddressSameAsLegal(selectedRecord) && selectedRecord.hq_address_city && (
                       <button
@@ -1635,7 +1935,7 @@ export default function LEIRecordsPage() {
                         className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-xs font-medium flex items-center gap-1 transition-colors"
                         title="View on OpenStreetMap"
                       >
-                        🗺️ View on Map
+                        {t('leiRecords.modal.viewOnMap')}
                       </button>
                     )}
                   </div>
@@ -1657,7 +1957,7 @@ export default function LEIRecordsPage() {
                       <div>
                         <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Address</label>
                         <p className="text-sm text-gray-500 dark:text-gray-400 italic mt-1">
-                          Same as Legal Address
+                          {t('leiRecords.modal.sameAsLegal')}
                         </p>
                       </div>
                     </div>
@@ -1691,7 +1991,13 @@ export default function LEIRecordsPage() {
                       <div>
                         <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{showLocationCodes ? 'Country Code' : 'Country Name'}</label>
                         <p className="text-sm text-gray-900 dark:text-white mt-1 flex items-center gap-2">
-                          <span>{formatCountryDisplay(selectedRecord.legal_address_country)}</span>
+                          <ReferenceDetailList
+                            values={[selectedRecord.legal_address_country]}
+                            normalizeValue={(rawValue) => String(rawValue || '').trim().toUpperCase()}
+                            getDisplayValue={(normalizedValue) => formatCountryDisplay(normalizedValue)}
+                            getDetails={(normalizedValue) => getCountryDetailsByCode(normalizedValue)}
+                            preferredOrder={COUNTRY_DETAIL_ORDER}
+                          />
                           <CountryFlag
                             countryCode={String(selectedRecord.legal_address_country || '')}
                             title={formatCountryDisplay(selectedRecord.legal_address_country)}
@@ -1770,7 +2076,13 @@ export default function LEIRecordsPage() {
                       <div>
                         <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{showLocationCodes ? 'Country Code' : 'Country Name'}</label>
                         <p className="text-sm text-gray-900 dark:text-white mt-1 flex items-center gap-2">
-                          <span>{formatCountryDisplay(selectedRecord.legal_address_country)}</span>
+                          <ReferenceDetailList
+                            values={[selectedRecord.legal_address_country]}
+                            normalizeValue={(rawValue) => String(rawValue || '').trim().toUpperCase()}
+                            getDisplayValue={(normalizedValue) => formatCountryDisplay(normalizedValue)}
+                            getDetails={(normalizedValue) => getCountryDetailsByCode(normalizedValue)}
+                            preferredOrder={COUNTRY_DETAIL_ORDER}
+                          />
                           <CountryFlag
                             countryCode={String(selectedRecord.legal_address_country || '')}
                             title={formatCountryDisplay(selectedRecord.legal_address_country)}
@@ -1781,7 +2093,13 @@ export default function LEIRecordsPage() {
                       <div>
                         <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{showLocationCodes ? 'Country Code' : 'Country Name'}</label>
                         <p className="text-sm text-gray-900 dark:text-white mt-1 flex items-center gap-2">
-                          <span>{formatCountryDisplay(selectedRecord.hq_address_country)}</span>
+                          <ReferenceDetailList
+                            values={[selectedRecord.hq_address_country]}
+                            normalizeValue={(rawValue) => String(rawValue || '').trim().toUpperCase()}
+                            getDisplayValue={(normalizedValue) => formatCountryDisplay(normalizedValue)}
+                            getDetails={(normalizedValue) => getCountryDetailsByCode(normalizedValue)}
+                            preferredOrder={COUNTRY_DETAIL_ORDER}
+                          />
                           <CountryFlag
                             countryCode={String(selectedRecord.hq_address_country || '')}
                             title={formatCountryDisplay(selectedRecord.hq_address_country)}
@@ -1809,7 +2127,7 @@ export default function LEIRecordsPage() {
               {/* Registration Information */}
               <section className="bg-white dark:bg-gray-900 p-6 pb-0">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 pb-2 border-b border-gray-200 dark:border-white/10">
-                  Registration Information
+                  {t('leiRecords.modal.registrationInformation')}
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white dark:bg-gray-900">
                   <div>
@@ -1863,28 +2181,83 @@ export default function LEIRecordsPage() {
               </section>
 
               {/* Associated Entities */}
-              {(selectedRecord.managing_lou || selectedRecord.successor_lei) && (
+              {(selectedRecord.managing_lou || selectedRecord.successor_lei || predecessorLeiLoading || predecessorLeiReferences.length > 0) && (
                 <section className="bg-white dark:bg-gray-900 p-6 pb-0">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 pb-2 border-b border-gray-200 dark:border-white/10">
-                    Associated Entities
+                    {t('leiRecords.modal.associatedEntities')}
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white dark:bg-gray-900">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white dark:bg-gray-900">
+                    <div>
+                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('leiRecords.modal.predecessorLei')}</label>
+                      <div className="mt-1 space-y-2">
+                        {predecessorLeiLoading && (
+                          <p className="text-xs text-gray-400 dark:text-gray-500 italic">{t('leiRecords.modal.checkingPredecessorLinks')}</p>
+                        )}
+                        {!predecessorLeiLoading && predecessorLeiReferences.length === 0 && (
+                          <p className="text-xs text-gray-400 dark:text-gray-500 italic">{t('leiRecords.modal.noPredecessorLinks')}</p>
+                        )}
+                        {!predecessorLeiLoading && predecessorLeiReferences.map((reference) => (
+                          <div key={reference.lei}>
+                            <button
+                              type="button"
+                              onClick={(event) => handleLinkedLeiClick(event, reference.lei)}
+                              className="block font-mono text-sm text-left text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+                            >
+                              {reference.lei}
+                            </button>
+                            {reference.legal_name && (
+                              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{reference.legal_name}</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('leiRecords.modal.successorLei')}</label>
+                      {selectedRecord.successor_lei ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={(event) => handleLinkedLeiClick(event, selectedRecord.successor_lei)}
+                            className="mt-1 block font-mono text-sm text-left text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+                          >
+                            {selectedRecord.successor_lei}
+                          </button>
+                          {successorLeiName && (
+                            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{successorLeiName}</p>
+                          )}
+                          {successorLeiNameLoading && (
+                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 italic">{t('leiRecords.modal.loadingName')}</p>
+                          )}
+                          {!successorLeiNameLoading && !successorLeiName && (
+                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 italic">Name unavailable.</p>
+                          )}
+                        </>
+                      ) : (
+                        <p className="mt-1 text-xs text-gray-400 dark:text-gray-500 italic">No successor link found.</p>
+                      )}
+                    </div>
+
                     {selectedRecord.managing_lou && (
-                      <div>
-                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Managing LOU</label>
-                        <p className="text-sm text-gray-900 dark:text-white mt-1 font-mono">{selectedRecord.managing_lou}</p>
+                      <div className="md:col-span-2 border-t border-gray-200 pt-4 dark:border-white/10">
+                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('leiRecords.modal.managingLou')}</label>
+                        <button
+                          type="button"
+                          onClick={(event) => handleLinkedLeiClick(event, selectedRecord.managing_lou)}
+                          className="mt-1 block font-mono text-sm text-left text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+                        >
+                          {selectedRecord.managing_lou}
+                        </button>
                         {managingLouName && (
                           <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{managingLouName}</p>
                         )}
-                        {managingLouName === null && selectedRecord.managing_lou && (
-                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 italic">Loading name...</p>
+                        {managingLouNameLoading && (
+                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 italic">{t('leiRecords.modal.loadingName')}</p>
                         )}
-                      </div>
-                    )}
-                    {selectedRecord.successor_lei && (
-                      <div>
-                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Successor LEI</label>
-                        <p className="text-sm font-mono text-gray-900 dark:text-white mt-1">{selectedRecord.successor_lei}</p>
+                        {!managingLouNameLoading && !managingLouName && (
+                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 italic">{t('leiRecords.modal.nameUnavailable')}</p>
+                        )}
                       </div>
                     )}
                   </div>
@@ -1895,11 +2268,11 @@ export default function LEIRecordsPage() {
               {selectedRecord.validation_authority && (
                 <section className="bg-white dark:bg-gray-900 p-6">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 pb-2 border-b border-gray-200 dark:border-white/10">
-                    Validation
+                    {t('leiRecords.modal.validation')}
                   </h3>
                   <div className="grid grid-cols-1 gap-4 bg-white dark:bg-gray-900">
                     <div>
-                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Validation Authority</label>
+                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('leiRecords.modal.validationAuthority')}</label>
                       <p className="text-sm text-gray-900 dark:text-white mt-1">{selectedRecord.validation_authority}</p>
                     </div>
                   </div>
@@ -1909,6 +2282,29 @@ export default function LEIRecordsPage() {
           </div>
         </div>
       )}
+
+      {/* Unobtrusive prompts to save changed preferences */}
+      <PreferenceSavePrompt
+        visible={showColumnSavePrompt}
+        resetKey={columnSaveVersion}
+        label={t('leiRecords.saveColumnPrompt')}
+        onSave={handleSaveColumns}
+        onDismiss={handleDismissColumns}
+      />
+      <PreferenceSavePrompt
+        visible={expandedWidthPreference.showPrompt}
+        resetKey={expandedWidthPreference.promptResetKey}
+        label={t('referenceLayout.savePageWidthDefault')}
+        onSave={expandedWidthPreference.save}
+        onDismiss={expandedWidthPreference.dismiss}
+      />
+      <PreferenceSavePrompt
+        visible={locationDisplayPreference.showPrompt}
+        resetKey={locationDisplayPreference.promptResetKey}
+        label={t('referenceLayout.saveDisplayModeDefault')}
+        onSave={locationDisplayPreference.save}
+        onDismiss={locationDisplayPreference.dismiss}
+      />
     </div>
   )
 }

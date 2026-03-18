@@ -5,9 +5,13 @@ Creates an isolated .env file for a temporary main-like test stack.
 
 .DESCRIPTION
 Copies values from .env.main (or another source env file) and rewrites
-project/port/database fields so the test stack cannot collide with the real
-main stack. This prevents accidental volume/container reuse and avoids data
-loss from destructive commands on the shared project name.
+project/port/database fields so the test stack uses a different COMPOSE
+project name and host ports than the real main stack. This prevents accidental
+container/volume reuse tied to the original project name. Log paths are also
+isolated via the LOG_MAIN_DIR variable so each test stack writes to its own
+log directory. Host bind-mounted LEI data (./data/main/lei) remains shared
+across stacks by design, so destructive commands there can still affect the
+shared LEI files.
 
 .PARAMETER Name
 Suffix used in COMPOSE_PROJECT_NAME and DB names.
@@ -123,11 +127,17 @@ if ($backendPort -and $backendPort -match '^\d+$') {
     $lines = Replace-Or-AddSetting -InputLines $lines -Key 'NEXT_PUBLIC_API_URL' -Value "http://localhost:$backendPort"
 }
 
+# Isolate log directory so test stacks do not mix log files with the main environment.
+# LEI data (./data/main/lei) intentionally remains shared across stacks.
+$logDir = "./log/main-$Name"
+$lines = Replace-Or-AddSetting -InputLines $lines -Key 'LOG_MAIN_DIR' -Value $logDir
+
 Set-Content -Path $OutputEnvFile -Value $lines -NoNewline:$false
 
 Write-Host "Created isolated env file: $OutputEnvFile" -ForegroundColor Green
 Write-Host "COMPOSE_PROJECT_NAME=$composeName"
 Write-Host "POSTGRES_DB=$dbName"
+Write-Host "LOG_MAIN_DIR=$logDir"
 Write-Host "Port offset applied: +$PortOffset"
 Write-Host ""
 Write-Host "Use it with:" -ForegroundColor Cyan

@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import Badge from './Badge'
+import { readStoredUser } from '../lib/stored-user'
 
 interface AdminLandingCardProps {
   href: string
@@ -17,15 +18,8 @@ export default function AdminLandingCard({ href, title, description, icon }: Adm
 
   useEffect(() => {
     setMounted(true)
-    try {
-      const raw = localStorage.getItem('axiom_user')
-      if (raw) {
-        const user = JSON.parse(raw)
-        setIsAdmin(user?.role === 'admin')
-      }
-    } catch {
-      // ignore malformed data
-    }
+    const user = readStoredUser()
+    setIsAdmin(user?.role === 'admin')
   }, [])
 
   if (!mounted || !isAdmin) return null

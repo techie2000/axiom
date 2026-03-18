@@ -21,8 +21,10 @@ type LEIRepository interface {
 	FindLEIByLEI(lei string) (*domain.LEIRecord, error)
 	FindLEIByID(id string) (*domain.LEIRecord, error)
 	FindAllLEI(limit, offset int) ([]*domain.LEIRecord, error)
-	FindAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string) ([]*domain.LEIRecord, error)
+	FindPredecessorLEIsBySuccessor(lei string) ([]*domain.LEIRecord, error)
+	FindAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string, includeLinkedNames bool) ([]*domain.LEIRecord, error)
 	CountLEIRecords() (int64, error)
+	FindLegalNamesByLEICodes(codes []string) (map[string]string, error)
 	GetDistinctCountries() ([]string, error)
 	GetDistinctCategories() ([]string, error)
 	GetDistinctRegions() ([]string, error)
@@ -111,6 +113,47 @@ func (r *leiRepository) FindAllLEI(limit, offset int) ([]*domain.LEIRecord, erro
 	if err := r.db.Limit(limit).Offset(offset).Preload("SourceFile").Find(&records).Error; err != nil {
 		return nil, err
 	}
+	return records, nil
+}
+
+// FindLegalNamesByLEICodes retrieves legal names for a batch of LEI codes in a single query.
+// Returns a map of LEI code → legal name for codes that exist in the database.
+func (r *leiRepository) FindLegalNamesByLEICodes(codes []string) (map[string]string, error) {
+	if len(codes) == 0 {
+		return map[string]string{}, nil
+	}
+
+	type row struct {
+		LEI       string
+		LegalName string
+	}
+
+	var rows []row
+	if err := r.db.Model(&domain.LEIRecord{}).
+		Select("lei, legal_name").
+		Where("lei IN ?", codes).
+		Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+
+	names := make(map[string]string, len(rows))
+	for _, row := range rows {
+		names[row.LEI] = row.LegalName
+	}
+
+	return names, nil
+}
+
+// FindPredecessorLEIsBySuccessor retrieves LEI records that point to the provided LEI as successor.
+func (r *leiRepository) FindPredecessorLEIsBySuccessor(lei string) ([]*domain.LEIRecord, error) {
+	var records []*domain.LEIRecord
+	if err := r.db.
+		Where("successor_lei = ?", strings.TrimSpace(lei)).
+		Order("updated_at desc").
+		Find(&records).Error; err != nil {
+		return nil, err
+	}
+
 	return records, nil
 }
 
@@ -205,7 +248,7 @@ func validateColumns(columns string) string {
 
 // FindAllLEIWithFilters retrieves LEI records with search and filters
 // Uses dynamic SELECT based on requested columns for performance optimization
-func (r *leiRepository) FindAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string) ([]*domain.LEIRecord, error) {
+func (r *leiRepository) FindAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string, includeLinkedNames bool) ([]*domain.LEIRecord, error) {
 	var records []*domain.LEIRecord
 	buildQuery := func(useSearchVector bool) *gorm.DB {
 		query := r.db.Limit(limit).Offset(offset)
@@ -213,6 +256,11 @@ func (r *leiRepository) FindAllLEIWithFilters(limit, offset int, search, status,
 		// Dynamic SELECT optimization: only fetch requested columns
 		// Validates columns against whitelist to prevent SQL injection
 		validatedColumns := validateColumns(columns)
+		if includeLinkedNames {
+			validatedColumns = validatedColumns +
+				", (SELECT ref.legal_name FROM lei_raw.lei_records ref WHERE BTRIM(ref.lei) = BTRIM(lei_raw.lei_records.managing_lou) LIMIT 1) AS managing_lou_legal_name" +
+				", (SELECT ref.legal_name FROM lei_raw.lei_records ref WHERE BTRIM(ref.lei) = BTRIM(lei_raw.lei_records.successor_lei) LIMIT 1) AS successor_lei_legal_name"
+		}
 		query = query.Select(validatedColumns)
 
 		// Remove Preload for list view - only needed for detail view
@@ -1044,7 +1092,32 @@ func (r *leiRepository) FindProcessingStatus(jobType string) (*domain.FileProces
 
 // UpdateProcessingStatus updates the processing status
 func (r *leiRepository) UpdateProcessingStatus(status *domain.FileProcessingStatus) error {
-	return r.db.Save(status).Error
+	if status == nil {
+		return fmt.Errorf("status is nil")
+	}
+
+	if status.ID == uuid.Nil {
+		return r.db.Omit("CurrentSourceFile").Create(status).Error
+	}
+
+	updates := map[string]interface{}{
+		"job_type":               status.JobType,
+		"job_label":              status.JobLabel,
+		"status":                 status.Status,
+		"last_run_at":            status.LastRunAt,
+		"next_run_at":            status.NextRunAt,
+		"last_success_at":        status.LastSuccessAt,
+		"depends_on_job_label":   status.DependsOnJobLabel,
+		"current_source_file_id": status.CurrentSourceFileID,
+		"depends_on_job_type":    status.DependsOnJobType,
+		"error_message":          status.ErrorMessage,
+		"progress_message":       status.ProgressMessage,
+		"updated_at":             gorm.Expr("NOW()"),
+	}
+
+	return r.db.Model(&domain.FileProcessingStatus{}).
+		Where("id = ?", status.ID).
+		Updates(updates).Error
 }
 
 // CreateAuditRecord creates a new audit record
@@ -1121,6 +1194,7 @@ func (r *leiRepository) BatchResolveOpenProcessingFailures(jobType string, natur
 		Where("job_type = ? AND natural_key IN ? AND resolved = FALSE", jobType, filtered).
 		Updates(updates).Error
 }
+
 // detectChanges compares two LEI records and returns a map of changed fields
 func (r *leiRepository) detectChanges(old, new *domain.LEIRecord) map[string]domain.LEIChangeDetection {
 	changes := make(map[string]domain.LEIChangeDetection)

@@ -2,6 +2,7 @@
 
 import AdminLandingCard from './AdminLandingCard'
 import { useEffect, useState } from 'react'
+import { readStoredUser } from '../lib/stored-user'
 
 /**
  * Renders the full Administration section on the landing page, including the
@@ -18,15 +19,8 @@ export default function AdminSection() {
 
   useEffect(() => {
     setMounted(true)
-    try {
-      const raw = localStorage.getItem('axiom_user')
-      if (raw) {
-        const user = JSON.parse(raw)
-        setIsAdmin(user?.role === 'admin')
-      }
-    } catch {
-      // ignore malformed data
-    }
+    const user = readStoredUser()
+    setIsAdmin(user?.role === 'admin')
   }, [])
 
   if (!mounted || !isAdmin) return null
@@ -48,6 +42,12 @@ export default function AdminSection() {
           title="User Management"
           description="Review registration requests, approve or deactivate accounts, and manage user roles"
           icon="👥"
+        />
+        <AdminLandingCard
+          href="/admin/translations"
+          title="Translations"
+          description="Review community-contributed UI translations, approve or reject pending strings, and add new translations"
+          icon="🌐"
         />
       </div>
     </section>

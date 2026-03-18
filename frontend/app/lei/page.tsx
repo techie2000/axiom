@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import Alert from '../components/Alert'
 import LoadingSpinner from '../components/LoadingSpinner'
 import PageHeader from '../components/PageHeader'
+import { buildDocsUrl } from '../lib/docsLinks'
 
 interface SourceFile {
   id: string
@@ -28,6 +29,7 @@ interface ProcessingStatus {
   current_source_file_id: string | null
   current_source_file: SourceFile | null
   error_message: string
+  progress_message: string
 }
 
 interface MasterDataCounts {
@@ -55,6 +57,7 @@ interface Level2ProcessingFailure {
 type ImportJobType = 'DAILY_FULL' | 'DAILY_DELTA' | 'LEVEL2_RR' | 'LEVEL2_REPEX'
 
 export default function LEIStatusPage() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [masterDataStatus, setMasterDataStatus] = useState<ProcessingStatus | null>(null)
   const [fullStatus, setFullStatus] = useState<ProcessingStatus | null>(null)
   const [deltaStatus, setDeltaStatus] = useState<ProcessingStatus | null>(null)
@@ -85,7 +88,7 @@ export default function LEIStatusPage() {
     ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080')
     : 'http://backend:8080'
 
-  const fetchStatus = async () => {
+  const fetchStatus = useCallback(async () => {
     try {
       const [
         mdResponse,
@@ -138,6 +141,43 @@ export default function LEIStatusPage() {
     } finally {
       setLoading(false)
     }
+  }, [API_BASE_URL])
+
+  const getAuthToken = (): string | null => {
+    const rawToken = localStorage.getItem('axiom_token')
+    if (!rawToken) return null
+
+    const normalizedToken = rawToken.replace(/^Bearer\s+/i, '').trim()
+    if (!normalizedToken || normalizedToken === 'undefined' || normalizedToken === 'null') {
+      return null
+    }
+
+    return normalizedToken
+  }
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    setIsLoggedIn(getAuthToken() !== null)
+  }, [])
+
+  const isJwtExpired = (token: string): boolean => {
+    const parts = token.split('.')
+    if (parts.length !== 3) return true
+
+    try {
+      const payloadBase64Url = parts[1]
+      const payloadBase64 = payloadBase64Url.replace(/-/g, '+').replace(/_/g, '/')
+      const paddingLength = (4 - (payloadBase64.length % 4)) % 4
+      const paddedPayloadBase64 = payloadBase64 + '='.repeat(paddingLength)
+      const payloadJson = atob(paddedPayloadBase64)
+      const payload = JSON.parse(payloadJson) as { exp?: number }
+
+      if (typeof payload.exp !== 'number') return false
+      const nowEpoch = Math.floor(Date.now() / 1000)
+      return payload.exp <= nowEpoch
+    } catch {
+      return true
+    }
   }
 
   const triggerJob = async (endpoint: string, successMessage: string) => {
@@ -148,12 +188,25 @@ export default function LEIStatusPage() {
     }
 
     try {
-      const token = localStorage.getItem('token') || localStorage.getItem('jwt') || localStorage.getItem('authToken')
+      const token = getAuthToken()
+      const tokenExpired = token ? isJwtExpired(token) : null
+
+      if (!token) {
+        showTriggerMessage('Authorization required. Log in again and retry.', 'warning')
+        return
+      }
+
+      if (tokenExpired) {
+        localStorage.removeItem('axiom_token')
+        showTriggerMessage('Session expired. Log in again and retry.', 'warning')
+        return
+      }
+
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: 'POST',
         headers: {
           Accept: 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          Authorization: `Bearer ${token}`,
         },
       })
 
@@ -176,6 +229,9 @@ export default function LEIStatusPage() {
           : 'Failed to trigger job'
       }
       const isAuthFailure = response.status === 401 || response.status === 403
+      if (isAuthFailure) {
+        localStorage.removeItem('axiom_token')
+      }
       const authHint = isAuthFailure ? ' Log in again and retry.' : ''
       showTriggerMessage(`${backendMessage}${authHint}`, isAuthFailure ? 'warning' : 'error')
     } catch (err) {
@@ -241,13 +297,13 @@ export default function LEIStatusPage() {
     if (typeof window !== 'undefined') {
       fetchStatus()
     }
-  }, [])
+  }, [fetchStatus])
 
   useEffect(() => {
     if (!autoRefresh) return
     const interval = setInterval(fetchStatus, 5000)
     return () => clearInterval(interval)
-  }, [autoRefresh])
+  }, [autoRefresh, fetchStatus])
 
   useEffect(() => {
     const handleEscapeKey = (event: KeyboardEvent) => {
@@ -430,6 +486,7 @@ export default function LEIStatusPage() {
     const file = status.current_source_file
     const isImportJob = jobKey === 'DAILY_FULL' || jobKey === 'DAILY_DELTA' || jobKey === 'LEVEL2_RR' || jobKey === 'LEVEL2_REPEX'
     const isMasterDataJob = jobKey === 'MASTER_DATA_SYNC'
+    const progressMessage = status.progress_message?.trim() || ''
     const fallbackTotalRecords = isMasterDataJob ? (masterDataCounts?.total ?? 0) : 0
     const totalRecords = file ? file.total_records : fallbackTotalRecords
     const successfulProcessed = file
@@ -514,6 +571,9 @@ export default function LEIStatusPage() {
           <>
             {file && status.status === 'RUNNING' && (
               <div className="mb-6">
+                {progressMessage && (
+                  <p className="text-sm text-blue-700 dark:text-blue-300 mb-2">⏳ {progressMessage}</p>
+                )}
                 {file.total_records > 0 ? (
                   <>
                     <div className="flex justify-between text-sm mb-2">
@@ -531,7 +591,9 @@ export default function LEIStatusPage() {
                   </>
                 ) : (
                   <div className="text-sm text-gray-600 dark:text-gray-400">
-                    <p className="mb-2">⏳ Downloading file... ({file.processed_records.toLocaleString()} records processed)</p>
+                    <p className="mb-2">
+                      ⏳ {progressMessage || 'Preparing file for processing...'} ({file.processed_records.toLocaleString()} records processed)
+                    </p>
                     <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden">
                       <div className="bg-blue-600 dark:bg-blue-500 h-4 rounded-full animate-pulse" style={{ width: '30%' }} />
                     </div>
@@ -658,6 +720,11 @@ export default function LEIStatusPage() {
                 <p><span className="font-medium text-gray-700 dark:text-gray-300">Total Records:</span> {totalRecords > 0 ? totalRecords.toLocaleString() : '-'}</p>
                 <p><span className="font-medium text-gray-700 dark:text-gray-300">Processed:</span> {totalRecords > 0 ? `${successfulProcessed.toLocaleString()} records` : '-'}</p>
                 <p className="truncate"><span className="font-medium text-gray-700 dark:text-gray-300">Last LEI:</span> {file?.last_processed_lei || '-'}</p>
+                {status.status === 'RUNNING' && progressMessage && (
+                  <p className="text-blue-700 dark:text-blue-300">
+                    <span className="font-medium">Progress:</span> {progressMessage}
+                  </p>
+                )}
                 {isMasterDataJob && masterDataCounts && (
                   <p>
                     <span className="font-medium text-gray-700 dark:text-gray-300">Breakdown:</span>{' '}
@@ -767,6 +834,11 @@ export default function LEIStatusPage() {
               ⚠️ {status.error_message}
             </p>
           )}
+          {!status?.error_message && status?.status === 'RUNNING' && status?.progress_message && (
+            <p className="text-blue-700 dark:text-blue-300 text-xs mt-1 truncate" title={status.progress_message}>
+              ⏳ {status.progress_message}
+            </p>
+          )}
         </div>
         {action && <div className="shrink-0 flex items-start">{action}</div>}
       </div>
@@ -779,6 +851,7 @@ export default function LEIStatusPage() {
 
   const showFullChildren = fullExpanded || fullStatus?.status === 'RUNNING' || rrStatus?.status === 'RUNNING' || repexStatus?.status === 'RUNNING'
   const showRrChild = rrExpanded || rrStatus?.status === 'RUNNING' || repexStatus?.status === 'RUNNING'
+  const backHref = isLoggedIn ? '/dashboard' : '/home'
 
   return (
     <div className="min-h-screen p-8">
@@ -786,6 +859,8 @@ export default function LEIStatusPage() {
         <PageHeader
           title="LEI Data Processing"
           subtitle="Real-time monitoring of GLEIF data synchronization"
+          backHref={backHref}
+          docsHref={buildDocsUrl('workflows/entities/')}
           actions={
             <>
               <button
