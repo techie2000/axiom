@@ -41,6 +41,7 @@
     "@eslint/eslintrc": "^3.3.1",
     "eslint": "^9.25.1",
     "eslint-config-next": "15.5.10",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
     "typescript": "^5.3.3",
     "vitest": "^3.2.4"
   }

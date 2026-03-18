@@ -66,7 +66,10 @@ export default function PageHeader({
     <div className="mb-8 flex justify-between items-start">
       <div>
         {showBackLink && (
-          <Link href={backHref} className="text-blue-400 hover:text-blue-300 mb-4 inline-block">
+          <Link
+            href={backHref}
+            className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 mb-4 inline-block rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+          >
             {resolvedBackLabel}
           </Link>
         )}

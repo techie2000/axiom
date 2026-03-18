@@ -9,6 +9,7 @@ Refactored the LEI records country filter to fetch countries from the `countries
 instead of querying DISTINCT values from the 3.2M+ LEI records.
 
 **Enhancements added:**
+
 - ✅ Country dropdown now displays **"CODE - Country Name"** format (e.g., "US - United States")
 - ✅ Searchable dropdown with real-time filtering by code or name
 - ✅ Backend returns full `Country` objects with code, name, alpha3_code, region, and active status
@@ -18,6 +19,7 @@ instead of querying DISTINCT values from the 3.2M+ LEI records.
 ### Backend Updates
 
 #### 1. **LEI Service** (`backend/internal/service/lei_service.go`)
+
 - **Added**: `countryRepo repository.CountryRepository` field to `leiService` struct
 - **Updated**: `NewLEIService` constructor to accept `CountryRepository` parameter
 - **Refactored**: `GetDistinctCountries()` method to query `countries` table instead of LEI records
@@ -27,13 +29,16 @@ instead of querying DISTINCT values from the 3.2M+ LEI records.
   - Each Country object includes: `code`, `name`, `alpha3_code`, `region`, `active`
 
 #### 2. **Service Factory** (`backend/internal/service/service.go`)
+
 - **Updated**: `NewServices` to pass `repos.Country` to `NewLEIService`
 - **New signature**: `NewLEIService(repos.LEI, repos.Country, leiDataDir)`
 
 #### 3. **API Endpoint**
+
 - **Endpoint**: `GET /api/v1/lei-countries`
 - **Returns**: Array of `Country` objects from master data
 - **Response format**:
+
   ```json
   [
     {
@@ -49,11 +54,13 @@ instead of querying DISTINCT values from the 3.2M+ LEI records.
     ...
   ]
   ```
+
 - **Current behavior**: Returns empty array `[]` until countries table is populated
 
 ### Frontend Updates
 
 #### 1. **LEI Records Page** (`frontend/app/lei-records/page.tsx`)
+
 - **Added**: `Country` interface with `code`, `name`, and `active` properties
 - **Added**: Dynamic country fetching from `/api/v1/lei-countries` on component mount
 - **Added**: `debouncedSearch` state for 300ms search input debouncing
@@ -70,6 +77,7 @@ instead of querying DISTINCT values from the 3.2M+ LEI records.
 - **Fixed**: Clear Filters now also clears country search input
 
 #### 2. **Search & Filter Behavior**
+
 - **Search input**: Debounced (300ms) → Auto-fetches after typing pause
 - **Status filter**: Immediate fetch on selection change
 - **Category filter**: Immediate fetch on selection change  
@@ -77,6 +85,7 @@ instead of querying DISTINCT values from the 3.2M+ LEI records.
 - **Page navigation**: Preserves all active filters
 
 #### 3. **Searchable Country Dropdown (Enhancement)**
+
 - **Backend Change**: API now returns full `Country` objects with `code`, `name`, `alpha3_code`, `region`, and
   `active` fields (instead of just code strings)
 - **Frontend Implementation**:
@@ -99,22 +108,26 @@ instead of querying DISTINCT values from the 3.2M+ LEI records.
 ## Benefits
 
 ### 1. **Architectural Correctness**
+
 - ✅ Countries are master reference data → should come from `countries` table
 - ✅ Follows single source of truth principle
 - ✅ Separation of concerns (reference data vs transactional data)
 
 ### 2. **Performance**
+
 - ✅ No DISTINCT query on 3.2M+ LEI records
 - ✅ Countries table indexed and optimized for reference data
 - ✅ Faster query execution (countries table << LEI records table)
 
 ### 3. **Data Quality**
+
 - ✅ Allows users to search for countries with zero LEI records
 - ✅ Users can see "No records found" message for countries not in LEI dataset
 - ✅ Complete list of countries (235 total) when table is populated
 - ✅ Supports active/inactive country filtering
 
 ### 4. **Maintainability**
+
 - ✅ Country list managed in one place (countries table)
 - ✅ Easy to update country names, codes, or regions
 - ✅ No hardcoded country lists in frontend or backend
@@ -122,8 +135,9 @@ instead of querying DISTINCT values from the 3.2M+ LEI records.
 ## Current State
 
 ### Countries Table
+
 - **Status**: Empty (not yet populated)
-- **Schema**: 
+- **Schema**:
   - `code` (2-letter ISO 3166-1 alpha-2, e.g., "US")
   - `name` (e.g., "United States")
   - `alpha3_code` (3-letter ISO code, e.g., "USA")
@@ -131,11 +145,13 @@ instead of querying DISTINCT values from the 3.2M+ LEI records.
   - `active` (boolean flag)
 
 ### API Behavior
+
 - **Endpoint**: `GET /api/v1/lei-countries`
 - **Current response**: `[]` (empty array)
 - **After population**: Will return 235+ country codes alphabetically sorted
 
 ### Frontend Behavior
+
 - **Country dropdown**: Shows only "All Countries" option
 - **Filtering**: Still works - users can manually type country codes in URL or future autocomplete
 - **User experience**: Clean, no errors, ready for data population
@@ -143,6 +159,7 @@ instead of querying DISTINCT values from the 3.2M+ LEI records.
 ## Next Steps (Future Work)
 
 ### 1. **Populate Countries Table**
+
 ```sql
 -- Example: Seed countries table with ISO 3166-1 reference data
 INSERT INTO countries (code, name, alpha3_code, region, active)
@@ -151,6 +168,7 @@ VALUES ('US', 'United States', 'USA', 'North America', true);
 ```
 
 ### 2. **Optional Enhancements**
+
 - ✅ **COMPLETED**: Add country name to dropdown (e.g., "US - United States")
   - Backend now returns full Country objects with `code`, `name`, `alpha3_code`, `region`, and `active` fields
   - Frontend displays countries in format "CODE - Country Name" (e.g., "US - United States")
@@ -165,6 +183,7 @@ VALUES ('US', 'United States', 'USA', 'North America', true);
 ## Testing
 
 ### Current Tests Passing
+
 ✅ Backend compiles without errors  
 ✅ API endpoint returns empty array (expected)  
 ✅ Frontend loads without errors  
@@ -175,6 +194,7 @@ VALUES ('US', 'United States', 'USA', 'North America', true);
 ✅ Pagination preserves filters  
 
 ### To Test After Countries Population
+
 - [ ] Verify 235+ countries appear in dropdown
 - [ ] Verify countries are alphabetically sorted
 - [ ] Verify inactive countries are excluded
@@ -183,6 +203,7 @@ VALUES ('US', 'United States', 'USA', 'North America', true);
 ## Technical Details
 
 ### Route Configuration (`backend/cmd/api/main.go`)
+
 ```go
 // Public LEI data routes
 v1.GET("/lei", h.LEI.ListLEI)
@@ -193,6 +214,7 @@ v1.GET("/lei/:lei", h.LEI.GetLEIByCode)
 ```
 
 ### Dependency Injection Flow
+
 ```text
 main.go
   ↓
@@ -206,6 +228,7 @@ LEI: NewLEIService(repos.LEI, repos.Country, leiDataDir)
 ```
 
 ### Frontend State Management
+
 ```typescript
 const [searchTerm, setSearchTerm] = useState('')          // User input (immediate)
 const [debouncedSearch, setDebouncedSearch] = useState('') // API query (300ms delay)
@@ -232,6 +255,7 @@ useEffect(() => {
 ## Rollback Plan
 
 If issues arise, revert to previous DISTINCT query approach:
+
 1. Change `GetDistinctCountries()` to query `s.repo.GetDistinctCountries()`
 2. Revert `NewLEIService` constructor to not require `CountryRepository`
 3. Revert `NewServices` factory to original signature

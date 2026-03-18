@@ -80,7 +80,7 @@ export default function UserBadge() {
       <button
         ref={buttonRef}
         onClick={() => setMenuOpen((open) => !open)}
-        className="flex items-center gap-2 h-9 px-3 rounded-lg bg-white/10 border border-white/20 text-sm hover:bg-white/20 transition-colors"
+        className="flex items-center gap-2 h-9 px-3 rounded-lg bg-white/10 border border-gray-400/50 dark:border-white/20 text-sm hover:bg-white/20 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
         title={t('preferences.openUserMenu')}
         aria-haspopup="menu"
         aria-expanded={menuOpen}

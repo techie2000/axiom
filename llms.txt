@@ -106,6 +106,8 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
   selection on login/register, community translation review workflow, and CI/daily seed integration
 - [ADR-0013: Dedicated User Documentation Site](docs/adr/adr-0013-user-documentation-site.md): decision to
   introduce top-level `docs-user/` for polished end-user docs while keeping `docs/` engineering-focused
+- [ADR-0014: WCAG Accessibility Standards](docs/adr/adr-0014-wcag-accessibility-standards.md): WCAG 2.2 AA
+  baseline for the frontend — contrast, focus visibility, and non-text contrast rules for shared components
 
 ## Deployment and Infrastructure
 
@@ -143,6 +145,8 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
 
 - [UI Patterns Guide](docs/ui-patterns.md): Reusable frontend components and patterns (Badge, Alert, LoadingSpinner,
   StatCard, PageHeader, Sticky Headers, User Preferences, Internationalisation)
+- [WCAG Compliance Guide](docs/accessibility/WCAG_COMPLIANCE.md): WCAG 2.2 AA developer reference —
+  contrast tables, approved Tailwind patterns, PR checklist, and testing tools
 - [Internationalisation Guide](docs/i18n/INTERNATIONALISATION.md): Full i18n guide: locale files, adding translation
   keys, LanguageSelector component, RTL support, review workflow, CI seed integration
 - [Branding Assets Guide](docs/assets/branding/README.md): Canonical source logos and generated runtime favicon/logo
