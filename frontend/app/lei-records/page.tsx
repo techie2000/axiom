@@ -1783,16 +1783,13 @@ export default function LEIRecordsPage() {
           role="presentation"
           className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
           onClick={() => setSelectedRecord(null)}
-          onKeyDown={(e) => e.key === 'Escape' && setSelectedRecord(null)}
         >
-          {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- role=dialog is interactive per ARIA spec; jsx-a11y does not recognise it as such */}
           <div
             role="dialog"
             aria-modal="true"
             aria-label={t('leiRecords.modal.title')}
             className="bg-white dark:bg-gray-900 rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border-2 border-gray-300 dark:border-white/20"
             onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
             <div className="sticky top-0 bg-white dark:bg-gray-900 border-b-2 border-gray-200 dark:border-white/10 p-6 z-10">

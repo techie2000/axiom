@@ -4,7 +4,7 @@ author1: "techie2000"
 post_slug: "adr-0014-wcag-accessibility-standards"
 microsoft_alias: "techie2000"
 featured_image: "https://placehold.co/1200x630.png"
-categories: ["frontend", "accessibility"]
+categories: ["frontend"]
 tags: ["adr", "frontend", "wcag", "accessibility", "contrast", "focus"]
 ai_note: "AI-assisted draft based on accessibility audit and WCAG 2.2 requirements."
 summary: "Records the decision to adopt WCAG 2.2 AA as the accessibility baseline for the Axiom frontend."
