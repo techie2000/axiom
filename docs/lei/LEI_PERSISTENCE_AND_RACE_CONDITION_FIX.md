@@ -153,20 +153,19 @@ Database survives container rebuilds. ✅
 #### UAT/Production Environments (Docker Volumes)
 
 1. **docker-compose.uat.yml**
+   - `LEI_DATADIR` environment variable
+   - `lei_data_uat:/root/data/lei` **volume mount** (better performance)
+   - `lei_data_uat` named volume
 
-- `LEI_DATADIR` environment variable
-- `lei_data_uat:/root/data/lei` **volume mount** (better performance)
-- `lei_data_uat` named volume
-
-1. **.env.uat**
+2. **.env.uat**
    - `LEI_DATADIR=/root/data/lei`
 
-2. **docker-compose.prod.yml**
+3. **docker-compose.prod.yml**
    - `LEI_DATADIR` environment variable
    - `lei_data_prod:/root/data/lei` **volume mount** (better performance)
    - `lei_data_prod` named volume
 
-3. **.env.prod**
+4. **.env.prod**
    - `LEI_DATADIR=/root/data/lei`
 
 ### Storage Strategy Summary
