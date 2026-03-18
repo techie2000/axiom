@@ -226,7 +226,6 @@ export function useUserPreference(
         }
       })
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [pageKey, prefKey, localKey],
   )
 
