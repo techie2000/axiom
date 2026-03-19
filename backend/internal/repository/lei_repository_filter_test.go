@@ -46,16 +46,72 @@ func TestNotSetEntityStatusWhereClauseCoversNullAndEmptyRepresentations(t *testi
 }
 
 func TestNormalizedEntityCategoryMatchWhereClauseUsesTrimmedCaseInsensitiveComparison(t *testing.T) {
-t.Helper()
+	t.Helper()
 
-expectedFragments := []string{
-"UPPER(BTRIM(entity_category))",
-"UPPER(BTRIM(?))",
+	expectedFragments := []string{
+		"UPPER(BTRIM(entity_category))",
+		"UPPER(BTRIM(?))",
+	}
+
+	for _, fragment := range expectedFragments {
+		if !strings.Contains(normalizedEntityCategoryMatchWhereClause, fragment) {
+			t.Fatalf("expected category where clause to contain fragment %q, got: %s", fragment, normalizedEntityCategoryMatchWhereClause)
+		}
+	}
 }
 
-for _, fragment := range expectedFragments {
-if !strings.Contains(normalizedEntityCategoryMatchWhereClause, fragment) {
-t.Fatalf("expected category where clause to contain fragment %q, got: %s", fragment, normalizedEntityCategoryMatchWhereClause)
+func TestExactLEIMatchWhereClauseIncludesPrimaryAndSuccessorLEI(t *testing.T) {
+	t.Helper()
+
+	expectedFragments := []string{
+		"lei = ?",
+		"successor_lei = ?",
+	}
+
+	for _, fragment := range expectedFragments {
+		if !strings.Contains(exactLEIMatchWhereClause, fragment) {
+			t.Fatalf("expected exact LEI match clause to contain fragment %q, got: %s", fragment, exactLEIMatchWhereClause)
+		}
+	}
 }
+
+func TestLikePatternLEISearchWhereClauseIncludesPrimaryAndSuccessorLEI(t *testing.T) {
+	t.Helper()
+
+	expectedFragments := []string{
+		"lei ILIKE ?",
+		"successor_lei ILIKE ?",
+		"legal_name ILIKE ?",
+	}
+
+	for _, fragment := range expectedFragments {
+		if !strings.Contains(likePatternLEISearchWhereClause, fragment) {
+			t.Fatalf("expected ILIKE search clause to contain fragment %q, got: %s", fragment, likePatternLEISearchWhereClause)
+		}
+	}
 }
+
+func TestIsAlphanumericRejectsNonAlphanumericCharacters(t *testing.T) {
+	t.Helper()
+
+	// isAlphanumeric is always called with a 20-char string in practice
+	// (guarded by len(search) == 20 in FindAllLEIWithFilters), so the
+	// important cases are 20-char strings that are or are not alphanumeric.
+	tests := []struct {
+		input string
+		want  bool
+	}{
+		{"ABCDEF1234567890ABCD", true},  // valid 20-char LEI format
+		{"abcdef1234567890abcd", true},  // lowercase letters and digits
+		{"12345678901234567890", true},  // digits only
+		{"ABCDEF1234567890ABC!", false}, // contains special char
+		{"ABCDEF 1234567890AB", false},  // contains space
+	}
+
+	for _, tt := range tests {
+		got := isAlphanumeric(tt.input)
+		if got != tt.want {
+			t.Errorf("isAlphanumeric(%q) = %v, want %v", tt.input, got, tt.want)
+		}
+	}
 }
