@@ -521,7 +521,7 @@ func buildRecordsArrayJSON(recordCount int) string {
 		builder.WriteString(`{"LEI":{"$":"`)
 		builder.WriteString(testLEICodeForIndex(i))
 		builder.WriteString(`"},"Entity":{"LegalName":{"$":"Entity`)
-		builder.WriteString(fmt.Sprintf("%d", i))
+		_, _ = fmt.Fprintf(&builder, "%d", i)
 		builder.WriteString(`"}}}`)
 	}
 	builder.WriteString("]")
