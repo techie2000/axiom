@@ -161,7 +161,81 @@ step-by-step integration checklist for new pages.
 - [useUserPreference hook](../../frontend/app/lib/useUserPreference.ts)
 - [PreferenceSavePrompt component](../../frontend/app/components/PreferenceSavePrompt.tsx)
 - GitHub Issue: [[feature] user preferences](https://github.com/techie2000/axiom/issues/108)
+- GitHub Issue: [[enhancement] undo accidental preference save + audit trail](https://github.com/techie2000/axiom/issues/122)
 
 ## Revision History
 
 - **2026-03-04:** Initial decision
+- **2026-03-13:** Added undo capability and server-side audit trail (see amendment below)
+
+---
+
+## Amendment: Preference Undo and Audit Trail
+
+**Status:** Accepted
+**Date:** 2026-03-13
+
+### Context
+
+After the initial delivery (migration 000042, `useUserPreference`, `PreferenceSavePrompt`),
+two gaps were identified:
+
+1. **No recovery path** – a user who accidentally clicks "Save" must manually reconfigure their
+   columns or other preferences; there is no in-app undo.
+2. **No audit trail** – there is no record of what preference value was replaced, when, or from
+   which IP, which is needed for debugging and future compliance requirements.
+
+### Solution
+
+#### 1. Undo (frontend)
+
+`useDeferredBooleanPreference` and `useDeferredStringPreference` now capture the previous
+persisted value in a ref (`previousValue`) immediately before calling `setStoredValue`. After a
+successful save they expose:
+
+| Return field | Type | Description |
+| ------------ | ---- | ----------- |
+| `showUndo` | `boolean` | `true` for up to 15 s after a save |
+| `undoResetKey` | `number` | Incremented on each save; resets the undo timer |
+| `undo()` | `() => void` | Restores the previous value and hides the undo toast |
+| `undoDismiss()` | `() => void` | Hides the undo toast without reverting |
+
+`PreferenceSavePrompt` gained optional `showUndo`, `undoResetKey`, `onUndo`, `onUndoDismiss`,
+and `undoLabel` props. When `showUndo` is `true` and `visible` is `false`, the component renders
+an amber "Undo" toast that auto-dismisses after 15 seconds. All pages that use
+`PreferenceSavePrompt` have been updated to wire these props.
+
+Pages with Set-based column preferences (countries, LEI Records) use local refs (`previousColumns`)
+following the same pattern.
+
+#### 2. Audit trail (backend)
+
+Migration `000047_add_preference_audit_table` adds a `user_preferences_audit` table:
+
+```sql
+CREATE TABLE IF NOT EXISTS user_preferences_audit (
+    id            UUID PRIMARY KEY DEFAULT GEN_RANDOM_UUID(),
+    user_id       UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    page_key      VARCHAR(100) NOT NULL,
+    preference_key VARCHAR(100) NOT NULL,
+    old_value     TEXT,
+    new_value     TEXT NOT NULL,
+    changed_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    ip_address    VARCHAR(45)
+);
+```
+
+`old_value` is `NULL` when the preference did not previously exist. `ip_address` captures the
+HTTP client IP from the gin context. All columns have `COMMENT ON` documentation.
+
+`UserPreferenceService.Set` was extended to accept an `ipAddress string` parameter. Before
+upserting, it reads the current value via the new `UserPreferenceRepository.GetOne` method.
+After a successful upsert, it writes an audit row via `PreferenceAuditRepository.Record`. Audit
+errors are swallowed (best-effort) so that a transient write failure never degrades the
+preference save response to the user.
+
+### Generalisation note
+
+The `user_preferences_audit` table design is intentionally generic. Future entity mutation audit tables
+(e.g. `lei_record_audit`, `user_profile_audit`) should follow the same append-only, insert-only
+pattern with `old_value` / `new_value` columns and a DB-clock `changed_at` timestamp.

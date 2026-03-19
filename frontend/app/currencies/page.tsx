@@ -504,6 +504,11 @@ export default function CurrenciesPage() {
         onSave={expandedWidthPreference.save}
         onDismiss={expandedWidthPreference.dismiss}
         label={t('referenceLayout.savePageWidthDefault')}
+        showUndo={expandedWidthPreference.showUndo}
+        undoResetKey={expandedWidthPreference.undoResetKey}
+        onUndo={expandedWidthPreference.undo}
+        onUndoDismiss={expandedWidthPreference.undoDismiss}
+        undoLabel={t('preferences.savedUndo')}
       />
     </div>
   )

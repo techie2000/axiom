@@ -25,6 +25,16 @@ interface DeferredBooleanPreference {
    */
   saveCurrentValue: () => void
   dismiss: () => void
+
+  // ── Undo ────────────────────────────────────────────────────────────────
+  /** True for 15 seconds after a successful save, allowing the user to revert. */
+  showUndo: boolean
+  /** Increment counter that resets the undo toast timer on repeated saves. */
+  undoResetKey: number
+  /** Restores the previous persisted value and hides the undo toast. */
+  undo: () => void
+  /** Hides the undo toast without reverting the saved value. */
+  undoDismiss: () => void
 }
 
 export function useDeferredBooleanPreference({
@@ -37,6 +47,12 @@ export function useDeferredBooleanPreference({
   const [showPrompt, setShowPrompt] = useState(false)
   const [promptResetKey, setPromptResetKey] = useState(0)
   const pendingValue = useRef<boolean | null>(null)
+
+  // Track the value that was persisted just before the most recent save so
+  // that the user can undo the change within the 15-second window.
+  const previousValue = useRef<boolean | null>(null)
+  const [showUndo, setShowUndo] = useState(false)
+  const [undoResetKey, setUndoResetKey] = useState(0)
 
   const value = localValue ?? (storedValue === 'true')
 
@@ -53,12 +69,17 @@ export function useDeferredBooleanPreference({
 
   const save = useCallback(() => {
     if (pendingValue.current !== null) {
+      // Snapshot the current persisted value as the undo target.
+      previousValue.current = storedValue === 'true'
       setStoredValue(String(pendingValue.current))
       setLocalValue(null)
       pendingValue.current = null
     }
     setShowPrompt(false)
-  }, [setStoredValue])
+    // Show undo toast after saving.
+    setShowUndo(true)
+    setUndoResetKey((k) => k + 1)
+  }, [setStoredValue, storedValue])
 
   const dismiss = useCallback(() => {
     setShowPrompt(false)
@@ -67,11 +88,27 @@ export function useDeferredBooleanPreference({
   const hasUnsavedChanges = localValue !== null
 
   const saveCurrentValue = useCallback(() => {
+    previousValue.current = storedValue === 'true'
     setStoredValue(String(value))
     setLocalValue(null)
     pendingValue.current = null
     setShowPrompt(false)
-  }, [setStoredValue, value])
+    setShowUndo(true)
+    setUndoResetKey((k) => k + 1)
+  }, [setStoredValue, storedValue, value])
+
+  const undo = useCallback(() => {
+    if (previousValue.current !== null) {
+      setStoredValue(String(previousValue.current))
+      setLocalValue(null)
+      previousValue.current = null
+    }
+    setShowUndo(false)
+  }, [setStoredValue])
+
+  const undoDismiss = useCallback(() => {
+    setShowUndo(false)
+  }, [])
 
   return {
     value,
@@ -83,5 +120,9 @@ export function useDeferredBooleanPreference({
     save,
     saveCurrentValue,
     dismiss,
+    showUndo,
+    undoResetKey,
+    undo,
+    undoDismiss,
   }
 }

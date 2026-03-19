@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 <#!
 .SYNOPSIS
-Runs API smoke tests for dev, UAT, and prod environments.
+Runs API smoke tests for main, dev, UAT, and prod environments.
 
 .DESCRIPTION
 Performs a consistent smoke-test suite against Axiom backend endpoints.

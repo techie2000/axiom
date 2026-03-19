@@ -23,6 +23,11 @@ const API_BASE_URL =
 const normalizeLanguageCode = (languageCode: string): string =>
   String(languageCode || '').trim().toLowerCase().split('-')[0]
 
+const isEnglishOrDefaultLanguage = (languageCode: string): boolean => {
+  const normalized = normalizeLanguageCode(languageCode)
+  return normalized === '' || normalized === 'en' || normalized === 'default'
+}
+
 const NESTED_TRANSLATION_PATTERN = /^\$t\(([^)]+)\)$/
 const SHARED_KEY_PREFIXES = ['referenceLayout.']
 
@@ -229,7 +234,7 @@ export default function I18nMissingTranslationsDevTool() {
     const collectMissingKeys = (keyInput: unknown) => {
       const keys = Array.isArray(keyInput) ? keyInput : [keyInput]
       const currentLanguage = normalizeLanguageCode(i18n.resolvedLanguage || i18n.language || '')
-      if (!currentLanguage || currentLanguage === 'en') {
+      if (isEnglishOrDefaultLanguage(currentLanguage)) {
         return
       }
 
@@ -291,6 +296,8 @@ export default function I18nMissingTranslationsDevTool() {
     () => Object.values(entries).sort((left, right) => left.key.localeCompare(right.key)),
     [entries]
   )
+
+  const shouldShowDevTool = !isEnglishOrDefaultLanguage(activeLanguage)
 
   const pendingCount = sortedEntries.length
 
@@ -356,7 +363,7 @@ export default function I18nMissingTranslationsDevTool() {
 
     const reconcileResolvedEntries = () => {
       const currentLanguage = normalizeLanguageCode(i18n.resolvedLanguage || i18n.language || '')
-      if (!currentLanguage || currentLanguage === 'en') return
+      if (isEnglishOrDefaultLanguage(currentLanguage)) return
 
       setEntries((current) => {
         let changed = false
@@ -457,7 +464,7 @@ export default function I18nMissingTranslationsDevTool() {
 
   const handleSubmit = async (entry: MissingTranslationDraft) => {
     const languageCode = normalizeLanguageCode(i18n.resolvedLanguage || i18n.language || '')
-    if (!languageCode || languageCode === 'en') {
+    if (isEnglishOrDefaultLanguage(languageCode)) {
       setEntryField(entry.key, {
         error: 'Switch to a non-English language before submitting translations.',
       })
@@ -595,7 +602,7 @@ export default function I18nMissingTranslationsDevTool() {
     }
   }
 
-  if (!isEnabled) {
+  if (!isEnabled || !shouldShowDevTool) {
     return null
   }
 

@@ -42,7 +42,7 @@ func NewServices(repos *repository.Repositories, db *gorm.DB, leiDataDir string,
 		LEILevel2:      NewLEILevel2Service(repos.LEILevel2, repos.LEI, leiDataDir),
 		MasterData:     NewMasterDataService(db, masterDataDir),
 		CodeMapping:    NewCodeMappingService(repos.CodeMapping),
-		UserPreference: NewUserPreferenceService(repos.UserPreference),
+		UserPreference: NewUserPreferenceService(repos.UserPreference, repos.PreferenceAudit),
 		UITranslation:  NewUITranslationService(repos.UITranslation),
 	}
 }

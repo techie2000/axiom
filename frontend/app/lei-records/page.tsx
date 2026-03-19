@@ -209,9 +209,12 @@ export default function LEIRecordsPage() {
   const [columnSaveVersion, setColumnSaveVersion] = useState(0)
   // Track whether the current value differs from the stored preference.
   const pendingColumns = useRef<Set<keyof LEIRecord> | null>(null)
+  const previousColumns = useRef<string | null>(null)
 
   // Apply pending column changes immediately (local state) even before saving.
   const [localColumns, setLocalColumns] = useState<Set<keyof LEIRecord> | null>(null)
+  const [showColumnUndoToast, setShowColumnUndoToast] = useState(false)
+  const [columnUndoVersion, setColumnUndoVersion] = useState(0)
 
   const effectiveVisibleColumns = localColumns ?? visibleColumns
   const [hasHydrated, setHasHydrated] = useState(false)
@@ -231,15 +234,31 @@ export default function LEIRecordsPage() {
 
   const handleSaveColumns = useCallback(() => {
     if (pendingColumns.current) {
+      previousColumns.current = storedColumns
       setStoredColumns(Array.from(pendingColumns.current).join(','))
       setLocalColumns(null)
       pendingColumns.current = null
     }
     setShowColumnSavePrompt(false)
-  }, [setStoredColumns])
+    setShowColumnUndoToast(true)
+    setColumnUndoVersion(v => v + 1)
+  }, [setStoredColumns, storedColumns])
 
   const handleDismissColumns = useCallback(() => {
     setShowColumnSavePrompt(false)
+  }, [])
+
+  const handleUndoColumns = useCallback(() => {
+    if (previousColumns.current !== null) {
+      setStoredColumns(previousColumns.current)
+      setLocalColumns(null)
+      previousColumns.current = null
+    }
+    setShowColumnUndoToast(false)
+  }, [setStoredColumns])
+
+  const handleUndoDismissColumns = useCallback(() => {
+    setShowColumnUndoToast(false)
   }, [])
 
   const toggleLocationDisplayMode = locationDisplayPreference.toggle
@@ -2296,6 +2315,11 @@ export default function LEIRecordsPage() {
         label={t('leiRecords.saveColumnPrompt')}
         onSave={handleSaveColumns}
         onDismiss={handleDismissColumns}
+        showUndo={showColumnUndoToast}
+        undoResetKey={columnUndoVersion}
+        onUndo={handleUndoColumns}
+        onUndoDismiss={handleUndoDismissColumns}
+        undoLabel={t('preferences.savedUndo')}
       />
       <PreferenceSavePrompt
         visible={expandedWidthPreference.showPrompt}
@@ -2303,6 +2327,11 @@ export default function LEIRecordsPage() {
         label={t('referenceLayout.savePageWidthDefault')}
         onSave={expandedWidthPreference.save}
         onDismiss={expandedWidthPreference.dismiss}
+        showUndo={expandedWidthPreference.showUndo}
+        undoResetKey={expandedWidthPreference.undoResetKey}
+        onUndo={expandedWidthPreference.undo}
+        onUndoDismiss={expandedWidthPreference.undoDismiss}
+        undoLabel={t('preferences.savedUndo')}
       />
       <PreferenceSavePrompt
         visible={locationDisplayPreference.showPrompt}
@@ -2310,6 +2339,11 @@ export default function LEIRecordsPage() {
         label={t('referenceLayout.saveDisplayModeDefault')}
         onSave={locationDisplayPreference.save}
         onDismiss={locationDisplayPreference.dismiss}
+        showUndo={locationDisplayPreference.showUndo}
+        undoResetKey={locationDisplayPreference.undoResetKey}
+        onUndo={locationDisplayPreference.undo}
+        onUndoDismiss={locationDisplayPreference.undoDismiss}
+        undoLabel={t('preferences.savedUndo')}
       />
     </div>
   )

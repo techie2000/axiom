@@ -445,6 +445,11 @@ export default function LanguagesPage() {
         onSave={expandedWidthPreference.save}
         onDismiss={expandedWidthPreference.dismiss}
         label={t('referenceLayout.savePageWidthDefault')}
+        showUndo={expandedWidthPreference.showUndo}
+        undoResetKey={expandedWidthPreference.undoResetKey}
+        onUndo={expandedWidthPreference.undo}
+        onUndoDismiss={expandedWidthPreference.undoDismiss}
+        undoLabel={t('preferences.savedUndo')}
       />
       <PreferenceSavePrompt
         visible={referenceDisplayPreference.showPrompt}
@@ -452,6 +457,11 @@ export default function LanguagesPage() {
         onSave={referenceDisplayPreference.save}
         onDismiss={referenceDisplayPreference.dismiss}
         label={t('referenceLayout.saveDisplayModeDefault')}
+        showUndo={referenceDisplayPreference.showUndo}
+        undoResetKey={referenceDisplayPreference.undoResetKey}
+        onUndo={referenceDisplayPreference.undo}
+        onUndoDismiss={referenceDisplayPreference.undoDismiss}
+        undoLabel={t('preferences.savedUndo')}
       />
     </div>
   )

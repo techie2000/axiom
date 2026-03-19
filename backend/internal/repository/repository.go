@@ -1,43 +1,47 @@
 package repository
 
 import (
+	"errors"
+
 	"github.com/techie2000/axiom/internal/domain"
 	"gorm.io/gorm"
 )
 
 // Repositories holds all repository interfaces
 type Repositories struct {
-	Country        CountryRepository
-	Currency       CurrencyRepository
-	Language       LanguageRepository
-	Entity         EntityRepository
-	Instrument     InstrumentRepository
-	Account        AccountRepository
-	SSI            SSIRepository
-	LEI            LEIRepository
-	LEILevel2      LEILevel2Repository
-	CodeMapping    CodeMappingRepository
-	User           UserRepository
-	UserPreference UserPreferenceRepository
-	UITranslation  UITranslationRepository
+	Country           CountryRepository
+	Currency          CurrencyRepository
+	Language          LanguageRepository
+	Entity            EntityRepository
+	Instrument        InstrumentRepository
+	Account           AccountRepository
+	SSI               SSIRepository
+	LEI               LEIRepository
+	LEILevel2         LEILevel2Repository
+	CodeMapping       CodeMappingRepository
+	User              UserRepository
+	UserPreference    UserPreferenceRepository
+	PreferenceAudit   PreferenceAuditRepository
+	UITranslation     UITranslationRepository
 }
 
 // NewRepositories creates a new repositories instance
 func NewRepositories(db *gorm.DB) *Repositories {
 	return &Repositories{
-		Country:        NewCountryRepository(db),
-		Currency:       NewCurrencyRepository(db),
-		Language:       NewLanguageRepository(db),
-		Entity:         NewEntityRepository(db),
-		Instrument:     NewInstrumentRepository(db),
-		Account:        NewAccountRepository(db),
-		SSI:            NewSSIRepository(db),
-		LEI:            NewLEIRepository(db),
-		LEILevel2:      NewLEILevel2Repository(db),
-		CodeMapping:    NewCodeMappingRepository(db),
-		User:           NewUserRepository(db),
-		UserPreference: NewUserPreferenceRepository(db),
-		UITranslation:  NewUITranslationRepository(db),
+		Country:         NewCountryRepository(db),
+		Currency:        NewCurrencyRepository(db),
+		Language:        NewLanguageRepository(db),
+		Entity:          NewEntityRepository(db),
+		Instrument:      NewInstrumentRepository(db),
+		Account:         NewAccountRepository(db),
+		SSI:             NewSSIRepository(db),
+		LEI:             NewLEIRepository(db),
+		LEILevel2:       NewLEILevel2Repository(db),
+		CodeMapping:     NewCodeMappingRepository(db),
+		User:            NewUserRepository(db),
+		UserPreference:  NewUserPreferenceRepository(db),
+		PreferenceAudit: NewPreferenceAuditRepository(db),
+		UITranslation:   NewUITranslationRepository(db),
 	}
 }
 
@@ -485,6 +489,8 @@ type UserPreferenceRepository interface {
 	GetByPage(userID, pageKey string) ([]*domain.UserPreference, error)
 	// GetAll returns all preferences for a user across all pages.
 	GetAll(userID string) ([]*domain.UserPreference, error)
+	// GetOne returns a single preference value or nil if it does not exist.
+	GetOne(userID, pageKey, preferenceKey string) (*domain.UserPreference, error)
 	// Upsert creates or updates a single preference.
 	Upsert(pref *domain.UserPreference) error
 	// Delete removes a preference by user, page, and preference key.
@@ -520,6 +526,20 @@ func (r *userPreferenceRepository) GetAll(userID string) ([]*domain.UserPreferen
 	return prefs, nil
 }
 
+func (r *userPreferenceRepository) GetOne(userID, pageKey, preferenceKey string) (*domain.UserPreference, error) {
+	var pref domain.UserPreference
+	err := r.db.
+		Where("user_id = ? AND page_key = ? AND preference_key = ?", userID, pageKey, preferenceKey).
+		First(&pref).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &pref, nil
+}
+
 func (r *userPreferenceRepository) Upsert(pref *domain.UserPreference) error {
 	return r.db.
 		Where(domain.UserPreference{
@@ -537,6 +557,26 @@ func (r *userPreferenceRepository) Delete(userID, pageKey, preferenceKey string)
 	return r.db.
 		Where("user_id = ? AND page_key = ? AND preference_key = ?", userID, pageKey, preferenceKey).
 		Delete(&domain.UserPreference{}).Error
+}
+
+// PreferenceAuditRepository records preference change history.
+type PreferenceAuditRepository interface {
+	// Record inserts a single audit row. It is best-effort: failures are logged
+	// but do not roll back the parent preference upsert.
+	Record(entry *domain.PreferenceAudit) error
+}
+
+type preferenceAuditRepository struct {
+	db *gorm.DB
+}
+
+// NewPreferenceAuditRepository creates a new PreferenceAuditRepository.
+func NewPreferenceAuditRepository(db *gorm.DB) PreferenceAuditRepository {
+	return &preferenceAuditRepository{db: db}
+}
+
+func (r *preferenceAuditRepository) Record(entry *domain.PreferenceAudit) error {
+	return r.db.Create(entry).Error
 }
 
 // UITranslationRepository interface
