@@ -60,12 +60,14 @@ func TestNormalizedEntityCategoryMatchWhereClauseUsesTrimmedCaseInsensitiveCompa
 	}
 }
 
-func TestExactLEIMatchWhereClauseIncludesPrimaryAndSuccessorLEI(t *testing.T) {
+func TestExactLEIMatchWhereClauseIncludesPrimaryAndIndexedSuccessorLEI(t *testing.T) {
 	t.Helper()
 
 	expectedFragments := []string{
 		"lei = ?",
 		"successor_lei = ?",
+		"successor_lei IS NOT NULL",
+		"BTRIM(successor_lei) <> ''",
 	}
 
 	for _, fragment := range expectedFragments {

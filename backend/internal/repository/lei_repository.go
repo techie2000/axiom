@@ -66,8 +66,10 @@ const notSetEntityStatusWhereClause = "entity_status IS NULL OR TRIM(entity_stat
 const normalizedEntityCategoryMatchWhereClause = "UPPER(BTRIM(entity_category)) = UPPER(BTRIM(?))"
 
 // exactLEIMatchWhereClause matches a record by its primary LEI or its successor LEI.
+// The successor branch includes the partial-index predicate so PostgreSQL can use
+// idx_lei_raw_lei_records_successor_lei instead of falling back to sequential scans.
 // Used when the search string is exactly 20 alphanumeric characters (LEI format).
-const exactLEIMatchWhereClause = "(lei = ? OR successor_lei = ?)"
+const exactLEIMatchWhereClause = "(lei = ? OR (successor_lei = ? AND successor_lei IS NOT NULL AND BTRIM(successor_lei) <> ''))"
 
 // likePatternLEISearchWhereClause matches a record by legal name, primary LEI,
 // successor LEI, or other names using case-insensitive LIKE patterns.
