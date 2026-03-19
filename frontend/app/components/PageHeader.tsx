@@ -61,7 +61,7 @@ export default function PageHeader({
     docsLabel,
     hasHydrated,
     t('nav.documentation'),
-    'Documentation',
+    '📘 Documentation',
   )
 
   return (

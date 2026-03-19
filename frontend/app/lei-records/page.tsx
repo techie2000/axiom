@@ -1184,9 +1184,10 @@ export default function LEIRecordsPage() {
               <button
                 onClick={expandedWidthPreference.toggle}
                 className="h-9 px-3 rounded-lg border border-gray-300 dark:border-white/20 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-                 title={effectiveExpandedWidth ? getEnglishTooltip('referenceLayout.normalButton') : getEnglishTooltip('referenceLayout.expandButton')}
+                title={effectiveExpandedWidth ? getEnglishTooltip('referenceLayout.normalButton') : getEnglishTooltip('referenceLayout.expandButton')}
+                aria-label={effectiveExpandedWidth ? t('referenceLayout.normalButton') : t('referenceLayout.expandButton')}
               >
-                 {effectiveExpandedWidth ? formatLabel(t('referenceLayout.normalButton')) : formatLabel(t('referenceLayout.expandButton'))}
+                {effectiveExpandedWidth ? formatLabel(t('referenceLayout.normalButton')) : formatLabel(t('referenceLayout.expandButton'))}
               </button>
 
               <div className="relative">
@@ -1194,6 +1195,7 @@ export default function LEIRecordsPage() {
                   onClick={() => setShowColumnSelector(!showColumnSelector)}
                   className="h-9 px-3 rounded-lg border border-gray-300 dark:border-white/20 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                   title={getEnglishTooltip('leiRecords.columns.button')}
+                  aria-label={t('leiRecords.columns.button', { count: effectiveVisibleColumns.size })}
                 >
                   {formatLabel(t('leiRecords.columns.button', { count: effectiveVisibleColumns.size }))}
                 </button>
@@ -1278,6 +1280,7 @@ export default function LEIRecordsPage() {
                 onClick={toggleLocationDisplayMode}
                 className="h-9 px-3 rounded-lg border border-gray-300 dark:border-white/20 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                 title={showLocationCodes ? getEnglishTooltip('leiRecords.display.codes') : getEnglishTooltip('leiRecords.display.names')}
+                aria-label={showLocationCodes ? t('leiRecords.display.codes') : t('leiRecords.display.names')}
               >
                 {formatLabel(showLocationCodes ? t('leiRecords.display.codes') : t('leiRecords.display.names'))}
               </button>

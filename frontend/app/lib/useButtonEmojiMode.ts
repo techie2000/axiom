@@ -5,6 +5,10 @@ import { useUserPreference } from './useUserPreference'
 
 export type EmojiMode = 'both' | 'text' | 'emoji'
 
+function isEmojiMode(value: string): value is EmojiMode {
+  return value === 'both' || value === 'text' || value === 'emoji'
+}
+
 /**
  * Matches one or more leading Extended_Pictographic codepoints, each optionally
  * followed by a variation-selector (U+FE0F) or combining-enclosing-keycap (U+20E3),
@@ -41,7 +45,7 @@ export function applyEmojiMode(label: string, mode: EmojiMode): string {
  */
 export function useButtonEmojiMode() {
   const [storedMode, setStoredMode] = useUserPreference('global', 'button_emoji_mode', 'both')
-  const mode = storedMode as EmojiMode
+  const mode: EmojiMode = isEmojiMode(storedMode) ? storedMode : 'both'
 
   const formatLabel = useCallback(
     (label: string): string => applyEmojiMode(label, mode),

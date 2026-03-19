@@ -574,6 +574,7 @@ export default function CountriesPage() {
                 onClick={expandedWidthPreference.toggle}
                 className="h-9 px-3 rounded-lg border border-gray-300 dark:border-white/20 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                 title={effectiveExpandedWidth ? getEnglishTooltip('referenceLayout.normalButton') : getEnglishTooltip('referenceLayout.expandButton')}
+                aria-label={effectiveExpandedWidth ? t('referenceLayout.normalButton') : t('referenceLayout.expandButton')}
               >
                 {effectiveExpandedWidth ? formatLabel(t('referenceLayout.normalButton')) : formatLabel(t('referenceLayout.expandButton'))}
               </button>
@@ -590,6 +591,7 @@ export default function CountriesPage() {
                 onClick={referenceDisplayPreference.toggle}
                 className="h-9 px-3 rounded-lg border border-gray-300 dark:border-white/20 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                 title={showReferenceCodes ? getEnglishTooltip('referenceLayout.displayCodesButton') : getEnglishTooltip('referenceLayout.displayNamesButton')}
+                aria-label={showReferenceCodes ? t('referenceLayout.displayCodesButton') : t('referenceLayout.displayNamesButton')}
               >
                 {formatLabel(showReferenceCodes ? t('referenceLayout.displayCodesButton') : t('referenceLayout.displayNamesButton'))}
               </button>
