@@ -1,8 +1,8 @@
 .PHONY: help build run test clean migrate-up migrate-down docker-up docker-down
 .PHONY: docker-main-up docker-main-down docker-dev-up docker-dev-down docker-uat-up docker-uat-down docker-prod-up docker-prod-down
 .PHONY: docker-all-up docker-all-down docker-all-status validate-env
-.PHONY: lint lint-docs lint-docs-fix lint-all install-hooks
-.PHONY: smoke-api smoke-ssi cleanup-stale-translations
+.PHONY: lint lint-docs lint-docs-fix docs-check docs-check-fix lint-all install-hooks
+.PHONY: smoke-api smoke-ssi cleanup-stale-translations docs-user-install docs-user-ci-install docs-user-build docs-user-check docs-user-dev
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
@@ -256,7 +256,7 @@ lint: ## Run linter
 lint-docs: ## Lint markdown documentation
 	@echo "Linting markdown files..."
 	@if command -v markdownlint > /dev/null 2>&1; then \
-		markdownlint --config .markdownlint.yaml '**/*.md' --ignore node_modules; \
+		markdownlint --config .markdownlint.yaml '**/*.md'; \
 	else \
 		echo "❌ markdownlint-cli not installed. Run: make install-tools"; \
 		exit 1; \
@@ -265,12 +265,39 @@ lint-docs: ## Lint markdown documentation
 lint-docs-fix: ## Auto-fix markdown linting issues
 	@echo "Auto-fixing markdown files..."
 	@if command -v markdownlint > /dev/null 2>&1; then \
-		markdownlint --config .markdownlint.yaml '**/*.md' --ignore node_modules --fix; \
+		markdownlint --config .markdownlint.yaml '**/*.md' --fix; \
 		echo "✅ Markdown auto-fix complete"; \
 	else \
 		echo "❌ markdownlint-cli not installed. Run: make install-tools"; \
 		exit 1; \
 	fi
+
+docs-check: lint-docs ## Canonical markdown validation gate
+
+docs-check-fix: ## Auto-fix then enforce clean markdown lint
+	$(MAKE) lint-docs-fix && $(MAKE) lint-docs
+
+docs-user-install: ## Install user documentation dependencies
+	@echo "Installing user documentation dependencies..."
+	cd docs-user && npm install
+	@echo "✅ User documentation dependencies installed"
+
+docs-user-ci-install: ## Install user documentation dependencies deterministically (CI-style)
+	@echo "Installing user documentation dependencies (npm ci)..."
+	cd docs-user && npm ci
+	@echo "✅ User documentation dependencies installed (CI mode)"
+
+docs-user-build: ## Build the user documentation site (VitePress)
+	@echo "Building user documentation site..."
+	cd docs-user && npm run docs:build
+	@echo "✅ User documentation built in docs-user/.vitepress/dist/"
+
+docs-user-check: docs-user-ci-install docs-user-build ## Canonical local verification gate for docs-user
+	@echo "✅ User documentation check complete"
+
+docs-user-dev: ## Start the user documentation dev server
+	@echo "Starting user documentation dev server..."
+	cd docs-user && npm run docs:dev
 
 lint-all: lint lint-docs ## Run all linters (Go + Markdown)
 

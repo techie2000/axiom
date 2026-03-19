@@ -82,6 +82,11 @@ compose-output.txt
 # Documentation
 /docs/*.pdf
 
+# User documentation site (VitePress)
+/docs-user/.vitepress/dist/
+/docs-user/.vitepress/cache/
+/docs-user/node_modules/
+
 # Security scanning - transient output files
 trivy-*.json
 trivy-*.sarif

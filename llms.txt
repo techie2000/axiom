@@ -11,8 +11,63 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
 ## Main Documentation
 
 - [README](README.md): Primary project documentation with setup instructions and architecture overview
+- [User Documentation Home](docs-user/README.md): Dedicated end-user docs space for workflow and screen-based
+  app usage guidance
+- [User Docs Information Architecture](docs-user/INFORMATION_ARCHITECTURE.md): Audience-first site structure
+  for end-user guides
+- [User Docs Governance](docs-user/GOVERNANCE.md): Ownership, review cadence, and contribution workflow for
+  end-user documentation
+- [User Docs Migration Matrix](docs-user/MIGRATION_MATRIX.md): Mapping of current mixed docs to user-doc actions and
+  priorities
+- [User Docs Rollout Plan](docs-user/ROLLOUT_PLAN.md): Phased delivery plan for bootstrap, workflow coverage, and
+  publication
 - [Architecture](docs/architecture.md): System architecture, design patterns, and component interactions
 - [Changelog](CHANGELOG.md): Version history and notable changes
+
+## User Documentation — Getting Started
+
+- [Getting Started Index](docs-user/getting-started/index.md): Introduction and navigation to first-use guides
+- [Sign In and Access](docs-user/getting-started/sign-in-and-access.md): Sign in, registration, and password reset
+- [Navigation Basics](docs-user/getting-started/navigation-basics.md): Application layout, personalisation, and
+  search and filter controls
+
+## User Documentation — Core Workflows
+
+- [Workflows Overview](docs-user/workflows/index.md): Summary of all available workflow guides
+- [LEI Records Workflow](docs-user/workflows/lei-records.md): Search, filter, and view GLEIF Legal Entity Identifier
+  records
+- [Settlement Instructions (SSI) Workflow](docs-user/workflows/ssi.md): View and manage Standard Settlement
+  Instructions
+- [Countries Workflow](docs-user/workflows/countries.md): Browse and search ISO 3166 country reference data
+- [Currencies Workflow](docs-user/workflows/currencies.md): Browse and search ISO 4217 currency data including
+  compliance flags
+- [Entities Workflow](docs-user/workflows/entities.md): View and search legal entity master data linked to LEI records
+- [Instruments Workflow](docs-user/workflows/instruments.md): Financial instrument master data (planned module
+  documentation)
+- [Accounts Workflow](docs-user/workflows/accounts.md): Account static data (planned module documentation)
+
+## User Documentation — Admin Workflows
+
+- [Admin Overview](docs-user/admin/index.md): Overview of admin-only workflow guides
+- [User Approvals](docs-user/admin/user-approvals.md): Review and approve new user registration requests
+- [Translation Review](docs-user/admin/translation-review.md): Review and approve community-submitted UI translations
+- [Sync Triggers](docs-user/admin/sync-triggers.md): Manually trigger LEI and master data synchronisation
+
+## User Documentation — Reference
+
+- [Reference Overview](docs-user/reference/index.md): Quick reference overview for Axiom users
+- [Data Dictionary](docs-user/reference/data-dictionary.md): Field definitions for LEI, country, currency, entity,
+  instrument, account, and SSI records
+- [Statuses and States](docs-user/reference/statuses-and-states.md): All status and state values used across Axiom
+- [Permissions and Roles](docs-user/reference/permissions-and-roles.md): Role definitions and module access matrix
+
+## User Documentation — Troubleshooting
+
+- [Troubleshooting Overview](docs-user/troubleshooting/index.md): Quick help index for common problems
+- [Common Errors](docs-user/troubleshooting/common-errors.md): Authentication, data, LEI, SSI, preferences, and admin
+  error resolutions
+- [FAQ](docs-user/troubleshooting/faq.md): Frequently asked questions covering access, data, interface preferences,
+  and admin tasks
 
 ## Getting Started
 
@@ -39,7 +94,8 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
 - [ADR-0005: RabbitMQ Async Processing](docs/adr/adr-0005-rabbitmq-async-processing.md): Message queue integration
 - [ADR-0006: Next.js and Tailwind Frontend](docs/adr/adr-0006-nextjs-tailwind-frontend.md): Frontend stack decisions
 - [ADR-0007: Docker Compose Local Dev](docs/adr/adr-0007-docker-compose-local-dev.md): Development environment
-- [ADR-0008: Sticky Headers with Smooth Transitions](docs/adr/adr-0008-sticky-headers-with-smooth-transitions.md): UI sticky header and scroll behaviour pattern
+- [ADR-0008: Sticky Headers with Smooth Transitions](docs/adr/adr-0008-sticky-headers-with-smooth-transitions.md):
+  UI sticky header and scroll behaviour pattern
 - [ADR-0009: Git Branching Strategy](docs/adr/adr-0009-git-branching-strategy.md): Branch model and environment
   promotion gates
 - [ADR-0010: User Auth and Registration](docs/adr/adr-0010-user-auth-registration-system.md): Self-registration,
@@ -48,10 +104,15 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
   database (theme, column visibility, page width) with `useUserPreference` hook and `PreferenceSavePrompt` toast
 - [ADR-0012: Internationalisation](docs/adr/adr-0012-internationalisation.md): i18next-based i18n stack, language
   selection on login/register, community translation review workflow, and CI/daily seed integration
+- [ADR-0013: Dedicated User Documentation Site](docs/adr/adr-0013-user-documentation-site.md): decision to
+  introduce top-level `docs-user/` for polished end-user docs while keeping `docs/` engineering-focused
+- [ADR-0014: WCAG Accessibility Standards](docs/adr/adr-0014-wcag-accessibility-standards.md): WCAG 2.2 AA
+  baseline for the frontend — contrast, focus visibility, and non-text contrast rules for shared components
 
 ## Deployment and Infrastructure
 
 - [Docker Setup](docker/README.md): Container configuration, Dockerfiles, and deployment instructions
+- [Dockerfile Docs User](docker/Dockerfile.docs-user): Multi-stage static build and nginx runtime for user docs site
 - [Docker Compose Main](docker-compose.main.yml): Main branch environment for intraday development and fixes
 - [Docker Compose Dev](docker-compose.dev.yml): Development environment definition
 - [Docker Compose UAT](docker-compose.uat.yml): User Acceptance Testing environment
@@ -84,15 +145,20 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
 
 - [UI Patterns Guide](docs/ui-patterns.md): Reusable frontend components and patterns (Badge, Alert, LoadingSpinner,
   StatCard, PageHeader, Sticky Headers, User Preferences, Internationalisation)
+- [WCAG Compliance Guide](docs/accessibility/WCAG_COMPLIANCE.md): WCAG 2.2 AA developer reference —
+  contrast tables, approved Tailwind patterns, PR checklist, and testing tools
 - [Internationalisation Guide](docs/i18n/INTERNATIONALISATION.md): Full i18n guide: locale files, adding translation
   keys, LanguageSelector component, RTL support, review workflow, CI seed integration
 - [Branding Assets Guide](docs/assets/branding/README.md): Canonical source logos and generated runtime favicon/logo
   outputs for active and alternate themes
 - [Makefile](Makefile): Build automation, testing, linting, and development commands
-- [API Smoke Script](scripts/smoke-api.ps1): Environment-aware API smoke tests for health/auth checks with startup readiness wait
-- [SSI Smoke Script](scripts/smoke-ssi.ps1): Verifies `/api/v1/ssis` contract fields, optional temporary seed rows, and BGC-free payload checks
+- [API Smoke Script](scripts/smoke-api.ps1): Environment-aware API smoke tests for health/auth checks
+  with startup readiness wait
+- [SSI Smoke Script](scripts/smoke-ssi.ps1): Verifies `/api/v1/ssis` contract fields, optional temporary seed rows,
+  and BGC-free payload checks
 - [Windows Smoke Wrapper](scripts/smoke-api.cmd): CMD entrypoint for smoke tests on machines without make
-- [Windows SSI Smoke Wrapper](scripts/smoke-ssi.cmd): CMD entrypoint for SSI contract checks with optional `--seed` and `--cleanup`
+- [Windows SSI Smoke Wrapper](scripts/smoke-ssi.cmd): CMD entrypoint for SSI contract checks with optional
+  `--seed` and `--cleanup`
 - [LEI Persistence Fix](docs/LEI_PERSISTENCE_AND_RACE_CONDITION_FIX.md): Technical fix for race condition issues
 - [Delta URL Fix](docs/DELTA_URL_FIX_SUMMARY.md): Bug fix summary for GLEIF delta URL parsing
 - [Backend Config](backend/config.yaml): Application configuration reference

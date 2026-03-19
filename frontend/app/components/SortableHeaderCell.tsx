@@ -35,7 +35,7 @@ export default function SortableHeaderCell({
       <button
         type="button"
         onClick={onSort}
-        className={`group flex items-center gap-1 cursor-pointer whitespace-nowrap hover:text-gray-700 dark:hover:text-gray-200 transition-colors ${align === 'center' ? 'w-full justify-center' : ''}`}
+        className={`group flex items-center gap-1 cursor-pointer whitespace-nowrap hover:text-gray-700 dark:hover:text-gray-200 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 rounded ${align === 'center' ? 'w-full justify-center' : ''}`}
       >
         {label}
         <span className={`${isActiveSort ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300'}`}>

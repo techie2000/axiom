@@ -147,6 +147,7 @@ until translations are approved.
 Axiom supports running multiple environments simultaneously on the same machine. Each environment uses a unique port
 prefix to avoid conflicts:
 
+- **Main**: Port prefix 4 (e.g., 48080, 43000, 45432, 45173 for docs)
 - **Development (dev)**: Port prefix 1 (e.g., 18080, 13000, 15432)
 - **UAT**: Port prefix 2 (e.g., 28080, 23000, 25432)
 - **Production (prod)**: Port prefix 3 (e.g., 38080, 33000, 35432)
@@ -359,6 +360,15 @@ This ensures rows removed from the active locale key set are also removed from `
 
 Once started, each environment is accessible at:
 
+**Main Environment:**
+
+- Frontend: http://localhost:43000
+- Backend API: http://localhost:48080
+- Swagger UI: http://localhost:48080/swagger/index.html
+- PostgreSQL: localhost:45432
+- RabbitMQ Management: http://localhost:45673
+- User Docs (optional profile): http://localhost:45173/docs-user/
+
 **Development Environment:**
 
 - Frontend: http://localhost:13000
@@ -366,6 +376,7 @@ Once started, each environment is accessible at:
 - Swagger UI: http://localhost:18080/swagger/index.html
 - PostgreSQL: localhost:15432
 - RabbitMQ Management: http://localhost:15673
+- User Docs (optional profile): http://localhost:15173/docs-user/
 
 **UAT Environment:**
 
@@ -572,7 +583,7 @@ server:
 
 | Variable | Default | Description |
 | -------- | ------- | ----------- |
-| `LOG_FILE_PATH` | _(unset)_ | Log file path. Unset = stdout only. `.env.*` files set this per environment. |
+| `LOG_FILE_PATH` | *(unset)* | Log file path. Unset = stdout only. `.env.*` files set this per environment. |
 | `LOG_MAX_SIZE_MB` | `10` | Max log file size in MB before rotation. |
 | `LOG_MAX_BACKUPS` | `3` | Max number of rotated log files to retain. |
 | `LOG_MAX_AGE_DAYS` | `7` | Max age in days for rotated log files. |
@@ -647,6 +658,51 @@ Please read [CONTRIBUTING.md](docs/CONTRIBUTING.md) for details on our developme
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## User Documentation
+
+End-user and operations documentation is available in [`docs-user/`](docs-user/README.md),
+powered by VitePress. This covers workflows, admin tasks, reference data, and troubleshooting
+written for non-engineering audiences.
+
+Published site: <https://techie2000.github.io/axiom/docs-user/>
+
+**Getting Started:**
+
+- [Sign In & Access](docs-user/getting-started/sign-in-and-access.md)
+- [Navigation Basics](docs-user/getting-started/navigation-basics.md)
+
+**Core Workflows:**
+
+- [LEI Records](docs-user/workflows/lei-records.md)
+- [Countries](docs-user/workflows/countries.md)
+- [Currencies](docs-user/workflows/currencies.md)
+- [Entities](docs-user/workflows/entities.md)
+- [Settlement Instructions (SSI)](docs-user/workflows/ssi.md)
+
+**Admin Workflows:**
+
+- [User Approvals](docs-user/admin/user-approvals.md)
+- [Translation Review](docs-user/admin/translation-review.md)
+- [Sync Triggers](docs-user/admin/sync-triggers.md)
+
+**Reference:**
+
+- [Data Dictionary](docs-user/reference/data-dictionary.md)
+- [Statuses & States](docs-user/reference/statuses-and-states.md)
+- [Permissions & Roles](docs-user/reference/permissions-and-roles.md)
+
+To preview the user documentation site locally:
+
+```bash
+make docs-user-dev
+```
+
+To build and validate the site:
+
+```bash
+make docs-user-check
+```
 
 ## Documentation
 

@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { getAuthToken } from './lib/auth-token'
 import { useEnglishTooltips } from './lib/useEnglishTooltips'
+import AdminSection from './components/AdminSection'
 
 export default function Home() {
   const [mounted, setMounted] = useState(false)
@@ -137,6 +138,9 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+        {/* Administration Section — client component; hides itself for non-admins */}
+        <AdminSection />
       </div>
     </main>
   )

@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import Image from 'next/image'
 import { useState } from 'react'
 import { getCountryFlagEmoji } from '../lib/country-flag'
 
@@ -30,13 +31,15 @@ export default function CountryFlag({ countryCode, className, title }: CountryFl
   }
 
   return (
-    <img
+    <Image
       src={toFlagImageUrl(normalized)}
       alt={`${normalized} flag`}
       title={title || normalized}
       className={className}
+      width={20}
+      height={15}
       loading="lazy"
-      decoding="async"
+      unoptimized
       onError={() => setImageFailed(true)}
     />
   )

@@ -169,6 +169,7 @@ stateDiagram-v2
 - ✅ **Maintainability**: Update diagrams as code changes
 
 **DO NOT** use:
+
 - ❌ Binary image files (PNG, JPG) for architecture diagrams
 - ❌ External diagram tools (draw.io, Visio) unless absolutely necessary
 - ❌ ASCII art (hard to read and maintain)
@@ -273,6 +274,19 @@ Modular domain knowledge packages that AI can load on-demand:
 
 ## Special Instructions
 
+### Markdown Compliance Gate (REQUIRED)
+
+When an agent edits any `*.md` file, it must run this loop before commit or PR update:
+
+1. `make docs-check-fix`
+2. `make docs-check`
+3. If lint still fails, fix remaining issues and rerun `make docs-check` until clean
+
+Rules:
+
+- Do not commit markdown changes while markdown lint is failing.
+- Treat markdown lint failures as blocking, not advisory.
+
 ### Self-Explanatory Code
 `self-explanatory-code-commenting.instructions.md` emphasizes:
 - Code that speaks for itself
@@ -293,7 +307,7 @@ When adding, removing, or modifying environment variables:
 3. **Update all docker-compose files**: [`docker-compose.dev.yml`](../docker-compose.dev.yml), [`docker-compose.uat.yml`](../docker-compose.uat.yml), [`docker-compose.prod.yml`](../docker-compose.prod.yml) environment sections to include the variable
 4. **Update [`README.md`](../README.md)** configuration documentation with the new variable
 5. **Update [`docs/environments/`](../docs/environments/)** environment-specific documentation if applicable
-6. Create or update relevant ADRs in [`docs/adrs/`](../docs/adrs/) if the change affects core behavior or architecture
+6. Create or update relevant ADRs in [`docs/adr/`](../docs/adr/) if the change affects core behavior or architecture
 
 **Common mistake**: Forgetting to sync all environment files and docker-compose configurations, causing configuration drift between dev, UAT, and production environments.
 
@@ -375,7 +389,9 @@ Agents are **invoked explicitly** using the `@` mention syntax in Copilot Chat:
 
 1. **Syntax**: `@[agent-name]` followed by your request
    ```
+
    @adr-generator Create an ADR for choosing RabbitMQ
+
 ```text
 
 2. **Available Agents**:
@@ -390,8 +406,10 @@ Agents are **invoked explicitly** using the `@` mention syntax in Copilot Chat:
 
 4. **Example Workflow**:
    ```
+
    User: @adr-generator Help me document the decision to use Go
    Agent: [Creates structured ADR with options, rationale, and consequences]
+
 ```text
 
 ### Prompts (Slash Commands)
@@ -400,9 +418,11 @@ Prompts are **invoked using slash commands** in Copilot Chat:
 
 1. **Syntax**: `/[prompt-name]` (auto-completes as you type)
    ```
+
    /review-and-refactor
    /create-llms
    /create-architectural-decision-record
+
 ```text
 
 2. **Interactive Configuration**: Many prompts have variables:
@@ -419,7 +439,9 @@ Prompts are **invoked using slash commands** in Copilot Chat:
 
 4. **Prompt Chaining**: Combine prompts for complex workflows:
    ```
+
    /create-architectural-decision-record → /create-llms → /review-and-refactor
+
 ```text
 
 ### Skills (On-Demand Loading)
@@ -434,40 +456,50 @@ Skills are **loaded automatically** when relevant topics are mentioned:
 
 3. **Usage Example**:
    ```
+
    User: Create a bug report issue for the authentication timeout
    Copilot: [Loads github-issues skill, uses templates, creates formatted issue]
+
 ```text
 
 ### Practical Usage Patterns
 
 #### For Code Generation
 ```
+
 1. Open file matching an instruction (e.g., main.go)
 2. Use Copilot inline suggestions → Follows go.instructions.md patterns
 3. Or ask in chat: "Create a CSV parser with error handling"
    → Applies go.instructions.md + security-and-owasp.instructions.md
+
 ```text
 
 #### For Code Review
 ```
+
 1. Select code block to review
 2. Chat: /review-and-refactor
    → Reviews against ALL applicable instruction files
    → Suggests improvements following documented patterns
+
 ```text
 
 #### For Workflow Automation
 ```
+
 1. Chat: @adr-generator Create ADR for RabbitMQ choice
    → Executes structured ADR creation workflow
    → Generates comprehensive decision document
+
 ```text
 
 #### For Documentation
 ```
+
 1. Chat: /create-llms
    → Scans repo structure
    → Generates llms.txt with all key documentation links
+
 ```text
 
 ### Best Practices

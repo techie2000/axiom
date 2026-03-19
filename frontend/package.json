@@ -10,7 +10,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "i18n:extract": "node ./scripts/extract-i18n-keys.mjs",
     "i18n:check": "node ./scripts/check-i18n-completeness.mjs",
     "i18n:verify": "npm run i18n:extract && npm run i18n:check && git diff --exit-code -- public/locales",
@@ -26,7 +26,7 @@
     "i18next-browser-languagedetector": "^8.2.1",
     "i18next-http-backend": "^3.0.2",
     "lucide-react": "^0.303.0",
-    "next": "15.5.10",
+    "next": "16.1.7",
     "postcss": "^8.4.32",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -38,8 +38,10 @@
     "@types/node": "^22.10.0",
     "@types/react": "^18.2.46",
     "@types/react-dom": "^18.2.18",
+    "@eslint/eslintrc": "^3.3.1",
     "eslint": "^9.25.1",
     "eslint-config-next": "15.5.10",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
     "typescript": "^5.3.3",
     "vitest": "^3.2.4"
   }

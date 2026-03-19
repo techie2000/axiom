@@ -3,6 +3,7 @@
 import PageHeader from '../components/PageHeader'
 import { useTranslation } from 'react-i18next'
 import { useEnglishTooltips } from '../lib/useEnglishTooltips'
+import { buildDocsUrl } from '../lib/docsLinks'
 
 export default function AccountsPage() {
   const { t } = useTranslation('common')
@@ -18,6 +19,7 @@ export default function AccountsPage() {
           titleTooltip={getEnglishTooltip('accounts.title')}
           subtitleTooltip={getEnglishTooltip('accounts.subtitle')}
           backHref="/dashboard"
+          docsHref={buildDocsUrl('workflows/accounts/')}
         />
 
         {/* Coming Soon Card */}

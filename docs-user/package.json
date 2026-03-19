@@ -1,0 +1,19 @@
+{
+  "name": "axiom-docs-user",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Axiom end-user documentation site powered by VitePress",
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
+  },
+  "scripts": {
+    "docs:dev": "vitepress dev",
+    "docs:build": "vitepress build",
+    "docs:preview": "vitepress preview"
+  },
+  "devDependencies": {
+    "vitepress": "^1.6.3"
+  }
+}
