@@ -178,6 +178,10 @@ func isAlphanumeric(s string) bool {
 	return true
 }
 
+func normalizeExactLEISearchInput(search string) string {
+	return strings.ToUpper(strings.TrimSpace(search))
+}
+
 // validateColumns validates and filters requested columns against allowed LEI record fields
 // Returns validated comma-separated column string or default columns if invalid
 func validateColumns(columns string) string {
@@ -279,22 +283,24 @@ func (r *leiRepository) FindAllLEIWithFilters(limit, offset int, search, status,
 
 		// Apply search filter (LEI code or legal name)
 		if search != "" {
+			trimmedSearch := strings.TrimSpace(search)
 			// Optimize search based on pattern:
 			// 1. If exactly 20 chars (LEI format), use exact match on primary or successor LEI
 			// 2. Otherwise, search name fields including other_names JSONB
-			if len(search) == 20 && isAlphanumeric(search) {
+			if len(trimmedSearch) == 20 && isAlphanumeric(trimmedSearch) {
+				normalizedSearch := normalizeExactLEISearchInput(trimmedSearch)
 				// Exact LEI match - also checks successor_lei so users can search by successor
 				// Uses idx_lei_records_lei B-tree index on the primary lei column (< 1ms)
-				query = query.Where(exactLEIMatchWhereClause, search, search)
+				query = query.Where(exactLEIMatchWhereClause, normalizedSearch, normalizedSearch)
 			} else if useSearchVector {
 				// Full-text search using the composite search_vector column
 				// Uses idx_lei_records_search_vector GIN index for single efficient lookup
 				query = query.Where(
 					"search_vector @@ plainto_tsquery('simple', ?)",
-					search,
+					trimmedSearch,
 				)
 			} else {
-				searchPattern := "%" + strings.TrimSpace(search) + "%"
+				searchPattern := "%" + trimmedSearch + "%"
 				query = query.Where(
 					likePatternLEISearchWhereClause,
 					searchPattern,

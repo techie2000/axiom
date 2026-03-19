@@ -117,3 +117,15 @@ func TestIsAlphanumericRejectsNonAlphanumericCharacters(t *testing.T) {
 		}
 	}
 }
+
+func TestNormalizeExactLEISearchInputUppercasesAndTrims(t *testing.T) {
+	t.Helper()
+
+	input := "  529900T8BM49AURSDO55  "
+	got := normalizeExactLEISearchInput(input)
+	want := "529900T8BM49AURSDO55"
+
+	if got != want {
+		t.Fatalf("normalizeExactLEISearchInput(%q) = %q, want %q", input, got, want)
+	}
+}
