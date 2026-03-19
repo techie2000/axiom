@@ -14,7 +14,7 @@ export default function ContextDocsLink({
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="px-3 py-2 rounded-lg border-2 border-blue-600/30 text-blue-700 hover:text-blue-800 hover:border-blue-700/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white transition-colors text-sm font-medium dark:border-blue-500/40 dark:text-blue-300 dark:hover:text-blue-200 dark:hover:border-blue-400/60 dark:focus-visible:ring-blue-400 dark:focus-visible:ring-offset-gray-950"
+      className="h-9 px-3 inline-flex items-center rounded-lg border border-gray-300 dark:border-white/20 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 transition-colors text-sm font-medium whitespace-nowrap"
       aria-label={label}
       title={label}
     >

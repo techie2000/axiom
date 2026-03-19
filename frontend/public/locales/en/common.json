@@ -5,7 +5,7 @@
     "backToLogin": "← Back to Login",
     "signIn": "Sign In",
     "requestAccess": "Request Access",
-    "documentation": "Documentation"
+    "documentation": "📖 Documentation"
   },
   "login": {
     "title": "Sign In",
@@ -80,7 +80,14 @@
     "promptSaved": "✓ Saved!",
     "undo": "Undo",
     "dismiss": "Dismiss",
-    "noThanks": "No thanks"
+    "noThanks": "No thanks",
+    "buttonEmoji": "Button labels",
+    "buttonEmojiDescription": "Choose how emoji icons appear on page action buttons.",
+    "buttonEmojiMode": {
+      "both": "Both",
+      "text": "Text",
+      "emoji": "Emoji"
+    }
   },
   "common": {
     "loading": "Loading…",
@@ -567,7 +574,7 @@
   },
   "countries": {
     "actions": {
-      "columns": "Columns ({{count}})",
+      "columns": "⚙️ Columns ({{count}})",
       "reset": "Reset",
       "saveAsDefault": "Save as default",
       "selectAll": "Select All"

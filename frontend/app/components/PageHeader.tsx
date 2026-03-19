@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import UserBadge from './UserBadge'
 import ContextDocsLink from './ContextDocsLink'
+import { useButtonEmojiMode } from '../lib/useButtonEmojiMode'
 
 interface PageHeaderProps {
   title: string
@@ -42,6 +43,7 @@ export default function PageHeader({
 }: PageHeaderProps) {
   const { t } = useTranslation('common')
   const [hasHydrated, setHasHydrated] = useState(false)
+  const { formatLabel } = useButtonEmojiMode()
 
   useEffect(() => {
     setHasHydrated(true)
@@ -77,7 +79,7 @@ export default function PageHeader({
         {subtitle && <p className="opacity-70" title={subtitleTooltip}>{subtitle}</p>}
       </div>
       <div className="flex items-center gap-4">
-        {docsHref && <ContextDocsLink href={docsHref} label={resolvedDocsLabel} />}
+        {docsHref && <ContextDocsLink href={docsHref} label={formatLabel(resolvedDocsLabel)} />}
         {actions}
         <UserBadge />
       </div>
