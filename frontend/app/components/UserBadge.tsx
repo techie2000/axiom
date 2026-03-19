@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { readStoredUser, StoredUser } from '../lib/stored-user'
 import { resetPreferencesCache } from '../lib/useUserPreference'
 import { useEnglishTooltips } from '../lib/useEnglishTooltips'
+import { useButtonEmojiMode, EmojiMode } from '../lib/useButtonEmojiMode'
 import ThemeToggle from './ThemeToggle'
 import LanguageSelector from './LanguageSelector'
 
@@ -16,6 +17,7 @@ export default function UserBadge() {
     englishTooltipsPreferenceEnabled,
     setEnglishTooltipsPreferenceEnabled,
   } = useEnglishTooltips()
+  const { emojiMode, setEmojiMode } = useButtonEmojiMode()
   const [user, setUser] = useState<StoredUser | null>(null)
   const [mounted, setMounted] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -128,6 +130,28 @@ export default function UserBadge() {
                 className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
             </label>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <span className="block text-sm text-gray-700 dark:text-gray-300">{t('preferences.buttonEmoji')}</span>
+                <span className="block text-xs text-gray-500 dark:text-gray-400">{t('preferences.buttonEmojiDescription')}</span>
+              </div>
+              <div className="flex shrink-0 gap-1" role="group" aria-label={t('preferences.buttonEmoji')}>
+                {(['both', 'text', 'emoji'] as EmojiMode[]).map((mode) => (
+                  <button
+                    key={mode}
+                    onClick={() => setEmojiMode(mode)}
+                    className={`px-2 py-1 text-xs rounded border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                      emojiMode === mode
+                        ? 'bg-blue-600 text-white border-blue-600 dark:bg-blue-500 dark:border-blue-500'
+                        : 'border-gray-300 dark:border-white/20 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10'
+                    }`}
+                    aria-pressed={emojiMode === mode}
+                  >
+                    {t(`preferences.buttonEmojiMode.${mode}`)}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
           <div className="mt-4 pt-3 border-t border-gray-200 dark:border-white/10">

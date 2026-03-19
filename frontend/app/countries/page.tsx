@@ -15,6 +15,7 @@ import StatCard from '../components/StatCard'
 import SyncedWideTable from '../components/SyncedWideTable'
 import { useDeferredBooleanPreference } from '../lib/useDeferredBooleanPreference'
 import { useEnglishTooltips } from '../lib/useEnglishTooltips'
+import { useButtonEmojiMode } from '../lib/useButtonEmojiMode'
 import { useUserPreference } from '../lib/useUserPreference'
 import { buildDocsUrl } from '../lib/docsLinks'
 import { Country, normalizeCountriesPayload, summarizeCountriesDataQuality } from './normalization'
@@ -86,6 +87,7 @@ const CENTER_ALIGNED_COLUMNS = new Set<CountryColumnKey>(['alpha2', 'alpha3', 'a
 export default function CountriesPage() {
   const { t } = useTranslation('common')
   const { getEnglishTooltip } = useEnglishTooltips()
+  const { formatLabel } = useButtonEmojiMode()
   const filterBarRef = useRef<HTMLDivElement>(null)
 
   const [countries, setCountries] = useState<Country[]>([])
@@ -570,10 +572,11 @@ export default function CountriesPage() {
             <>
               <button
                 onClick={expandedWidthPreference.toggle}
-                className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 transition-colors text-white text-sm font-medium"
+                className="h-9 px-3 rounded-lg border border-gray-300 dark:border-white/20 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                 title={effectiveExpandedWidth ? getEnglishTooltip('referenceLayout.normalButton') : getEnglishTooltip('referenceLayout.expandButton')}
+                aria-label={effectiveExpandedWidth ? t('referenceLayout.normalButton') : t('referenceLayout.expandButton')}
               >
-                {effectiveExpandedWidth ? t('referenceLayout.normalButton') : t('referenceLayout.expandButton')}
+                {effectiveExpandedWidth ? formatLabel(t('referenceLayout.normalButton')) : formatLabel(t('referenceLayout.expandButton'))}
               </button>
               {expandedWidthPreference.hasUnsavedChanges && (
                 <button
@@ -586,17 +589,18 @@ export default function CountriesPage() {
               )}
               <button
                 onClick={referenceDisplayPreference.toggle}
-                className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 transition-colors text-white text-sm font-medium"
+                className="h-9 px-3 rounded-lg border border-gray-300 dark:border-white/20 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                 title={showReferenceCodes ? getEnglishTooltip('referenceLayout.displayCodesButton') : getEnglishTooltip('referenceLayout.displayNamesButton')}
+                aria-label={showReferenceCodes ? t('referenceLayout.displayCodesButton') : t('referenceLayout.displayNamesButton')}
               >
-                {showReferenceCodes ? t('referenceLayout.displayCodesButton') : t('referenceLayout.displayNamesButton')}
+                {formatLabel(showReferenceCodes ? t('referenceLayout.displayCodesButton') : t('referenceLayout.displayNamesButton'))}
               </button>
               <div className="relative">
                 <button
                   onClick={() => setShowColumnSelector(!showColumnSelector)}
-                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors text-white text-sm font-medium"
+                  className="h-9 px-3 rounded-lg border border-gray-300 dark:border-white/20 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                 >
-                  {t('countries.actions.columns', { count: effectiveVisibleColumns.size })}
+                  {formatLabel(t('countries.actions.columns', { count: effectiveVisibleColumns.size }))}
                 </button>
 
                 {showColumnSelector && (

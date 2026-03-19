@@ -13,6 +13,7 @@ import StatCard from '../components/StatCard'
 import SyncedWideTable from '../components/SyncedWideTable'
 import { useDeferredBooleanPreference } from '../lib/useDeferredBooleanPreference'
 import { buildDocsUrl } from '../lib/docsLinks'
+import { useButtonEmojiMode } from '../lib/useButtonEmojiMode'
 import { useEnglishTooltips } from '../lib/useEnglishTooltips'
 import { useUserPreference } from '../lib/useUserPreference'
 import { formatEnumDisplayValue, formatLEICellValue, getStatusBadgePresentation, normalizeRecordNullLikeValues } from './null-utils'
@@ -159,6 +160,7 @@ const COUNTRY_DETAIL_ORDER = ['code', 'name', 'alpha3_code', 'region', 'active']
 export default function LEIRecordsPage() {
   const { t } = useTranslation('common')
   const { getEnglishTooltip } = useEnglishTooltips()
+  const { formatLabel } = useButtonEmojiMode()
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [records, setRecords] = useState<LEIRecord[]>([])
   const [loading, setLoading] = useState(true)
@@ -1181,19 +1183,21 @@ export default function LEIRecordsPage() {
             <>
               <button
                 onClick={expandedWidthPreference.toggle}
-                className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 transition-colors text-white text-sm font-medium flex items-center gap-2"
-                 title={effectiveExpandedWidth ? getEnglishTooltip('referenceLayout.normalButton') : getEnglishTooltip('referenceLayout.expandButton')}
+                className="h-9 px-3 rounded-lg border border-gray-300 dark:border-white/20 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                title={effectiveExpandedWidth ? getEnglishTooltip('referenceLayout.normalButton') : getEnglishTooltip('referenceLayout.expandButton')}
+                aria-label={effectiveExpandedWidth ? t('referenceLayout.normalButton') : t('referenceLayout.expandButton')}
               >
-                 {effectiveExpandedWidth ? t('referenceLayout.normalButton') : t('referenceLayout.expandButton')}
+                {effectiveExpandedWidth ? formatLabel(t('referenceLayout.normalButton')) : formatLabel(t('referenceLayout.expandButton'))}
               </button>
 
               <div className="relative">
                 <button
                   onClick={() => setShowColumnSelector(!showColumnSelector)}
-                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors text-white text-sm font-medium flex items-center gap-2"
+                  className="h-9 px-3 rounded-lg border border-gray-300 dark:border-white/20 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                   title={getEnglishTooltip('leiRecords.columns.button')}
+                  aria-label={t('leiRecords.columns.button', { count: effectiveVisibleColumns.size })}
                 >
-                  {t('leiRecords.columns.button', { count: effectiveVisibleColumns.size })}
+                  {formatLabel(t('leiRecords.columns.button', { count: effectiveVisibleColumns.size }))}
                 </button>
 
                 {showColumnSelector && (
@@ -1274,10 +1278,11 @@ export default function LEIRecordsPage() {
 
               <button
                 onClick={toggleLocationDisplayMode}
-                className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 transition-colors text-white text-sm font-medium"
+                className="h-9 px-3 rounded-lg border border-gray-300 dark:border-white/20 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                 title={showLocationCodes ? getEnglishTooltip('leiRecords.display.codes') : getEnglishTooltip('leiRecords.display.names')}
+                aria-label={showLocationCodes ? t('leiRecords.display.codes') : t('leiRecords.display.names')}
               >
-                {showLocationCodes ? t('leiRecords.display.codes') : t('leiRecords.display.names')}
+                {formatLabel(showLocationCodes ? t('leiRecords.display.codes') : t('leiRecords.display.names'))}
               </button>
             </>
           }
