@@ -1,0 +1,162 @@
+name: Security Report
+
+# This workflow generates a security findings report to a file in the repository.
+# It is intended to be triggered manually so that the Copilot coding agent can read
+# the output from source control — the agent's token lacks the `security_events`
+# scope needed to call the Dependabot / code-scanning REST APIs directly.
+#
+# Usage:
+#   gh workflow run security-report.yml   (or via GitHub UI → Actions → Run workflow)
+#
+# After the workflow completes, pull/fetch the branch to read:
+#   docs/security/latest-report.md
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Run every Monday at 08:00 UTC so there's always a fresh report for weekly reviews
+    - cron: '0 8 * * 1'
+
+permissions:
+  contents: write          # needed to commit the report file
+  security-events: read    # needed to query code-scanning alerts
+  # Note: Dependabot alerts additionally require the `security_events` scope AND
+  # the repository's Dependabot alerts to be enabled. If the step below errors,
+  # check Settings → Code security → Dependabot alerts.
+
+jobs:
+  generate-report:
+    name: Generate Security Report
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+
+      - name: Install frontend dependencies (for npm audit)
+        working-directory: frontend
+        run: npm ci --legacy-peer-deps
+
+      - name: Run govulncheck (Go vulnerabilities)
+        id: govuln
+        working-directory: backend
+        continue-on-error: true
+        run: |
+          govulncheck ./... 2>&1 | tee /tmp/govuln.txt; EXIT_CODE=$?
+          echo "exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
+
+      - name: Run npm audit (frontend vulnerabilities)
+        id: npm_audit
+        working-directory: frontend
+        continue-on-error: true
+        run: |
+          npm audit 2>&1 | tee /tmp/npm-audit.txt; EXIT_CODE=$?
+          echo "exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch Dependabot alerts
+        id: dependabot
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api /repos/${{ github.repository }}/dependabot/alerts \
+            --jq '.[] | "- [\(.security_advisory.severity | ascii_upcase)] \(.security_advisory.summary) — \(.dependency.package.name) \(.security_vulnerability.vulnerable_version_range) → fix: \(.security_vulnerability.first_patched_version.identifier // "none")"' \
+            2>&1 | tee /tmp/dependabot.txt || echo "(Dependabot alerts not accessible — ensure Dependabot is enabled)" > /tmp/dependabot.txt
+
+      - name: Fetch code scanning alerts
+        id: code_scanning
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api /repos/${{ github.repository }}/code-scanning/alerts?state=open \
+            --jq '.[] | "- [\(.rule.severity | ascii_upcase)] \(.rule.description) — \(.most_recent_instance.location.path):\(.most_recent_instance.location.start_line)"' \
+            2>&1 | tee /tmp/code-scanning.txt || echo "(Code scanning alerts not accessible — ensure code scanning is enabled)" > /tmp/code-scanning.txt
+
+      - name: Build report
+        run: |
+          REPORT_DATE=$(date -u +"%Y-%m-%d %H:%M UTC")
+          REPORT_FILE="docs/security/latest-report.md"
+
+          cat > "$REPORT_FILE" <<EOF
+          # Security Report
+
+          **Generated:** ${REPORT_DATE}
+          **Workflow run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          > ⚠️ This file is auto-generated. Do not edit manually.
+          > Trigger a new run via \`gh workflow run security-report.yml\` to refresh.
+
+          ---
+
+          ## Go Vulnerabilities (govulncheck)
+
+          \`\`\`
+          $(cat /tmp/govuln.txt 2>/dev/null || echo "govulncheck output unavailable")
+          \`\`\`
+
+          ---
+
+          ## Frontend Vulnerabilities (npm audit)
+
+          \`\`\`
+          $(cat /tmp/npm-audit.txt 2>/dev/null || echo "npm audit output unavailable")
+          \`\`\`
+
+          ---
+
+          ## Dependabot Alerts
+
+          $(cat /tmp/dependabot.txt || echo "No output")
+
+          ---
+
+          ## Code Scanning Alerts
+
+          $(cat /tmp/code-scanning.txt || echo "No output")
+
+          ---
+
+          ## Action Versions in Use
+
+          The following third-party GitHub Actions are pinned in this repository:
+
+          \`\`\`
+          $(grep -rh 'uses:' .github/workflows/ | grep -v '#' | sort -u | sed 's/^[[:space:]]*//')
+          \`\`\`
+
+          ---
+
+          *To view full details, visit:*
+          - *Dependabot: ${{ github.server_url }}/${{ github.repository }}/security/dependabot*
+          - *Code scanning: ${{ github.server_url }}/${{ github.repository }}/security/code-scanning*
+          EOF
+
+          echo "Report written to $REPORT_FILE"
+          cat "$REPORT_FILE"
+
+      - name: Commit report
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/security/latest-report.md
+          if git diff --cached --quiet; then
+            echo "No changes to report."
+          else
+            git commit -m "chore: refresh security report [skip ci]"
+            git push
+          fi
