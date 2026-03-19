@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
   /** When true the "Save as default?" prompt is shown. */
@@ -64,6 +65,7 @@ export default function PreferenceSavePrompt({
   onUndoDismiss,
   undoLabel,
 }: Props) {
+  const { t } = useTranslation('common')
   // Use refs to always call the latest callbacks, avoiding stale closure issues.
   const onDismissRef = useRef(onDismiss)
   const onSaveRef = useRef(onSave)
@@ -110,6 +112,13 @@ export default function PreferenceSavePrompt({
     onUndoDismissRef.current?.()
   }
 
+  const savePromptLabel = label ?? t('preferences.saveAsDefaultPrompt')
+  const undoPromptLabel = undoLabel ?? t('preferences.promptSaved')
+  const saveButtonLabel = t('common.save')
+  const undoButtonLabel = t('preferences.undo')
+  const dismissButtonLabel = t('preferences.dismiss')
+  const noThanksButtonLabel = t('preferences.noThanks')
+
   // Undo toast: shown after the user saves, giving them 15s to revert.
   if (showUndo && !visible) {
     return (
@@ -119,20 +128,20 @@ export default function PreferenceSavePrompt({
         className="fixed bottom-5 right-5 z-50 flex max-w-[calc(100vw-2.5rem)] items-center gap-3 rounded-lg border border-white/20 bg-gray-800/95 px-4 py-3 text-sm text-white shadow-xl backdrop-blur-sm transition-all"
       >
         <span className="text-gray-300">
-          {undoLabel ?? '✓ Saved!'}
+          {undoPromptLabel}
         </span>
         {onUndo && (
           <button
             onClick={handleUndo}
             className="rounded bg-amber-600 px-3 py-1 text-xs font-semibold text-white hover:bg-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-400"
           >
-            Undo
+            {undoButtonLabel}
           </button>
         )}
         <button
           onClick={handleUndoDismiss}
           className="rounded bg-white/10 px-3 py-1 text-xs font-semibold text-gray-300 hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/30"
-          aria-label="Dismiss"
+          aria-label={dismissButtonLabel}
         >
           ✕
         </button>
@@ -150,19 +159,19 @@ export default function PreferenceSavePrompt({
       className="fixed bottom-5 right-5 z-50 flex max-w-[calc(100vw-2.5rem)] items-center gap-3 rounded-lg border border-white/20 bg-gray-800/95 px-4 py-3 text-sm text-white shadow-xl backdrop-blur-sm transition-all"
     >
       <span className="text-gray-300">
-        {label ?? 'Save this as your default?'}
+        {savePromptLabel}
       </span>
       <button
         onClick={handleSave}
         className="rounded bg-blue-600 px-3 py-1 text-xs font-semibold text-white hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400"
       >
-        Save
+        {saveButtonLabel}
       </button>
       <button
         onClick={handleDismiss}
         className="rounded bg-white/10 px-3 py-1 text-xs font-semibold text-gray-300 hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/30"
       >
-        No thanks
+        {noThanksButtonLabel}
       </button>
     </div>
   )

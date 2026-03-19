@@ -73,7 +73,13 @@
     "englishTooltipsDescription": "Show English text on hover when the UI is in another language.",
     "openUserMenu": "Open user menu",
     "menuLabel": "Global Preferences",
-    "savedUndo": "✓ Saved — Undo?"
+    "savedUndo": "✓ Saved — Undo?",
+    "saveThemeDefault": "Save theme as your default?",
+    "saveAsDefaultPrompt": "Save this as your default?",
+    "promptSaved": "✓ Saved!",
+    "undo": "Undo",
+    "dismiss": "Dismiss",
+    "noThanks": "No thanks"
   },
   "common": {
     "loading": "Loading…",

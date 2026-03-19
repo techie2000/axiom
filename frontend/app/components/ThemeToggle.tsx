@@ -1,10 +1,12 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import PreferenceSavePrompt from './PreferenceSavePrompt'
 import { useDeferredStringPreference } from '../lib/useDeferredStringPreference'
 
 export default function ThemeToggle() {
+  const { t } = useTranslation('common')
   const themePreference = useDeferredStringPreference({
     pageKey: 'global',
     preferenceKey: 'theme',
@@ -55,12 +57,12 @@ export default function ThemeToggle() {
         resetKey={themePreference.promptResetKey}
         onSave={themePreference.save}
         onDismiss={themePreference.dismiss}
-        label="Save theme as your default?"
+        label={t('preferences.saveThemeDefault')}
         showUndo={themePreference.showUndo}
         undoResetKey={themePreference.undoResetKey}
         onUndo={themePreference.undo}
         onUndoDismiss={themePreference.undoDismiss}
-        undoLabel="Theme saved — Undo?"
+        undoLabel={t('preferences.savedUndo')}
       />
     </>
   )
