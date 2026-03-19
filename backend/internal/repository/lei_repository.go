@@ -65,6 +65,17 @@ type leiRepository struct {
 const notSetEntityStatusWhereClause = "entity_status IS NULL OR TRIM(entity_status) = '' OR UPPER(TRIM(entity_status)) = 'NULL'"
 const normalizedEntityCategoryMatchWhereClause = "UPPER(BTRIM(entity_category)) = UPPER(BTRIM(?))"
 
+// exactLEIMatchWhereClause matches a record by its primary LEI or its successor LEI.
+// The successor branch includes the partial-index predicate so PostgreSQL can use
+// idx_lei_raw_lei_records_successor_lei instead of falling back to sequential scans.
+// Used when the search string is exactly 20 alphanumeric characters (LEI format).
+const exactLEIMatchWhereClause = "(lei = ? OR (successor_lei = ? AND successor_lei IS NOT NULL AND BTRIM(successor_lei) <> ''))"
+
+// likePatternLEISearchWhereClause matches a record by legal name, primary LEI,
+// successor LEI, or other names using case-insensitive LIKE patterns.
+// Used as a fallback when the search_vector column is unavailable.
+const likePatternLEISearchWhereClause = "(legal_name ILIKE ? OR lei ILIKE ? OR successor_lei ILIKE ? OR COALESCE(other_names::text, '') ILIKE ?)"
+
 func isNotSetStatusFilter(status string) bool {
 	normalized := strings.ToUpper(strings.ReplaceAll(strings.TrimSpace(status), " ", "_"))
 	return normalized == "NULL" || normalized == "NOT_SET"
@@ -165,6 +176,10 @@ func isAlphanumeric(s string) bool {
 		}
 	}
 	return true
+}
+
+func normalizeExactLEISearchInput(search string) string {
+	return strings.ToUpper(strings.TrimSpace(search))
 }
 
 // validateColumns validates and filters requested columns against allowed LEI record fields
@@ -268,23 +283,27 @@ func (r *leiRepository) FindAllLEIWithFilters(limit, offset int, search, status,
 
 		// Apply search filter (LEI code or legal name)
 		if search != "" {
+			trimmedSearch := strings.TrimSpace(search)
 			// Optimize search based on pattern:
-			// 1. If exactly 20 chars (LEI format), use exact match on LEI only
+			// 1. If exactly 20 chars (LEI format), use exact match on primary or successor LEI
 			// 2. Otherwise, search name fields including other_names JSONB
-			if len(search) == 20 && isAlphanumeric(search) {
-				// Exact LEI match - uses idx_lei_records_lei B-tree index (< 1ms)
-				query = query.Where("lei = ?", search)
+			if len(trimmedSearch) == 20 && isAlphanumeric(trimmedSearch) {
+				normalizedSearch := normalizeExactLEISearchInput(trimmedSearch)
+				// Exact LEI match - also checks successor_lei so users can search by successor
+				// Uses idx_lei_records_lei B-tree index on the primary lei column (< 1ms)
+				query = query.Where(exactLEIMatchWhereClause, normalizedSearch, normalizedSearch)
 			} else if useSearchVector {
 				// Full-text search using the composite search_vector column
 				// Uses idx_lei_records_search_vector GIN index for single efficient lookup
 				query = query.Where(
 					"search_vector @@ plainto_tsquery('simple', ?)",
-					search,
+					trimmedSearch,
 				)
 			} else {
-				searchPattern := "%" + strings.TrimSpace(search) + "%"
+				searchPattern := "%" + trimmedSearch + "%"
 				query = query.Where(
-					"(legal_name ILIKE ? OR lei ILIKE ? OR COALESCE(other_names::text, '') ILIKE ?)",
+					likePatternLEISearchWhereClause,
+					searchPattern,
 					searchPattern,
 					searchPattern,
 					searchPattern,
