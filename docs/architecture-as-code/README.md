@@ -31,8 +31,14 @@ See [pilot-scope.md](./pilot-scope.md) for boundaries and exclusions.
 
 1. Update model artifacts when changing cross-cutting boundaries or critical flows.
 2. Keep links between model files, ADRs, and narrative docs in sync.
-3. Run local model validation before opening PR.
+3. Run local model validation before opening PR (`make calm-validate`).
 4. Ensure CI model validation passes.
+
+## Validation Commands
+
+- Local strict validation: `make calm-validate`
+- Local warn-only validation: `make calm-validate-warn`
+- CI currently runs warn mode while the pilot stabilizes.
 
 ## Current Status
 

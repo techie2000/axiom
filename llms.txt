@@ -151,6 +151,9 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
 
 - [UI Patterns Guide](docs/ui-patterns.md): Reusable frontend components and patterns (Badge, Alert, LoadingSpinner,
   StatCard, PageHeader, Sticky Headers, User Preferences, Internationalisation)
+- [Architecture as Code Model](docs/architecture-as-code/models/axiom-core.architecture.json): Initial CALM model
+  covering core components and pilot flows (auth, LEI sync, SSI read path)
+- [CALM Validation Script](scripts/validate-calm.sh): Shared validation entrypoint used by Makefile and CI
 - [WCAG Compliance Guide](docs/accessibility/WCAG_COMPLIANCE.md): WCAG 2.2 AA developer reference —
   contrast tables, approved Tailwind patterns, PR checklist, and testing tools
 - [Internationalisation Guide](docs/i18n/INTERNATIONALISATION.md): Full i18n guide: locale files, adding translation

@@ -99,7 +99,7 @@
     {
       "unique-id": "rel-api-postgres",
       "description": "API persists and queries core data in PostgreSQL.",
-      "protocol": "PostgreSQL",
+      "protocol": "JDBC",
       "relationship-type": {
         "connects": {
           "source": {
