@@ -957,7 +957,7 @@ func ibanOrEmpty(account string) string {
 		return ""
 	}
 	prefix := strings.ToUpper(account[:2])
-	if !(prefix[0] >= 'A' && prefix[0] <= 'Z' && prefix[1] >= 'A' && prefix[1] <= 'Z') {
+	if prefix[0] < 'A' || prefix[0] > 'Z' || prefix[1] < 'A' || prefix[1] > 'Z' {
 		return ""
 	}
 	return account

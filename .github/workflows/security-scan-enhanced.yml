@@ -37,7 +37,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version-file: 'backend/go.mod'
           cache-dependency-path: backend/go.sum
 
       - name: Set up Node.js
@@ -57,7 +57,7 @@ jobs:
           docker build -f docker/Dockerfile.frontend -t axiom-frontend:latest ./frontend
 
       - name: Run Trivy scan on Backend (JSON output)
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           image-ref: 'axiom-backend:latest'
           format: 'json'
@@ -66,7 +66,7 @@ jobs:
           exit-code: 0
 
       - name: Run Trivy scan on Frontend (JSON output)
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           image-ref: 'axiom-frontend:latest'
           format: 'json'
@@ -75,7 +75,7 @@ jobs:
           exit-code: 0
 
       - name: Upload Trivy results (Backend SARIF)
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           image-ref: 'axiom-backend:latest'
           format: 'sarif'
@@ -89,7 +89,7 @@ jobs:
           category: 'trivy-backend-scan'
 
       - name: Upload Trivy results (Frontend SARIF)
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           image-ref: 'axiom-frontend:latest'
           format: 'sarif'

@@ -384,7 +384,7 @@ func (r *leiRepository) FindAllLEIWithFilters(limit, offset int, search, status,
 	query := buildQuery(true)
 	if err := query.Find(&records).Error; err != nil {
 		errMsg := strings.ToLower(err.Error())
-		isNonLEISearch := search != "" && !(len(search) == 20 && isAlphanumeric(search))
+		isNonLEISearch := search != "" && (len(search) != 20 || !isAlphanumeric(search))
 		if isNonLEISearch && strings.Contains(errMsg, "search_vector") && strings.Contains(errMsg, "does not exist") {
 			records = nil
 			fallbackQuery := buildQuery(false)

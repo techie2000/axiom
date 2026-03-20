@@ -53,7 +53,7 @@ jobs:
         run: docker build -f docker/Dockerfile.backend -t axiom-backend:latest ./backend
 
       - name: Run Trivy vulnerability scanner on Backend image
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           image-ref: 'axiom-backend:latest'
           format: 'sarif'
@@ -70,7 +70,7 @@ jobs:
         run: docker build -f docker/Dockerfile.frontend -t axiom-frontend:latest ./frontend
 
       - name: Run Trivy vulnerability scanner on Frontend image
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           image-ref: 'axiom-frontend:latest'
           format: 'sarif'
@@ -85,7 +85,7 @@ jobs:
 
       - name: Run Trivy for issue creation (Backend)
         id: trivy-check-backend
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           image-ref: 'axiom-backend:latest'
           format: 'json'
@@ -95,7 +95,7 @@ jobs:
 
       - name: Run Trivy for issue creation (Frontend)
         id: trivy-check-frontend
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           image-ref: 'axiom-frontend:latest'
           format: 'json'
