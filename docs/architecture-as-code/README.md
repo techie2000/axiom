@@ -37,5 +37,6 @@ See [pilot-scope.md](./pilot-scope.md) for boundaries and exclusions.
 ## Current Status
 
 - Pilot planning and ADR proposal are in place.
+- Initial CALM model baseline is available at [models/axiom-core.architecture.json](models/axiom-core.architecture.json).
 - Model files and validation automation are intentionally incremental.
 - Tracking issue: [#204](https://github.com/techie2000/axiom/issues/204)

@@ -22,9 +22,10 @@
 
 ## Entry Criteria
 
-- ADR-0015 proposed and linked.
-- Tracking issue open with task checklist.
-- Documentation links available from architecture index and `llms.txt`.
+- [ADR-0015](../adr/adr-0015-architecture-as-code-calm-pilot.md) proposed and linked.
+- [Tracking issue #204](https://github.com/techie2000/axiom/issues/204) open with task checklist.
+- Documentation links available from [Architecture as Code overview](README.md) and [llms.txt](../../llms.txt).
+- Initial CALM model exists at [axiom-core.architecture.json](models/axiom-core.architecture.json).
 
 ## Exit Criteria
 

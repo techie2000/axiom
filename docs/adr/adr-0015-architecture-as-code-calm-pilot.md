@@ -1,3 +1,22 @@
+---
+post_title: "ADR-0015: Architecture as Code (CALM) Pilot Adoption"
+author1: "techie2000"
+post_slug: "adr-0015-architecture-as-code-calm-pilot"
+microsoft_alias: "techie2000"
+featured_image: "https://placehold.co/1200x630.png"
+categories: ["architecture"]
+tags: ["adr", "architecture", "decision", "calm", "architecture-as-code"]
+ai_note: "AI-assisted draft based on repository state and user request."
+summary: "Records the decision to adopt Architecture as Code incrementally with a CALM pilot for Axiom."
+post_date: "2026-03-20"
+title: "ADR-0015: Architecture as Code (CALM) Pilot Adoption"
+status: "Proposed"
+date: "2026-03-20"
+authors: "techie2000"
+supersedes: ""
+superseded_by: ""
+---
+
 # ADR-0015: Architecture as Code (CALM) Pilot Adoption
 
 **Status:** Proposed
