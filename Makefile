@@ -277,6 +277,12 @@ docs-check: lint-docs ## Canonical markdown validation gate
 docs-check-fix: ## Auto-fix then enforce clean markdown lint
 	$(MAKE) lint-docs-fix && $(MAKE) lint-docs
 
+calm-validate: ## Validate CALM architecture models (strict)
+	@bash scripts/validate-calm.sh
+
+calm-validate-warn: ## Validate CALM architecture models (warn-only)
+	@bash scripts/validate-calm.sh --warn
+
 docs-user-install: ## Install user documentation dependencies
 	@echo "Installing user documentation dependencies..."
 	cd docs-user && npm install
@@ -311,8 +317,9 @@ install-tools: ## Install development tools
 	@echo "Installing markdownlint-cli..."
 	@if command -v npm > /dev/null 2>&1; then \
 		npm install -g markdownlint-cli; \
+		npm install -g @finos/calm-cli; \
 	else \
-		echo "⚠️  npm not found. Install Node.js to get markdownlint-cli"; \
+		echo "⚠️  npm not found. Install Node.js to get markdownlint-cli and @finos/calm-cli"; \
 	fi
 
 install-hooks: ## Install git hooks for pre-commit validation

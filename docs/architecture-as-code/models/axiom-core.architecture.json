@@ -1,0 +1,222 @@
+{
+  "$schema": "https://calm.finos.org/release/1.2/meta/calm.json",
+  "unique-id": "axiom-core-architecture",
+  "name": "Axiom Core Architecture",
+  "description": "Architecture as Code pilot model for Axiom core components and critical flows.",
+  "metadata": [
+    {
+      "version": "0.1.0",
+      "owner": "engineering-team",
+      "environment": "multi-environment",
+      "source-doc": "docs/architecture.md",
+      "tracking-issue": "https://github.com/techie2000/axiom/issues/204"
+    }
+  ],
+  "nodes": [
+    {
+      "unique-id": "axiom-user",
+      "node-type": "actor",
+      "name": "Axiom User",
+      "description": "Human user accessing frontend workflows."
+    },
+    {
+      "unique-id": "axiom-frontend",
+      "node-type": "webclient",
+      "name": "Axiom Frontend",
+      "description": "Next.js frontend used by operators and admins.",
+      "interfaces": [
+        {
+          "unique-id": "frontend-https",
+          "url": "https://axiom.example.local"
+        }
+      ]
+    },
+    {
+      "unique-id": "axiom-api",
+      "node-type": "service",
+      "name": "Axiom API",
+      "description": "Go API service handling auth, LEI, SSI, and master data endpoints.",
+      "interfaces": [
+        {
+          "unique-id": "api-rest",
+          "url": "https://api.axiom.local/api/v1"
+        }
+      ]
+    },
+    {
+      "unique-id": "axiom-postgres",
+      "node-type": "database",
+      "name": "Axiom PostgreSQL",
+      "description": "Primary relational data store for users, LEI, SSI, and master data."
+    },
+    {
+      "unique-id": "axiom-rabbitmq",
+      "node-type": "message-broker",
+      "name": "Axiom RabbitMQ",
+      "description": "Asynchronous message broker for background processing and events."
+    },
+    {
+      "unique-id": "gleif-api",
+      "node-type": "external-system",
+      "name": "GLEIF API",
+      "description": "External LEI source used for full and delta synchronization."
+    }
+  ],
+  "relationships": [
+    {
+      "unique-id": "rel-user-frontend",
+      "description": "Users interact with frontend workflows.",
+      "relationship-type": {
+        "interacts": {
+          "actor": "axiom-user",
+          "nodes": [
+            "axiom-frontend"
+          ]
+        }
+      }
+    },
+    {
+      "unique-id": "rel-frontend-api",
+      "description": "Frontend calls backend API over HTTPS.",
+      "protocol": "HTTPS",
+      "relationship-type": {
+        "connects": {
+          "source": {
+            "node": "axiom-frontend",
+            "interfaces": [
+              "frontend-https"
+            ]
+          },
+          "destination": {
+            "node": "axiom-api",
+            "interfaces": [
+              "api-rest"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "unique-id": "rel-api-postgres",
+      "description": "API persists and queries core data in PostgreSQL.",
+      "protocol": "JDBC",
+      "relationship-type": {
+        "connects": {
+          "source": {
+            "node": "axiom-api"
+          },
+          "destination": {
+            "node": "axiom-postgres"
+          }
+        }
+      }
+    },
+    {
+      "unique-id": "rel-api-rabbitmq",
+      "description": "API publishes and consumes async events via RabbitMQ.",
+      "protocol": "AMQP",
+      "relationship-type": {
+        "connects": {
+          "source": {
+            "node": "axiom-api"
+          },
+          "destination": {
+            "node": "axiom-rabbitmq"
+          }
+        }
+      }
+    },
+    {
+      "unique-id": "rel-api-gleif",
+      "description": "API requests LEI data from GLEIF service.",
+      "protocol": "HTTPS",
+      "relationship-type": {
+        "connects": {
+          "source": {
+            "node": "axiom-api"
+          },
+          "destination": {
+            "node": "gleif-api"
+          }
+        }
+      }
+    }
+  ],
+  "flows": [
+    {
+      "unique-id": "flow-authentication",
+      "name": "Authentication Flow",
+      "description": "User signs in and receives authenticated session/JWT context.",
+      "transitions": [
+        {
+          "relationship-unique-id": "rel-user-frontend",
+          "sequence-number": 1,
+          "description": "User submits credentials from login screen.",
+          "direction": "source-to-destination"
+        },
+        {
+          "relationship-unique-id": "rel-frontend-api",
+          "sequence-number": 2,
+          "description": "Frontend calls auth endpoint on API.",
+          "direction": "source-to-destination"
+        },
+        {
+          "relationship-unique-id": "rel-api-postgres",
+          "sequence-number": 3,
+          "description": "API validates user credentials and status in PostgreSQL.",
+          "direction": "source-to-destination"
+        }
+      ]
+    },
+    {
+      "unique-id": "flow-lei-sync",
+      "name": "LEI Synchronization Flow",
+      "description": "Background or triggered LEI sync from GLEIF into internal storage.",
+      "transitions": [
+        {
+          "relationship-unique-id": "rel-api-gleif",
+          "sequence-number": 1,
+          "description": "API requests LEI records from GLEIF.",
+          "direction": "source-to-destination"
+        },
+        {
+          "relationship-unique-id": "rel-api-postgres",
+          "sequence-number": 2,
+          "description": "API writes normalized LEI updates to PostgreSQL.",
+          "direction": "source-to-destination"
+        },
+        {
+          "relationship-unique-id": "rel-api-rabbitmq",
+          "sequence-number": 3,
+          "description": "API publishes sync events for downstream processing.",
+          "direction": "source-to-destination"
+        }
+      ]
+    },
+    {
+      "unique-id": "flow-ssi-read-path",
+      "name": "SSI Read Path",
+      "description": "User requests SSI data through frontend and API read path.",
+      "transitions": [
+        {
+          "relationship-unique-id": "rel-user-frontend",
+          "sequence-number": 1,
+          "description": "User opens SSI list and applies filters.",
+          "direction": "source-to-destination"
+        },
+        {
+          "relationship-unique-id": "rel-frontend-api",
+          "sequence-number": 2,
+          "description": "Frontend requests SSI endpoint with query params.",
+          "direction": "source-to-destination"
+        },
+        {
+          "relationship-unique-id": "rel-api-postgres",
+          "sequence-number": 3,
+          "description": "API queries SSI rows and related entities from PostgreSQL.",
+          "direction": "source-to-destination"
+        }
+      ]
+    }
+  ]
+}

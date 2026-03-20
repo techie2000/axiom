@@ -159,3 +159,11 @@ flowchart TD
 - Event sourcing: For complete audit trail
 - GraphQL: Alternative API interface
 - Multi-tenancy: Data isolation per client
+
+## Architecture as Code Pilot
+
+Architecture as Code is being introduced incrementally to complement ADR and Mermaid documentation.
+
+- [Architecture as Code Overview](./architecture-as-code/README.md)
+- [Architecture as Code Pilot Scope](./architecture-as-code/pilot-scope.md)
+- [ADR-0015 Architecture as Code (CALM) Pilot Adoption](./adr/adr-0015-architecture-as-code-calm-pilot.md)

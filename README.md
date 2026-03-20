@@ -11,6 +11,8 @@ entities, financial instruments, accounts, and settlement instructions.
 
 Architecture decisions are documented as ADRs in [docs/adr](docs/adr).
 
+Architecture as Code pilot guidance is available in [docs/architecture-as-code](docs/architecture-as-code).
+
 ### Tech Stack
 
 **Backend:**

@@ -22,6 +22,10 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
 - [User Docs Rollout Plan](docs-user/ROLLOUT_PLAN.md): Phased delivery plan for bootstrap, workflow coverage, and
   publication
 - [Architecture](docs/architecture.md): System architecture, design patterns, and component interactions
+- [Architecture as Code Overview](docs/architecture-as-code/README.md): Architecture as Code pilot goals,
+  source-of-truth policy, and contributor workflow
+- [Architecture as Code Pilot Scope](docs/architecture-as-code/pilot-scope.md): v1 model boundaries,
+  exclusions, and pilot success criteria
 - [Changelog](CHANGELOG.md): Version history and notable changes
 
 ## User Documentation — Getting Started
@@ -108,6 +112,8 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
   introduce top-level `docs-user/` for polished end-user docs while keeping `docs/` engineering-focused
 - [ADR-0014: WCAG Accessibility Standards](docs/adr/adr-0014-wcag-accessibility-standards.md): WCAG 2.2 AA
   baseline for the frontend — contrast, focus visibility, and non-text contrast rules for shared components
+- [ADR-0015: Architecture as Code (CALM) Pilot Adoption](docs/adr/adr-0015-architecture-as-code-calm-pilot.md):
+  incremental adoption decision for machine-readable architecture with phased CI validation
 
 ## Deployment and Infrastructure
 
@@ -145,6 +151,9 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
 
 - [UI Patterns Guide](docs/ui-patterns.md): Reusable frontend components and patterns (Badge, Alert, LoadingSpinner,
   StatCard, PageHeader, Sticky Headers, User Preferences, Internationalisation)
+- [Architecture as Code Model](docs/architecture-as-code/models/axiom-core.architecture.json): Initial CALM model
+  covering core components and pilot flows (auth, LEI sync, SSI read path)
+- [CALM Validation Script](scripts/validate-calm.sh): Shared validation entrypoint used by Makefile and CI
 - [WCAG Compliance Guide](docs/accessibility/WCAG_COMPLIANCE.md): WCAG 2.2 AA developer reference —
   contrast tables, approved Tailwind patterns, PR checklist, and testing tools
 - [Internationalisation Guide](docs/i18n/INTERNATIONALISATION.md): Full i18n guide: locale files, adding translation
