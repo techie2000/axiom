@@ -105,7 +105,7 @@ jobs:
 
           ## Go Vulnerabilities (govulncheck)
 
-          \`\`\`
+          \`\`\`text
           $(cat /tmp/govuln.txt 2>/dev/null || echo "govulncheck output unavailable")
           \`\`\`
 
@@ -113,7 +113,7 @@ jobs:
 
           ## Frontend Vulnerabilities (npm audit)
 
-          \`\`\`
+          \`\`\`text
           $(cat /tmp/npm-audit.txt 2>/dev/null || echo "npm audit output unavailable")
           \`\`\`
 
@@ -135,13 +135,14 @@ jobs:
 
           The following third-party GitHub Actions are pinned in this repository:
 
-          \`\`\`
+          \`\`\`text
           $(grep -rh 'uses:' .github/workflows/ | grep -v '#' | sort -u | sed 's/^[[:space:]]*//')
           \`\`\`
 
           ---
 
           *To view full details, visit:*
+
           - *Dependabot: ${{ github.server_url }}/${{ github.repository }}/security/dependabot*
           - *Code scanning: ${{ github.server_url }}/${{ github.repository }}/security/code-scanning*
           EOF
@@ -158,5 +159,5 @@ jobs:
             echo "No changes to report."
           else
             git commit -m "chore: refresh security report [skip ci]"
-            git push
+            git push origin HEAD:security-report
           fi

@@ -47,7 +47,7 @@ Then open a task with something like:
 ## Medium-Term Fix (Security Report Workflow)
 
 `.github/workflows/security-report.yml` is available in this repository. It runs in a real GitHub
-Actions context where the `GITHUB_TOKEN` **does** have `security_events: read` permission (set
+Actions context where the `GITHUB_TOKEN` **does** have `security-events: read` permission (set
 explicitly in the workflow's `permissions` block).
 
 ### Trigger it

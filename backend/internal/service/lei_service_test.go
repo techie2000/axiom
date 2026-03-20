@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -521,7 +522,7 @@ func buildRecordsArrayJSON(recordCount int) string {
 		builder.WriteString(`{"LEI":{"$":"`)
 		builder.WriteString(testLEICodeForIndex(i))
 		builder.WriteString(`"},"Entity":{"LegalName":{"$":"Entity`)
-		_, _ = fmt.Fprintf(&builder, "%d", i)
+		builder.WriteString(strconv.Itoa(i))
 		builder.WriteString(`"}}}`)
 	}
 	builder.WriteString("]")
