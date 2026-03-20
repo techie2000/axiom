@@ -10,6 +10,7 @@ This section covers the day-to-day tasks you will perform in Axiom.
 | [Settlement Instructions (SSI)](./ssi) | View and manage standard settlement instructions |
 | [Countries](./countries) | Browse ISO 3166 country reference data |
 | [Currencies](./currencies) | Browse ISO 4217 currency reference data |
+| [Languages](./languages) | Browse BCP 47 language reference data |
 | [Entities](./entities) | View legal entity master data |
 | [Instruments](./instruments) | View financial instrument master data |
 | [Accounts](./accounts) | View account static data |
