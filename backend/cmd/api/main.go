@@ -82,7 +82,7 @@ func main() {
 	}
 
 	// Initialize services with both data directories
-	services := service.NewServices(repos, db, leiDataDir, masterDataDir, cfg.JWT.Secret, cfg.JWT.Expiry)
+	services := service.NewServices(repos, db, leiDataDir, masterDataDir, cfg.JWT.Secret, cfg.JWT.Expiry, cfg.LEI.GLEIFRAListURL)
 
 	// Load master data on startup (idempotent - only loads if tables are empty)
 	logger.Info().Msg("Checking master data...")
@@ -91,7 +91,7 @@ func main() {
 	}
 
 	// Initialize scheduler service for LEI data acquisition and master data sync (with config for schedules)
-	schedulerService := service.NewSchedulerService(services.LEI, services.LEILevel2, services.MasterData, cfg)
+	schedulerService := service.NewSchedulerService(services.LEI, services.LEILevel2, services.MasterData, services.RegistrationAuthority, cfg)
 
 	// Start scheduler
 	if err := schedulerService.Start(); err != nil {

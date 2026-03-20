@@ -43,9 +43,10 @@ type SchedulerService interface {
 }
 
 type schedulerService struct {
-	leiService        LEIService
-	leiLevel2Service  LEILevel2Service
-	masterDataService MasterDataService
+	leiService                  LEIService
+	leiLevel2Service            LEILevel2Service
+	masterDataService           MasterDataService
+	registrationAuthorityService RegistrationAuthorityService
 	stopChan          chan struct{}
 	running           bool
 	// triggerMu serialises concurrent manual-trigger API calls so that the
@@ -65,11 +66,12 @@ type schedulerService struct {
 }
 
 // NewSchedulerService creates a new scheduler service
-func NewSchedulerService(leiService LEIService, leiLevel2Service LEILevel2Service, masterDataService MasterDataService, cfg *config.Config) SchedulerService {
+func NewSchedulerService(leiService LEIService, leiLevel2Service LEILevel2Service, masterDataService MasterDataService, registrationAuthorityService RegistrationAuthorityService, cfg *config.Config) SchedulerService {
 	s := &schedulerService{
-		leiService:        leiService,
-		leiLevel2Service:  leiLevel2Service,
-		masterDataService: masterDataService,
+		leiService:                  leiService,
+		leiLevel2Service:            leiLevel2Service,
+		masterDataService:           masterDataService,
+		registrationAuthorityService: registrationAuthorityService,
 		stopChan:          make(chan struct{}),
 		running:           false,
 	}
@@ -1239,6 +1241,26 @@ func (s *schedulerService) RunDailyMasterDataSync() error {
 // doMasterDataSyncWork checks for and applies master data updates for a MASTER_DATA_SYNC job
 // whose status has already been set to RUNNING by the caller.
 func (s *schedulerService) doMasterDataSyncWork(st *domain.FileProcessingStatus) error {
+	// --- Step 1: sync GLEIF registration authorities before any LEI processing ---
+	st.ProgressMessage = "Syncing GLEIF registration authorities"
+	_ = s.leiService.UpdateProcessingStatus(st)
+
+	log.Info().Msg("Syncing GLEIF registration authorities as part of master data sync")
+	raCreated, raUpdated, raErr := s.registrationAuthorityService.SyncFromGLEIF()
+	if raErr != nil {
+		// Log but do not abort — we still want master data to load even if RA sync fails.
+		log.Error().Err(raErr).Msg("GLEIF registration authority sync encountered errors (continuing)")
+	} else {
+		log.Info().
+			Int("created", raCreated).
+			Int("updated", raUpdated).
+			Msg("GLEIF registration authority sync completed")
+	}
+
+	// --- Step 2: check if local master data files have been updated ---
+	st.ProgressMessage = "Checking master data for updates"
+	_ = s.leiService.UpdateProcessingStatus(st)
+
 	// Check if master data files have been updated
 	hasUpdates, err := s.masterDataService.CheckForUpdates()
 	if err != nil {

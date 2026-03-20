@@ -55,6 +55,7 @@ interface LEIRecord {
   registration_authority: string
   registration_authority_id: string
   registration_number: string
+  registration_authority_name?: string
   
   // Associated Entities
   managing_lou: string
@@ -1620,6 +1621,7 @@ export default function LEIRecordsPage() {
                           const isLegalFormColumn = column.key === 'entity_legal_form'
                           const isManagingLou = column.key === 'managing_lou'
                           const isSuccessorLei = column.key === 'successor_lei'
+                          const isRegistrationAuthorityColumn = column.key === 'registration_authority'
                           const isCountryFlagColumn = column.key === 'country_flag'
                           const isRegionColumn = column.key === 'legal_address_region' || column.key === 'hq_address_region'
                           const isCountryColumn = column.key === 'legal_address_country' || column.key === 'hq_address_country'
@@ -1702,6 +1704,15 @@ export default function LEIRecordsPage() {
                                       </div>
                                     )
                                   })()}
+                                </div>
+                              ) : isRegistrationAuthorityColumn ? (
+                                <div>
+                                  <div>{formatCellValue(value, column.key)}</div>
+                                  {record.registration_authority_name && (
+                                    <div className="mt-1 text-xs text-blue-600 dark:text-blue-400">
+                                      {record.registration_authority_name}
+                                    </div>
+                                  )}
                                 </div>
                               ) : isLegalName ? (
                                 <div>
@@ -2163,6 +2174,9 @@ export default function LEIRecordsPage() {
                   <div>
                     <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Registration Authority</span>
                     <p className="text-sm text-gray-900 dark:text-white mt-1">{selectedRecord.registration_authority || '-'}</p>
+                    {selectedRecord.registration_authority_name && (
+                      <p className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">{selectedRecord.registration_authority_name}</p>
+                    )}
                   </div>
                   <div>
                     <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Registration Number</span>

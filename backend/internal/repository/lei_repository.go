@@ -103,7 +103,15 @@ func (r *leiRepository) CreateLEIRecord(record *domain.LEIRecord) error {
 // FindLEIByLEI finds an LEI record by LEI code
 func (r *leiRepository) FindLEIByLEI(lei string) (*domain.LEIRecord, error) {
 	var record domain.LEIRecord
-	if err := r.db.Where("lei = ?", lei).Preload("SourceFile").First(&record).Error; err != nil {
+	err := r.db.
+		Select("lei_raw.lei_records.*" +
+			", (SELECT ref.legal_name FROM lei_raw.lei_records ref WHERE BTRIM(ref.lei) = BTRIM(lei_raw.lei_records.managing_lou) LIMIT 1) AS managing_lou_legal_name" +
+			", (SELECT ref.legal_name FROM lei_raw.lei_records ref WHERE BTRIM(ref.lei) = BTRIM(lei_raw.lei_records.successor_lei) LIMIT 1) AS successor_lei_legal_name" +
+			", (SELECT ra.ra_name FROM lei_raw.registration_authorities ra WHERE ra.ra_code = BTRIM(lei_raw.lei_records.registration_authority) AND ra.deleted_at IS NULL LIMIT 1) AS registration_authority_name").
+		Where("lei_raw.lei_records.lei = ?", lei).
+		Preload("SourceFile").
+		First(&record).Error
+	if err != nil {
 		return nil, err
 	}
 	return &record, nil
@@ -274,7 +282,8 @@ func (r *leiRepository) FindAllLEIWithFilters(limit, offset int, search, status,
 		if includeLinkedNames {
 			validatedColumns = validatedColumns +
 				", (SELECT ref.legal_name FROM lei_raw.lei_records ref WHERE BTRIM(ref.lei) = BTRIM(lei_raw.lei_records.managing_lou) LIMIT 1) AS managing_lou_legal_name" +
-				", (SELECT ref.legal_name FROM lei_raw.lei_records ref WHERE BTRIM(ref.lei) = BTRIM(lei_raw.lei_records.successor_lei) LIMIT 1) AS successor_lei_legal_name"
+				", (SELECT ref.legal_name FROM lei_raw.lei_records ref WHERE BTRIM(ref.lei) = BTRIM(lei_raw.lei_records.successor_lei) LIMIT 1) AS successor_lei_legal_name" +
+				", (SELECT ra.ra_name FROM lei_raw.registration_authorities ra WHERE ra.ra_code = BTRIM(lei_raw.lei_records.registration_authority) AND ra.deleted_at IS NULL LIMIT 1) AS registration_authority_name"
 		}
 		query = query.Select(validatedColumns)
 

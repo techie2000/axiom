@@ -67,6 +67,9 @@ type LEIConfig struct {
 	CleanupTime       string // Time for daily cleanup (HH:MM format, e.g., "00:00" for midnight)
 	KeepFullFiles     int    // Number of full files to retain
 	KeepDeltaFiles    int    // Number of delta files to retain
+	// GLEIFRAListURL is the URL of the GLEIF Registration Authorities List CSV download.
+	// Leave empty to use the built-in default URL.
+	GLEIFRAListURL string
 }
 
 // Load loads configuration from file and environment variables

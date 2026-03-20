@@ -9,39 +9,41 @@ import (
 
 // Repositories holds all repository interfaces
 type Repositories struct {
-	Country           CountryRepository
-	Currency          CurrencyRepository
-	Language          LanguageRepository
-	Entity            EntityRepository
-	Instrument        InstrumentRepository
-	Account           AccountRepository
-	SSI               SSIRepository
-	LEI               LEIRepository
-	LEILevel2         LEILevel2Repository
-	CodeMapping       CodeMappingRepository
-	User              UserRepository
-	UserPreference    UserPreferenceRepository
-	PreferenceAudit   PreferenceAuditRepository
-	UITranslation     UITranslationRepository
+	Country                CountryRepository
+	Currency               CurrencyRepository
+	Language               LanguageRepository
+	Entity                 EntityRepository
+	Instrument             InstrumentRepository
+	Account                AccountRepository
+	SSI                    SSIRepository
+	LEI                    LEIRepository
+	LEILevel2              LEILevel2Repository
+	CodeMapping            CodeMappingRepository
+	User                   UserRepository
+	UserPreference         UserPreferenceRepository
+	PreferenceAudit        PreferenceAuditRepository
+	UITranslation          UITranslationRepository
+	RegistrationAuthority  RegistrationAuthorityRepository
 }
 
 // NewRepositories creates a new repositories instance
 func NewRepositories(db *gorm.DB) *Repositories {
 	return &Repositories{
-		Country:         NewCountryRepository(db),
-		Currency:        NewCurrencyRepository(db),
-		Language:        NewLanguageRepository(db),
-		Entity:          NewEntityRepository(db),
-		Instrument:      NewInstrumentRepository(db),
-		Account:         NewAccountRepository(db),
-		SSI:             NewSSIRepository(db),
-		LEI:             NewLEIRepository(db),
-		LEILevel2:       NewLEILevel2Repository(db),
-		CodeMapping:     NewCodeMappingRepository(db),
-		User:            NewUserRepository(db),
-		UserPreference:  NewUserPreferenceRepository(db),
-		PreferenceAudit: NewPreferenceAuditRepository(db),
-		UITranslation:   NewUITranslationRepository(db),
+		Country:               NewCountryRepository(db),
+		Currency:              NewCurrencyRepository(db),
+		Language:              NewLanguageRepository(db),
+		Entity:                NewEntityRepository(db),
+		Instrument:            NewInstrumentRepository(db),
+		Account:               NewAccountRepository(db),
+		SSI:                   NewSSIRepository(db),
+		LEI:                   NewLEIRepository(db),
+		LEILevel2:             NewLEILevel2Repository(db),
+		CodeMapping:           NewCodeMappingRepository(db),
+		User:                  NewUserRepository(db),
+		UserPreference:        NewUserPreferenceRepository(db),
+		PreferenceAudit:       NewPreferenceAuditRepository(db),
+		UITranslation:         NewUITranslationRepository(db),
+		RegistrationAuthority: NewRegistrationAuthorityRepository(db),
 	}
 }
 

@@ -51,10 +51,11 @@ type LEIRecord struct {
 	EntityStatus            string `gorm:"size:255" json:"entity_status"`
 
 	// Associated entities
-	ManagingLOU           string `gorm:"size:255" json:"managing_lou"` // Local Operating Unit
-	SuccessorLEI          string `gorm:"size:20" json:"successor_lei"`
-	ManagingLOULegalName  string `gorm:"->;column:managing_lou_legal_name" json:"managing_lou_legal_name,omitempty"`
-	SuccessorLEILegalName string `gorm:"->;column:successor_lei_legal_name" json:"successor_lei_legal_name,omitempty"`
+	ManagingLOU              string `gorm:"size:255" json:"managing_lou"` // Local Operating Unit
+	SuccessorLEI             string `gorm:"size:20" json:"successor_lei"`
+	ManagingLOULegalName     string `gorm:"->;column:managing_lou_legal_name" json:"managing_lou_legal_name,omitempty"`
+	SuccessorLEILegalName    string `gorm:"->;column:successor_lei_legal_name" json:"successor_lei_legal_name,omitempty"`
+	RegistrationAuthorityName string `gorm:"->;column:registration_authority_name" json:"registration_authority_name,omitempty"`
 
 	// Dates
 	InitialRegistrationDate time.Time `json:"initial_registration_date"`
@@ -408,3 +409,46 @@ type LEILevel2ProcessingFailure struct {
 func (LEILevel2ProcessingFailure) TableName() string {
 	return "lei_raw.lei_level2_processing_failures"
 }
+
+// RegistrationAuthority represents a GLEIF registration authority reference record.
+// Loaded from the GLEIF Registration Authorities List CSV and used to resolve the
+// registration_authority code present in lei_raw.lei_records to a human-readable name.
+type RegistrationAuthority struct {
+	ID                uuid.UUID      `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	RACode            string         `gorm:"column:ra_code;uniqueIndex;size:100;not null" json:"ra_code"`
+	CountryCode       string         `gorm:"column:country_code;size:3" json:"country_code"`
+	RAName            string         `gorm:"column:ra_name;size:500;not null" json:"ra_name"`
+	InternationalName string         `gorm:"column:international_name;size:500" json:"international_name"`
+	Website           string         `gorm:"column:website;size:1000" json:"website"`
+	GLEIFNotes        string         `gorm:"column:gleif_notes;type:text" json:"gleif_notes"`
+	IsDeprecated      bool           `gorm:"column:is_deprecated;not null;default:false" json:"is_deprecated"`
+	CreatedBy         string         `gorm:"size:100;not null;default:'system'" json:"created_by"`
+	UpdatedBy         string         `gorm:"size:100;not null;default:'system'" json:"updated_by"`
+	CreatedAt         time.Time      `json:"created_at"`
+	UpdatedAt         time.Time      `json:"updated_at"`
+	DeletedAt         gorm.DeletedAt `gorm:"index" json:"-"`
+}
+
+// TableName overrides the table name for RegistrationAuthority.
+func (RegistrationAuthority) TableName() string {
+	return "lei_raw.registration_authorities"
+}
+
+// RegistrationAuthorityAudit records every create/update to a RegistrationAuthority row,
+// following the same audit pattern as LEIRecordAudit.
+type RegistrationAuthorityAudit struct {
+	ID             uuid.UUID   `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	RAID           uuid.UUID   `gorm:"type:uuid;not null;index;column:ra_id" json:"ra_id"`
+	RACode         string      `gorm:"column:ra_code;size:100;not null;index" json:"ra_code"`
+	Action         string      `gorm:"size:20;not null" json:"action"` // CREATE, UPDATE
+	RecordSnapshot JSONBString `gorm:"type:jsonb;not null" json:"record_snapshot"`
+	ChangedFields  JSONBString `gorm:"type:jsonb" json:"changed_fields"`
+	ChangedBy      string      `gorm:"size:100;not null;default:'system'" json:"changed_by"`
+	CreatedAt      time.Time   `json:"created_at"`
+}
+
+// TableName overrides the table name for RegistrationAuthorityAudit.
+func (RegistrationAuthorityAudit) TableName() string {
+	return "lei_raw.registration_authorities_audit"
+}
+
