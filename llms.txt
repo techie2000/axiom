@@ -26,6 +26,8 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
   source-of-truth policy, and contributor workflow
 - [Architecture as Code Pilot Scope](docs/architecture-as-code/pilot-scope.md): v1 model boundaries,
   exclusions, and pilot success criteria
+- [ADR to CALM Model Mapping](docs/architecture-as-code/adr-model-map.md): Traceability between ADR decisions
+  and machine-readable architecture artifacts for PR review
 - [Changelog](CHANGELOG.md): Version history and notable changes
 
 ## User Documentation — Getting Started
