@@ -6,8 +6,11 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
   issues: write
+
+concurrency:
+  group: aasc-weekly-rolling-checkin
+  cancel-in-progress: false
 
 jobs:
   upsert-checkin:
@@ -46,7 +49,10 @@ jobs:
               per_page: 100,
             });
 
-            const existing = comments.find((comment) => comment.body && comment.body.includes(marker));
+            const matches = comments
+              .filter((comment) => comment.body && comment.body.includes(marker))
+              .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+            const existing = matches[0];
 
             if (existing) {
               await github.rest.issues.updateComment({
@@ -56,6 +62,15 @@ jobs:
                 body,
               });
               core.info(`Updated rolling check-in comment: ${existing.html_url}`);
+
+              for (const duplicate of matches.slice(1)) {
+                await github.rest.issues.deleteComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: duplicate.id,
+                });
+                core.info(`Deleted duplicate marker comment: ${duplicate.html_url}`);
+              }
             } else {
               const created = await github.rest.issues.createComment({
                 owner: context.repo.owner,
