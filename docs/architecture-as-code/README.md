@@ -38,7 +38,12 @@ See [pilot-scope.md](./pilot-scope.md) for boundaries and exclusions.
 
 - Local strict validation: `make calm-validate`
 - Local warn-only validation: `make calm-validate-warn`
-- CI currently runs warn mode while the pilot stabilizes.
+- CI runs warn mode by default while the pilot stabilizes.
+- Set repository variable `CALM_VALIDATE_STRICT=true` to enable strict blocking validation in CI.
+
+## Traceability
+
+- ADR-to-model traceability map: [adr-model-map.md](adr-model-map.md)
 
 ## Current Status
 
