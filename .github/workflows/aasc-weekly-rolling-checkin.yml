@@ -1,0 +1,67 @@
+name: AasC Weekly Rolling Check-in
+
+on:
+  schedule:
+    - cron: '0 9 * * 1' # Weekly every Monday at 09:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  upsert-checkin:
+    name: Upsert Issue 207 Rolling Comment
+    runs-on: ubuntu-latest
+    steps:
+      - name: Upsert weekly rolling check-in comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = 207;
+            const marker = '<!-- aasc-weekly-rolling-checkin -->';
+
+            const now = new Date();
+            const dateOnly = now.toISOString().slice(0, 10);
+            const runUrl = `${process.env.GITHUB_SERVER_URL}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            const body = [
+              marker,
+              '## AasC Weekly Rolling Check-in',
+              '',
+              `Last updated: ${dateOnly}`,
+              '',
+              '- Stage: 3 hardening (Issue #207)',
+              '- Strict gate variable (`CALM_VALIDATE_STRICT`): _pending decision_',
+              '- Risks/Blockers: _update during weekly review_',
+              '- Next step: _update during weekly review_',
+              '',
+              `Run log: ${runUrl}`,
+            ].join('\n');
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              per_page: 100,
+            });
+
+            const existing = comments.find((comment) => comment.body && comment.body.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+              core.info(`Updated rolling check-in comment: ${existing.html_url}`);
+            } else {
+              const created = await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                body,
+              });
+              core.info(`Created rolling check-in comment: ${created.data.html_url}`);
+            }
