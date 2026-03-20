@@ -140,6 +140,8 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
 - [Security Update Summary](docs/security/SECURITY_UPDATE_SUMMARY.md): Summary of security vulnerability fixes
   applied to Docker base images and Go/npm dependencies
 - [Security Documentation](docs/security/README.md): Security overview and related documentation
+- [Agent Security Access](docs/security/AGENT_SECURITY_ACCESS.md): Guide for granting the Copilot agent
+  access to GitHub security APIs (Dependabot, code scanning, secret scanning)
 
 ## Optional
 
