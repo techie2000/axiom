@@ -245,7 +245,7 @@ export default function CurrenciesPage() {
                   className="px-3 py-2 rounded-lg bg-green-700 hover:bg-green-600 transition-colors text-white text-xs font-medium"
                   title={getEnglishTooltip('referenceLayout.savePageWidthDefault')}
                 >
-                    {t('referenceLayout.savePageWidthDefault')}
+                  {formatLabel('💾 Save width')}
                 </button>
               )}
             </>

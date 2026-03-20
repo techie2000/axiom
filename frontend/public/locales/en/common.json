@@ -714,10 +714,10 @@
     "title": "Languages"
   },
   "referenceLayout": {
-    "displayCodesButton": "Show Codes",
+    "displayCodesButton": "🏷️ Display: Codes",
     "displayModeCodes": "Display code values",
     "displayModeNames": "Display localized names",
-    "displayNamesButton": "Show Names",
+    "displayNamesButton": "🏷️ Display: Names",
     "expandButton": "↔️ Expand",
     "expandedWidth": "Expanded Width",
     "normalButton": "⬅️ Normal",

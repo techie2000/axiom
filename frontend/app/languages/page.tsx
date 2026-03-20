@@ -230,7 +230,7 @@ export default function LanguagesPage() {
                   className="px-3 py-2 rounded-lg bg-green-700 hover:bg-green-600 transition-colors text-white text-xs font-medium"
                   title={getEnglishTooltip('referenceLayout.savePageWidthDefault')}
                 >
-                  💾 Save width
+                  {formatLabel('💾 Save width')}
                 </button>
               )}
               <button
