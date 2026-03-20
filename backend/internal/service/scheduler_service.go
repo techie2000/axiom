@@ -1233,12 +1233,12 @@ func (s *schedulerService) RunDailyMasterDataSync() error {
 	st.ErrorMessage = ""
 	_ = s.leiService.UpdateProcessingStatus(st)
 
-	return s.doMasterDataSyncWork(st, now)
+	return s.doMasterDataSyncWork(st)
 }
 
 // doMasterDataSyncWork checks for and applies master data updates for a MASTER_DATA_SYNC job
 // whose status has already been set to RUNNING by the caller.
-func (s *schedulerService) doMasterDataSyncWork(st *domain.FileProcessingStatus, now time.Time) error {
+func (s *schedulerService) doMasterDataSyncWork(st *domain.FileProcessingStatus) error {
 	// Check if master data files have been updated
 	hasUpdates, err := s.masterDataService.CheckForUpdates()
 	if err != nil {

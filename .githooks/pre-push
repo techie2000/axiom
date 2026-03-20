@@ -1,0 +1,21 @@
+#!/bin/sh
+# Pre-push hook to ensure VS Code settings are sorted.
+
+if [ ! -f ".vscode/settings.json" ]; then
+    exit 0
+fi
+
+if ! command -v pwsh > /dev/null 2>&1; then
+    echo "⚠️  pwsh not found; skipping settings sort check"
+    exit 0
+fi
+
+if ! pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/sort-vscode-settings.ps1 -CheckOnly; then
+    echo ""
+    echo "❌ Push blocked: .vscode/settings.json is not sorted."
+    echo "   Run: make settings-sort"
+    echo ""
+    exit 1
+fi
+
+exit 0

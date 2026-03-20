@@ -41,6 +41,16 @@ See [pilot-scope.md](./pilot-scope.md) for boundaries and exclusions.
 - CI runs warn mode by default while the pilot stabilizes.
 - Set repository variable `CALM_VALIDATE_STRICT=true` to enable strict blocking validation in CI.
 
+## Viewing the Model in VS Code
+
+To view Architecture as Code models visually in VS Code:
+
+1. Install [CALM Tools (VS Code Marketplace)](https://marketplace.visualstudio.com/items?itemName=finos.calm-tools).
+2. Open [models/axiom-core.architecture.json](models/axiom-core.architecture.json).
+3. Run the CALM Tools visualize/view command from the Command Palette.
+
+Tip: if CALM commands do not appear after install, reload VS Code and reopen the model file.
+
 ## Traceability
 
 - ADR-to-model traceability map: [adr-model-map.md](adr-model-map.md)
