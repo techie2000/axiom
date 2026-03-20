@@ -226,7 +226,7 @@ help: ## Show this help message
 	@echo 'Usage: make [target]'
 	@echo ''
 	@echo 'Available targets:'
-	@pwsh -NoProfile -Command '$$targets = Get-Content -LiteralPath "Makefile" | Where-Object { $$_ -match "^[A-Za-z0-9_.-]+:.*?## " }; foreach ($$line in $$targets) { $$parts = $$line -split ":.*?## ", 2; if ($$parts.Count -eq 2) { "  {0,-15} {1}" -f $$parts[0], $$parts[1] } }'
+	@pwsh -NoProfile -Command "$$targets = Get-Content -LiteralPath 'Makefile'; foreach ($$line in $$targets) { if ($$line -match '^[A-Za-z0-9_.-]+:.*?## ') { $$parts = $$line -split ':.*?## ', 2; if ($$parts.Count -eq 2) { '  {0,-15} {1}' -f $$parts[0], $$parts[1] } } }" || awk -F ':.*## ' '/^[A-Za-z0-9_.-]+:.*## / { printf "  %-15s %s\n", $$1, $$2 }' Makefile
 
 install-hooks: ## Install git hooks for pre-commit validation
 	@echo "Installing git hooks..."

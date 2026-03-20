@@ -6,8 +6,11 @@ if [ ! -f ".vscode/settings.json" ]; then
 fi
 
 if ! command -v pwsh > /dev/null 2>&1; then
-    echo "⚠️  pwsh not found; skipping settings sort check"
-    exit 0
+    echo ""
+    echo "❌ Push blocked: pwsh is required to validate sorted .vscode/settings.json."
+    echo "   Install PowerShell 7+ or run the sort/check from a shell where 'pwsh' is available."
+    echo ""
+    exit 1
 fi
 
 if ! pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/sort-vscode-settings.ps1 -CheckOnly; then

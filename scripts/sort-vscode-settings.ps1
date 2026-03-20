@@ -45,12 +45,14 @@ try {
 }
 
 $sorted = Sort-JsonNode -Node $parsed
-$formatted = $sorted | ConvertTo-Json -Depth 100
+$formatted = ($sorted | ConvertTo-Json -Depth 100) -replace "`r?`n", "`n"
 if (-not $formatted.EndsWith("`n")) {
     $formatted += "`n"
 }
 
-if ($original -ceq $formatted) {
+$normalizedOriginal = $original -replace "`r`n", "`n"
+
+if ($normalizedOriginal -ceq $formatted) {
     Write-Host "settings.json is already sorted."
     exit 0
 }
@@ -60,5 +62,5 @@ if ($CheckOnly) {
     exit 1
 }
 
-Set-Content -LiteralPath $SettingsPath -Value $formatted -NoNewline
+[System.IO.File]::WriteAllText((Resolve-Path -LiteralPath $SettingsPath), $formatted, [System.Text.UTF8Encoding]::new($false))
 Write-Host "Sorted $SettingsPath alphabetically."

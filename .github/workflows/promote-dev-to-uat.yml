@@ -62,7 +62,7 @@ jobs:
         if: |
           steps.check.outputs.needed == 'true' &&
           steps.existing.outputs.result == '"false"' &&
-          inputs.dry_run != 'true'
+          !inputs.dry_run
         uses: actions/github-script@v7
         with:
           script: |
@@ -102,7 +102,7 @@ jobs:
             console.log(`✅ Created promotion PR #${pr.number}: ${pr.html_url}`);
 
       - name: Dry run summary
-        if: inputs.dry_run == 'true'
+        if: inputs.dry_run
         run: |
           AHEAD="${{ steps.check.outputs.commits_ahead }}"
           echo "🔍 Dry run — no PR created."
