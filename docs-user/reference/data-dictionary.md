@@ -13,7 +13,8 @@ This page defines the key fields used across Axiom's data entities.
 | Entity Category | Classification of the entity type | `GENERAL` |
 | Registered Address | Officially registered legal address | 1 Main St, London |
 | Headquarters Address | Principal place of business if different | 2 HQ Road, London |
-| Registration Authority | Body that assigned the registration number | Companies House |
+| Registration Authority | GLEIF registration authority code | `RA000585` |
+| Registration Authority Name | Full name of the registrar resolved from the GLEIF list | `Securities and Exchange Commission` |
 | Registration Number | Identifier issued by the registration authority | `12345678` |
 | Registration Date | Date the LEI was first registered | `2015-01-15` |
 | Last Updated | Date the record was last updated in GLEIF | `2026-01-10` |

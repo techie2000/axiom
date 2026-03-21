@@ -19,6 +19,18 @@ sources. Use a manual sync trigger when:
 - You are setting up a new environment and need to populate data immediately.
 - An upstream data source has published a correction that you need to apply sooner.
 
+### Sync sequencing
+
+For **Master Data** syncs, Axiom enforces the following order to avoid unresolved reference codes:
+
+1. **GLEIF Registration Authorities List** — downloads the registrar name list from GLEIF so that
+   registration authority codes in LEI records can be resolved to full names.
+2. **LEI Level 1 (entity data)** — processed after registration authority data is loaded.
+3. **LEI Level 2 (relationship data)** — processed after Level 1 is complete.
+
+This sequencing means that after a successful Master Data sync, all registration authority codes
+in LEI records will display their full registrar name in the LEI Records module.
+
 ## Steps
 
 ### Trigger a sync

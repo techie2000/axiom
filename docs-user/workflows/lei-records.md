@@ -45,10 +45,16 @@ Multiple filters can be active at the same time. Click **Clear Filters** to rese
    - **Entity information** — legal name, legal form, status, and category.
    - **Registered address** — street, city, region, postal code, and country.
    - **Headquarters address** — if different from registered address.
-   - **Registration details** — registration authority, registration number, and initial registration date.
+   - **Registration details** — registration authority code with its full registrar name, registration
+     number, and initial registration date.
    - **Relationship data** — managing LOU (Legal Operating Unit), relationship status, and validation status.
    - **Other names** — previous legal names or trading names if available.
 3. Click **Close** or press **Escape** to dismiss the panel.
+
+> **Registrar names** — the **Registration Authority** field shows both the GLEIF code (for example
+> `RA000585`) and the resolved registrar name beneath it (for example *Securities and Exchange
+> Commission*). This name is sourced from the GLEIF Registration Authorities List, which is
+> synchronised daily before LEI data is processed.
 
 ### Customise visible columns
 
@@ -74,6 +80,7 @@ full entity details.
 | Record shows stale data | Daily sync may not have run yet | Data is updated once per day; check the last sync date |
 | Some columns are missing | They may be hidden in your column selection | Open the Columns panel and enable them |
 | Record count differs from GLEIF | Delta records may be queued | Axiom performs a daily full sync at 2 AM |
+| Registration authority shows only a code | Registrar sync has not completed yet | The GLEIF Registration Authorities List is synced daily; trigger a Master Data sync if needed |
 
 ## Related tasks
 
