@@ -8,53 +8,53 @@ from scheduling through to storage.
 ```mermaid
 flowchart TD
     Start([Backend Startup]) --> Init[Initialize Scheduler Service]
-    Init --> CheckDB{Database<br/>Empty?}
-    
+    Init --> GLEIFRefSync[Sync GLEIF Reference Code Lists<br/>Registration Authorities<br/>Entity Legal Forms<br/>Organizational Roles<br/>Legal Jurisdictions]
+
+    GLEIFRefSync --> CheckDB{Database<br/>Empty?}
+
     CheckDB -->|Yes - First Run| FullSync[Schedule Full Sync]
     CheckDB -->|No - Has Data| DeltaSync[Schedule Delta Sync]
-    
+
     FullSync --> DownloadFull[Download Full File<br/>~900MB, 3.2M records]
     DeltaSync --> DownloadDelta[Download Delta File<br/>~13MB, 58K records]
-    
+
     DownloadFull --> SaveFile1[Save to ./data/lei/]
     DownloadDelta --> SaveFile2[Save to ./data/lei/]
-    
+
     SaveFile1 --> CreateSourceFile1[Create SourceFile Record<br/>Status: PENDING]
     SaveFile2 --> CreateSourceFile2[Create SourceFile Record<br/>Status: PENDING]
-    
+
     CreateSourceFile1 --> ProcessFile[Process ZIP File]
     CreateSourceFile2 --> ProcessFile
     
     ProcessFile --> Extract[Extract JSON<br/>JSON Lines format]
     Extract --> ParseLoop{For Each<br/>JSON Record}
-    
+
     ParseLoop -->|Parse Record| Transform[Transform JSON to<br/>Domain Model]
     Transform --> Validate[Validate LEI Data]
     Validate --> Upsert[Upsert to Database]
-    
+
     Upsert --> CheckExists{Record<br/>Exists?}
-    
+
     CheckExists -->|No| CreateNew[Create New Record]
     CheckExists -->|Yes| DetectChanges{Changes<br/>Detected?}
-    
+
     CreateNew --> CreateAudit1[Create Audit Record<br/>Action: CREATE]
     DetectChanges -->|Yes| UpdateRecord[Update Record]
     DetectChanges -->|No| Skip[Skip - No Changes]
-    
+
     UpdateRecord --> CreateAudit2[Create Audit Record<br/>Action: UPDATE]
-    
+
     CreateAudit1 --> UpdateProgress[Update Processing Progress]
     CreateAudit2 --> UpdateProgress
     Skip --> UpdateProgress
-    
+
     UpdateProgress --> ParseLoop
-    
+
     ParseLoop -->|All Records Processed| Complete[Mark SourceFile<br/>Status: COMPLETED]
     Complete --> Schedule{Scheduler}
-    
-    Schedule -->|Daily: 2 AM| FullSync
-    
-    Note over Schedule: Delta sync disabled - caused reliability issues,<br/>minimal benefit with daily full sync
+
+    Schedule -->|Daily: 2 AM| GLEIFRefSync
 ```
 
 ## Detailed Component Interaction

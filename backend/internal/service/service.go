@@ -11,20 +11,21 @@ import (
 
 // Services holds all service interfaces
 type Services struct {
-	Auth           AuthService
-	Country        CountryService
-	Currency       CurrencyService
-	Language       LanguageService
-	Entity         EntityService
-	Instrument     InstrumentService
-	Account        AccountService
-	SSI            SSIService
-	LEI            LEIService
-	LEILevel2      LEILevel2Service
-	MasterData     MasterDataService
-	CodeMapping    CodeMappingService
-	UserPreference UserPreferenceService
-	UITranslation  UITranslationService
+	Auth            AuthService
+	Country         CountryService
+	Currency        CurrencyService
+	Language        LanguageService
+	Entity          EntityService
+	Instrument      InstrumentService
+	Account         AccountService
+	SSI             SSIService
+	LEI             LEIService
+	LEILevel2       LEILevel2Service
+	MasterData      MasterDataService
+	CodeMapping     CodeMappingService
+	UserPreference  UserPreferenceService
+	UITranslation   UITranslationService
+	GLEIFReference  GLEIFReferenceService
 }
 
 // NewServices creates a new services instance
@@ -44,6 +45,12 @@ func NewServices(repos *repository.Repositories, db *gorm.DB, leiDataDir string,
 		CodeMapping:    NewCodeMappingService(repos.CodeMapping),
 		UserPreference: NewUserPreferenceService(repos.UserPreference, repos.PreferenceAudit),
 		UITranslation:  NewUITranslationService(repos.UITranslation),
+		GLEIFReference: NewGLEIFReferenceService(
+			repos.GLEIFRegistrationAuthority,
+			repos.GLEIFEntityLegalForm,
+			repos.GLEIFOrganizationalRole,
+			repos.GLEIFLegalJurisdiction,
+		),
 	}
 }
 

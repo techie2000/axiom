@@ -30,6 +30,9 @@ interface LEIRecord {
   entity_category: string
   entity_sub_category: string
   entity_legal_form: string
+  entity_legal_form_name?: string
+  legal_jurisdiction?: string
+  legal_jurisdiction_name?: string
   
   // Legal Address
   legal_address_line_1: string
@@ -53,6 +56,7 @@ interface LEIRecord {
   
   // Registration
   registration_authority: string
+  registration_authority_name?: string
   registration_authority_id: string
   registration_number: string
   
@@ -1729,7 +1733,11 @@ export default function LEIRecordsPage() {
                               ) : isRegionColumn ? (
                                 formatRegionDisplay(String(value || ''))
                               ) : isLegalFormColumn ? (
-                                formatLegalFormDisplay(String(value || ''))
+                                (() => {
+                                  if (showLocationCodes) return String(value || '-')
+                                  // Prefer resolved name from DB join, fall back to local map lookup
+                                  return record.entity_legal_form_name || formatLegalFormDisplay(String(value || ''))
+                                })()
                               ) : (
                                 formatCellValue(value, column.key)
                               )}
@@ -1897,7 +1905,37 @@ export default function LEIRecordsPage() {
                   {selectedRecord.entity_legal_form && (
                     <div>
                       <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{showLocationCodes ? 'Legal Form Code' : 'Legal Form Name'}</span>
-                      <p className="text-sm text-gray-900 dark:text-white mt-1">{formatLegalFormDisplay(selectedRecord.entity_legal_form)}</p>
+                      {showLocationCodes ? (
+                        <p className="text-sm font-mono text-gray-900 dark:text-white mt-1">{selectedRecord.entity_legal_form}</p>
+                      ) : (
+                        <>
+                          <p className="text-sm text-gray-900 dark:text-white mt-1">
+                            {selectedRecord.entity_legal_form_name || formatLegalFormDisplay(selectedRecord.entity_legal_form)}
+                          </p>
+                          {selectedRecord.entity_legal_form_name && (
+                            <p className="text-xs font-mono text-gray-500 dark:text-gray-400 mt-0.5">{selectedRecord.entity_legal_form}</p>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
+                  {selectedRecord.legal_jurisdiction && (
+                    <div>
+                      <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                        {showLocationCodes ? 'Jurisdiction Code' : 'Jurisdiction'}
+                      </span>
+                      {showLocationCodes ? (
+                        <p className="text-sm font-mono text-gray-900 dark:text-white mt-1">{selectedRecord.legal_jurisdiction}</p>
+                      ) : (
+                        <>
+                          <p className="text-sm text-gray-900 dark:text-white mt-1">
+                            {selectedRecord.legal_jurisdiction_name || selectedRecord.legal_jurisdiction}
+                          </p>
+                          {selectedRecord.legal_jurisdiction_name && (
+                            <p className="text-xs font-mono text-gray-500 dark:text-gray-400 mt-0.5">{selectedRecord.legal_jurisdiction}</p>
+                          )}
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
@@ -2162,7 +2200,10 @@ export default function LEIRecordsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white dark:bg-gray-900">
                   <div>
                     <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Registration Authority</span>
-                    <p className="text-sm text-gray-900 dark:text-white mt-1">{selectedRecord.registration_authority || '-'}</p>
+                    <p className="text-sm font-mono text-gray-900 dark:text-white mt-1">{selectedRecord.registration_authority || '-'}</p>
+                    {selectedRecord.registration_authority_name && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{selectedRecord.registration_authority_name}</p>
+                    )}
                   </div>
                   <div>
                     <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Registration Number</span>

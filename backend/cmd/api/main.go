@@ -91,7 +91,14 @@ func main() {
 	}
 
 	// Initialize scheduler service for LEI data acquisition and master data sync (with config for schedules)
-	schedulerService := service.NewSchedulerService(services.LEI, services.LEILevel2, services.MasterData, cfg)
+	// Uses the GLEIF-aware constructor so reference code lists are synced before each LEI ingest.
+	schedulerService := service.NewSchedulerServiceWithGLEIF(
+		services.LEI,
+		services.LEILevel2,
+		services.MasterData,
+		services.GLEIFReference,
+		cfg,
+	)
 
 	// Start scheduler
 	if err := schedulerService.Start(); err != nil {
@@ -401,6 +408,7 @@ func setupRouter(cfg *config.Config, h *handler.Handlers) *gin.Engine {
 			lei := protected.Group("/lei")
 			{
 				lei.POST("/sync/masterdata", h.LEI.TriggerMasterDataSync)
+				lei.POST("/sync/gleif-reference", h.LEI.TriggerGLEIFReferenceSync)
 				lei.POST("/sync/full", h.LEI.TriggerFullSync)
 				lei.POST("/sync/delta", h.LEI.TriggerDeltaSync)
 				lei.POST("/sync/level2", h.LEI.TriggerLevel2Sync)

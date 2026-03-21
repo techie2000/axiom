@@ -1236,6 +1236,7 @@ func normalizeLEIRecordNullLikeFields(record *domain.LEIRecord) {
 	record.EntitySubCategory = normalizeNullLikeValue(record.EntitySubCategory)
 	record.EntityLegalForm = normalizeNullLikeValue(record.EntityLegalForm)
 	record.EntityStatus = normalizeNullLikeValue(record.EntityStatus)
+	record.LegalJurisdiction = normalizeNullLikeValue(record.LegalJurisdiction)
 	record.ManagingLOU = normalizeNullLikeValue(record.ManagingLOU)
 	record.SuccessorLEI = normalizeLEICodeValue(record.SuccessorLEI)
 	if record.SuccessorLEI != "" && !isValidLEICode(record.SuccessorLEI) {
@@ -1259,6 +1260,7 @@ func (s *leiService) jsonToDomainRecord(jsonRecord *LEIJSONRecord, sourceFileID 
 		EntityCategory:         jsonRecord.Entity.EntityCategory.Value,
 		EntityLegalForm:        jsonRecord.Entity.LegalForm.EntityLegalFormCode.Value,
 		EntityStatus:           jsonRecord.Entity.EntityStatus.Value,
+		LegalJurisdiction:      jsonRecord.Entity.LegalJurisdiction.Value,
 		ManagingLOU:            jsonRecord.Registration.ManagingLOU.Value,
 		SourceFileID:           &sourceFileID,
 		// Initialize JSONB fields with valid JSON

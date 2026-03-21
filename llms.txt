@@ -90,6 +90,8 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
 - [LEI Acquisition](docs/LEI_ACQUISITION.md): Complete LEI integration documentation with GLEIF API details
 - [LEI Implementation Summary](docs/LEI_IMPLEMENTATION_SUMMARY.md): Technical implementation details and features
 - [LEI Data Flow](docs/LEI_DATA_FLOW.md): Data processing flow diagrams and scheduler architecture
+- [GLEIF Reference Code Lists](docs/lei/GLEIF_REFERENCE_CODE_LISTS.md): Reference data ingestion for
+  registration authorities, legal forms, organizational roles, and legal jurisdictions
 
 ## Architecture Decision Records
 

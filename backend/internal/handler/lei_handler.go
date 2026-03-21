@@ -363,6 +363,29 @@ func (h *LEIHandler) TriggerMasterDataSync(c *gin.Context) {
 	c.JSON(http.StatusAccepted, gin.H{"message": "Master data sync triggered"})
 }
 
+// TriggerGLEIFReferenceSync manually triggers a GLEIF reference code-list sync
+// @Summary Trigger GLEIF reference sync
+// @Description Manually trigger synchronization of GLEIF reference code lists (registration authorities,
+// entity legal forms, organizational roles, legal jurisdictions).
+// @Tags LEI
+// @Accept json
+// @Produce json
+// @Success 202 {object} map[string]string
+// @Failure 409 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/lei/sync/gleif-reference [post]
+func (h *LEIHandler) TriggerGLEIFReferenceSync(c *gin.Context) {
+	if err := h.schedulerService.TriggerGLEIFReferenceSync(); err != nil {
+		if errors.Is(err, service.ErrJobRunning) {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to trigger GLEIF reference sync"})
+		}
+		return
+	}
+	c.JSON(http.StatusAccepted, gin.H{"message": "GLEIF reference sync triggered"})
+}
+
 // TriggerDeltaSync manually triggers a delta sync
 // @Summary Trigger delta LEI sync
 // @Description Manually trigger a delta LEI data synchronization
