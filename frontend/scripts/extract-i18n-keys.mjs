@@ -105,6 +105,7 @@ function setNestedValue(target, dottedKey, defaultValue) {
   }
 
   const leaf = parts[parts.length - 1]
+
   if (!hasOwn(cursor, leaf) || cursor[leaf] === undefined) {
     cursor[leaf] = defaultValue
     return true
