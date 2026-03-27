@@ -3,7 +3,28 @@ package repository
 import (
 	"strings"
 	"testing"
+
+	"github.com/techie2000/axiom/internal/domain"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
+
+func columnNames(columns []clause.Column) []string {
+	names := make([]string, 0, len(columns))
+	for _, col := range columns {
+		names = append(names, col.Name)
+	}
+	return names
+}
+
+func containsColumn(columns []clause.Column, target string) bool {
+	for _, col := range columns {
+		if col.Name == target {
+			return true
+		}
+	}
+	return false
+}
 
 func TestIsNotSetStatusFilter(t *testing.T) {
 	t.Helper()
@@ -127,5 +148,123 @@ func TestNormalizeExactLEISearchInputUppercasesAndTrims(t *testing.T) {
 
 	if got != want {
 		t.Fatalf("normalizeExactLEISearchInput(%q) = %q, want %q", input, got, want)
+	}
+}
+
+func TestValidateColumns_DefaultsAndFallbacks(t *testing.T) {
+	t.Helper()
+
+	defaults := columnNames(validateColumns(""))
+	if len(defaults) == 0 {
+		t.Fatalf("expected default columns for empty input")
+	}
+	if defaults[0] != "id" {
+		t.Fatalf("expected first default column to be id, got %q", defaults[0])
+	}
+	if !containsColumn(validateColumns(""), "other_names") {
+		t.Fatalf("expected default columns to include other_names")
+	}
+
+	fallback := columnNames(validateColumns("not_a_real_column"))
+	if len(fallback) == 0 {
+		t.Fatalf("expected fallback columns for invalid input")
+	}
+	if fallback[0] != "id" {
+		t.Fatalf("expected first fallback column to be id, got %q", fallback[0])
+	}
+	if containsColumn(validateColumns("not_a_real_column"), "other_names") {
+		t.Fatalf("did not expect fallback columns to include other_names")
+	}
+}
+
+func TestValidateColumns_AlwaysIncludesIDForValidUserSelection(t *testing.T) {
+	t.Helper()
+
+	columns := validateColumns("lei, legal_name")
+	if !containsColumn(columns, "id") {
+		t.Fatalf("expected validated columns to always include id")
+	}
+
+	names := columnNames(columns)
+	if len(names) < 3 {
+		t.Fatalf("expected id + requested columns, got %v", names)
+	}
+	if names[0] != "id" {
+		t.Fatalf("expected id prepended first, got %v", names)
+	}
+}
+
+func TestEnsureLinkedLEICodeColumns_AddsRequiredColumnsWithoutDuplicates(t *testing.T) {
+	t.Helper()
+
+	base := []clause.Column{{Name: "id"}, {Name: "lei"}}
+	withLinked := ensureLinkedLEICodeColumns(base)
+
+	if !containsColumn(withLinked, "managing_lou") {
+		t.Fatalf("expected managing_lou to be added")
+	}
+	if !containsColumn(withLinked, "successor_lei") {
+		t.Fatalf("expected successor_lei to be added")
+	}
+
+	again := ensureLinkedLEICodeColumns(withLinked)
+	manageCount := 0
+	successorCount := 0
+	for _, col := range again {
+		if col.Name == "managing_lou" {
+			manageCount++
+		}
+		if col.Name == "successor_lei" {
+			successorCount++
+		}
+	}
+	if manageCount != 1 || successorCount != 1 {
+		t.Fatalf("expected linked code columns to be unique, got managing_lou=%d successor_lei=%d", manageCount, successorCount)
+	}
+}
+
+func TestFindAllLEIWithFilters_IncludeLinkedNames_ForcesLinkedCodeColumnsInSelect(t *testing.T) {
+	t.Helper()
+
+	capture := &sqlCaptureLogger{}
+	db, err := gorm.Open(nopDialector{}, &gorm.Config{DryRun: true, Logger: capture})
+	if err != nil {
+		t.Fatalf("gorm.Open failed: %v", err)
+	}
+
+	repo := &leiRepository{db: db}
+	_, err = repo.FindAllLEIWithFilters(10, 0, "", "", "", "", "", "", "lei,legal_name", true)
+	if err != nil {
+		t.Fatalf("FindAllLEIWithFilters returned error: %v", err)
+	}
+
+	sql := strings.ToLower(capture.last())
+	if !strings.Contains(sql, "managing_lou") {
+		t.Fatalf("expected SQL select to include managing_lou when includeLinkedNames=true, got: %s", sql)
+	}
+	if !strings.Contains(sql, "successor_lei") {
+		t.Fatalf("expected SQL select to include successor_lei when includeLinkedNames=true, got: %s", sql)
+	}
+}
+
+func TestApplyLinkedLEINames_PopulatesLinkedLegalNameFields(t *testing.T) {
+	t.Helper()
+
+	records := []*domain.LEIRecord{
+		{ManagingLOU: " 529900AAA00000000001 ", SuccessorLEI: "529900BBB00000000002"},
+	}
+
+	namesByCode := map[string]string{
+		"529900AAA00000000001": "Managing LOU Name",
+		"529900BBB00000000002": "Successor LEI Name",
+	}
+
+	applyLinkedLEINames(records, namesByCode)
+
+	if records[0].ManagingLOULegalName != "Managing LOU Name" {
+		t.Fatalf("expected ManagingLOULegalName to be populated, got %q", records[0].ManagingLOULegalName)
+	}
+	if records[0].SuccessorLEILegalName != "Successor LEI Name" {
+		t.Fatalf("expected SuccessorLEILegalName to be populated, got %q", records[0].SuccessorLEILegalName)
 	}
 }
