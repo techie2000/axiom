@@ -11,8 +11,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"github.com/techie2000/axiom/internal/domain"
-	"gorm.io/gorm/clause"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // LEIRepository interface
@@ -290,6 +290,39 @@ func validateColumns(columns string) []clause.Column {
 	return toClauseColumns(validatedCols)
 }
 
+func ensureLinkedLEICodeColumns(columns []clause.Column) []clause.Column {
+	const managingLOUColumn = "managing_lou"
+	const successorLEIColumn = "successor_lei"
+
+	hasManagingLOU := false
+	hasSuccessorLEI := false
+
+	for _, col := range columns {
+		switch col.Name {
+		case managingLOUColumn:
+			hasManagingLOU = true
+		case successorLEIColumn:
+			hasSuccessorLEI = true
+		}
+	}
+
+	if !hasManagingLOU {
+		columns = append(columns, clause.Column{Name: managingLOUColumn})
+	}
+	if !hasSuccessorLEI {
+		columns = append(columns, clause.Column{Name: successorLEIColumn})
+	}
+
+	return columns
+}
+
+func applyLinkedLEINames(records []*domain.LEIRecord, namesByCode map[string]string) {
+	for _, record := range records {
+		record.ManagingLOULegalName = namesByCode[strings.TrimSpace(record.ManagingLOU)]
+		record.SuccessorLEILegalName = namesByCode[strings.TrimSpace(record.SuccessorLEI)]
+	}
+}
+
 func (r *leiRepository) hydrateLinkedLEINames(records []*domain.LEIRecord) error {
 	if len(records) == 0 {
 		return nil
@@ -319,10 +352,7 @@ func (r *leiRepository) hydrateLinkedLEINames(records []*domain.LEIRecord) error
 		return err
 	}
 
-	for _, record := range records {
-		record.ManagingLOULegalName = namesByCode[strings.TrimSpace(record.ManagingLOU)]
-		record.SuccessorLEILegalName = namesByCode[strings.TrimSpace(record.SuccessorLEI)]
-	}
+	applyLinkedLEINames(records, namesByCode)
 
 	return nil
 }
@@ -337,6 +367,9 @@ func (r *leiRepository) FindAllLEIWithFilters(limit, offset int, search, status,
 		// Dynamic SELECT optimization: only fetch requested columns
 		// Validates columns against whitelist and emits structured columns.
 		validatedColumns := validateColumns(columns)
+		if includeLinkedNames {
+			validatedColumns = ensureLinkedLEICodeColumns(validatedColumns)
+		}
 		query = query.Clauses(clause.Select{Columns: validatedColumns})
 
 		// Remove Preload for list view - only needed for detail view
