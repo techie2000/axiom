@@ -45,12 +45,12 @@ type SchedulerService interface {
 }
 
 type schedulerService struct {
-	leiService           LEIService
-	leiLevel2Service     LEILevel2Service
-	masterDataService    MasterDataService
+	leiService            LEIService
+	leiLevel2Service      LEILevel2Service
+	masterDataService     MasterDataService
 	gleifReferenceService GLEIFReferenceService
-	stopChan             chan struct{}
-	running              bool
+	stopChan              chan struct{}
+	running               bool
 	// triggerMu serialises concurrent manual-trigger API calls so that the
 	// status check and goroutine spawn happen atomically from the caller's
 	// perspective, eliminating the TOCTOU race between handler validation
@@ -945,7 +945,15 @@ func (s *schedulerService) RunDailyDeltaSync() error {
 // has already been set to RUNNING by the caller.
 func (s *schedulerService) doDeltaSyncWork(status *domain.FileProcessingStatus, now time.Time) error {
 	// Run GLEIF reference sync first to ensure all code lists are current before LEI delta ingest.
-	s.runGLEIFReferenceSyncIfConfigured("delta_sync")
+	if err := s.runGLEIFReferenceSyncIfConfigured("delta_sync"); err != nil {
+		status.Status = "FAILED"
+		status.ErrorMessage = err.Error()
+		status.ProgressMessage = ""
+		if updateErr := s.leiService.UpdateProcessingStatus(status); updateErr != nil {
+			log.Error().Err(updateErr).Msg("Failed to update delta sync status after GLEIF pre-sync failure")
+		}
+		return err
+	}
 
 	// Download delta file
 	sourceFile, err := s.leiService.DownloadDeltaFile()
@@ -1049,9 +1057,15 @@ func (s *schedulerService) RunDailyFullSync() error {
 // has already been set to RUNNING by the caller.
 func (s *schedulerService) doFullSyncWork(status *domain.FileProcessingStatus, now time.Time) error {
 	// Run GLEIF reference sync first to ensure all code lists are current before LEI ingest.
-	// Non-fatal: log warnings but continue so a temporary GLEIF download failure does not
-	// block the main LEI pipeline.
-	s.runGLEIFReferenceSyncIfConfigured("full_sync")
+	if err := s.runGLEIFReferenceSyncIfConfigured("full_sync"); err != nil {
+		status.Status = "FAILED"
+		status.ErrorMessage = err.Error()
+		status.ProgressMessage = ""
+		if updateErr := s.leiService.UpdateProcessingStatus(status); updateErr != nil {
+			log.Error().Err(updateErr).Msg("Failed to update full sync status after GLEIF pre-sync failure")
+		}
+		return err
+	}
 
 	// Download full file
 	sourceFile, err := s.leiService.DownloadFullFile()
@@ -1720,19 +1734,18 @@ func (s *schedulerService) TriggerLevel2REPEXSync() error {
 	return nil
 }
 
-// runGLEIFReferenceSyncIfConfigured runs a best-effort GLEIF reference sync when the
-// service is available. Errors are logged as warnings and do not abort the caller:
-// a temporary GLEIF download failure must not block the main LEI ingest pipeline.
-// Returns true if the sync ran (whether or not it succeeded).
-func (s *schedulerService) runGLEIFReferenceSyncIfConfigured(context string) bool {
+// runGLEIFReferenceSyncIfConfigured runs GLEIF reference sync when configured.
+// It returns an error when sync fails so callers can stop LEI ingest until
+// reference lists are consistent.
+func (s *schedulerService) runGLEIFReferenceSyncIfConfigured(context string) error {
 	if s.gleifReferenceService == nil {
-		return false
+		return nil
 	}
 	log.Info().Str("context", context).Msg("Running GLEIF reference sync before LEI ingest")
 	if err := s.gleifReferenceService.SyncAll(); err != nil {
-		log.Warn().Err(err).Str("context", context).Msg("GLEIF reference sync encountered errors; continuing with LEI ingest")
+		return fmt.Errorf("GLEIF reference sync failed before %s: %w", context, err)
 	}
-	return true
+	return nil
 }
 
 // RunGLEIFReferenceSync downloads and upserts all GLEIF reference code lists.

@@ -72,6 +72,7 @@ type GLEIFEntityLegalFormRepository interface {
 	Count() (int64, error)
 	FindAll(limit, offset int) ([]*domain.GLEIFEntityLegalForm, error)
 	FindByELFCode(elfCode string) (*domain.GLEIFEntityLegalForm, error)
+	DeactivateAll() error
 }
 
 type gleifEntityLegalFormRepository struct {
@@ -117,6 +118,12 @@ func (r *gleifEntityLegalFormRepository) FindByELFCode(elfCode string) (*domain.
 		return nil, err
 	}
 	return &record, nil
+}
+
+func (r *gleifEntityLegalFormRepository) DeactivateAll() error {
+	return r.db.Model(&domain.GLEIFEntityLegalForm{}).
+		Where("status = ?", "ACTIVE").
+		Update("status", "INACTIVE").Error
 }
 
 // GLEIFOrganizationalRoleRepository defines data access for GLEIF organizational roles.

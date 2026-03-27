@@ -343,6 +343,10 @@ func (s *gleifReferenceService) SyncEntityLegalForms() error {
 		return fmt.Errorf("parse entity legal forms: %w", err)
 	}
 
+	if err := s.elfRepo.DeactivateAll(); err != nil {
+		return fmt.Errorf("deactivate entity legal forms: %w", err)
+	}
+
 	for i := 0; i < len(records); i += gleifBatchSize {
 		end := i + gleifBatchSize
 		if end > len(records) {
