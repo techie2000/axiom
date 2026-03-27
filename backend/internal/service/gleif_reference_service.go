@@ -303,7 +303,11 @@ func (s *gleifReferenceService) SyncRegistrationAuthorities() error {
 	if err != nil {
 		return fmt.Errorf("download registration authorities: %w", err)
 	}
-	defer body.Close()
+	defer func() {
+		if closeErr := body.Close(); closeErr != nil {
+			log.Warn().Err(closeErr).Msg("Failed to close registration authorities response body")
+		}
+	}()
 
 	records, err := parseRegistrationAuthoritiesCSV(body)
 	if err != nil {
@@ -336,7 +340,11 @@ func (s *gleifReferenceService) SyncEntityLegalForms() error {
 	if err != nil {
 		return fmt.Errorf("download entity legal forms: %w", err)
 	}
-	defer body.Close()
+	defer func() {
+		if closeErr := body.Close(); closeErr != nil {
+			log.Warn().Err(closeErr).Msg("Failed to close entity legal forms response body")
+		}
+	}()
 
 	records, err := parseEntityLegalFormsCSV(body)
 	if err != nil {
@@ -368,7 +376,11 @@ func (s *gleifReferenceService) SyncOrganizationalRoles() error {
 	if err != nil {
 		return fmt.Errorf("download organizational roles: %w", err)
 	}
-	defer body.Close()
+	defer func() {
+		if closeErr := body.Close(); closeErr != nil {
+			log.Warn().Err(closeErr).Msg("Failed to close organizational roles response body")
+		}
+	}()
 
 	records, err := parseOrganizationalRolesCSV(body)
 	if err != nil {
@@ -400,7 +412,11 @@ func (s *gleifReferenceService) SyncLegalJurisdictions() error {
 	if err != nil {
 		return fmt.Errorf("download legal jurisdictions: %w", err)
 	}
-	defer body.Close()
+	defer func() {
+		if closeErr := body.Close(); closeErr != nil {
+			log.Warn().Err(closeErr).Msg("Failed to close legal jurisdictions response body")
+		}
+	}()
 
 	records, err := parseLegalJurisdictionsCSV(body)
 	if err != nil {
@@ -433,7 +449,9 @@ func (s *gleifReferenceService) downloadCSV(url string) (io.ReadCloser, error) {
 		return nil, fmt.Errorf("HTTP GET %s: %w", url, err)
 	}
 	if resp.StatusCode != http.StatusOK {
-		resp.Body.Close()
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			log.Warn().Err(closeErr).Str("url", url).Msg("Failed to close response body for non-OK status")
+		}
 		return nil, fmt.Errorf("HTTP %d from %s", resp.StatusCode, url)
 	}
 	return resp.Body, nil
