@@ -63,9 +63,25 @@ On list pages (for example, LEI Records or Countries):
    table view.
 2. Your preferred width is saved automatically.
 
-## Searching and filtering
+## Searching this documentation
 
-Most list pages provide a search bar and filter controls:
+The documentation site has a built-in full-text search you can open from anywhere using a keyboard shortcut.
+
+| Platform | Shortcut |
+| --- | --- |
+| macOS | **⌘ K** (Command + K) |
+| Windows / Linux | **Ctrl + K** |
+
+Pressing the shortcut opens a search modal. Type your query and the results update instantly across all
+documentation pages. Use the **↑** and **↓** arrow keys to move between results, press **Enter** to open a result,
+and press **Escape** to close the search modal without navigating away.
+
+You can also open the search modal by clicking the **Search** button that appears in the top navigation bar of the
+documentation site.
+
+## Searching and filtering application data
+
+Most list pages in the Axiom application provide a search bar and filter controls:
 
 - **Search** — type to filter records by name or code.
 - **Filters** — use dropdowns to narrow results by status, country, or other attributes.
