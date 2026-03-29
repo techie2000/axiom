@@ -7,7 +7,7 @@ import { readStoredUser, StoredUser } from '../lib/stored-user'
 import { resetPreferencesCache } from '../lib/useUserPreference'
 import { useEnglishTooltips } from '../lib/useEnglishTooltips'
 import { useButtonEmojiMode, EmojiMode } from '../lib/useButtonEmojiMode'
-import ThemeToggle from './ThemeToggle'
+import ThemeSelector from './ThemeSelector'
 import LanguageSelector from './LanguageSelector'
 
 export default function UserBadge() {
@@ -116,7 +116,7 @@ export default function UserBadge() {
             </div>
             <div className="flex items-center justify-between gap-3">
               <span className="text-sm text-gray-700 dark:text-gray-300">{t('preferences.theme')}</span>
-              <ThemeToggle />
+              <ThemeSelector />
             </div>
             <label className="flex items-start justify-between gap-3">
               <div className="min-w-0">

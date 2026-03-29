@@ -2,16 +2,53 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
+/* ── Theme: dark (default) ─────────────────────────────────────────────── */
+:root,
+[data-theme="dark"] {
+  --foreground-rgb: 248, 250, 252;
+  --background-start-rgb: 15, 23, 42;
+  --background-end-rgb: 2, 6, 23;
+  --accent-rgb: 59, 130, 246;
 }
 
-.dark {
-  --foreground-rgb: 255, 255, 255;
-  --background-start-rgb: 0, 0, 0;
+/* ── Theme: light ────────────────────────────────────────────────────────── */
+[data-theme="light"] {
+  --foreground-rgb: 15, 23, 42;
+  --background-start-rgb: 248, 250, 252;
+  --background-end-rgb: 226, 232, 240;
+  --accent-rgb: 37, 99, 235;
+}
+
+/* ── Theme: midnight ─────────────────────────────────────────────────────── */
+[data-theme="midnight"] {
+  --foreground-rgb: 248, 248, 255;
+  --background-start-rgb: 3, 7, 18;
   --background-end-rgb: 0, 0, 0;
+  --accent-rgb: 99, 102, 241;
+}
+
+/* ── Theme: ocean ────────────────────────────────────────────────────────── */
+[data-theme="ocean"] {
+  --foreground-rgb: 240, 249, 255;
+  --background-start-rgb: 3, 30, 50;
+  --background-end-rgb: 8, 51, 68;
+  --accent-rgb: 20, 184, 166;
+}
+
+/* ── Theme: slate ────────────────────────────────────────────────────────── */
+[data-theme="slate"] {
+  --foreground-rgb: 30, 41, 59;
+  --background-start-rgb: 241, 245, 249;
+  --background-end-rgb: 226, 232, 240;
+  --accent-rgb: 99, 102, 241;
+}
+
+/* ── Legacy dark class (kept for backward compat during SSR hydration) ─── */
+.dark:not([data-theme]) {
+  --foreground-rgb: 248, 250, 252;
+  --background-start-rgb: 15, 23, 42;
+  --background-end-rgb: 2, 6, 23;
+  --accent-rgb: 59, 130, 246;
 }
 
 body {

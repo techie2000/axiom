@@ -1,9 +1,19 @@
 'use client'
 
+/**
+ * ThemeToggle — retained for backward compatibility.
+ *
+ * The primary theme-switching surface is now ThemeSelector, which exposes all
+ * pre-defined themes.  ThemeToggle keeps the simple two-state (dark ↔ light)
+ * toggle behaviour for any call-site that imports it directly.  It shares the
+ * same preference key (global / theme) so both components stay in sync.
+ */
+
 import React, { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import PreferenceSavePrompt from './PreferenceSavePrompt'
 import { useDeferredStringPreference } from '../lib/useDeferredStringPreference'
+import { applyTheme, resolveTheme } from '../lib/theme'
 
 export default function ThemeToggle() {
   const { t } = useTranslation('common')
@@ -14,23 +24,16 @@ export default function ThemeToggle() {
   })
   const [mounted, setMounted] = useState(false)
 
-  const effectiveTheme = (themePreference.value === 'light' ? 'light' : 'dark') as 'light' | 'dark'
+  const effectiveTheme = resolveTheme(themePreference.value)
+  const isDark = effectiveTheme.isDark
 
   useEffect(() => {
     setMounted(true)
-    const resolved = themePreference.value || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-    document.documentElement.classList.toggle('dark', resolved === 'dark')
-    localStorage.setItem('theme', resolved)
+    applyTheme(themePreference.value || 'dark')
   }, [themePreference.value])
 
-  useEffect(() => {
-    if (!mounted) return
-    document.documentElement.classList.toggle('dark', effectiveTheme === 'dark')
-    localStorage.setItem('theme', effectiveTheme)
-  }, [effectiveTheme, mounted])
-
   const toggleTheme = () => {
-    const newTheme: 'light' | 'dark' = effectiveTheme === 'dark' ? 'light' : 'dark'
+    const newTheme = isDark ? 'light' : 'dark'
     themePreference.setValue(newTheme)
   }
 
@@ -48,10 +51,10 @@ export default function ThemeToggle() {
       <button
         onClick={toggleTheme}
         className="h-9 w-9 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 border border-gray-400/50 dark:border-white/20 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
-        aria-label={`Switch to ${effectiveTheme === 'dark' ? 'light' : 'dark'} mode`}
-        title={`Switch to ${effectiveTheme === 'dark' ? 'light' : 'dark'} mode`}
+        aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
+        title={`Switch to ${isDark ? 'light' : 'dark'} mode`}
       >
-        <span className="text-base leading-none">{effectiveTheme === 'dark' ? '☀️' : '🌙'}</span>
+        <span className="text-base leading-none">{isDark ? '☀️' : '🌙'}</span>
       </button>
       <PreferenceSavePrompt
         visible={themePreference.showPrompt}

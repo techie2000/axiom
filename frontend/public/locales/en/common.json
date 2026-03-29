@@ -87,6 +87,19 @@
       "both": "Both",
       "text": "Text",
       "emoji": "Emoji"
+    },
+    "changeTheme": "Change theme",
+    "themes": {
+      "dark": "Dark",
+      "darkDescription": "Classic dark mode with slate blue tones",
+      "light": "Light",
+      "lightDescription": "Clean light mode with cool white tones",
+      "midnight": "Midnight",
+      "midnightDescription": "Pure black for OLED displays",
+      "ocean": "Ocean",
+      "oceanDescription": "Dark mode with deep teal accents",
+      "slate": "Slate",
+      "slateDescription": "Soft light mode with blue-grey tones"
     }
   },
   "common": {
