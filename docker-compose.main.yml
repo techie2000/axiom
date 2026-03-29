@@ -73,6 +73,8 @@ services:
       CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:13000,http://localhost:23000,http://localhost:33000,http://localhost:43000"
       CORS_ALLOWED_METHODS: "GET,POST,PUT,DELETE,OPTIONS"
       CORS_ALLOWED_HEADERS: "Origin,Content-Type,Authorization,Accept"
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-main}
     ports:
       - "${BACKEND_PORT}:8080"
     volumes:
@@ -97,6 +99,10 @@ services:
     environment:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
       NEXT_PUBLIC_ENVIRONMENT: ${NEXT_PUBLIC_ENVIRONMENT}
+      NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN:-}
+      SENTRY_AUTH_TOKEN: ${SENTRY_AUTH_TOKEN:-}
+      SENTRY_ORG: ${SENTRY_ORG:-}
+      SENTRY_PROJECT: ${SENTRY_PROJECT:-axiom-frontend}
       NODE_ENV: development
     ports:
       - "${FRONTEND_PORT}:3000"

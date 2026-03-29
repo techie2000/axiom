@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/getsentry/sentry-go"
+	sentrygin "github.com/getsentry/sentry-go/gin"
 	"github.com/techie2000/axiom/internal/config"
 	"github.com/techie2000/axiom/internal/handler"
 	"github.com/techie2000/axiom/internal/middleware"
@@ -58,6 +60,10 @@ func main() {
 
 	// Initialize logger
 	logger.Init(cfg.Log.Level)
+
+	// Initialize Sentry error tracking (if DSN is configured)
+	initSentry(cfg)
+	defer sentry.Flush(2 * time.Second)
 
 	// Connect to database
 	db, err := connectDatabase(cfg)
@@ -138,6 +144,41 @@ func main() {
 	}
 
 	logger.Info().Msg("Server exited")
+}
+
+// initSentry initialises the Sentry SDK when a DSN is provided. A missing or
+// empty DSN is treated as disabled (no error is raised).
+func initSentry(cfg *config.Config) {
+	if cfg.Sentry.DSN == "" {
+		logger.Info().Msg("Sentry DSN not configured – error tracking disabled")
+		return
+	}
+
+	env := cfg.Sentry.Environment
+	if env == "" {
+		env = os.Getenv("ENVIRONMENT")
+	}
+	if env == "" {
+		env = cfg.Server.Mode
+	}
+
+	sampleRate := cfg.Sentry.SampleRate
+	if sampleRate < 0 || sampleRate > 1 {
+		sampleRate = 0.1
+	}
+
+	if err := sentry.Init(sentry.ClientOptions{
+		Dsn:              cfg.Sentry.DSN,
+		Environment:      env,
+		Release:          version.GetFullVersion(),
+		TracesSampleRate: sampleRate,
+		AttachStacktrace: true,
+	}); err != nil {
+		logger.Warn().Err(err).Msg("Sentry initialisation failed – continuing without error tracking")
+		return
+	}
+
+	logger.Info().Msgf("Sentry error tracking enabled (environment: %s, sample rate: %.2f)", env, sampleRate)
 }
 
 func connectDatabase(cfg *config.Config) (*gorm.DB, error) {
@@ -235,6 +276,11 @@ func setupRouter(cfg *config.Config, h *handler.Handlers) *gin.Engine {
 	router.Use(middleware.Logger())
 	router.Use(middleware.CORS(cfg))
 	router.Use(middleware.RateLimit())
+
+	// Sentry performance tracing middleware (no-op when Sentry is not configured)
+	if cfg.Sentry.DSN != "" {
+		router.Use(sentrygin.New(sentrygin.Options{Repanic: true}))
+	}
 
 	// Health check
 	router.GET("/health", func(c *gin.Context) {

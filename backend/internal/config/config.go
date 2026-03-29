@@ -16,6 +16,7 @@ type Config struct {
 	Log      LogConfig
 	CORS     CORSConfig
 	LEI      LEIConfig
+	Sentry   SentryConfig
 }
 
 // ServerConfig holds server configuration
@@ -56,6 +57,13 @@ type CORSConfig struct {
 	AllowedOrigins []string `mapstructure:"allowed_origins"`
 	AllowedMethods []string `mapstructure:"allowed_methods"`
 	AllowedHeaders []string `mapstructure:"allowed_headers"`
+}
+
+// SentryConfig holds Sentry error tracking configuration
+type SentryConfig struct {
+	DSN         string  // Sentry DSN; empty string disables Sentry
+	Environment string  // e.g. "dev", "uat", "production"
+	SampleRate  float64 // Traces sample rate 0.0–1.0 (default 0.1)
 }
 
 // LEIConfig holds LEI data acquisition and scheduling configuration
@@ -128,6 +136,11 @@ func setDefaults() {
 	viper.SetDefault("cors.allowed_origins", []string{"http://localhost:3000"})
 	viper.SetDefault("cors.allowed_methods", []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"})
 	viper.SetDefault("cors.allowed_headers", []string{"Origin", "Content-Type", "Authorization"})
+
+	// Sentry defaults
+	viper.SetDefault("sentry.dsn", "")        // Empty disables Sentry
+	viper.SetDefault("sentry.environment", "") // Falls back to ENVIRONMENT env var
+	viper.SetDefault("sentry.samplerate", 0.1)
 
 	// LEI defaults
 	viper.SetDefault("lei.datadir", "./data/lei")
