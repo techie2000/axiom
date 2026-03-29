@@ -116,6 +116,8 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
   baseline for the frontend — contrast, focus visibility, and non-text contrast rules for shared components
 - [ADR-0015: Architecture as Code (CALM) Pilot Adoption](docs/adr/adr-0015-architecture-as-code-calm-pilot.md):
   incremental adoption decision for machine-readable architecture with phased CI validation
+- [ADR-0016: Sentry Error Tracking](docs/adr/adr-0016-sentry-error-tracking.md):
+  error tracking and performance monitoring via Sentry — frontend (Next.js) and backend (Go/Gin) integration
 
 ## Deployment and Infrastructure
 

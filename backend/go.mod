@@ -3,6 +3,8 @@ module github.com/techie2000/axiom
 go 1.25.1
 
 require (
+	github.com/getsentry/sentry-go v0.44.1
+	github.com/getsentry/sentry-go/gin v0.44.1
 	github.com/gin-gonic/gin v1.11.0
 	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/google/uuid v1.6.0
