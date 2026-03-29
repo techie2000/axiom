@@ -1,0 +1,5 @@
+# Compiled binaries
+/api
+/worker
+/notification
+*.exe
