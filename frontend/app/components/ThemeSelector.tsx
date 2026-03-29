@@ -8,19 +8,18 @@ import { applyTheme, THEMES, resolveTheme } from '../lib/theme'
 import type { ThemeId } from '../lib/theme'
 
 /**
- * ThemeSelector renders a compact dropdown button that allows users to choose
- * from the set of pre-defined application themes.
+ * ThemeSelector renders a compact dropdown that lets users choose a colour palette
+ * from the pre-defined set.  Palette choice is independent of dark/light mode —
+ * that is controlled separately by ThemeToggle.
  *
- * Theme preference is persisted via `useDeferredStringPreference` (global / theme),
- * matching the same preference key used by the original ThemeToggle so that
- * existing saved preferences are honoured transparently.
+ * Preference: global / theme  (ThemeId — one of the palette IDs)
  */
 export default function ThemeSelector() {
   const { t } = useTranslation('common')
   const themePreference = useDeferredStringPreference({
     pageKey: 'global',
     preferenceKey: 'theme',
-    defaultValue: 'dark',
+    defaultValue: 'default',
   })
   const [mounted, setMounted] = useState(false)
   const [open, setOpen] = useState(false)
@@ -29,10 +28,10 @@ export default function ThemeSelector() {
 
   const effectiveTheme = resolveTheme(themePreference.value)
 
-  // Apply the theme to <html> whenever the preference changes.
+  // Apply the palette to <html> whenever the preference changes.
   useEffect(() => {
     setMounted(true)
-    applyTheme(themePreference.value || 'dark')
+    applyTheme(themePreference.value || 'default')
   }, [themePreference.value])
 
   // Close dropdown on outside click or Escape key.
@@ -64,7 +63,7 @@ export default function ThemeSelector() {
   if (!mounted) {
     return (
       <button className="h-9 px-3 flex items-center gap-1.5 rounded-lg opacity-50 cursor-not-allowed text-sm">
-        <span className="text-base leading-none">🌓</span>
+        <span className="text-base leading-none">🎨</span>
         <span className="hidden sm:inline text-xs font-medium">Theme</span>
       </button>
     )
@@ -93,7 +92,7 @@ export default function ThemeSelector() {
 
         {open && (
           <div
-            className="absolute right-0 mt-1 w-48 rounded-xl border border-gray-200 dark:border-white/20 bg-white dark:bg-gray-900 shadow-2xl overflow-hidden z-50"
+            className="absolute right-0 mt-1 w-52 rounded-xl border border-gray-200 dark:border-white/20 bg-white dark:bg-gray-900 shadow-2xl overflow-hidden z-50"
             role="listbox"
             aria-label={t('preferences.theme')}
           >

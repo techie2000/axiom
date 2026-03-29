@@ -2,53 +2,114 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── Theme: dark (default) ─────────────────────────────────────────────── */
-:root,
-[data-theme="dark"] {
-  --foreground-rgb: 248, 250, 252;
-  --background-start-rgb: 15, 23, 42;
-  --background-end-rgb: 2, 6, 23;
-  --accent-rgb: 59, 130, 246;
-}
+/*
+ * ── Theming overview ──────────────────────────────────────────────────────────
+ *
+ * Each colour palette provides TWO selectors:
+ *
+ *   [data-theme="<id>"]       — light variant (applied when the `dark` class is absent)
+ *   [data-theme="<id>"].dark  — dark  variant (applied when the `dark` class is present)
+ *
+ * The `dark` class on <html> is controlled independently of the palette by the
+ * ThemeToggle component (global / dark_mode preference).
+ *
+ * Palette-agnostic fallbacks:
+ *   :root                     — base light colours used before JS hydration
+ *   .dark:not([data-theme])   — base dark  colours used before JS hydration
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
 
-/* ── Theme: light ────────────────────────────────────────────────────────── */
-[data-theme="light"] {
+/* ── Fallback: light (pre-hydration / no data-theme) ──────────────────────── */
+/* NOTE: these values intentionally mirror [data-theme="default"]. Keep them  */
+/*       in sync whenever the Default palette's light variant is updated.      */
+:root {
   --foreground-rgb: 15, 23, 42;
   --background-start-rgb: 248, 250, 252;
   --background-end-rgb: 226, 232, 240;
-  --accent-rgb: 37, 99, 235;
+  --accent-rgb: 59, 130, 246;
 }
 
-/* ── Theme: midnight ─────────────────────────────────────────────────────── */
-[data-theme="midnight"] {
-  --foreground-rgb: 248, 248, 255;
-  --background-start-rgb: 3, 7, 18;
-  --background-end-rgb: 0, 0, 0;
-  --accent-rgb: 99, 102, 241;
-}
-
-/* ── Theme: ocean ────────────────────────────────────────────────────────── */
-[data-theme="ocean"] {
-  --foreground-rgb: 240, 249, 255;
-  --background-start-rgb: 3, 30, 50;
-  --background-end-rgb: 8, 51, 68;
-  --accent-rgb: 20, 184, 166;
-}
-
-/* ── Theme: slate ────────────────────────────────────────────────────────── */
-[data-theme="slate"] {
-  --foreground-rgb: 30, 41, 59;
-  --background-start-rgb: 241, 245, 249;
-  --background-end-rgb: 226, 232, 240;
-  --accent-rgb: 99, 102, 241;
-}
-
-/* ── Legacy dark class (kept for backward compat during SSR hydration) ─── */
+/* ── Fallback: dark (pre-hydration / no data-theme) ───────────────────────── */
 .dark:not([data-theme]) {
   --foreground-rgb: 248, 250, 252;
   --background-start-rgb: 15, 23, 42;
   --background-end-rgb: 2, 6, 23;
   --accent-rgb: 59, 130, 246;
+}
+
+/* ── Palette: Default — Axiom blue-slate ────────────────────────────────────── */
+[data-theme="default"] {
+  --foreground-rgb: 15, 23, 42;           /* slate-900  */
+  --background-start-rgb: 248, 250, 252;  /* slate-50   */
+  --background-end-rgb: 226, 232, 240;    /* slate-200  */
+  --accent-rgb: 59, 130, 246;             /* blue-500   */
+}
+
+[data-theme="default"].dark {
+  --foreground-rgb: 248, 250, 252;        /* slate-50   */
+  --background-start-rgb: 15, 23, 42;    /* slate-900  */
+  --background-end-rgb: 2, 6, 23;        /* slate-950  */
+  --accent-rgb: 59, 130, 246;            /* blue-500   */
+}
+
+/* ── Palette: Modern Minimal — clean zinc neutrals ───────────────────────────── */
+[data-theme="modern-minimal"] {
+  --foreground-rgb: 9, 9, 11;             /* zinc-950   */
+  --background-start-rgb: 255, 255, 255;  /* white      */
+  --background-end-rgb: 244, 244, 245;    /* zinc-100   */
+  --accent-rgb: 63, 63, 70;              /* zinc-600   */
+}
+
+[data-theme="modern-minimal"].dark {
+  --foreground-rgb: 250, 250, 250;        /* zinc-50    */
+  --background-start-rgb: 9, 9, 11;      /* zinc-950   */
+  --background-end-rgb: 0, 0, 0;         /* black      */
+  --accent-rgb: 161, 161, 170;           /* zinc-400   */
+}
+
+/* ── Palette: Supabase — forest green ────────────────────────────────────────── */
+[data-theme="supabase"] {
+  --foreground-rgb: 28, 28, 28;           /* near-black */
+  --background-start-rgb: 255, 255, 255;  /* white      */
+  --background-end-rgb: 240, 253, 249;    /* green tint */
+  --accent-rgb: 62, 207, 142;            /* #3ECF8E    */
+}
+
+[data-theme="supabase"].dark {
+  --foreground-rgb: 237, 237, 223;        /* warm off-white */
+  --background-start-rgb: 12, 12, 12;    /* near-black */
+  --background-end-rgb: 28, 28, 28;      /* supabase dark  */
+  --accent-rgb: 62, 207, 142;            /* #3ECF8E    */
+}
+
+/* ── Palette: Perpetuity — deep indigo-violet ────────────────────────────────── */
+[data-theme="perpetuity"] {
+  --foreground-rgb: 30, 27, 75;           /* indigo-950 */
+  --background-start-rgb: 239, 237, 255;  /* indigo-50  */
+  --background-end-rgb: 224, 220, 255;    /* indigo-100 */
+  --accent-rgb: 99, 102, 241;            /* indigo-500 */
+}
+
+[data-theme="perpetuity"].dark {
+  --foreground-rgb: 224, 231, 255;        /* indigo-100 */
+  --background-start-rgb: 17, 17, 49;    /* deep indigo-black */
+  --background-end-rgb: 8, 8, 30;        /* near-black indigo  */
+  --accent-rgb: 129, 140, 248;           /* indigo-400 */
+}
+
+/* ── Palette: Twitter — classic Twitter blue ─────────────────────────────────── */
+[data-theme="twitter"] {
+  --foreground-rgb: 15, 20, 25;           /* #0F1419    */
+  --background-start-rgb: 255, 255, 255;  /* white      */
+  --background-end-rgb: 247, 249, 255;    /* faint blue */
+  --accent-rgb: 29, 155, 240;            /* #1D9BF0    */
+}
+
+[data-theme="twitter"].dark {
+  --foreground-rgb: 231, 233, 234;        /* #E7E9EA    */
+  --background-start-rgb: 21, 32, 43;    /* #15202B    */
+  --background-end-rgb: 15, 20, 25;      /* #0F1419    */
+  --accent-rgb: 29, 155, 240;            /* #1D9BF0    */
 }
 
 body {

@@ -1,43 +1,42 @@
 'use client'
 
 /**
- * ThemeToggle — retained for backward compatibility.
+ * ThemeToggle — controls the dark / light mode independently of the colour palette.
  *
- * The primary theme-switching surface is now ThemeSelector, which exposes all
- * pre-defined themes.  ThemeToggle keeps the simple two-state (dark ↔ light)
- * toggle behaviour for any call-site that imports it directly.  It shares the
- * same preference key (global / theme) so both components stay in sync.
+ * Preference key: global / dark_mode  ('dark' | 'light')
+ *
+ * This component is intentionally decoupled from the colour palette (ThemeSelector).
+ * Both components can be mounted side-by-side; ThemeToggle only touches the `dark`
+ * CSS class on <html> while ThemeSelector only touches the `data-theme` attribute.
  */
 
 import React, { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import PreferenceSavePrompt from './PreferenceSavePrompt'
 import { useDeferredStringPreference } from '../lib/useDeferredStringPreference'
-import { applyTheme, resolveTheme } from '../lib/theme'
+import { applyDarkMode } from '../lib/theme'
 
 export default function ThemeToggle() {
   const { t } = useTranslation('common')
-  const themePreference = useDeferredStringPreference({
+  const darkModePreference = useDeferredStringPreference({
     pageKey: 'global',
-    preferenceKey: 'theme',
+    preferenceKey: 'dark_mode',
     defaultValue: 'dark',
   })
   const [mounted, setMounted] = useState(false)
 
-  const effectiveTheme = resolveTheme(themePreference.value)
-  const isDark = effectiveTheme.isDark
+  const isDark = darkModePreference.value === 'dark' || darkModePreference.value === ''
 
   useEffect(() => {
     setMounted(true)
-    applyTheme(themePreference.value || 'dark')
-  }, [themePreference.value])
+    applyDarkMode(darkModePreference.value !== 'light')
+  }, [darkModePreference.value])
 
-  const toggleTheme = () => {
-    const newTheme = isDark ? 'light' : 'dark'
-    themePreference.setValue(newTheme)
+  const toggleDarkMode = () => {
+    darkModePreference.setValue(isDark ? 'light' : 'dark')
   }
 
-  // Avoid hydration mismatch
+  // Avoid hydration mismatch.
   if (!mounted) {
     return (
       <button className="h-9 w-9 flex items-center justify-center rounded-lg opacity-50 cursor-not-allowed">
@@ -49,23 +48,23 @@ export default function ThemeToggle() {
   return (
     <>
       <button
-        onClick={toggleTheme}
+        onClick={toggleDarkMode}
         className="h-9 w-9 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 border border-gray-400/50 dark:border-white/20 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
-        aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
-        title={`Switch to ${isDark ? 'light' : 'dark'} mode`}
+        aria-label={isDark ? t('preferences.switchToLight') : t('preferences.switchToDark')}
+        title={isDark ? t('preferences.switchToLight') : t('preferences.switchToDark')}
       >
         <span className="text-base leading-none">{isDark ? '☀️' : '🌙'}</span>
       </button>
       <PreferenceSavePrompt
-        visible={themePreference.showPrompt}
-        resetKey={themePreference.promptResetKey}
-        onSave={themePreference.save}
-        onDismiss={themePreference.dismiss}
-        label={t('preferences.saveThemeDefault')}
-        showUndo={themePreference.showUndo}
-        undoResetKey={themePreference.undoResetKey}
-        onUndo={themePreference.undo}
-        onUndoDismiss={themePreference.undoDismiss}
+        visible={darkModePreference.showPrompt}
+        resetKey={darkModePreference.promptResetKey}
+        onSave={darkModePreference.save}
+        onDismiss={darkModePreference.dismiss}
+        label={t('preferences.saveDarkModeDefault')}
+        showUndo={darkModePreference.showUndo}
+        undoResetKey={darkModePreference.undoResetKey}
+        onUndo={darkModePreference.undo}
+        onUndoDismiss={darkModePreference.undoDismiss}
         undoLabel={t('preferences.savedUndo')}
       />
     </>
