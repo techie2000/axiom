@@ -73,9 +73,7 @@ const gleifResolvedNamesSelectFragment = "" +
 	", (SELECT ra.organization_name FROM lei_raw.gleif_registration_authorities ra" +
 	"   WHERE BTRIM(ra.ra_id) = BTRIM(lei_raw.lei_records.registration_authority) AND ra.active = TRUE LIMIT 1) AS registration_authority_name" +
 	", (SELECT elf.entity_legal_form_name FROM lei_raw.gleif_entity_legal_forms elf" +
-	"   WHERE BTRIM(elf.elf_code) = BTRIM(lei_raw.lei_records.entity_legal_form) LIMIT 1) AS entity_legal_form_name" +
-	", (SELECT jur.jurisdiction_name FROM lei_raw.gleif_legal_jurisdictions jur" +
-	"   WHERE BTRIM(jur.jurisdiction_code) = BTRIM(lei_raw.lei_records.legal_jurisdiction) AND jur.active = TRUE LIMIT 1) AS legal_jurisdiction_name"
+	"   WHERE BTRIM(elf.elf_code) = BTRIM(lei_raw.lei_records.entity_legal_form) LIMIT 1) AS entity_legal_form_name"
 
 // exactLEIMatchWhereClause matches a record by its primary LEI or its successor LEI.
 // The successor branch includes the partial-index predicate so PostgreSQL can use
@@ -808,8 +806,8 @@ func (r *leiRepository) BatchUpsertLEIRecords(records []*domain.LEIRecord) (int,
 		emptyChangedFields := "{}"
 
 		for _, record := range batch {
-			// Use placeholders for ALL fields (42 total, including legal_jurisdiction)
-			valueStrings = append(valueStrings, "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+			// Use placeholders for ALL fields (41 total)
+			valueStrings = append(valueStrings, "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
 
 			// Generate ID and timestamps in Go
 			newID := uuid.New()
@@ -843,7 +841,6 @@ func (r *leiRepository) BatchUpsertLEIRecords(records []*domain.LEIRecord) (int,
 				record.EntitySubCategory,             // entity_sub_category
 				record.EntityLegalForm,               // entity_legal_form
 				record.EntityStatus,                  // entity_status
-				record.LegalJurisdiction,             // legal_jurisdiction
 				nullableLEICode(record.SuccessorLEI), // successor_lei
 				record.ValidationAuthority,           // validation_authority
 				record.InitialRegistrationDate,       // initial_registration_date
@@ -870,7 +867,7 @@ func (r *leiRepository) BatchUpsertLEIRecords(records []*domain.LEIRecord) (int,
 				hq_address_city, hq_address_region, hq_address_country, hq_address_postal_code,
 				registration_authority, registration_authority_id, registration_number,
 				entity_category, entity_sub_category, entity_legal_form,
-				entity_status, legal_jurisdiction, successor_lei, validation_authority,
+				entity_status, successor_lei, validation_authority,
 				initial_registration_date, last_update_date, next_renewal_date,
 				managing_lou, validation_sources,
 				source_file_id,
@@ -903,7 +900,6 @@ func (r *leiRepository) BatchUpsertLEIRecords(records []*domain.LEIRecord) (int,
 				entity_category = EXCLUDED.entity_category,
 				entity_sub_category = EXCLUDED.entity_sub_category,
 				entity_legal_form = EXCLUDED.entity_legal_form,
-				legal_jurisdiction = EXCLUDED.legal_jurisdiction,
 				successor_lei = EXCLUDED.successor_lei,
 				validation_authority = EXCLUDED.validation_authority,
 				initial_registration_date = EXCLUDED.initial_registration_date,
@@ -942,7 +938,6 @@ func (r *leiRepository) BatchUpsertLEIRecords(records []*domain.LEIRecord) (int,
 				lei_raw.lei_records.entity_category,
 				lei_raw.lei_records.entity_sub_category,
 				lei_raw.lei_records.entity_legal_form,
-				lei_raw.lei_records.legal_jurisdiction,
 				lei_raw.lei_records.successor_lei,
 				lei_raw.lei_records.validation_authority,
 				lei_raw.lei_records.initial_registration_date,
@@ -978,7 +973,6 @@ func (r *leiRepository) BatchUpsertLEIRecords(records []*domain.LEIRecord) (int,
 				EXCLUDED.entity_category,
 				EXCLUDED.entity_sub_category,
 				EXCLUDED.entity_legal_form,
-				EXCLUDED.legal_jurisdiction,
 				EXCLUDED.successor_lei,
 				EXCLUDED.validation_authority,
 				EXCLUDED.initial_registration_date,
@@ -1004,7 +998,7 @@ func (r *leiRepository) BatchUpsertLEIRecords(records []*domain.LEIRecord) (int,
 				Int("batch_start", i).
 				Int("batch_end", end).
 				Int("value_args_count", len(valueArgs)).
-				Int("expected_per_record", 42).
+				Int("expected_per_record", 41).
 				Int("records_in_batch", len(batch)).
 				Str("stmt_preview", stmtPreview).
 				Msg("CRITICAL: Batch upsert failed")

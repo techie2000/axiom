@@ -47,8 +47,6 @@ Multiple filters can be active at the same time. Click **Clear Filters** to rese
    - **Headquarters address** — if different from registered address.
    - **Registration details** — registration authority (with full organisation name where available),
      registration number, and initial registration date.
-   - **Legal jurisdiction** — jurisdiction where the entity is legally formed (full name displayed
-     alongside the code where available).
    - **Relationship data** — managing LOU (Legal Operating Unit), relationship status, and validation status.
    - **Other names** — previous legal names or trading names if available.
 3. Click **Close** or press **Escape** to dismiss the panel.

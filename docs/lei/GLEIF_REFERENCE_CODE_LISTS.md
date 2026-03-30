@@ -83,7 +83,6 @@ flowchart TD
 - **Source**: GLEIF Accepted Legal Jurisdictions List CSV (tab-separated)
 - **Table**: `lei_raw.gleif_legal_jurisdictions`
 - **Key column**: `jurisdiction_code` (e.g. `US-CA`, `DE`)
-- **Resolves**: `lei_raw.lei_records.legal_jurisdiction`
 - **Update strategy**: Full replace — `DeactivateAll()` then upsert all rows
 - **URL**: `https://www.gleif.org/content/2-about-lei/6-code-lists/3-gleif-accepted-legal-jurisdictions/`
 
@@ -128,13 +127,7 @@ subqueries at query time. No denormalization is stored in `lei_records`.
 (SELECT elf.entity_legal_form_name
    FROM lei_raw.gleif_entity_legal_forms elf
   WHERE BTRIM(elf.elf_code) = BTRIM(lei_records.entity_legal_form)
-  LIMIT 1) AS entity_legal_form_name,
-
-(SELECT jur.jurisdiction_name
-   FROM lei_raw.gleif_legal_jurisdictions jur
-  WHERE BTRIM(jur.jurisdiction_code) = BTRIM(lei_records.legal_jurisdiction)
-    AND jur.active = TRUE
-  LIMIT 1) AS legal_jurisdiction_name
+  LIMIT 1) AS entity_legal_form_name
 ```
 
 The resolved names are returned in the `LEIRecord` JSON response as:
@@ -143,11 +136,15 @@ The resolved names are returned in the `LEIRecord` JSON response as:
 | --- | --- | --- |
 | `registration_authority_name` | `registration_authority` | `gleif_registration_authorities` |
 | `entity_legal_form_name` | `entity_legal_form` | `gleif_entity_legal_forms` |
-| `legal_jurisdiction_name` | `legal_jurisdiction` | `gleif_legal_jurisdictions` |
 
 The LEI Records UI page (`frontend/app/lei-records/page.tsx`) displays the resolved
 name alongside the raw code, falling back gracefully when the reference table has
 not yet been seeded.
+
+> **Note**: The `gleif_legal_jurisdictions` reference table is available for future
+> jurisdiction resolution. The raw `LegalJurisdiction` field in GLEIF data is not
+> currently stored in `lei_raw.lei_records` — a separate enrichment layer will be
+> introduced if jurisdiction name resolution is required.
 
 ## Manual Trigger
 

@@ -49,7 +49,6 @@ type LEIRecord struct {
 	EntitySubCategory       string `gorm:"size:255" json:"entity_sub_category"`
 	EntityLegalForm         string `gorm:"size:255" json:"entity_legal_form"`
 	EntityStatus            string `gorm:"size:255" json:"entity_status"`
-	LegalJurisdiction       string `gorm:"size:50" json:"legal_jurisdiction"`
 
 	// Associated entities
 	ManagingLOU           string `gorm:"size:255" json:"managing_lou"` // Local Operating Unit
@@ -60,7 +59,6 @@ type LEIRecord struct {
 	// GLEIF reference resolved names (computed via JOIN, not stored in lei_records)
 	RegistrationAuthorityName string `gorm:"->;column:registration_authority_name" json:"registration_authority_name,omitempty"`
 	EntityLegalFormName       string `gorm:"->;column:entity_legal_form_name" json:"entity_legal_form_name,omitempty"`
-	LegalJurisdictionName     string `gorm:"->;column:legal_jurisdiction_name" json:"legal_jurisdiction_name,omitempty"`
 
 	// Dates
 	InitialRegistrationDate time.Time `json:"initial_registration_date"`

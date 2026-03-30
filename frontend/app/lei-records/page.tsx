@@ -31,8 +31,6 @@ interface LEIRecord {
   entity_sub_category: string
   entity_legal_form: string
   entity_legal_form_name?: string
-  legal_jurisdiction?: string
-  legal_jurisdiction_name?: string
   
   // Legal Address
   legal_address_line_1: string
@@ -1914,25 +1912,6 @@ export default function LEIRecordsPage() {
                           </p>
                           {selectedRecord.entity_legal_form_name && (
                             <p className="text-xs font-mono text-gray-500 dark:text-gray-400 mt-0.5">{selectedRecord.entity_legal_form}</p>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  )}
-                  {selectedRecord.legal_jurisdiction && (
-                    <div>
-                      <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                        {showLocationCodes ? 'Jurisdiction Code' : 'Jurisdiction'}
-                      </span>
-                      {showLocationCodes ? (
-                        <p className="text-sm font-mono text-gray-900 dark:text-white mt-1">{selectedRecord.legal_jurisdiction}</p>
-                      ) : (
-                        <>
-                          <p className="text-sm text-gray-900 dark:text-white mt-1">
-                            {selectedRecord.legal_jurisdiction_name || selectedRecord.legal_jurisdiction}
-                          </p>
-                          {selectedRecord.legal_jurisdiction_name && (
-                            <p className="text-xs font-mono text-gray-500 dark:text-gray-400 mt-0.5">{selectedRecord.legal_jurisdiction}</p>
                           )}
                         </>
                       )}

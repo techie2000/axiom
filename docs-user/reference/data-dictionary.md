@@ -16,7 +16,6 @@ This page defines the key fields used across Axiom's data entities.
 | Registration Authority | Body that assigned the registration number; full name shown where available | Companies House |
 | Registration Number | Identifier issued by the registration authority | `12345678` |
 | Registration Date | Date the LEI was first registered | `2015-01-15` |
-| Legal Jurisdiction | Jurisdiction code where the entity is legally formed; full name shown where available | `GB`, `US-DE` |
 | Last Updated | Date the record was last updated in GLEIF | `2026-01-10` |
 | Relationship Status | Status of the relationship to the managing LOU | `ISSUED` |
 | Validation Status | Source and method used to validate entity information | `FULLY_CORROBORATED` |

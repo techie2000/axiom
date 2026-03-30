@@ -1,4 +1,4 @@
--- Add GLEIF reference code-list tables and legal_jurisdiction column
+-- Add GLEIF reference code-list tables
 -- These tables support daily ingestion of GLEIF registration authorities,
 -- entity legal forms, organizational roles, and legal jurisdictions before
 -- LEI Level 1/2 ingest to prevent unresolved reference code lookups.
@@ -137,11 +137,11 @@ CREATE INDEX idx_gleif_jur_active ON lei_raw.gleif_legal_jurisdictions (active);
 
 COMMENT ON TABLE lei_raw.gleif_legal_jurisdictions IS
 'GLEIF accepted legal jurisdictions code list. Sourced daily from GLEIF CSV. '
-'Used to resolve legal_jurisdiction codes in LEI records to human-readable names.';
+'Used to resolve LEI entity jurisdiction codes to human-readable names.';
 
 COMMENT ON COLUMN lei_raw.gleif_legal_jurisdictions.jurisdiction_code IS
 'Jurisdiction code as used in LEI records (e.g. US, GB, DE-BY). '
-'Matches legal_jurisdiction column in lei_raw.lei_records.';
+'Matches the LegalJurisdiction field in GLEIF Level 1 JSON data.';
 
 COMMENT ON COLUMN lei_raw.gleif_legal_jurisdictions.jurisdiction_name IS
 'Human-readable name of the jurisdiction (e.g. United States, United Kingdom, Bavaria).';
@@ -152,17 +152,7 @@ COMMENT ON COLUMN lei_raw.gleif_legal_jurisdictions.country_code IS
 COMMENT ON COLUMN lei_raw.gleif_legal_jurisdictions.active IS
 'FALSE when the jurisdiction has been deprecated or removed from the GLEIF list.';
 
--- 5. Add legal_jurisdiction column to lei_records to persist parsed jurisdiction codes for reference lookups
-ALTER TABLE lei_raw.lei_records
-    ADD COLUMN IF NOT EXISTS legal_jurisdiction VARCHAR(50);
-
-CREATE INDEX IF NOT EXISTS idx_lei_records_legal_jurisdiction ON lei_raw.lei_records (legal_jurisdiction);
-
-COMMENT ON COLUMN lei_raw.lei_records.legal_jurisdiction IS
-'Legal jurisdiction code from GLEIF data (ISO 3166-1 alpha-2 or ISO 3166-2 country subdivision). '
-'References gleif_legal_jurisdictions.jurisdiction_code for name resolution.';
-
--- 6. Add updated_at triggers for new tables
+-- 5. Add updated_at triggers for new tables
 CREATE TRIGGER update_gleif_ra_updated_at BEFORE UPDATE ON lei_raw.gleif_registration_authorities
 FOR EACH ROW EXECUTE FUNCTION UPDATE_UPDATED_AT_COLUMN();
 
@@ -175,7 +165,7 @@ FOR EACH ROW EXECUTE FUNCTION UPDATE_UPDATED_AT_COLUMN();
 CREATE TRIGGER update_gleif_jur_updated_at BEFORE UPDATE ON lei_raw.gleif_legal_jurisdictions
 FOR EACH ROW EXECUTE FUNCTION UPDATE_UPDATED_AT_COLUMN();
 
--- 7. Add GLEIF_REFERENCE_SYNC job to file_processing_status so the pipeline is visible in UI
+-- 6. Add GLEIF_REFERENCE_SYNC job to file_processing_status so the pipeline is visible in UI
 INSERT INTO lei_raw.file_processing_status (job_type, status, created_at, updated_at)
 VALUES ('GLEIF_REFERENCE_SYNC', 'IDLE', NOW(), NOW())
 ON CONFLICT DO NOTHING;

@@ -74,7 +74,7 @@ func (GLEIFOrganizationalRole) TableName() string {
 
 // GLEIFLegalJurisdiction represents a GLEIF accepted legal jurisdiction reference record.
 // Source: GLEIF accepted legal jurisdictions code list (CSV).
-// Resolves legal_jurisdiction codes in LEI records to human-readable names.
+// Reference table for resolving GLEIF jurisdiction codes (e.g. US-CA, DE) to human-readable names.
 type GLEIFLegalJurisdiction struct {
 	ID               uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
 	JurisdictionCode string    `gorm:"column:jurisdiction_code;uniqueIndex;size:20;not null" json:"jurisdiction_code"`
