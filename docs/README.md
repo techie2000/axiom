@@ -142,7 +142,7 @@ Located in [performance/](./performance/):
 ### For Contributors
 
 1. **Branching and promotion workflow** → [Branching Strategy](./contributing/BRANCHING_STRATEGY.md)
-2. **Git hooks (pre-commit / pre-push)** → [Git Hooks](./../.githooks/README.md)
+2. **Git hooks (pre-commit / pre-push)** → [Git Hooks](../.githooks/README.md)
 3. **Branch setup script** → [scripts/setup-branches.sh](../scripts/setup-branches.sh)
 
 ---
