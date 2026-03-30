@@ -13,7 +13,7 @@ Browse and search ISO 639-1 language reference data in Axiom, including writing 
 ### Search for a language
 
 1. Click **Languages** in the top navigation.
-2. Type in the **Search** bar to filter by language name, native name, or BCP 47 code.
+2. Type in the **Search** bar to filter by language name, native name, or ISO 639-1 code.
 3. Results update automatically as you type.
 
 ### Filter by writing direction
