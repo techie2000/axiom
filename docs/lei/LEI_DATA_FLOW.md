@@ -8,15 +8,19 @@ from scheduling through to storage.
 ```mermaid
 flowchart TD
     Start([Backend Startup]) --> Init[Initialize Scheduler Service]
-    Init --> GLEIFRefSync[Sync GLEIF Reference Code Lists<br/>Registration Authorities<br/>Entity Legal Forms<br/>Organizational Roles<br/>Legal Jurisdictions]
+    Init --> CheckDB{Database<br/>Empty?}
 
-    GLEIFRefSync --> CheckDB{Database<br/>Empty?}
+    CheckDB -->|Yes - First Run| FullSync[Trigger Full Sync Job]
+    CheckDB -->|No - Has Data| DeltaSync[Trigger Delta Sync Job]
 
-    CheckDB -->|Yes - First Run| FullSync[Schedule Full Sync]
-    CheckDB -->|No - Has Data| DeltaSync[Schedule Delta Sync]
+    FullSync --> GLEIFRefSyncFull[Pre-step: Sync GLEIF Reference Code Lists<br/>Registration Authorities<br/>Entity Legal Forms<br/>Organizational Roles<br/>Legal Jurisdictions]
+    DeltaSync --> GLEIFRefSyncDelta[Pre-step: Sync GLEIF Reference Code Lists]
 
-    FullSync --> DownloadFull[Download Full File<br/>~900MB, 3.2M records]
-    DeltaSync --> DownloadDelta[Download Delta File<br/>~13MB, 58K records]
+    GLEIFRefSyncFull -->|Success| DownloadFull[Download Full File<br/>~900MB, 3.2M records]
+    GLEIFRefSyncFull -->|Failure| AbortFull([Abort: mark FAILED])
+
+    GLEIFRefSyncDelta -->|Success| DownloadDelta[Download Delta File<br/>~13MB, 58K records]
+    GLEIFRefSyncDelta -->|Failure| AbortDelta([Abort: mark FAILED])
 
     DownloadFull --> SaveFile1[Save to ./data/lei/]
     DownloadDelta --> SaveFile2[Save to ./data/lei/]
@@ -26,7 +30,7 @@ flowchart TD
 
     CreateSourceFile1 --> ProcessFile[Process ZIP File]
     CreateSourceFile2 --> ProcessFile
-    
+
     ProcessFile --> Extract[Extract JSON<br/>JSON Lines format]
     Extract --> ParseLoop{For Each<br/>JSON Record}
 
@@ -54,7 +58,7 @@ flowchart TD
     ParseLoop -->|All Records Processed| Complete[Mark SourceFile<br/>Status: COMPLETED]
     Complete --> Schedule{Scheduler}
 
-    Schedule -->|Daily: 2 AM| GLEIFRefSync
+    Schedule -->|Daily: 2 AM| FullSync
 ```
 
 ## Detailed Component Interaction

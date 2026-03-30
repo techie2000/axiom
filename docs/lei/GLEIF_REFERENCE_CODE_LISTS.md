@@ -29,20 +29,23 @@ flowchart TD
     Roles --> RolesDone{OK?}
     Jur --> JurDone{OK?}
 
-    RADone -->|yes| Continue[All 4 Lists Ready]
-    ELFDone -->|yes| Continue
-    RolesDone -->|yes| Continue
-    JurDone -->|yes| Continue
+    RADone -->|yes| AllReady{All 4<br/>succeeded?}
+    ELFDone -->|yes| AllReady
+    RolesDone -->|yes| AllReady
+    JurDone -->|yes| AllReady
 
-    RADone -->|no| LogErr[Log Error<br/>Continue with Partial Data]
+    RADone -->|no| LogErr[Log Error]
     ELFDone -->|no| LogErr
     RolesDone -->|no| LogErr
     JurDone -->|no| LogErr
 
-    Continue --> LEIIngest[LEI Level 1 Ingest]
-    LogErr --> LEIIngest
+    LogErr --> AllReady
+
+    AllReady -->|yes| LEIIngest[LEI Level 1 Ingest]
+    AllReady -->|no| BlockIngest[Block LEI Ingest<br/>Return Error]
 
     LEIIngest --> Done([Done])
+    BlockIngest --> Done
 ```
 
 ## Code Lists
@@ -62,7 +65,8 @@ flowchart TD
 - **Table**: `lei_raw.gleif_entity_legal_forms`
 - **Key column**: `elf_code` (e.g. `2HBR`)
 - **Resolves**: `lei_raw.lei_records.entity_legal_form`
-- **Update strategy**: Incremental upsert with status tracking (`ACTIVE` / `DECOMMISSIONED`)
+- **Update strategy**: Full replace — `DeactivateAll()` then upsert all rows (sets status to `DECOMMISSIONED`
+  for removed rows)
 - **URL**: `https://www.gleif.org/content/2-about-lei/6-code-lists/1-iso-20275-entity-legal-forms/`
 
 ### 3. Official Organizational Roles — ISO 5009 (issue #214)

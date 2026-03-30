@@ -123,7 +123,7 @@ func (r *gleifEntityLegalFormRepository) FindByELFCode(elfCode string) (*domain.
 func (r *gleifEntityLegalFormRepository) DeactivateAll() error {
 	return r.db.Model(&domain.GLEIFEntityLegalForm{}).
 		Where("status = ?", "ACTIVE").
-		Update("status", "INACTIVE").Error
+		Update("status", "DECOMMISSIONED").Error
 }
 
 // GLEIFOrganizationalRoleRepository defines data access for GLEIF organizational roles.

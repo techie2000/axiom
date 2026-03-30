@@ -152,7 +152,7 @@ COMMENT ON COLUMN lei_raw.gleif_legal_jurisdictions.country_code IS
 COMMENT ON COLUMN lei_raw.gleif_legal_jurisdictions.active IS
 'FALSE when the jurisdiction has been deprecated or removed from the GLEIF list.';
 
--- 5. Add legal_jurisdiction column to lei_records (parsed from JSON but not stored)
+-- 5. Add legal_jurisdiction column to lei_records to persist parsed jurisdiction codes for reference lookups
 ALTER TABLE lei_raw.lei_records
     ADD COLUMN IF NOT EXISTS legal_jurisdiction VARCHAR(50);
 

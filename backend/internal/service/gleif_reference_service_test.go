@@ -104,6 +104,7 @@ func newTestGLEIFSvc(
 		roleRepo: roleRepo,
 		jurRepo:  jurRepo,
 		client:   client,
+		urls:     DefaultGLEIFReferenceURLs(),
 	}
 }
 

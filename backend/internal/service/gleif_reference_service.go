@@ -46,15 +46,9 @@ type GLEIFReferenceService interface {
 	SyncLegalJurisdictions() error
 }
 
-type gleifReferenceService struct {
-	raRepo   repository.GLEIFRegistrationAuthorityRepository
-	elfRepo  repository.GLEIFEntityLegalFormRepository
-	roleRepo repository.GLEIFOrganizationalRoleRepository
-	jurRepo  repository.GLEIFLegalJurisdictionRepository
-	client   *http.Client
-}
-
 // GLEIFReferenceURLs holds configurable URLs for the four GLEIF reference CSV downloads.
+// Use DefaultGLEIFReferenceURLs() for production defaults or supply custom URLs (e.g. in tests
+// or when GLEIF changes their hosting paths).
 type GLEIFReferenceURLs struct {
 	RegistrationAuthorities string
 	EntityLegalForms        string
@@ -72,12 +66,34 @@ func DefaultGLEIFReferenceURLs() GLEIFReferenceURLs {
 	}
 }
 
-// NewGLEIFReferenceService creates a new GLEIFReferenceService.
+type gleifReferenceService struct {
+	raRepo   repository.GLEIFRegistrationAuthorityRepository
+	elfRepo  repository.GLEIFEntityLegalFormRepository
+	roleRepo repository.GLEIFOrganizationalRoleRepository
+	jurRepo  repository.GLEIFLegalJurisdictionRepository
+	client   *http.Client
+	urls     GLEIFReferenceURLs
+}
+
+// NewGLEIFReferenceService creates a new GLEIFReferenceService using the production GLEIF URLs.
+// Supply a custom GLEIFReferenceURLs via NewGLEIFReferenceServiceWithURLs when the defaults need
+// overriding (e.g. during testing or when GLEIF changes their hosting paths).
 func NewGLEIFReferenceService(
 	raRepo repository.GLEIFRegistrationAuthorityRepository,
 	elfRepo repository.GLEIFEntityLegalFormRepository,
 	roleRepo repository.GLEIFOrganizationalRoleRepository,
 	jurRepo repository.GLEIFLegalJurisdictionRepository,
+) GLEIFReferenceService {
+	return NewGLEIFReferenceServiceWithURLs(raRepo, elfRepo, roleRepo, jurRepo, DefaultGLEIFReferenceURLs())
+}
+
+// NewGLEIFReferenceServiceWithURLs creates a new GLEIFReferenceService with explicit CSV source URLs.
+func NewGLEIFReferenceServiceWithURLs(
+	raRepo repository.GLEIFRegistrationAuthorityRepository,
+	elfRepo repository.GLEIFEntityLegalFormRepository,
+	roleRepo repository.GLEIFOrganizationalRoleRepository,
+	jurRepo repository.GLEIFLegalJurisdictionRepository,
+	urls GLEIFReferenceURLs,
 ) GLEIFReferenceService {
 	return &gleifReferenceService{
 		raRepo:   raRepo,
@@ -85,6 +101,7 @@ func NewGLEIFReferenceService(
 		roleRepo: roleRepo,
 		jurRepo:  jurRepo,
 		client:   &http.Client{Timeout: gleifHTTPTimeout},
+		urls:     urls,
 	}
 }
 
@@ -299,7 +316,7 @@ func parseLegalJurisdictionsCSV(r io.ReadCloser) ([]*domain.GLEIFLegalJurisdicti
 // SyncRegistrationAuthorities downloads and upserts the GLEIF registration authorities list.
 // CSV columns (tab-separated): RA ID | Organization Name | Jurisdiction | International Name | Languages | Website | Comments
 func (s *gleifReferenceService) SyncRegistrationAuthorities() error {
-	body, err := s.downloadCSV(defaultGLEIFRegistrationAuthoritiesURL)
+	body, err := s.downloadCSV(s.urls.RegistrationAuthorities)
 	if err != nil {
 		return fmt.Errorf("download registration authorities: %w", err)
 	}
@@ -336,7 +353,7 @@ func (s *gleifReferenceService) SyncRegistrationAuthorities() error {
 // SyncEntityLegalForms downloads and upserts the ISO 20275 entity legal forms list.
 // CSV columns (tab-separated): ELF Code | Country | Subdivision | Legal Form Name | Abbreviations | Status
 func (s *gleifReferenceService) SyncEntityLegalForms() error {
-	body, err := s.downloadCSV(defaultGLEIFEntityLegalFormsURL)
+	body, err := s.downloadCSV(s.urls.EntityLegalForms)
 	if err != nil {
 		return fmt.Errorf("download entity legal forms: %w", err)
 	}
@@ -372,7 +389,7 @@ func (s *gleifReferenceService) SyncEntityLegalForms() error {
 // SyncOrganizationalRoles downloads and upserts the ISO 5009 organizational roles list.
 // CSV columns (tab-separated): Role Code | Role Name | Description
 func (s *gleifReferenceService) SyncOrganizationalRoles() error {
-	body, err := s.downloadCSV(defaultGLEIFOrganizationalRolesURL)
+	body, err := s.downloadCSV(s.urls.OrganizationalRoles)
 	if err != nil {
 		return fmt.Errorf("download organizational roles: %w", err)
 	}
@@ -408,7 +425,7 @@ func (s *gleifReferenceService) SyncOrganizationalRoles() error {
 // SyncLegalJurisdictions downloads and upserts the GLEIF legal jurisdictions list.
 // CSV columns (tab-separated): Jurisdiction Code | Jurisdiction Name | Country Code
 func (s *gleifReferenceService) SyncLegalJurisdictions() error {
-	body, err := s.downloadCSV(defaultGLEIFLegalJurisdictionsURL)
+	body, err := s.downloadCSV(s.urls.LegalJurisdictions)
 	if err != nil {
 		return fmt.Errorf("download legal jurisdictions: %w", err)
 	}

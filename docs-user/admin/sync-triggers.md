@@ -19,6 +19,11 @@ sources. Use a manual sync trigger when:
 - You are setting up a new environment and need to populate data immediately.
 - An upstream data source has published a correction that you need to apply sooner.
 
+The LEI sync automatically pre-synchronises four GLEIF reference code lists (registration
+authorities, entity legal forms, organizational roles, and legal jurisdictions) before processing
+LEI Level 1/2 data. These reference lists ensure coded fields in LEI records display their
+full human-readable names in the UI.
+
 ## Steps
 
 ### Trigger a sync

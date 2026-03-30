@@ -8,14 +8,15 @@ This page defines the key fields used across Axiom's data entities.
 | --- | --- | --- |
 | LEI | 20-character Legal Entity Identifier (ISO 17442) | `2138005O9XJIJN4JPN90` |
 | Legal Name | Official registered name of the entity | `Acme Corporation Ltd` |
-| Legal Form | Legal structure type (for example, `LLC`, `PLC`, `SA`) | `PLC` |
+| Legal Form | Legal structure type code (e.g. `2HBR` for GmbH); full name shown where available | `PLC` |
 | Entity Status | Current lifecycle status of the entity | `ACTIVE` |
 | Entity Category | Classification of the entity type | `GENERAL` |
 | Registered Address | Officially registered legal address | 1 Main St, London |
 | Headquarters Address | Principal place of business if different | 2 HQ Road, London |
-| Registration Authority | Body that assigned the registration number | Companies House |
+| Registration Authority | Body that assigned the registration number; full name shown where available | Companies House |
 | Registration Number | Identifier issued by the registration authority | `12345678` |
 | Registration Date | Date the LEI was first registered | `2015-01-15` |
+| Legal Jurisdiction | Jurisdiction code where the entity is legally formed; full name shown where available | `GB`, `US-DE` |
 | Last Updated | Date the record was last updated in GLEIF | `2026-01-10` |
 | Relationship Status | Status of the relationship to the managing LOU | `ISSUED` |
 | Validation Status | Source and method used to validate entity information | `FULLY_CORROBORATED` |
