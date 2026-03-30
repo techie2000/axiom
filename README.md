@@ -679,6 +679,7 @@ Published site: <https://techie2000.github.io/axiom/docs-user/>
 - [LEI Records](docs-user/workflows/lei-records.md)
 - [Countries](docs-user/workflows/countries.md)
 - [Currencies](docs-user/workflows/currencies.md)
+- [Languages](docs-user/workflows/languages.md)
 - [Entities](docs-user/workflows/entities.md)
 - [Settlement Instructions (SSI)](docs-user/workflows/ssi.md)
 

@@ -47,6 +47,8 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
 - [Countries Workflow](docs-user/workflows/countries.md): Browse and search ISO 3166 country reference data
 - [Currencies Workflow](docs-user/workflows/currencies.md): Browse and search ISO 4217 currency data including
   compliance flags
+- [Languages Workflow](docs-user/workflows/languages.md): Browse and search ISO 639-1 language reference data including
+  writing direction
 - [Entities Workflow](docs-user/workflows/entities.md): View and search legal entity master data linked to LEI records
 - [Instruments Workflow](docs-user/workflows/instruments.md): Financial instrument master data (planned module
   documentation)
