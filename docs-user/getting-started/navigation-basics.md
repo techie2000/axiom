@@ -80,7 +80,7 @@ The shortcuts are consistent across all pages that support the corresponding fea
 
 | Shortcut | Action | Pages |
 | --- | --- | --- |
-| **Ctrl+F** / **⌘F** | Focus the search input | Countries, Currencies, Languages, LEI Records, Admin → Translations |
+| **Ctrl+F** / **⌘F** | Focus the search input | Code Mappings, Countries, Currencies, Languages, LEI Records, Admin → Translations |
 | **Esc** | Close the top-most open panel or dropdown | All pages with overlays |
 
 > **Note:** Pressing **Ctrl+F** / **⌘F** on a page that has a search bar will focus that bar and

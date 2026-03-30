@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import Alert from '../components/Alert'
 import Badge from '../components/Badge'
@@ -9,6 +9,7 @@ import PageHeader from '../components/PageHeader'
 import SearchInputWithOverflowTooltip from '../components/SearchInputWithOverflowTooltip'
 import StatCard from '../components/StatCard'
 import { useEnglishTooltips } from '../lib/useEnglishTooltips'
+import { useSearchFocusShortcut } from '../lib/useSearchFocusShortcut'
 
 interface CodeMapping {
   id: string
@@ -28,6 +29,8 @@ interface CodeMapping {
 export default function CodeMappingsPage() {
   const { t } = useTranslation('common')
   const { getEnglishTooltip } = useEnglishTooltips()
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  useSearchFocusShortcut(searchInputRef)
   const [mappings, setMappings] = useState<CodeMapping[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -129,6 +132,7 @@ export default function CodeMappingsPage() {
         {/* Search */}
         <div className="mb-6">
           <SearchInputWithOverflowTooltip
+            ref={searchInputRef}
             type="text"
             placeholder={t('codeMappings.searchPlaceholder')}
             title={getEnglishTooltip('codeMappings.searchPlaceholder')}

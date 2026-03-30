@@ -4,9 +4,9 @@ import { RefObject, useEffect } from 'react'
 
 /**
  * Registers a global Ctrl+F / Cmd+F keyboard shortcut that focuses the given
- * search input and selects its current text.  The browser's built-in find
- * dialog is suppressed while the input is focused so the shortcut is
- * intercepted reliably.
+ * search input and selects its current text. The browser's built-in find
+ * dialog is suppressed whenever this shortcut is used so the custom search
+ * field is focused and selected reliably instead.
  *
  * @param inputRef - A React ref pointing to the search `<input>` element.
  */

@@ -4,6 +4,10 @@
 
 This directory contains Dockerfiles for the Axiom application with environment-specific configurations.
 
+Base images and infra images are sourced from the Public ECR Docker library mirror
+(`public.ecr.aws/docker/library/*`) to avoid corporate filtering that blocks Docker
+Hub blob CDN URLs.
+
 ## Files
 
 ### Dockerfile.backend
