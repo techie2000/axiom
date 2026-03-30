@@ -92,6 +92,37 @@ describe('countries normalization', () => {
     expect(summary.missingSecondaryAlpha3Rows).toBe(2)
   })
 
+  it('falls back to alpha2 for id and code when those fields are missing', () => {
+    const result = normalizeCountry({ alpha2: 'gb', name: 'United Kingdom', alpha3: 'gbr' })
+
+    expect(result.id).toBe('GB')
+    expect(result.code).toBe('GB')
+    expect(result.alpha2).toBe('GB')
+    expect(result.alpha3).toBe('GBR')
+  })
+
+  it('falls back to name for id when both id and alpha2 are absent', () => {
+    const result = normalizeCountry({ name: 'Mystery Land' })
+
+    expect(result.id).toBe('Mystery Land')
+  })
+
+  it('returns empty array for an empty-string array field', () => {
+    const result = normalizeCountry({ code: 'AU', name: 'Australia', phone_codes: '' })
+
+    expect(result.phone_codes).toEqual([])
+  })
+
+  it('handles null rows in summarizeCountriesDataQuality gracefully', () => {
+    const summary = summarizeCountriesDataQuality([
+      null,
+      { alpha2: 'US', alpha3: 'USA' },
+    ])
+
+    expect(summary.totalRows).toBe(2)
+    expect(summary.missingPrimaryAlpha2Rows).toBe(1)
+  })
+
   it('returns zero summary for non-array payload', () => {
     const summary = summarizeCountriesDataQuality(undefined)
 

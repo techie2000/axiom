@@ -86,7 +86,8 @@
     "buttonEmojiMode": {
       "both": "Both",
       "text": "Text",
-      "emoji": "Emoji"
+      "emoji": "Emoji",
+      "${mode}": "preferences.buttonEmojiMode.${mode}"
     }
   },
   "common": {

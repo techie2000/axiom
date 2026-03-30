@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  formatEnumDisplayValue,
   formatLEICellValue,
   formatLEIDisplayValue,
   getStatusBadgePresentation,
@@ -37,6 +38,15 @@ describe('LEI null-like value helpers', () => {
     expect(formatLEIDisplayValue(' null ')).toBe('-')
     expect(formatLEIDisplayValue(undefined)).toBe('-')
     expect(formatLEIDisplayValue('ACTIVE')).toBe('ACTIVE')
+    expect(formatLEIDisplayValue('0001-01-01T00:00:00Z')).toBe('-')
+  })
+
+  it('title-cases enum values for display', () => {
+    expect(formatEnumDisplayValue('FUND')).toBe('Fund')
+    expect(formatEnumDisplayValue('GENERAL')).toBe('General')
+    expect(formatEnumDisplayValue('SOLE_PROPRIETOR')).toBe('Sole Proprietor')
+    expect(formatEnumDisplayValue('NULL')).toBe('-')
+    expect(formatEnumDisplayValue(undefined)).toBe('-')
   })
 
   it('maps status badge label and active branch correctly', () => {
@@ -54,4 +64,11 @@ describe('LEI null-like value helpers', () => {
     expect(formatLEICellValue('NULL', 'entity_status')).toBe('-')
     expect(formatLEICellValue('ACTIVE', 'entity_status')).toBe('ACTIVE')
   })
+
+  it('title-cases entity_category and entity_sub_category cell values', () => {
+    expect(formatLEICellValue('GENERAL', 'entity_category')).toBe('General')
+    expect(formatLEICellValue('BRANCH', 'entity_sub_category')).toBe('Branch')
+    expect(formatLEICellValue('NULL', 'entity_category')).toBe('-')
+  })
 })
+

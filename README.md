@@ -1,5 +1,8 @@
 # Axiom - Financial Services Static Data System
 
+[![CI](https://github.com/techie2000/axiom/actions/workflows/ci.yml/badge.svg)](https://github.com/techie2000/axiom/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/techie2000/axiom/branch/main/graph/badge.svg)](https://codecov.io/gh/techie2000/axiom)
+
 A modular monolith financial services static data management system built with Go, Next.js, and PostgreSQL.
 
 ## Overview
@@ -523,7 +526,14 @@ go test ./...
 # Frontend tests
 cd frontend
 npm test
+
+# Frontend tests with coverage report (enforces ≥ 50% line coverage)
+cd frontend
+npm run test:coverage
 ```
+
+Coverage is reported to [Codecov](https://codecov.io/gh/techie2000/axiom) on every CI run.
+The coverage badge at the top of this file reflects the latest `main` branch result.
 
 ## API Documentation
 
