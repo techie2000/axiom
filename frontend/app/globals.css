@@ -82,19 +82,19 @@
   --accent-rgb: 62, 207, 142;            /* #3ECF8E    */
 }
 
-/* ── Palette: Perpetuity — deep indigo-violet ────────────────────────────────── */
+/* ── Palette: Perpetuity — cyan/teal terminal aesthetic ───────────────────────── */
 [data-theme="perpetuity"] {
-  --foreground-rgb: 30, 27, 75;           /* indigo-950 */
-  --background-start-rgb: 239, 237, 255;  /* indigo-50  */
-  --background-end-rgb: 224, 220, 255;    /* indigo-100 */
-  --accent-rgb: 99, 102, 241;            /* indigo-500 */
+  --foreground-rgb: 44, 73, 96;           /* deep blue-teal */
+  --background-start-rgb: 236, 244, 247;  /* mist cyan      */
+  --background-end-rgb: 226, 239, 244;    /* soft cyan      */
+  --accent-rgb: 61, 154, 181;             /* teal-blue      */
 }
 
 [data-theme="perpetuity"].dark {
-  --foreground-rgb: 224, 231, 255;        /* indigo-100 */
-  --background-start-rgb: 17, 17, 49;    /* deep indigo-black */
-  --background-end-rgb: 8, 8, 30;        /* near-black indigo  */
-  --accent-rgb: 129, 140, 248;           /* indigo-400 */
+  --foreground-rgb: 77, 222, 232;         /* neon cyan   */
+  --background-start-rgb: 11, 26, 38;     /* deep cyan-black */
+  --background-end-rgb: 6, 18, 32;        /* near-black cyan */
+  --accent-rgb: 77, 222, 232;             /* neon cyan   */
 }
 
 /* ── Palette: Twitter — classic Twitter blue ─────────────────────────────────── */
