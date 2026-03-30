@@ -2,7 +2,7 @@
 
 ## Goal
 
-Browse and search BCP 47 language reference data in Axiom, including writing direction information.
+Browse and search ISO 639-1 language reference data in Axiom, including writing direction information.
 
 ## Prerequisites
 
@@ -32,21 +32,21 @@ standard width. Your preference is saved automatically.
 
 | Field | Description | Example |
 | --- | --- | --- |
-| Code | BCP 47 language code | `en` |
+| Code | ISO 639-1 language code | `en` |
 | Name | Official English name of the language | `English` |
 | Native Name | Language name written in that language | `English` |
 | Direction | Writing direction of the language | `LTR` / `RTL` |
 
 ## Expected result
 
-You can find any BCP 47 language by name or code, filter by writing direction, and view all
+You can find any ISO 639-1 language by name or code, filter by writing direction, and view all
 available language attributes.
 
 ## Common issues
 
 | Issue | Possible cause | Resolution |
 | --- | --- | --- |
-| Language not found | Search term does not match name or code | Try the BCP 47 code directly (for example, `fr`) |
+| Language not found | Search term does not match name or code | Try the ISO 639-1 code directly (for example, `fr`) |
 | RTL filter shows no results | No RTL languages match the current search term | Clear the search and apply the direction filter alone |
 | Native name is blank | Not all records include a native name | This is expected for some languages |
 
