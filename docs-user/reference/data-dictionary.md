@@ -55,7 +55,7 @@ This page defines the key fields used across Axiom's data entities.
 
 | Field | Description | Example |
 | --- | --- | --- |
-| Code | BCP 47 language code | `en` |
+| Code | ISO 639-1 two-letter language code | `en` |
 | Name | Official English name of the language | `English` |
 | Native Name | Language name written in that language | `English` |
 | Direction | Writing direction: left-to-right or right-to-left | `LTR` / `RTL` |
