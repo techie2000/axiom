@@ -53,6 +53,13 @@ Chinese, and Arabic.
 
 ## Data and search
 
+**Q: How do I search within this documentation?**
+
+Press **⌘ K** (macOS) or **Ctrl + K** (Windows / Linux) anywhere in the documentation site to open the
+search modal. Type your query to instantly search across all pages. Use arrow keys to navigate results, press
+**Enter** to open a page, and press **Escape** to close the modal. You can also click the **Search** button in the
+top navigation bar of the documentation site.
+
 **Q: Why does my search return no results?**
 
 Try a shorter or partial search term. For LEI records, ensure the LEI code is exactly 20
