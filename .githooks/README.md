@@ -31,7 +31,7 @@ Runs `markdownlint` against every staged `.md` file using the project rules in
 **Rules enforced:**
 
 - MD013 — Line length must not exceed 120 characters
-- MD040 — Fenced code blocks must declare a language (e.g., `\`\`\`bash`, `\`\`\`json`, `\`\`\`text`)
+- MD040 — Fenced code blocks must declare a language (e.g., `bash`, `json`, `text`)
 - MD060 — Table columns must use spaced pipe style
 - All other rules enabled in `.markdownlint.yaml`
 
