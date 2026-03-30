@@ -31,6 +31,7 @@
     "ForEach-Object": true,
     "Get-Command": true,
     "Get-Item": true,
+    "Get-Process": true,
     "Get-PSDrive": true,
     "gh": true,
     "git add": true,
@@ -69,7 +70,19 @@
     "Tee-Object": true,
     "Test-Path": true,
     "Write-Error": true,
-    "wsl": true
+    "wsl": true,
+    "/^node --check frontend/scripts/extract-i18n-keys\\.mjs$/": {
+      "approve": true,
+      "matchCommandLine": true
+    },
+    "git restore": true,
+    "/^Set-Location backend; go test \\./internal/repository; Set-Location \\.\\.; node --check frontend/scripts/extract-i18n-keys\\.mjs$/": {
+      "approve": true,
+      "matchCommandLine": true
+    },
+    "gofmt": true,
+    "docker pull": true,
+    "docker tag": true
   },
   "cSpell.words": [
     "ACMR",

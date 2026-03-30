@@ -18,6 +18,7 @@ import { useEnglishTooltips } from '../lib/useEnglishTooltips'
 import { useButtonEmojiMode } from '../lib/useButtonEmojiMode'
 import { useUserPreference } from '../lib/useUserPreference'
 import { buildDocsUrl } from '../lib/docsLinks'
+import { useSearchFocusShortcut } from '../lib/useSearchFocusShortcut'
 import { Country, normalizeCountriesPayload, summarizeCountriesDataQuality } from './normalization'
 
 type CountryColumnKey =
@@ -89,6 +90,8 @@ export default function CountriesPage() {
   const { getEnglishTooltip } = useEnglishTooltips()
   const { formatLabel } = useButtonEmojiMode()
   const filterBarRef = useRef<HTMLDivElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  useSearchFocusShortcut(searchInputRef)
 
   const [countries, setCountries] = useState<Country[]>([])
   const [loading, setLoading] = useState(true)
@@ -686,6 +689,7 @@ export default function CountriesPage() {
             <div>
               <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">{t('countries.filters.search')}</label>
               <SearchInputWithOverflowTooltip
+                ref={searchInputRef}
                 type="text"
                 placeholder={t('countries.searchPlaceholder')}
                 title={getEnglishTooltip('countries.searchPlaceholder')}

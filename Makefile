@@ -255,22 +255,12 @@ lint-all: lint lint-docs ## Run all linters (Go + Markdown)
 
 lint-docs: ## Lint markdown documentation
 	@echo "Linting markdown files..."
-	@if command -v markdownlint > /dev/null 2>&1; then \
-		markdownlint --config .markdownlint.yaml '**/*.md'; \
-	else \
-		echo "❌ markdownlint-cli not installed. Run: make install-tools"; \
-		exit 1; \
-	fi
+	@markdownlint --config .markdownlint.yaml "**/*.md" || (echo "❌ markdownlint-cli not installed or failed. Run: make install-tools" && exit 1)
 
 lint-docs-fix: ## Auto-fix markdown linting issues
 	@echo "Auto-fixing markdown files..."
-	@if command -v markdownlint > /dev/null 2>&1; then \
-		markdownlint --config .markdownlint.yaml '**/*.md' --fix; \
-		echo "✅ Markdown auto-fix complete"; \
-	else \
-		echo "❌ markdownlint-cli not installed. Run: make install-tools"; \
-		exit 1; \
-	fi
+	@markdownlint --config .markdownlint.yaml "**/*.md" --fix || (echo "❌ markdownlint-cli not installed or failed. Run: make install-tools" && exit 1)
+	@echo "✅ Markdown auto-fix complete"
 
 migrate-create: ## Create a new migration (usage: make migrate-create name=create_users_table)
 	migrate create -ext sql -dir backend/migrations -seq $(name)

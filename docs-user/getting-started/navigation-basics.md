@@ -73,6 +73,20 @@ Most list pages provide a search bar and filter controls:
 
 Results update automatically as you type or change filters.
 
+## Keyboard shortcuts
+
+Axiom provides keyboard shortcuts to speed up navigation and data entry.
+The shortcuts are consistent across all pages that support the corresponding feature.
+
+| Shortcut | Action | Pages |
+| --- | --- | --- |
+| **Ctrl+F** / **⌘F** | Focus the search input | Code Mappings, Countries, Currencies, Languages, LEI Records, Admin → Translations |
+| **Esc** | Close the top-most open panel or dropdown | All pages with overlays |
+
+> **Note:** Pressing **Ctrl+F** / **⌘F** on a page that has a search bar will focus that bar and
+> select any existing text, so you can start typing immediately. The browser's built-in
+> find-in-page dialog is suppressed on these pages.
+
 ## Expected result
 
 You can navigate to any module you have access to and locate records using search and filters.
