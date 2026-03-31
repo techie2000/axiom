@@ -9,6 +9,8 @@ import { resetDeferredBooleanPreferenceSession } from '../lib/useDeferredBoolean
 import { resetDeferredPreferenceSession } from '../lib/useDeferredStringPreference'
 import { useEnglishTooltips } from '../lib/useEnglishTooltips'
 import { useButtonEmojiMode, EmojiMode } from '../lib/useButtonEmojiMode'
+import { MAP_PROVIDERS, MapProviderId } from '../lib/map-providers'
+import { useUserPreference } from '../lib/useUserPreference'
 import ThemeSelector from './ThemeSelector'
 import ThemeToggle from './ThemeToggle'
 import LanguageSelector from './LanguageSelector'
@@ -21,6 +23,11 @@ export default function UserBadge() {
     setEnglishTooltipsPreferenceEnabled,
   } = useEnglishTooltips()
   const { emojiMode, setEmojiMode } = useButtonEmojiMode()
+  const [storedMapProvider, setStoredMapProvider] = useUserPreference(
+    'global',
+    'map_provider',
+    'openstreetmap',
+  )
   const [user, setUser] = useState<StoredUser | null>(null)
   const [mounted, setMounted] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -159,6 +166,30 @@ export default function UserBadge() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <span className="block text-sm theme-text-muted">{t('preferences.mapProvider')}</span>
+                <span className="block text-xs theme-text-muted">{t('preferences.mapProviderDescription')}</span>
+              </div>
+              <select
+                value={storedMapProvider}
+                onChange={(e) => {
+                  const selected = e.target.value
+                  if (MAP_PROVIDERS.some((p) => p.id === selected)) {
+                    setStoredMapProvider(selected as MapProviderId)
+                  }
+                }}
+                className="shrink-0 text-xs rounded border theme-btn-neutral theme-focus px-1.5 py-1 bg-[rgb(var(--surface-rgb))] text-[rgb(var(--foreground-rgb))]"
+                aria-label={t('preferences.mapProvider')}
+              >
+                {MAP_PROVIDERS.map((p) => (
+                  <option key={p.id} value={p.id} className="bg-[rgb(var(--surface-rgb))] text-[rgb(var(--foreground-rgb))]">
+                    {p.emoji} {p.label}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 

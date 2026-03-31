@@ -86,7 +86,8 @@
     "buttonEmojiMode": {
       "both": "Both",
       "text": "Text",
-      "emoji": "Emoji"
+      "emoji": "Emoji",
+      "${mode}": "preferences.buttonEmojiMode.${mode}"
     },
     "changeTheme": "Change theme",
     "themes": {
@@ -103,7 +104,9 @@
     },
     "switchToLight": "Switch to light mode",
     "switchToDark": "Switch to dark mode",
-    "saveDarkModeDefault": "Save as your default mode?"
+    "saveDarkModeDefault": "Save as your default mode?",
+    "mapProvider": "Map provider",
+    "mapProviderDescription": "Default map service used when clicking \"View on Map\"."
   },
   "common": {
     "loading": "Loading…",
@@ -740,5 +743,18 @@
     "normalWidth": "Normal Width",
     "saveDisplayModeDefault": "Save display mode as your default?",
     "savePageWidthDefault": "Save page width as your default?"
+  },
+  "mapProvider": {
+    "setDefaultPrompt": "Use {{provider}} as your default map?",
+    "viewOnMapTitle": "View on {{provider}}",
+    "chooseProvider": "Choose map provider",
+    "openWith": "Open with…",
+    "default": "default",
+    "providers": {
+      "openstreetmap": "OpenStreetMap",
+      "google": "Google Maps",
+      "bing": "Bing Maps",
+      "apple": "Apple Maps"
+    }
   }
 }
