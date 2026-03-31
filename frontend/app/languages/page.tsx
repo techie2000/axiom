@@ -210,7 +210,7 @@ export default function LanguagesPage() {
   const backHref = isLoggedIn ? '/dashboard' : '/home'
 
   return (
-    <div className="min-h-screen p-8">
+    <div className="min-h-screen p-8 pb-14">
       <div className={`${effectiveExpandedWidth ? 'max-w-full' : 'max-w-7xl'} mx-auto transition-all duration-300`}>
         <PageHeader
           title={t('languages.title')}

@@ -611,23 +611,23 @@ export default function I18nMissingTranslationsDevTool() {
       <button
         type="button"
         onClick={() => setIsOpen((open) => !open)}
-        className="fixed bottom-4 right-4 z-[70] rounded-full border border-zinc-500 bg-zinc-800 px-4 py-2 text-xs font-semibold text-zinc-100 shadow-lg hover:bg-zinc-700 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700"
+        className="fixed bottom-4 right-4 z-[70] rounded-full px-4 py-2 text-xs font-semibold shadow-lg transition-colors theme-btn-neutral"
         title="Dev only: detect and submit missing translations from this page"
       >
         Missing Translations: {pendingCount}
       </button>
 
       {isOpen && (
-        <div className="fixed bottom-16 right-4 z-[70] w-[32rem] max-h-[70vh] overflow-hidden rounded-lg border border-zinc-300 bg-white shadow-2xl dark:border-zinc-700 dark:bg-zinc-900">
-          <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-3 dark:border-zinc-700">
+        <div className="fixed bottom-16 right-4 z-[70] w-[32rem] max-h-[70vh] overflow-hidden rounded-lg border shadow-2xl theme-panel">
+          <div className="flex items-center justify-between border-b border-[rgb(var(--border-rgb)/0.75)] px-4 py-3">
             <div>
-              <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Missing translations (dev)</p>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">Language: {activeLanguage || 'unknown'} · Found: {sortedEntries.length}</p>
+              <p className="text-sm font-semibold">Missing translations (dev)</p>
+              <p className="text-xs theme-text-muted">Language: {activeLanguage || 'unknown'} · Found: {sortedEntries.length}</p>
             </div>
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              className="rounded border border-zinc-300 px-2 py-1 text-xs text-zinc-700 hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              className="rounded border px-2 py-1 text-xs transition-colors theme-btn-neutral"
             >
               Close
             </button>
@@ -635,16 +635,16 @@ export default function I18nMissingTranslationsDevTool() {
 
           <div className="max-h-[58vh] overflow-y-auto p-3 space-y-3">
             {sortedEntries.length === 0 ? (
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">No missing keys detected yet on this page.</p>
+              <p className="text-xs theme-text-muted">No missing keys detected yet on this page.</p>
             ) : (
               sortedEntries.map((entry) => (
-                <div key={entry.key} className="rounded border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-800/60">
+                <div key={entry.key} className="rounded border border-[rgb(var(--border-rgb)/0.75)] p-3 theme-subtle">
                   <div className="mb-2 flex items-start justify-between gap-2">
-                    <code className="break-all text-xs text-zinc-800 dark:text-zinc-100">{entry.key}</code>
+                    <code className="break-all text-xs">{entry.key}</code>
                     <button
                       type="button"
                       onClick={() => removeEntry(entry.key)}
-                      className="rounded border border-zinc-300 px-2 py-0.5 text-[11px] text-zinc-600 hover:bg-white dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-700"
+                      className="rounded border px-2 py-0.5 text-[11px] transition-colors theme-btn-neutral"
                     >
                       Hide
                     </button>
@@ -653,31 +653,31 @@ export default function I18nMissingTranslationsDevTool() {
                   {entry.aliasTarget && (
                     <p className="mb-2 flex items-center gap-1.5 flex-wrap">
                       <span className="inline-block rounded bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 px-1.5 py-0.5 text-[10px] font-semibold">ALIAS</span>
-                      <span className="text-[11px] text-zinc-500 dark:text-zinc-400">of <code className="font-mono">{entry.aliasTarget}</code></span>
+                      <span className="text-[11px] theme-text-muted">of <code className="font-mono">{entry.aliasTarget}</code></span>
                     </p>
                   )}
 
                   {!entry.aliasTarget && entry.referencedBy.length > 0 && (
                     <p className="mb-2 flex items-center gap-1.5 flex-wrap">
                       <span className="inline-block rounded bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 px-1.5 py-0.5 text-[10px] font-semibold">MASTER</span>
-                      <span className="text-[11px] text-zinc-500 dark:text-zinc-400">source for <code className="font-mono">{entry.referencedBy.join(', ')}</code></span>
+                      <span className="text-[11px] theme-text-muted">source for <code className="font-mono">{entry.referencedBy.join(', ')}</code></span>
                     </p>
                   )}
 
                   {!entry.aliasTarget && entry.referencedBy.length === 0 && isDirectSharedKey(entry.key) && (
                     <p className="mb-2 flex items-center gap-1.5 flex-wrap">
                       <span className="inline-block rounded bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300 px-1.5 py-0.5 text-[10px] font-semibold">SHARED</span>
-                      <span className="text-[11px] text-zinc-500 dark:text-zinc-400">used across multiple pages — translate once per language</span>
+                      <span className="text-[11px] theme-text-muted">used across multiple pages — translate once per language</span>
                     </p>
                   )}
 
                   <div className="group mb-2">
-                    <p className="inline-flex items-center text-xs text-zinc-600 dark:text-zinc-300">
+                    <p className="inline-flex items-center text-xs theme-text-muted">
                       <span>English: {removeDecorationsForDisplay(entry.englishDefault)}</span>
                     <button
                       type="button"
                       onClick={() => void copyToClipboard(removeDecorationsForDisplay(entry.englishDefault), entry.key)}
-                      className="ml-1 rounded p-1 text-zinc-400 opacity-0 transition-opacity hover:bg-zinc-100 hover:text-zinc-700 focus:opacity-100 group-hover:opacity-100 dark:text-zinc-500 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                      className="ml-1 rounded p-1 opacity-0 transition-opacity hover:opacity-80 focus:opacity-100 group-hover:opacity-100 theme-text-muted"
                       title={copiedKey === entry.key ? 'Copied' : 'Copy English text'}
                       aria-label={copiedKey === entry.key ? 'Copied' : 'Copy English text'}
                     >
@@ -700,7 +700,7 @@ export default function I18nMissingTranslationsDevTool() {
                     value={entry.value}
                     onChange={(event) => setEntryField(entry.key, { value: event.target.value, error: '' })}
                     placeholder="Type translation"
-                    className="mb-2 w-full rounded border border-zinc-300 bg-white px-2 py-1 text-xs text-zinc-900 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+                    className="mb-2 w-full rounded px-2 py-1 text-xs theme-input theme-focus"
                   />
 
                   <input
@@ -708,7 +708,7 @@ export default function I18nMissingTranslationsDevTool() {
                     value={entry.notes}
                     onChange={(event) => setEntryField(entry.key, { notes: event.target.value })}
                     placeholder="Optional notes"
-                    className="mb-2 w-full rounded border border-zinc-300 bg-white px-2 py-1 text-xs text-zinc-900 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+                    className="mb-2 w-full rounded px-2 py-1 text-xs theme-input theme-focus"
                   />
 
                   {entry.error && <p className="mb-2 text-xs text-red-600">{entry.error}</p>}
@@ -716,7 +716,7 @@ export default function I18nMissingTranslationsDevTool() {
                     type="button"
                     disabled={entry.submitting}
                     onClick={() => void handleSubmit(entry)}
-                    className="rounded bg-zinc-700 px-3 py-1.5 text-xs font-medium text-zinc-100 hover:bg-zinc-600 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-600"
+                    className="rounded px-3 py-1.5 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-50 theme-btn-primary"
                   >
                     {entry.submitting ? 'Submitting...' : 'Submit translation'}
                   </button>

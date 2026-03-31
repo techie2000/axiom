@@ -106,7 +106,7 @@ export default function UserBadge() {
 
       {menuOpen && (
         <div
-          className={`absolute mt-2 w-[320px] max-w-[calc(100vw-1rem)] rounded-xl theme-dropdown shadow-2xl p-4 z-50 ${menuAlign === 'right' ? 'right-0' : 'left-0'}`}
+          className={`absolute mt-2 w-[320px] max-w-[calc(100vw-1rem)] rounded-xl theme-dropdown shadow-2xl p-4 z-[80] ${menuAlign === 'right' ? 'right-0' : 'left-0'}`}
           role="menu"
           aria-label="User menu"
         >

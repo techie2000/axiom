@@ -1174,7 +1174,7 @@ export default function LEIRecordsPage() {
   }
 
   return (
-    <div className="min-h-screen p-8 theme-page">
+    <div className="min-h-screen p-8 pb-14 theme-page">
       <div className={`${effectiveExpandedWidth ? 'max-w-full' : 'max-w-7xl'} mx-auto transition-all duration-300`}>
         <PageHeader
           title={t('leiRecords.title')}
@@ -1307,7 +1307,7 @@ export default function LEIRecordsPage() {
           <StatCard
             title={t('leiRecords.stats.currentPage')}
             titleTooltip={getEnglishTooltip('leiRecords.stats.currentPage')}
-            value={`${currentPage} ${hasActiveFilters ? t('leiRecords.stats.currentPageFiltered', { page: currentPage }) : t('leiRecords.stats.currentPageOf', { page: currentPage, total: totalPages.toLocaleString() })}`}
+            value={hasActiveFilters ? t('leiRecords.stats.currentPageFiltered', { page: currentPage }) : t('leiRecords.stats.currentPageOf', { page: currentPage, total: totalPages.toLocaleString() })}
           />
           <StatCard
             title={t('leiRecords.stats.showing')}
