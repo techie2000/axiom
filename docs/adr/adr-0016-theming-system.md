@@ -44,9 +44,9 @@ Subsequent implementation refinements added:
 - Session-scoped deferred preference overrides so unsaved theme and display changes persist across in-app navigation for the active authenticated session and reset on logout.
 - Custom themed select controls (`ThemedSelect`) replacing native `<select>` usage in app screens and shared controls to avoid OS/browser popup colour drift.
 
-The key insight from reviewing tweakcn is that **each theme is a colour palette that ships both a light and
-a dark variant**, independently of which mode the user has selected. A user picking "Supabase" should still
-be able to toggle between light and dark Supabase, not be locked into one mode.
+The key insight from reviewing tweakcn is that **each theme is a colour palette that ships both a light and a
+dark variant**, independently of which mode the user has selected. A user picking "Supabase" should still be
+able to toggle between light and dark Supabase, not be locked into one mode.
 
 ## Decision Drivers
 
@@ -183,7 +183,8 @@ Five tweakcn-inspired palettes are shipped with this ADR, each providing both li
 - Browser scrollbars now match active theme tokens.
 - Adding a new palette requires changing only two files: `globals.css` and `theme.ts`.
 - Dropdown popups now follow palette tokens consistently because listbox rendering is app-controlled instead of browser-native.
-- Unsaved preference edits now behave predictably for users: they persist within the current signed-in session and revert to saved preferences on next login.
+- Unsaved preference edits now behave predictably for users: they persist within the current signed-in session
+  and revert to saved preferences on next login.
 
 ### Negative
 

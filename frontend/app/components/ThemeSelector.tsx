@@ -62,9 +62,14 @@ export default function ThemeSelector() {
   // Pre-render placeholder to avoid hydration mismatch.
   if (!mounted) {
     return (
-      <button className="h-9 px-3 inline-flex items-center gap-2 rounded-lg theme-btn-neutral text-sm opacity-60 cursor-not-allowed">
+      <button
+        type="button"
+        disabled
+        aria-disabled="true"
+        className="h-9 px-3 inline-flex items-center gap-2 rounded-lg theme-btn-neutral text-sm opacity-60 cursor-not-allowed"
+      >
         <span className="text-base leading-none">🎨</span>
-        <span className="hidden sm:inline font-medium">Theme</span>
+        <span className="hidden sm:inline font-medium">{t('preferences.theme')}</span>
       </button>
     )
   }

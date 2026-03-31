@@ -13,7 +13,7 @@
  * 1. Extend `ThemeId` and add an entry to `THEMES`.
  * 2. Add matching `[data-theme="<id>"]` and `[data-theme="<id>"].dark` blocks in globals.css.
  * 3. Add `preferences.themes.<camelCaseId>` and `preferences.themes.<camelCaseId>Description`
- *    translation keys to locales/en/common.json.
+ *    translation keys to frontend/public/locales/en/common.json.
  */
 
 export type ThemeId = 'default' | 'modern-minimal' | 'supabase' | 'perpetuity' | 'twitter'
