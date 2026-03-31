@@ -20,6 +20,7 @@ import { useUserPreference } from '../lib/useUserPreference'
 import { useSearchFocusShortcut } from '../lib/useSearchFocusShortcut'
 import { formatEnumDisplayValue, formatLEICellValue, getStatusBadgePresentation, normalizeRecordNullLikeValues } from './null-utils'
 import { useTranslation } from 'react-i18next'
+import LEIAuditHistoryModal from '../components/LEIAuditHistoryModal'
 
 interface LEIRecord {
   id: string
@@ -284,6 +285,13 @@ export default function LEIRecordsPage() {
   const [stickyColumnWidths, setStickyColumnWidths] = useState<number[]>([])
   const [dateDisplayMode, setDateDisplayMode] = useState<'relative' | 'absolute'>('relative')
   const recordsRequestControllerRef = useRef<AbortController | null>(null)
+
+  // Context menu state (right-click on table row)
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; record: LEIRecord } | null>(null)
+  const contextMenuRef = useRef<HTMLDivElement>(null)
+
+  // Audit history modal state
+  const [auditRecord, setAuditRecord] = useState<LEIRecord | null>(null)
 
   const API_BASE_URL = typeof window !== 'undefined' 
     ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080')
@@ -691,6 +699,31 @@ export default function LEIRecordsPage() {
       setSelectedRecord(normalizeRecordNullLikeValues(partialRecord))
     }
   }
+
+  // Right-click context menu handler
+  const handleRowContextMenu = useCallback((event: ReactMouseEvent, record: LEIRecord) => {
+    event.preventDefault()
+    event.stopPropagation()
+    setContextMenu({ x: event.clientX, y: event.clientY, record })
+  }, [])
+
+  const closeContextMenu = useCallback(() => setContextMenu(null), [])
+
+  // Close context menu on outside click or ESC
+  useEffect(() => {
+    const handleClick = () => closeContextMenu()
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeContextMenu()
+    }
+    if (contextMenu) {
+      document.addEventListener('click', handleClick)
+      document.addEventListener('keydown', handleKey)
+    }
+    return () => {
+      document.removeEventListener('click', handleClick)
+      document.removeEventListener('keydown', handleKey)
+    }
+  }, [contextMenu, closeContextMenu])
 
   const handleLinkedLeiClick = async (event: ReactMouseEvent, leiCode: string) => {
     event.stopPropagation()
@@ -1621,6 +1654,7 @@ export default function LEIRecordsPage() {
                         data-lei={record.lei}
                         data-row-index={index}
                         onClick={() => handleRecordClick(record)}
+                        onContextMenu={(e) => handleRowContextMenu(e, record)}
                         className="group theme-table-row-hover transition-colors cursor-pointer"
                         style={{ height: 'auto', minHeight: '48px' }}
                       >
@@ -1837,12 +1871,21 @@ export default function LEIRecordsPage() {
                   <h2 className="text-2xl font-bold text-[rgb(var(--foreground-rgb))] mb-2">{t('leiRecords.modal.title')}</h2>
                   <p className="text-lg font-mono text-[rgb(var(--primary-rgb))] dark:text-[rgb(var(--primary-rgb))]">{selectedRecord.lei}</p>
                 </div>
-                <button
-                  onClick={() => setSelectedRecord(null)}
-                  className="px-4 py-2 rounded-lg bg-[rgb(var(--surface-muted-rgb))] hover:bg-[rgb(var(--surface-muted-rgb))] dark:bg-[rgb(var(--surface-muted-rgb))] dark:hover:bg-[rgb(var(--surface-muted-rgb))] transition-colors text-[rgb(var(--foreground-rgb))] font-medium"
-                >
-                  {t('leiRecords.modal.close')}
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => { setAuditRecord(selectedRecord); setSelectedRecord(null) }}
+                    className="px-3 py-2 rounded-lg bg-[rgb(var(--surface-muted-rgb))] hover:bg-[rgb(var(--surface-muted-rgb))] transition-colors text-[rgb(var(--foreground-rgb))] text-sm font-medium"
+                    title={t('leiAudit.viewAuditHistory')}
+                  >
+                    {t('leiAudit.historyButton')}
+                  </button>
+                  <button
+                    onClick={() => setSelectedRecord(null)}
+                    className="px-4 py-2 rounded-lg bg-[rgb(var(--surface-muted-rgb))] hover:bg-[rgb(var(--surface-muted-rgb))] dark:bg-[rgb(var(--surface-muted-rgb))] dark:hover:bg-[rgb(var(--surface-muted-rgb))] transition-colors text-[rgb(var(--foreground-rgb))] font-medium"
+                  >
+                    {t('leiRecords.modal.close')}
+                  </button>
+                </div>
               </div>
               {/* Date Display Mode Toggle */}
               <div className="flex items-center gap-2 text-sm">
@@ -2325,6 +2368,55 @@ export default function LEIRecordsPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Context menu (right-click on table row) */}
+      {contextMenu && (
+        /* eslint-disable-next-line jsx-a11y/interactive-supports-focus -- context menu is positioned to cursor; focus is managed by the child menuitem buttons */
+        <div
+          ref={contextMenuRef}
+          role="menu"
+          aria-label={t('leiAudit.contextMenuLabel') ?? 'Row actions'}
+          className="fixed z-[60] min-w-48 theme-dropdown rounded-lg shadow-xl border border-[rgb(var(--border-rgb))] overflow-hidden"
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => { if (e.key === 'Escape') closeContextMenu() }}
+        >
+          <button
+            role="menuitem"
+            type="button"
+            className="w-full text-left px-4 py-2.5 text-sm hover:bg-[rgb(var(--surface-muted-rgb))] transition-colors focus:outline-none focus-visible:ring-inset focus-visible:ring-2 focus-visible:ring-blue-500"
+            onClick={() => {
+              closeContextMenu()
+              void handleRecordClick(contextMenu.record)
+            }}
+          >
+            {t('leiAudit.viewDetails')}
+          </button>
+          <button
+            role="menuitem"
+            type="button"
+            className="w-full text-left px-4 py-2.5 text-sm hover:bg-[rgb(var(--surface-muted-rgb))] transition-colors focus:outline-none focus-visible:ring-inset focus-visible:ring-2 focus-visible:ring-blue-500"
+            onClick={() => {
+              closeContextMenu()
+              setAuditRecord(contextMenu.record)
+            }}
+          >
+            {t('leiAudit.viewAuditHistory')}
+          </button>
+        </div>
+      )}
+
+      {/* Audit History Modal */}
+      {auditRecord && (
+        <LEIAuditHistoryModal
+          lei={auditRecord.lei}
+          legalName={auditRecord.legal_name}
+          onClose={() => setAuditRecord(null)}
+          apiBaseUrl={API_BASE_URL}
+          availableColumns={AVAILABLE_COLUMNS}
+          visibleColumns={effectiveVisibleColumns}
+        />
       )}
 
       {/* Unobtrusive prompts to save changed preferences */}

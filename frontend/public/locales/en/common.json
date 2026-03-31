@@ -86,7 +86,8 @@
     "buttonEmojiMode": {
       "both": "Both",
       "text": "Text",
-      "emoji": "Emoji"
+      "emoji": "Emoji",
+      "${mode}": "preferences.buttonEmojiMode.${mode}"
     },
     "changeTheme": "Change theme",
     "themes": {
@@ -581,6 +582,46 @@
     "saveColumnPrompt": "Save column selection as your default?",
     "saveWidthPrompt": "$t(referenceLayout.savePageWidthDefault)",
     "saveDisplayPrompt": "$t(referenceLayout.saveDisplayModeDefault)"
+  },
+  "leiAudit": {
+    "title": "📋 Audit / Change History",
+    "loading": "Loading audit history…",
+    "noHistory": "No audit records found for this LEI.",
+    "noColumnsSelected": "No columns selected. Use the ⚙️ Columns button to choose fields.",
+    "timeline": "Timeline",
+    "latest": "Latest",
+    "oldest": "← Oldest",
+    "newest": "Newest →",
+    "viewingVersion": "Viewing version {{current}} of {{total}}",
+    "action": "Action",
+    "date": "Date",
+    "changedBy": "Changed by",
+    "changedFieldsCount": "Fields changed",
+    "changedFields": "Changed Fields",
+    "field": "Field",
+    "value": "Value",
+    "oldValue": "Old value",
+    "newValue": "New value",
+    "recordState": "Record state at this point in time",
+    "fieldsChanged_one": "{{count}} field changed",
+    "fieldsChanged_other": "{{count}} fields changed",
+    "fieldsChanged": "{{count}} field(s) changed",
+    "showChangedOnly": "⚑ Changed fields only",
+    "showChangedOnlyTitle": "Show only fields that changed in this audit entry",
+    "compareMode": "⇄ Compare",
+    "compareModeTitle": "Show this version side-by-side with the previous version",
+    "olderVersion": "older version",
+    "noPreviousVersion": "No previous version to compare.",
+    "columns": "Columns",
+    "selectColumns": "Select columns to display",
+    "timelineSlider": "Navigate audit history timeline",
+    "viewAuditHistory": "📋 View Audit History",
+    "viewDetails": "📄 View Details",
+    "contextMenuLabel": "Row actions",
+    "historyButton": "📋 History",
+    "errors": {
+      "fetchFailed": "Failed to load audit history. Please try again."
+    }
   },
   "footer": {
     "copyright": "Axiom – Financial Services Static Data"
