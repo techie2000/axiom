@@ -39,7 +39,7 @@ export default function ThemeToggle() {
   // Avoid hydration mismatch.
   if (!mounted) {
     return (
-      <button className="h-9 w-9 flex items-center justify-center rounded-lg opacity-50 cursor-not-allowed">
+      <button className="h-9 w-9 inline-flex items-center justify-center rounded-lg theme-btn-neutral opacity-60 cursor-not-allowed">
         <span className="text-base leading-none">🌓</span>
       </button>
     )
@@ -49,7 +49,7 @@ export default function ThemeToggle() {
     <>
       <button
         onClick={toggleDarkMode}
-        className="h-9 w-9 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 border border-gray-400/50 dark:border-white/20 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
+        className="h-9 w-9 inline-flex items-center justify-center rounded-lg theme-btn-neutral theme-focus"
         aria-label={isDark ? t('preferences.switchToLight') : t('preferences.switchToDark')}
         title={isDark ? t('preferences.switchToLight') : t('preferences.switchToDark')}
       >

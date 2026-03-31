@@ -14,6 +14,7 @@ import PreferenceSavePrompt from '../../components/PreferenceSavePrompt'
 import SortableHeaderCell from '../../components/SortableHeaderCell'
 import SyncedWideTable from '../../components/SyncedWideTable'
 import TablePaginationControls from '../../components/TablePaginationControls'
+import ThemedSelect from '../../components/ThemedSelect'
 import { getAuthToken } from '../../lib/auth-token'
 import { buildDocsUrl } from '../../lib/docsLinks'
 import { useEnglishTooltips } from '../../lib/useEnglishTooltips'
@@ -475,6 +476,10 @@ export default function AdminTranslationsPage() {
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!formData.translation_key.trim() || !formData.language_code.trim()) {
+      setFormError(t('admin.translations.errors.submitFailed'))
+      return
+    }
     setFormLoading(true)
     setFormError('')
     const token = getToken()
@@ -751,7 +756,7 @@ export default function AdminTranslationsPage() {
             <>
               <button
                 onClick={expandedWidthPreference.toggle}
-                className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 transition-colors text-white text-sm font-medium"
+                className="px-4 py-2 rounded-lg theme-btn-neutral theme-focus text-sm font-medium"
                 title={
                   effectiveExpandedWidth
                       ? getEnglishTooltip('referenceLayout.normalButton')
@@ -763,8 +768,8 @@ export default function AdminTranslationsPage() {
                     : t('referenceLayout.expandButton')}
               </button>
               <button
-                onClick={() => handleOpenNewTranslationForm()}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+                onClick={() => setShowForm(true)}
+                className="px-4 py-2 rounded-lg theme-btn-primary theme-focus text-sm font-medium"
                 title={getEnglishTooltip('admin.translations.addTranslation')}
               >
                 + {t('admin.translations.addTranslation')}
@@ -773,7 +778,7 @@ export default function AdminTranslationsPage() {
                 <button
                   onClick={handleDeleteStaleTranslations}
                   disabled={actionLoading !== null}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
+                  className="px-4 py-2 text-sm font-medium rounded-lg transition-colors theme-btn-primary theme-focus disabled:opacity-50"
                   title={t('admin.translations.stale.cleanupTitle')}
                 >
                   {t('admin.translations.stale.cleanupButton', { count: staleTranslationRows.length })}
@@ -795,45 +800,50 @@ export default function AdminTranslationsPage() {
         )}
 
         {/* Filters */}
-        <div className="bg-white dark:bg-white/5 backdrop-blur-sm border-2 border-gray-200 dark:border-white/10 rounded-lg p-4 mb-6 flex flex-wrap gap-3 items-end">
+        <div className="theme-panel backdrop-blur-sm border-2 rounded-lg p-4 mb-6 flex flex-wrap gap-3 items-end">
           <div>
-            <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
+            <label className="block text-xs theme-text-muted mb-1">
               {t('admin.translations.filterByLanguage')}
             </label>
-            <select
+            <ThemedSelect
               value={langFilter}
-              onChange={(e) => { setLangFilter(e.target.value); setPage(0) }}
+              onChange={(next) => { setLangFilter(next); setPage(0) }}
+              ariaLabel={t('admin.translations.filterByLanguage')}
               title={langFilter || getEnglishTooltip('admin.translations.allLanguages')}
-              className="bg-white dark:bg-white/5 border border-gray-300 dark:border-white/20 rounded-md text-gray-900 dark:text-white text-sm px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">{t('admin.translations.allLanguages')}</option>
-              {TARGET_TRANSLATION_LANGUAGES.map((l) => (
-                <option key={l.code} value={l.code} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
-                  {l.flag} {l.nativeName}
-                </option>
-              ))}
-            </select>
+              className="min-w-[13rem]"
+              buttonClassName="rounded-md text-sm px-3 py-1.5"
+              options={[
+                { value: '', label: t('admin.translations.allLanguages') },
+                ...TARGET_TRANSLATION_LANGUAGES.map((l) => ({
+                  value: l.code,
+                  label: `${l.flag} ${l.nativeName}`,
+                })),
+              ]}
+            />
           </div>
 
           <div>
-            <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
+            <label className="block text-xs theme-text-muted mb-1">
               {t('admin.translations.filterByStatus')}
             </label>
-            <select
+            <ThemedSelect
               value={statusFilter}
-              onChange={(e) => { setStatusFilter(e.target.value); setPage(0) }}
+              onChange={(next) => { setStatusFilter(next); setPage(0) }}
+              ariaLabel={t('admin.translations.filterByStatus')}
               title={statusFilter || getEnglishTooltip('admin.translations.allStatuses')}
-              className="bg-white dark:bg-white/5 border border-gray-300 dark:border-white/20 rounded-md text-gray-900 dark:text-white text-sm px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">{t('admin.translations.allStatuses')}</option>
-              <option value="pending" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">{t('admin.translations.statusPending')}</option>
-              <option value="approved" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">{t('admin.translations.statusApproved')}</option>
-              <option value="rejected" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">{t('admin.translations.statusRejected')}</option>
-            </select>
+              className="min-w-[12rem]"
+              buttonClassName="rounded-md text-sm px-3 py-1.5"
+              options={[
+                { value: '', label: t('admin.translations.allStatuses') },
+                { value: 'pending', label: t('admin.translations.statusPending') },
+                { value: 'approved', label: t('admin.translations.statusApproved') },
+                { value: 'rejected', label: t('admin.translations.statusRejected') },
+              ]}
+            />
           </div>
 
           <div className="flex-1 min-w-[200px]">
-            <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
+            <label className="block text-xs theme-text-muted mb-1">
               {t('common.search')}
             </label>
             <SearchInputWithOverflowTooltip
@@ -842,14 +852,14 @@ export default function AdminTranslationsPage() {
               onChange={(e) => { setSearch(e.target.value); setPage(0) }}
               placeholder={t('admin.translations.searchPlaceholder')}
               title={getEnglishTooltip('admin.translations.searchPlaceholder')}
-              className="w-full bg-white dark:bg-white/5 border border-gray-300 dark:border-white/20 rounded-md text-gray-900 dark:text-white text-sm px-3 py-1.5 placeholder-gray-500 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border rounded-md text-sm px-3 py-1.5 theme-input"
             />
           </div>
 
           {(langFilter || statusFilter || search) && (
             <button
               onClick={() => { setLangFilter(''); setStatusFilter(''); setSearch(''); setPage(0) }}
-              className="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white border border-gray-300 dark:border-white/20 rounded-md transition-colors"
+              className="px-3 py-1.5 text-sm rounded-md transition-colors theme-btn-neutral"
               title={getEnglishTooltip('common.clearFilters')}
             >
               {t('common.clearFilters')}
@@ -858,7 +868,7 @@ export default function AdminTranslationsPage() {
 
           <button
             onClick={() => setShowHelpPanel(true)}
-            className="ml-auto px-3 py-1.5 text-sm rounded-md border border-cyan-300 text-cyan-800 bg-cyan-50 hover:bg-cyan-100 dark:border-cyan-700/50 dark:text-cyan-200 dark:bg-cyan-900/20 dark:hover:bg-cyan-900/35 transition-colors"
+            className="ml-auto px-3 py-1.5 text-sm rounded-md transition-colors theme-btn-neutral theme-focus"
             title={getEnglishTooltip('admin.translations.help.openButton')}
           >
             ? {t('admin.translations.help.openButton')}
@@ -890,15 +900,15 @@ export default function AdminTranslationsPage() {
         {hasActiveFilters && (
           <div
             ref={filterBarRef}
-            className="sticky top-0 z-40 bg-blue-50 dark:bg-blue-900 border-b-2 border-blue-200 dark:border-blue-700 px-4 py-2 shadow-md rounded-t-lg"
+            className="sticky top-0 z-40 theme-filterbar border-b-2 border-[rgb(var(--ring-rgb)/0.35)] px-4 py-2 shadow-md rounded-t-lg"
           >
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2 flex-wrap text-sm">
-                <span className="font-medium text-blue-900 dark:text-blue-100">{t('leiRecords.filters.activeFilters')}</span>
+                <span className="font-medium theme-link">{t('leiRecords.filters.activeFilters')}</span>
                 {langFilter && (
                   <button
                     onClick={() => setLangFilter('')}
-                    className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors"
+                    className="px-2 py-1 rounded text-xs font-medium transition-colors theme-filterchip"
                   >
                     {t('admin.translations.filterByLanguage')}: {langFilter.toUpperCase()} <span className="ml-1">✕</span>
                   </button>
@@ -906,7 +916,7 @@ export default function AdminTranslationsPage() {
                 {statusFilter && (
                   <button
                     onClick={() => setStatusFilter('')}
-                    className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors"
+                    className="px-2 py-1 rounded text-xs font-medium transition-colors theme-filterchip"
                   >
                     {t('admin.translations.filterByStatus')}: {statusFilter.toUpperCase()} <span className="ml-1">✕</span>
                   </button>
@@ -914,7 +924,7 @@ export default function AdminTranslationsPage() {
                 {search.trim() && (
                   <button
                     onClick={() => setSearch('')}
-                    className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors"
+                    className="px-2 py-1 rounded text-xs font-medium transition-colors theme-filterchip"
                   >
                     {t('filters.searchChip', { value: search.trim() })} <span className="ml-1">✕</span>
                   </button>
@@ -922,7 +932,7 @@ export default function AdminTranslationsPage() {
               </div>
               <button
                 onClick={() => { setLangFilter(''); setStatusFilter(''); setSearch(''); setPage(0) }}
-                className="px-3 py-1 text-xs rounded-lg bg-white hover:bg-gray-100 dark:bg-blue-600 dark:hover:bg-blue-700 text-blue-900 dark:text-white border border-blue-300 dark:border-transparent transition-colors font-medium shadow-sm"
+                className="px-3 py-1 text-xs rounded-lg theme-filterchip-clear transition-colors font-medium shadow-sm"
               >
                 {t('filters.clearAll')}
               </button>
@@ -932,12 +942,12 @@ export default function AdminTranslationsPage() {
 
         {/* Table */}
         {loading ? (
-          <div className="bg-white dark:bg-white/5 backdrop-blur-sm border-2 border-gray-200 dark:border-white/10 rounded-lg">
+          <div className="theme-table-shell backdrop-blur-sm border-2 rounded-lg">
             <LoadingSpinner message={t('common.loading')} />
           </div>
         ) : displayedTranslations.length === 0 ? (
-          <div className="bg-white dark:bg-white/5 backdrop-blur-sm border-2 border-gray-200 dark:border-white/10 rounded-lg">
-            <div className="text-center py-16 text-gray-600 dark:text-gray-400">
+          <div className="theme-table-shell backdrop-blur-sm border-2 rounded-lg">
+            <div className="text-center py-16 theme-text-muted">
               {t('admin.translations.noTranslations')}
             </div>
           </div>
@@ -948,12 +958,12 @@ export default function AdminTranslationsPage() {
               dependencyKey={`${displayedTranslations.length}-${sortField ?? 'default'}-${sortDirection}-${actionLoading ?? 'idle'}`}
               tableClassName="min-w-full"
               tableStyle={{ tableLayout: 'auto', borderCollapse: 'collapse' }}
-              mainHeaderClassName="bg-gray-100 dark:bg-gray-800"
-              stickyHeaderClassName="bg-gray-100 dark:bg-gray-800"
-              bodyClassName="divide-y divide-gray-200 dark:divide-white/10"
-              topScrollbarClassName="mb-1 overflow-x-auto bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 rounded-t-lg"
-              stickyContainerClassName="fixed z-30 overflow-x-auto bg-white border-b-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm shadow-lg transition-all duration-300 ease-in-out"
-              containerClassName="overflow-x-auto bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm shadow-lg"
+              mainHeaderClassName="theme-table-header"
+              stickyHeaderClassName="theme-table-header"
+              bodyClassName="divide-y [--tw-divide-opacity:1] divide-[rgb(var(--border-rgb)/0.7)]"
+              topScrollbarClassName="mb-1 overflow-x-auto theme-table-shell border-2 [--tw-border-opacity:1] border-[rgb(var(--border-rgb)/0.75)] rounded-t-lg"
+              stickyContainerClassName="fixed z-30 overflow-x-auto theme-table-shell border-b-2 [--tw-border-opacity:1] border-[rgb(var(--border-rgb)/0.8)] backdrop-blur-sm shadow-lg transition-all duration-300 ease-in-out"
+              containerClassName="overflow-x-auto theme-table-shell border-2 [--tw-border-opacity:1] border-[rgb(var(--border-rgb)/0.75)] backdrop-blur-sm shadow-lg"
               containerStyle={{
                 borderTopLeftRadius: hasActiveFilters ? 0 : '0.5rem',
                 borderTopRightRadius: hasActiveFilters ? 0 : '0.5rem',
@@ -964,49 +974,49 @@ export default function AdminTranslationsPage() {
               headerRow={
                 <tr>
                   <SortableHeaderCell
-                    className="sticky top-0 z-20 bg-gray-100 dark:bg-gray-800 px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300"
+                    className="sticky top-0 z-20 theme-table-header px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell"
                     label={<span title={getEnglishTooltip('admin.translations.keyColumn')}>{t('admin.translations.keyColumn')}</span>}
                     onSort={() => handleSort('translation_key')}
                     isActiveSort={sortField === 'translation_key'}
                     sortDirection={sortDirection}
                   />
                   <SortableHeaderCell
-                    className="sticky top-0 z-20 bg-gray-100 dark:bg-gray-800 px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300"
+                    className="sticky top-0 z-20 theme-table-header px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell"
                     label={<span title={getEnglishTooltip('admin.translations.languageColumn')}>{t('admin.translations.languageColumn')}</span>}
                     onSort={() => handleSort('language_code')}
                     isActiveSort={sortField === 'language_code'}
                     sortDirection={sortDirection}
                   />
                   <SortableHeaderCell
-                    className="sticky top-0 z-20 bg-gray-100 dark:bg-gray-800 px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300"
+                    className="sticky top-0 z-20 theme-table-header px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell"
                     label={<span title={getEnglishTooltip('admin.translations.englishDefaultLabel')}>{t('admin.translations.englishDefaultLabel')}</span>}
                     onSort={() => handleSort('english_default')}
                     isActiveSort={sortField === 'english_default'}
                     sortDirection={sortDirection}
                   />
                   <SortableHeaderCell
-                    className="sticky top-0 z-20 bg-gray-100 dark:bg-gray-800 px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300"
+                    className="sticky top-0 z-20 theme-table-header px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell"
                     label={<span title={getEnglishTooltip('admin.translations.valueColumn')}>{t('admin.translations.valueColumn')}</span>}
                     onSort={() => handleSort('translation_value')}
                     isActiveSort={sortField === 'translation_value'}
                     sortDirection={sortDirection}
                   />
                   <SortableHeaderCell
-                    className="sticky top-0 z-20 bg-gray-100 dark:bg-gray-800 px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300"
+                    className="sticky top-0 z-20 theme-table-header px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell"
                     label={<span title={getEnglishTooltip('admin.translations.notesLabel')}>{t('admin.translations.notesLabel')}</span>}
                     onSort={() => handleSort('notes')}
                     isActiveSort={sortField === 'notes'}
                     sortDirection={sortDirection}
                   />
                   <SortableHeaderCell
-                    className="sticky top-0 z-20 bg-gray-100 dark:bg-gray-800 px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300"
+                    className="sticky top-0 z-20 theme-table-header px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell"
                     label={<span title={getEnglishTooltip('admin.translations.statusColumn')}>{t('admin.translations.statusColumn')}</span>}
                     onSort={() => handleSort('status')}
                     isActiveSort={sortField === 'status'}
                     sortDirection={sortDirection}
                   />
                   <SortableHeaderCell
-                    className="sticky top-0 z-20 bg-gray-100 dark:bg-gray-800 px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300"
+                    className="sticky top-0 z-20 theme-table-header px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell"
                     label={<span title={getEnglishTooltip('admin.translations.actionsColumn')}>{t('admin.translations.actionsColumn')}</span>}
                     sortable={false}
                   />
@@ -1032,18 +1042,18 @@ export default function AdminTranslationsPage() {
                     return (
                       <tr
                         key={tr.id}
-                        className="border-t border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+                        className="border-t [--tw-border-opacity:1] border-[rgb(var(--border-rgb)/0.35)] theme-table-row-hover transition-colors"
                       >
-                        <td className="px-4 py-3 font-mono text-xs text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                        <td className="px-4 py-3 font-mono text-xs whitespace-nowrap theme-text-muted">
                           {tr.translation_key}
                           {aliasTarget && (
-                            <span className="ml-2 inline-block rounded bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 px-1.5 py-0.5 text-[10px] align-middle">
+                            <span className="ml-2 inline-block rounded theme-subtle px-1.5 py-0.5 text-[10px] align-middle">
                               ALIAS
                             </span>
                           )}
                           {isSharedMaster && (
                             <span
-                              className="ml-2 inline-block rounded bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 px-1.5 py-0.5 text-[10px] align-middle"
+                              className="ml-2 inline-block rounded theme-subtle px-1.5 py-0.5 text-[10px] align-middle"
                               title={`Used by: ${referencedBy.join(', ')}`}
                             >
                               MASTER
@@ -1051,14 +1061,14 @@ export default function AdminTranslationsPage() {
                           )}
                           {isSharedDirect && (
                             <span
-                              className="ml-2 inline-block rounded bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300 px-1.5 py-0.5 text-[10px] align-middle"
+                              className="ml-2 inline-block rounded theme-subtle px-1.5 py-0.5 text-[10px] align-middle"
                               title="Shared key used directly across reference-data pages. Translate once per language unless you intentionally override elsewhere."
                             >
                               SHARED
                             </span>
                           )}
                           {isStaleTranslationKey(tr.translation_key) && (
-                            <span className="ml-2 inline-block rounded bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 px-1.5 py-0.5 text-[10px] align-middle">
+                            <span className="ml-2 inline-block rounded theme-subtle px-1.5 py-0.5 text-[10px] align-middle">
                               {t('admin.translations.stale.badge')}
                             </span>
                           )}
@@ -1066,12 +1076,12 @@ export default function AdminTranslationsPage() {
                         <td className="px-4 py-3 whitespace-nowrap">
                           {lang ? `${lang.flag} ${lang.nativeName}` : tr.language_code}
                         </td>
-                        <td className="px-4 py-3 max-w-xs truncate text-gray-600 dark:text-gray-400" title={displayEnglishDefault ?? ''}>
+                        <td className="px-4 py-3 max-w-xs truncate theme-text-muted" title={displayEnglishDefault ?? ''}>
                           {displayEnglishDefault ?? '-'}
                         </td>
                         <td className="px-4 py-3 max-w-xs truncate" title={tr.translation_value}>
                           {isAliasPointerRecord ? (
-                            <span className="text-purple-700 dark:text-purple-300 font-mono text-xs">
+                            <span className="theme-text-muted font-mono text-xs">
                               {'->'} {aliasTarget}
                               {resolvedAliasTranslation ? ` [${resolvedAliasTranslation}]` : ''}
                             </span>
@@ -1079,7 +1089,7 @@ export default function AdminTranslationsPage() {
                             tr.translation_value
                           )}
                         </td>
-                        <td className="px-4 py-3 max-w-xs text-gray-600 dark:text-gray-400 break-words" title={tr.notes ?? ''}>
+                        <td className="px-4 py-3 max-w-xs theme-text-muted break-words" title={tr.notes ?? ''}>
                           {tr.notes?.trim() ? tr.notes : '-'}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
@@ -1092,14 +1102,14 @@ export default function AdminTranslationsPage() {
                                 <button
                                   onClick={() => handleApprove(tr.id)}
                                   disabled={actionLoading !== null}
-                                  className="text-xs px-2.5 py-1 rounded bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-600/30 dark:text-green-300 dark:hover:bg-green-600/50 disabled:opacity-50 transition-colors"
+                                  className="text-xs px-2.5 py-1 rounded theme-btn-primary theme-focus disabled:opacity-50 transition-colors"
                                 >
                                   {t('admin.translations.approve')}
                                 </button>
                                 <button
                                   onClick={() => handleReject(tr.id, tr.translation_key, tr.language_code)}
                                   disabled={actionLoading !== null}
-                                  className="text-xs px-2.5 py-1 rounded bg-amber-100 text-amber-800 hover:bg-amber-200 dark:bg-yellow-600/30 dark:text-yellow-300 dark:hover:bg-yellow-600/50 disabled:opacity-50 transition-colors"
+                                  className="text-xs px-2.5 py-1 rounded theme-btn-neutral theme-focus disabled:opacity-50 transition-colors"
                                 >
                                   {t('admin.translations.reject')}
                                 </button>
@@ -1108,7 +1118,7 @@ export default function AdminTranslationsPage() {
                             <button
                               onClick={() => handleDelete(tr.id, tr.translation_key, tr.language_code)}
                               disabled={actionLoading !== null}
-                              className="text-xs px-2.5 py-1 rounded bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-600/30 dark:text-red-300 dark:hover:bg-red-600/50 disabled:opacity-50 transition-colors"
+                              className="text-xs px-2.5 py-1 rounded theme-btn-neutral theme-focus disabled:opacity-50 transition-colors"
                             >
                               {t('common.delete')}
                             </button>
@@ -1167,39 +1177,39 @@ export default function AdminTranslationsPage() {
             onClick={() => setShowHelpPanel(false)}
             aria-label={t('admin.translations.help.closeButton')}
           />
-          <aside className="absolute right-0 top-0 h-full w-full max-w-md bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-white/10 shadow-2xl p-6 overflow-y-auto">
+          <aside className="absolute right-0 top-0 h-full w-full max-w-md theme-panel border-l [--tw-border-opacity:1] border-[rgb(var(--border-rgb)/0.75)] shadow-2xl p-6 overflow-y-auto theme-scrollbar">
             <div className="flex items-start justify-between gap-3 mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{t('admin.translations.help.panelTitle')}</h2>
+              <h2 className="text-lg font-semibold">{t('admin.translations.help.panelTitle')}</h2>
               <button
                 type="button"
                 onClick={() => setShowHelpPanel(false)}
-                className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                className="theme-text-muted hover:opacity-80 transition-colors"
                 aria-label={t('admin.translations.help.closeButton')}
               >
                 ✕
               </button>
             </div>
 
-            <p className="text-sm text-gray-700 dark:text-gray-300 mb-4">{t('admin.translations.help.intro')}</p>
+            <p className="text-sm theme-text-muted mb-4">{t('admin.translations.help.intro')}</p>
 
             <div className="space-y-4 text-sm">
-              <div className="rounded-lg border border-purple-200 dark:border-purple-900/50 bg-purple-50 dark:bg-purple-900/20 p-3">
-                <p className="font-semibold text-purple-900 dark:text-purple-200">ALIAS</p>
-                <p className="text-purple-800 dark:text-purple-300">{t('admin.translations.help.aliasDescription')}</p>
+              <div className="rounded-lg border border-[rgb(var(--border-rgb)/0.6)] bg-[rgb(var(--surface-rgb)/0.7)] p-3">
+                <p className="font-semibold">ALIAS</p>
+                <p className="theme-text-muted">{t('admin.translations.help.aliasDescription')}</p>
               </div>
 
-              <div className="rounded-lg border border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-900/20 p-3">
-                <p className="font-semibold text-blue-900 dark:text-blue-200">MASTER</p>
-                <p className="text-blue-800 dark:text-blue-300">{t('admin.translations.help.masterDescription')}</p>
+              <div className="rounded-lg border border-[rgb(var(--border-rgb)/0.6)] bg-[rgb(var(--surface-rgb)/0.7)] p-3">
+                <p className="font-semibold">MASTER</p>
+                <p className="theme-text-muted">{t('admin.translations.help.masterDescription')}</p>
               </div>
 
-              <div className="rounded-lg border border-cyan-200 dark:border-cyan-900/50 bg-cyan-50 dark:bg-cyan-900/20 p-3">
-                <p className="font-semibold text-cyan-900 dark:text-cyan-200">SHARED</p>
-                <p className="text-cyan-800 dark:text-cyan-300">{t('admin.translations.help.sharedDescription')}</p>
+              <div className="rounded-lg border border-[rgb(var(--border-rgb)/0.6)] bg-[rgb(var(--surface-rgb)/0.7)] p-3">
+                <p className="font-semibold">SHARED</p>
+                <p className="theme-text-muted">{t('admin.translations.help.sharedDescription')}</p>
               </div>
             </div>
 
-            <div className="mt-5 rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 p-3 text-sm text-gray-700 dark:text-gray-300">
+            <div className="mt-5 rounded-lg border border-[rgb(var(--border-rgb)/0.6)] bg-[rgb(var(--surface-rgb)/0.7)] p-3 text-sm theme-text-muted">
               <p className="font-medium mb-1">{t('admin.translations.help.ruleTitle')}</p>
               <p>{t('admin.translations.help.ruleBody')}</p>
             </div>
@@ -1210,14 +1220,14 @@ export default function AdminTranslationsPage() {
       {/* New Translation Modal */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/20 rounded-xl shadow-2xl w-full max-w-lg">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-white/10">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <div className="theme-panel border border-[rgb(var(--border-rgb)/0.6)] rounded-xl shadow-2xl w-full max-w-lg">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[rgb(var(--border-rgb)/0.5)]">
+              <h2 className="text-lg font-semibold">
                 {t('admin.translations.newTranslation')}
               </h2>
               <button
                 onClick={() => setShowForm(false)}
-                className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                className="theme-text-muted hover:opacity-80 transition-colors"
                 aria-label={t('common.close')}
               >
                 ✕
@@ -1230,44 +1240,43 @@ export default function AdminTranslationsPage() {
               )}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium theme-text-muted mb-1">
                   {t('admin.translations.keyLabel')} <span className="text-red-500 dark:text-red-400">*</span>
                 </label>
-                <select
-                  required
+                <ThemedSelect
                   value={formData.translation_key}
-                  onChange={(e) => setFormData((d) => ({ ...d, translation_key: e.target.value }))}
-                  className="w-full bg-white dark:bg-white/5 border border-gray-300 dark:border-white/20 rounded-md text-gray-900 dark:text-white text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="" disabled>{t('admin.translations.keyPlaceholder')}</option>
-                  {translationKeyOptions.map((key) => (
-                    <option key={key} value={key} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
-                      {key}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(next) => setFormData((d) => ({ ...d, translation_key: next }))}
+                  ariaLabel={t('admin.translations.keyLabel')}
+                  title={formData.translation_key || t('admin.translations.keyPlaceholder')}
+                  className="w-full"
+                  buttonClassName="rounded-md text-sm px-3 py-2"
+                  options={[
+                    { value: '', label: t('admin.translations.keyPlaceholder') },
+                    ...translationKeyOptions.map((key) => ({ value: key, label: key })),
+                  ]}
+                />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium theme-text-muted mb-1">
                   {t('admin.translations.languageLabel')} <span className="text-red-500 dark:text-red-400">*</span>
                 </label>
-                <select
-                  required
+                <ThemedSelect
                   value={formData.language_code}
-                  onChange={(e) => setFormData((d) => ({ ...d, language_code: e.target.value }))}
-                  className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-white/20 rounded-md text-gray-900 dark:text-white text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {TARGET_TRANSLATION_LANGUAGES.map((l) => (
-                    <option key={l.code} value={l.code} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
-                      {l.flag} {l.nativeName} ({l.code})
-                    </option>
-                  ))}
-                </select>
+                  onChange={(next) => setFormData((d) => ({ ...d, language_code: next }))}
+                  ariaLabel={t('admin.translations.languageLabel')}
+                  title={formData.language_code}
+                  className="w-full"
+                  buttonClassName="rounded-md text-sm px-3 py-2"
+                  options={TARGET_TRANSLATION_LANGUAGES.map((l) => ({
+                    value: l.code,
+                    label: `${l.flag} ${l.nativeName} (${l.code})`,
+                  }))}
+                />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium theme-text-muted mb-1">
                   {t('admin.translations.englishDefaultLabel')}
                 </label>
                 <textarea
@@ -1275,17 +1284,17 @@ export default function AdminTranslationsPage() {
                   rows={3}
                   value={selectedEnglishDefault ?? ''}
                   placeholder={t('admin.translations.englishDefaultPlaceholder')}
-                  className="w-full bg-gray-50 dark:bg-white/5 border border-gray-300 dark:border-white/20 rounded-md text-gray-900 dark:text-gray-200 text-sm px-3 py-2 placeholder-gray-500 focus:outline-none resize-none"
+                  className="w-full rounded-md text-sm px-3 py-2 theme-input theme-text-muted resize-none"
                 />
                 {selectedAliasTarget && (
-                  <p className="mt-1 text-xs text-purple-700 dark:text-purple-300 font-mono">
+                  <p className="mt-1 text-xs theme-text-muted font-mono">
                     Alias target: {selectedAliasTarget}
                   </p>
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium theme-text-muted mb-1">
                   {t('admin.translations.valueLabel')} <span className="text-red-500 dark:text-red-400">*</span>
                 </label>
                 <textarea
@@ -1294,12 +1303,12 @@ export default function AdminTranslationsPage() {
                   value={formData.translation_value}
                   onChange={(e) => setFormData((d) => ({ ...d, translation_value: e.target.value }))}
                   placeholder={t('admin.translations.valuePlaceholder')}
-                  className="w-full bg-white dark:bg-white/5 border border-gray-300 dark:border-white/20 rounded-md text-gray-900 dark:text-white text-sm px-3 py-2 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  className="w-full rounded-md text-sm px-3 py-2 theme-input theme-focus resize-none"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium theme-text-muted mb-1">
                   {t('admin.translations.notesLabel')}
                 </label>
                 <input
@@ -1307,7 +1316,7 @@ export default function AdminTranslationsPage() {
                   value={formData.notes}
                   onChange={(e) => setFormData((d) => ({ ...d, notes: e.target.value }))}
                   placeholder={t('admin.translations.notesPlaceholder')}
-                  className="w-full bg-white dark:bg-white/5 border border-gray-300 dark:border-white/20 rounded-md text-gray-900 dark:text-white text-sm px-3 py-2 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-md text-sm px-3 py-2 theme-input theme-focus"
                 />
               </div>
 
@@ -1315,14 +1324,14 @@ export default function AdminTranslationsPage() {
                 <button
                   type="button"
                   onClick={() => setShowForm(false)}
-                  className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white border border-gray-300 dark:border-white/20 rounded-lg transition-colors"
+                  className="flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-colors theme-btn-neutral theme-focus"
                 >
                   {t('common.cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={formLoading}
-                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg transition-colors"
+                  className="flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-colors theme-btn-primary theme-focus disabled:opacity-50"
                 >
                   {formLoading ? t('common.loading') : t('admin.translations.submitForReview')}
                 </button>

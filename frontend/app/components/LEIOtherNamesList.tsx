@@ -69,10 +69,10 @@ export default function LEIOtherNamesList({
   showLabel = true,
   label = 'Other names:',
   labelClassName = '',
-  className = 'mt-1 text-xs text-gray-500 dark:text-gray-400',
+  className = 'mt-1 text-xs theme-text-muted',
   listClassName = '',
   itemClassName = 'ml-2',
-  languageClassName = 'ml-1 text-gray-400 dark:text-gray-500',
+  languageClassName = 'ml-1 theme-text-muted',
 }: LEIOtherNamesListProps) {
   const otherNames = parseOtherNames(otherNamesData)
   if (otherNames.length === 0) {

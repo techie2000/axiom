@@ -12,6 +12,7 @@ import SearchInputWithOverflowTooltip from '../components/SearchInputWithOverflo
 import SortableHeaderCell from '../components/SortableHeaderCell'
 import StatCard from '../components/StatCard'
 import SyncedWideTable from '../components/SyncedWideTable'
+import ThemedSelect from '../components/ThemedSelect'
 import { useDeferredBooleanPreference } from '../lib/useDeferredBooleanPreference'
 import { useEnglishTooltips } from '../lib/useEnglishTooltips'
 import { useButtonEmojiMode } from '../lib/useButtonEmojiMode'
@@ -218,7 +219,7 @@ export default function LanguagesPage() {
             <>
               <button
                 onClick={expandedWidthPreference.toggle}
-                className="h-9 px-3 rounded-lg border border-gray-300 dark:border-white/20 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                className="theme-header-action rounded-lg theme-btn-neutral theme-focus"
                 title={effectiveExpandedWidth ? getEnglishTooltip('referenceLayout.normalButton') : getEnglishTooltip('referenceLayout.expandButton')}
                 aria-label={effectiveExpandedWidth ? t('referenceLayout.normalButton') : t('referenceLayout.expandButton')}
               >
@@ -227,7 +228,7 @@ export default function LanguagesPage() {
               {expandedWidthPreference.hasUnsavedChanges && (
                 <button
                   onClick={expandedWidthPreference.saveCurrentValue}
-                  className="px-3 py-2 rounded-lg bg-green-700 hover:bg-green-600 transition-colors text-white text-xs font-medium"
+                  className="theme-header-action rounded-lg theme-btn-primary theme-focus"
                   title={getEnglishTooltip('referenceLayout.savePageWidthDefault')}
                 >
                   {formatLabel('💾 Save width')}
@@ -235,7 +236,7 @@ export default function LanguagesPage() {
               )}
               <button
                 onClick={referenceDisplayPreference.toggle}
-                className="h-9 px-3 rounded-lg border border-gray-300 dark:border-white/20 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                className="theme-header-action rounded-lg theme-btn-neutral theme-focus"
                 title={showReferenceCodes ? getEnglishTooltip('referenceLayout.displayCodesButton') : getEnglishTooltip('referenceLayout.displayNamesButton')}
                 aria-label={showReferenceCodes ? t('referenceLayout.displayCodesButton') : t('referenceLayout.displayNamesButton')}
               >
@@ -278,38 +279,40 @@ export default function LanguagesPage() {
           />
         </div>
 
-        <div className="mb-6 bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm rounded-lg p-6">
+        <div className="mb-6 theme-panel border-2 backdrop-blur-sm rounded-lg p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">{t('languages.filters.search')}</label>
+              <label className="block text-sm font-medium mb-2 theme-text-muted">{t('languages.filters.search')}</label>
               <SearchInputWithOverflowTooltip
                 type="text"
                 placeholder={t('languages.searchPlaceholder')}
                 title={getEnglishTooltip('languages.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-white/20 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-white/5 text-gray-900 dark:text-white"
+                className="w-full px-4 py-2 border rounded-lg theme-input"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">{t('languages.filters.direction')}</label>
-              <select
+              <label className="block text-sm font-medium mb-2 theme-text-muted">{t('languages.filters.direction')}</label>
+              <ThemedSelect
                 value={directionFilter}
-                onChange={(e) => setDirectionFilter(e.target.value as DirectionFilter)}
+                onChange={(next) => setDirectionFilter(next as DirectionFilter)}
+                ariaLabel={t('languages.filters.direction')}
                 title={getEnglishTooltip(directionFilterTranslationKey)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-white/20 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-              >
-                <option value="all" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white" title={getEnglishTooltip('languages.filters.all')}>{t('languages.filters.all')}</option>
-                <option value="rtl" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white" title={getEnglishTooltip('languages.filters.rtl')}>{t('languages.filters.rtl')}</option>
-                <option value="ltr" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white" title={getEnglishTooltip('languages.filters.ltr')}>{t('languages.filters.ltr')}</option>
-              </select>
+                className="w-full"
+                options={[
+                  { value: 'all', label: t('languages.filters.all'), title: getEnglishTooltip('languages.filters.all') },
+                  { value: 'rtl', label: t('languages.filters.rtl'), title: getEnglishTooltip('languages.filters.rtl') },
+                  { value: 'ltr', label: t('languages.filters.ltr'), title: getEnglishTooltip('languages.filters.ltr') },
+                ]}
+              />
             </div>
           </div>
           {hasActiveFilters && (
             <div className="flex gap-3">
               <button
                 onClick={clearFilters}
-                className="px-6 py-2 rounded-lg bg-white hover:bg-gray-100 dark:bg-gray-600 dark:hover:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-transparent transition-colors font-medium shadow-sm"
+                className="px-6 py-2 rounded-lg theme-btn-neutral transition-colors font-medium shadow-sm"
                 title={getEnglishTooltip('actions.clearFilters')}
               >
                 {t('actions.clearFilters')}
@@ -321,15 +324,15 @@ export default function LanguagesPage() {
         {hasActiveFilters && (
           <div
             ref={filterBarRef}
-            className="sticky top-0 z-40 mb-1 bg-blue-50 dark:bg-blue-900 border-2 border-blue-200 dark:border-blue-700 px-4 py-2 shadow-md rounded-lg"
+            className="sticky top-0 z-40 mb-1 theme-filterbar border-2 border-[rgb(var(--ring-rgb)/0.35)] px-4 py-2 shadow-md rounded-lg"
           >
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-semibold text-blue-900 dark:text-blue-100">{t('filters.activeFilters')}</span>
+                <span className="text-xs font-semibold theme-link">{t('filters.activeFilters')}</span>
                 {searchTerm && (
                   <button
                     onClick={() => setSearchTerm('')}
-                    className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors"
+                    className="px-2 py-1 rounded text-xs font-medium transition-colors theme-filterchip"
                     title={getEnglishTooltip('filters.searchChip', { value: searchTerm })}
                   >
                     {t('filters.searchChip', { value: searchTerm })}
@@ -338,7 +341,7 @@ export default function LanguagesPage() {
                 {directionFilter !== 'all' && (
                   <button
                     onClick={() => setDirectionFilter('all')}
-                    className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors"
+                    className="px-2 py-1 rounded text-xs font-medium transition-colors theme-filterchip"
                     title={getEnglishTooltip('languages.filters.directionChip', { value: directionFilter.toUpperCase() })}
                   >
                     {t('languages.filters.directionChip', { value: directionFilter.toUpperCase() })}
@@ -347,7 +350,7 @@ export default function LanguagesPage() {
               </div>
               <button
                 onClick={clearFilters}
-                className="px-3 py-1 text-xs rounded-lg bg-white hover:bg-gray-100 dark:bg-blue-600 dark:hover:bg-blue-700 text-blue-900 dark:text-white border border-blue-300 dark:border-transparent transition-colors font-medium shadow-sm"
+                className="px-3 py-1 text-xs rounded-lg theme-filterchip-clear transition-colors font-medium shadow-sm"
                 title={getEnglishTooltip('filters.clearAll')}
               >
                 {t('filters.clearAll')}
@@ -356,14 +359,14 @@ export default function LanguagesPage() {
           </div>
         )}
 
-        <div className="bg-white dark:bg-white/5 rounded-lg shadow border-2 border-gray-200 dark:border-white/10">
+        <div className="theme-table-shell rounded-lg shadow border-2">
           <SyncedWideTable
             stickyTopOffset={hasActiveFilters ? filterBarHeight : 0}
             dependencyKey={`${effectiveExpandedWidth}-${showReferenceCodes}-${filteredLanguages.length}-${directionFilter}-${searchTerm}`}
             headerRow={(
               <tr>
                 <SortableHeaderCell
-                  className={`${showReferenceCodes ? 'w-24 px-4' : 'w-64 px-6'} py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider`}
+                  className={`${showReferenceCodes ? 'w-24 px-4' : 'w-64 px-6'} py-3 text-xs font-medium uppercase tracking-wider theme-table-header-cell`}
                   align={showReferenceCodes ? 'center' : 'left'}
                   label={showReferenceCodes ? t('languages.columns.code') : t('languages.columns.languageName')}
                   onSort={() => handleSort(showReferenceCodes ? 'code' : 'name')}
@@ -371,7 +374,7 @@ export default function LanguagesPage() {
                   sortDirection={sortDirection}
                 />
                 <SortableHeaderCell
-                  className={`${showReferenceCodes ? 'w-64 px-6' : 'w-24 px-4'} py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider`}
+                  className={`${showReferenceCodes ? 'w-64 px-6' : 'w-24 px-4'} py-3 text-xs font-medium uppercase tracking-wider theme-table-header-cell`}
                   align={showReferenceCodes ? 'left' : 'center'}
                   label={showReferenceCodes ? t('languages.columns.languageName') : t('languages.columns.code')}
                   onSort={() => handleSort(showReferenceCodes ? 'name' : 'code')}
@@ -379,14 +382,14 @@ export default function LanguagesPage() {
                   sortDirection={sortDirection}
                 />
                 <SortableHeaderCell
-                  className="w-64 px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="w-64 px-6 py-3 text-xs font-medium uppercase tracking-wider theme-table-header-cell"
                   label={t('languages.columns.nativeName')}
                   onSort={() => handleSort('native')}
                   isActiveSort={sortField === 'native'}
                   sortDirection={sortDirection}
                 />
                 <SortableHeaderCell
-                  className="w-36 px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="w-36 px-6 py-3 text-xs font-medium uppercase tracking-wider theme-table-header-cell"
                   align="center"
                   label={t('languages.columns.direction')}
                   onSort={() => handleSort('rtl')}
@@ -399,22 +402,22 @@ export default function LanguagesPage() {
               <>
                 {filteredLanguages.length > 0 ? (
                   filteredLanguages.map((language) => (
-                    <tr key={language.code} className="hover:bg-blue-50 dark:hover:bg-white/10 transition-colors">
-                      <td className={`${showReferenceCodes ? 'px-4' : 'px-6'} py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white ${showReferenceCodes ? 'text-center' : ''}`}>
+                    <tr key={language.code} className="theme-table-row-hover transition-colors">
+                      <td className={`${showReferenceCodes ? 'px-4' : 'px-6'} py-4 whitespace-nowrap text-sm font-medium ${showReferenceCodes ? 'text-center' : ''}`}>
                         {showReferenceCodes ? (
                           <Badge variant="blue" mono>{language.code}</Badge>
                         ) : (
                           language.name || '-'
                         )}
                       </td>
-                      <td className={`${showReferenceCodes ? 'px-6' : 'px-4'} py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 ${showReferenceCodes ? '' : 'text-center'}`}>
+                      <td className={`${showReferenceCodes ? 'px-6' : 'px-4'} py-4 whitespace-nowrap text-sm theme-text-muted ${showReferenceCodes ? '' : 'text-center'}`}>
                         {showReferenceCodes ? (
-                          <span className="text-gray-900 dark:text-white">{language.name || '-'}</span>
+                          <span>{language.name || '-'}</span>
                         ) : (
                           <Badge variant="blue" mono>{language.code}</Badge>
                         )}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                      <td className="px-6 py-4 text-sm theme-text-muted">
                         {language.native || '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
@@ -428,7 +431,7 @@ export default function LanguagesPage() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={4} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                    <td colSpan={4} className="px-6 py-4 text-center text-sm theme-text-muted">
                       {t('languages.emptyWithSearch')}
                     </td>
                   </tr>
@@ -438,7 +441,7 @@ export default function LanguagesPage() {
           />
         </div>
 
-        <div className="mt-6 text-center text-sm text-gray-500">
+        <div className="mt-6 text-center text-sm theme-text-muted">
           <p>{t('languages.footer')}</p>
         </div>
       </div>

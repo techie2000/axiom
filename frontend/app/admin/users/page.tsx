@@ -31,13 +31,13 @@ interface User {
 
 function statusBadge(status: string, label: string) {
   const variants: Record<string, string> = {
-    pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300',
-    active: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
-    inactive: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
+    pending: 'theme-subtle',
+    active: 'theme-subtle',
+    inactive: 'theme-subtle',
   }
   return (
     <span
-      className={`px-2 py-0.5 text-xs font-medium rounded-full ${variants[status] ?? 'bg-gray-100 text-gray-700'}`}
+      className={`px-2 py-0.5 text-xs font-medium rounded-full ${variants[status] ?? 'theme-subtle'}`}
     >
       {label}
     </span>
@@ -46,13 +46,7 @@ function statusBadge(status: string, label: string) {
 
 function roleBadge(role: string, label: string) {
   return (
-    <span
-      className={`px-2 py-0.5 text-xs font-medium rounded-full ${
-        role === 'admin'
-          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300'
-          : 'bg-gray-100 text-gray-700 dark:bg-gray-700/40 dark:text-gray-300'
-      }`}
-    >
+    <span className="px-2 py-0.5 text-xs font-medium rounded-full theme-subtle">
       {label}
     </span>
   )
@@ -203,11 +197,11 @@ function AdminUsersContent() {
         />
 
         {isBootstrap && (
-          <div className="mb-6 p-4 rounded-lg bg-amber-50 border-2 border-amber-300 dark:bg-amber-900/20 dark:border-amber-600">
-            <p className="text-amber-800 dark:text-amber-300 font-medium">
+          <div className="mb-6 p-4 rounded-lg theme-panel border-2 border-[rgb(var(--border-rgb)/0.7)]">
+            <p className="font-medium">
               {t('admin.users.bootstrapWarning.title')}
             </p>
-            <p className="text-amber-700 dark:text-amber-400 text-sm mt-1">
+            <p className="theme-text-muted text-sm mt-1">
               {t('admin.users.bootstrapWarning.bodyBefore')}{' '}
               <strong>{t('admin.users.actions.promoteToAdmin')}</strong>{' '}
               {t('admin.users.bootstrapWarning.bodyAfter')}
@@ -227,8 +221,8 @@ function AdminUsersContent() {
               title={s === '' ? getEnglishTooltip('admin.users.filters.all') : undefined}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 statusFilter === s
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/10'
+                  ? 'theme-btn-primary'
+                  : 'theme-btn-neutral'
               }`}
             >
               {s === ''
@@ -241,7 +235,7 @@ function AdminUsersContent() {
         {loading ? (
           <LoadingSpinner message={t('admin.users.loadingUsers')} />
         ) : users.length === 0 ? (
-          <div className="text-center py-16 text-gray-500 dark:text-gray-400">
+          <div className="text-center py-16 theme-text-muted">
             {t('admin.users.emptyWithStatus', {
               status: statusFilter
                 ? getStatusLabel(statusFilter)
@@ -249,36 +243,36 @@ function AdminUsersContent() {
             })}
           </div>
         ) : (
-          <div className="bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm rounded-lg shadow overflow-hidden">
+          <div className="theme-table-shell border-2 backdrop-blur-sm rounded-lg shadow overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-gray-50 dark:bg-white/5 border-b border-gray-200 dark:border-white/10">
-                  <th className="px-4 py-3 text-left font-medium text-gray-700 dark:text-gray-300"><span title={getEnglishTooltip('admin.users.columns.user')}>{t('admin.users.columns.user')}</span></th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-700 dark:text-gray-300"><span title={getEnglishTooltip('admin.users.columns.username')}>{t('admin.users.columns.username')}</span></th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-700 dark:text-gray-300"><span title={getEnglishTooltip('admin.users.columns.role')}>{t('admin.users.columns.role')}</span></th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-700 dark:text-gray-300"><span title={getEnglishTooltip('admin.users.columns.status')}>{t('admin.users.columns.status')}</span></th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-700 dark:text-gray-300"><span title={getEnglishTooltip('admin.users.columns.requested')}>{t('admin.users.columns.requested')}</span></th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-700 dark:text-gray-300"><span title={getEnglishTooltip('admin.users.columns.actions')}>{t('admin.users.columns.actions')}</span></th>
+                <tr className="theme-table-header border-b border-[rgb(var(--border-rgb))]">
+                  <th className="px-4 py-3 text-left font-medium theme-table-header-cell"><span title={getEnglishTooltip('admin.users.columns.user')}>{t('admin.users.columns.user')}</span></th>
+                  <th className="px-4 py-3 text-left font-medium theme-table-header-cell"><span title={getEnglishTooltip('admin.users.columns.username')}>{t('admin.users.columns.username')}</span></th>
+                  <th className="px-4 py-3 text-left font-medium theme-table-header-cell"><span title={getEnglishTooltip('admin.users.columns.role')}>{t('admin.users.columns.role')}</span></th>
+                  <th className="px-4 py-3 text-left font-medium theme-table-header-cell"><span title={getEnglishTooltip('admin.users.columns.status')}>{t('admin.users.columns.status')}</span></th>
+                  <th className="px-4 py-3 text-left font-medium theme-table-header-cell"><span title={getEnglishTooltip('admin.users.columns.requested')}>{t('admin.users.columns.requested')}</span></th>
+                  <th className="px-4 py-3 text-left font-medium theme-table-header-cell"><span title={getEnglishTooltip('admin.users.columns.actions')}>{t('admin.users.columns.actions')}</span></th>
                 </tr>
               </thead>
               <tbody>
                 {users.map((user) => (
                   <tr
                     key={user.id}
-                    className="border-b border-gray-100 dark:border-white/5 hover:bg-blue-50 dark:hover:bg-white/5 transition-colors"
+                    className="border-b border-[rgb(var(--border-rgb)/0.4)] theme-table-row-hover transition-colors"
                   >
                     <td className="px-4 py-3 align-top">
-                      <div className="font-medium text-gray-900 dark:text-white">
+                      <div className="font-medium">
                         {user.full_name || t('admin.users.fallback.none')}
                       </div>
-                      <div className="text-gray-500 dark:text-gray-400 text-xs">{user.email}</div>
+                      <div className="theme-text-muted text-xs">{user.email}</div>
                     </td>
-                    <td className="px-4 py-3 text-gray-700 dark:text-gray-300 align-top font-mono text-xs">
+                    <td className="px-4 py-3 theme-text-muted align-top font-mono text-xs">
                       {user.username}
                     </td>
                     <td className="px-4 py-3 align-top">{roleBadge(user.role, getRoleLabel(user.role))}</td>
                     <td className="px-4 py-3 align-top">{statusBadge(user.status, getStatusLabel(user.status))}</td>
-                    <td className="px-4 py-3 text-gray-500 dark:text-gray-400 align-top text-xs">
+                    <td className="px-4 py-3 theme-text-muted align-top text-xs">
                       {user.created_at && !user.created_at.startsWith('0001-')
                         ? new Date(user.created_at).toISOString().split('T')[0]
                         : t('admin.users.fallback.none')}
@@ -290,7 +284,7 @@ function AdminUsersContent() {
                             onClick={() => handleApprove(user.id)}
                             disabled={actionLoading === user.id + '-approve'}
                             title={getEnglishTooltip('admin.users.actions.approve')}
-                            className="px-3 py-1 text-xs bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white rounded transition-colors"
+                            className="px-3 py-1 text-xs rounded theme-btn-primary theme-focus disabled:opacity-60"
                           >
                             {actionLoading === user.id + '-approve' ? t('admin.users.actions.loading') : t('admin.users.actions.approve')}
                           </button>
@@ -300,7 +294,7 @@ function AdminUsersContent() {
                             onClick={() => handleReject(user.id)}
                             disabled={actionLoading === user.id + '-reject'}
                             title={getEnglishTooltip('admin.users.actions.deactivate')}
-                            className="px-3 py-1 text-xs bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white rounded transition-colors"
+                            className="px-3 py-1 text-xs rounded theme-btn-primary theme-focus disabled:opacity-60"
                           >
                             {actionLoading === user.id + '-reject' ? t('admin.users.actions.loading') : t('admin.users.actions.deactivate')}
                           </button>
@@ -311,13 +305,13 @@ function AdminUsersContent() {
                             onClick={() => handleApprove(user.id)}
                             disabled={actionLoading === user.id + '-approve'}
                             title={getEnglishTooltip('admin.users.actions.reactivate')}
-                            className="px-3 py-1 text-xs bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded transition-colors"
+                            className="px-3 py-1 text-xs rounded theme-btn-primary theme-focus disabled:opacity-60"
                           >
                             {actionLoading === user.id + '-approve' ? t('admin.users.actions.loading') : t('admin.users.actions.reactivate')}
                           </button>
                         )}
                         {user.status === 'inactive' && user.is_bootstrap && (
-                          <span className="px-2 py-1 text-xs bg-gray-100 text-gray-500 dark:bg-gray-700/40 dark:text-gray-400 rounded italic">
+                          <span className="px-2 py-1 text-xs theme-subtle rounded italic">
                             {t('admin.users.status.permanentlyLocked')}
                           </span>
                         )}
@@ -333,11 +327,7 @@ function AdminUsersContent() {
                                 ? t('admin.users.actions.demoteTooltip')
                                 : t('admin.users.actions.promoteTooltip')
                             }
-                            className={`px-3 py-1 text-xs rounded transition-colors ${
-                              user.role === 'admin'
-                                ? 'bg-orange-500 hover:bg-orange-600 disabled:bg-orange-300 text-white'
-                                : 'bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white'
-                            }`}
+                            className="px-3 py-1 text-xs rounded theme-btn-primary theme-focus disabled:opacity-60"
                           >
                             {actionLoading === user.id + '-role'
                               ? t('admin.users.actions.loading')
@@ -356,7 +346,7 @@ function AdminUsersContent() {
         )}
 
         <div className="mt-6 text-center">
-          <Link href="/dashboard" className="text-blue-500 hover:text-blue-400 text-sm" title={getEnglishTooltip('nav.backToDashboard')}>
+          <Link href="/dashboard" className="theme-link hover:opacity-80 text-sm" title={getEnglishTooltip('nav.backToDashboard')}>
             {t('nav.backToDashboard')}
           </Link>
         </div>

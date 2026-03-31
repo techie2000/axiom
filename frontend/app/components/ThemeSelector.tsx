@@ -62,9 +62,9 @@ export default function ThemeSelector() {
   // Pre-render placeholder to avoid hydration mismatch.
   if (!mounted) {
     return (
-      <button className="h-9 px-3 flex items-center gap-1.5 rounded-lg opacity-50 cursor-not-allowed text-sm">
+      <button className="h-9 px-3 inline-flex items-center gap-2 rounded-lg theme-btn-neutral text-sm opacity-60 cursor-not-allowed">
         <span className="text-base leading-none">🎨</span>
-        <span className="hidden sm:inline text-xs font-medium">Theme</span>
+        <span className="hidden sm:inline font-medium">Theme</span>
       </button>
     )
   }
@@ -75,24 +75,24 @@ export default function ThemeSelector() {
         <button
           ref={buttonRef}
           onClick={() => setOpen((v) => !v)}
-          className="h-9 px-2.5 flex items-center gap-1.5 rounded-lg bg-white/10 hover:bg-white/20 border border-gray-400/50 dark:border-white/20 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 text-sm font-medium"
+          className="h-9 px-3 inline-flex items-center gap-2 rounded-lg theme-btn-neutral theme-focus text-sm font-medium"
           aria-label={t('preferences.changeTheme')}
           aria-haspopup="listbox"
           aria-expanded={open}
           title={t('preferences.changeTheme')}
         >
           <span className="text-base leading-none" aria-hidden="true">{effectiveTheme.emoji}</span>
-          <span className="hidden sm:inline text-xs font-medium text-gray-900 dark:text-white">
+          <span className="hidden sm:inline">
             {t(effectiveTheme.label)}
           </span>
-          <span className="text-xs text-gray-700 dark:text-gray-300" aria-hidden="true">
+          <span className="text-xs theme-text-muted" aria-hidden="true">
             {open ? '▲' : '▼'}
           </span>
         </button>
 
         {open && (
           <div
-            className="absolute right-0 mt-1 w-52 rounded-xl border border-gray-200 dark:border-white/20 bg-white dark:bg-gray-900 shadow-2xl overflow-hidden z-50"
+            className="absolute right-0 mt-1 w-52 rounded-xl theme-dropdown shadow-2xl overflow-hidden z-50"
             role="listbox"
             aria-label={t('preferences.theme')}
           >
@@ -104,10 +104,10 @@ export default function ThemeSelector() {
                   role="option"
                   aria-selected={isActive}
                   onClick={() => selectTheme(theme.id)}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500 ${
+                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[rgb(var(--ring-rgb))] ${
                     isActive
-                      ? 'bg-blue-50 text-blue-700 dark:bg-blue-600/20 dark:text-blue-300 font-medium'
-                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5'
+                      ? 'theme-subtle font-medium'
+                      : 'hover:bg-[rgb(var(--surface-soft-rgb))]'
                   }`}
                 >
                   <span className="text-base leading-none w-5 text-center" aria-hidden="true">
@@ -118,7 +118,7 @@ export default function ThemeSelector() {
                     <span className="block text-xs opacity-60 truncate">{t(theme.description)}</span>
                   </div>
                   {isActive && (
-                    <span className="ml-auto text-blue-600 dark:text-blue-400 shrink-0" aria-hidden="true">✓</span>
+                    <span className="ml-auto theme-link shrink-0" aria-hidden="true">✓</span>
                   )}
                 </button>
               )

@@ -65,12 +65,12 @@ export default function PageHeader({
   )
 
   return (
-    <div className="mb-8 flex justify-between items-start">
+    <div className="mb-8 flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
       <div>
         {showBackLink && (
           <Link
             href={backHref}
-            className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 mb-4 inline-block rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+            className="theme-link hover:opacity-80 mb-4 inline-block rounded theme-focus"
           >
             {resolvedBackLabel}
           </Link>
@@ -78,7 +78,7 @@ export default function PageHeader({
         <h1 className="text-4xl font-bold mb-2" title={titleTooltip}>{title}</h1>
         {subtitle && <p className="opacity-70" title={subtitleTooltip}>{subtitle}</p>}
       </div>
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center justify-start gap-3 xl:justify-end">
         {docsHref && <ContextDocsLink href={docsHref} label={formatLabel(resolvedDocsLabel)} />}
         {actions}
         <UserBadge />

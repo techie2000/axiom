@@ -14,6 +14,7 @@ import { useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { SUPPORTED_LANGUAGES, LANGUAGE_PREF_KEY } from '../lib/i18n'
 import { useUserPreference } from '../lib/useUserPreference'
+import ThemedSelect from './ThemedSelect'
 
 interface LanguageSelectorProps {
   /** Additional CSS classes applied to the outer wrapper. */
@@ -28,8 +29,7 @@ export default function LanguageSelector({ className = '', compact = false }: La
   const [, setStoredLanguage] = useUserPreference('global', 'language', 'en')
 
   const handleChange = useCallback(
-    (e: React.ChangeEvent<HTMLSelectElement>) => {
-      const code = e.target.value
+    (code: string) => {
       i18n.changeLanguage(code)
       // Persist to localStorage immediately (the preference hook also does
       // this, but we do it here to ensure the i18next detector picks it up).
@@ -49,32 +49,19 @@ export default function LanguageSelector({ className = '', compact = false }: La
       <span className="text-lg leading-none" aria-hidden="true">
         {current.flag}
       </span>
-      <select
+      <ThemedSelect
         value={i18n.language}
         onChange={handleChange}
-        aria-label="Select language"
-        className={[
-          'bg-transparent border border-gray-300 dark:border-white/20 rounded-md',
-          'text-gray-900 dark:text-white text-sm',
-          'focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer',
-          'py-1 px-1.5',
-          compact ? '' : 'min-w-[120px]',
-        ]
-          .filter(Boolean)
-          .join(' ')}
+        ariaLabel="Select language"
+        className={compact ? '' : 'min-w-[120px]'}
+        buttonClassName="py-1 px-1.5 text-sm"
         title={compact ? currentTooltip : 'Select language'}
-      >
-        {SUPPORTED_LANGUAGES.map((lang) => (
-          <option
-            key={lang.code}
-            value={lang.code}
-            className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-            title={`${lang.regionCode} = ${lang.regionName}; ${lang.code.toUpperCase()} = ${lang.name}`}
-          >
-            {compact ? lang.code.toUpperCase() : lang.nativeName}
-          </option>
-        ))}
-      </select>
+        options={SUPPORTED_LANGUAGES.map((lang) => ({
+          value: lang.code,
+          label: compact ? lang.code.toUpperCase() : lang.nativeName,
+          title: `${lang.regionCode} = ${lang.regionName}; ${lang.code.toUpperCase()} = ${lang.name}`,
+        }))}
+      />
     </div>
   )
 }

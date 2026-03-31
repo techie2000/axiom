@@ -134,9 +134,7 @@ export default function CodeMappingsPage() {
             title={getEnglishTooltip('codeMappings.searchPlaceholder')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 dark:border-white/20 rounded-lg
-              focus:ring-2 focus:ring-blue-500 focus:border-transparent
-              bg-white dark:bg-white/5 text-gray-900 dark:text-white"
+            className="w-full px-4 py-2 border rounded-lg theme-input"
           />
         </div>
 
@@ -149,57 +147,57 @@ export default function CodeMappingsPage() {
         </div>
 
         {/* Mappings Table */}
-        <div className="bg-white dark:bg-white/5 rounded-lg shadow overflow-hidden border-2 border-gray-200 dark:border-white/10">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-white/10">
-              <thead className="bg-gray-50 dark:bg-white/5">
+        <div className="theme-table-shell rounded-lg shadow overflow-hidden border-2">
+          <div className="overflow-x-auto theme-scrollbar">
+            <table className="min-w-full divide-y [--tw-divide-opacity:1] divide-[rgb(var(--border-rgb)/0.7)]">
+              <thead className="theme-table-header">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell">
                     <span title={getEnglishTooltip('codeMappings.columns.fromSystem')}>{t('codeMappings.columns.fromSystem')}</span>
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell">
                     <span title={getEnglishTooltip('codeMappings.columns.fromType')}>{t('codeMappings.columns.fromType')}</span>
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell">
                     <span title={getEnglishTooltip('codeMappings.columns.fromCode')}>{t('codeMappings.columns.fromCode')}</span>
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell">
                     <span title={getEnglishTooltip('codeMappings.columns.toSystem')}>{t('codeMappings.columns.toSystem')}</span>
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell">
                     <span title={getEnglishTooltip('codeMappings.columns.toType')}>{t('codeMappings.columns.toType')}</span>
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell">
                     <span title={getEnglishTooltip('codeMappings.columns.toCode')}>{t('codeMappings.columns.toCode')}</span>
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell">
                     <span title={getEnglishTooltip('codeMappings.columns.status')}>{t('codeMappings.columns.status')}</span>
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell">
                     <span title={getEnglishTooltip('codeMappings.columns.description')}>{t('codeMappings.columns.description')}</span>
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white dark:bg-white/5 divide-y divide-gray-200 dark:divide-white/10">
+              <tbody className="theme-table-shell divide-y [--tw-divide-opacity:1] divide-[rgb(var(--border-rgb)/0.7)]">
                 {filteredMappings.length > 0 ? (
                   filteredMappings.map((mapping) => (
-                    <tr key={mapping.id} className="hover:bg-blue-50 dark:hover:bg-white/10 transition-colors">
-                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white text-center">
+                    <tr key={mapping.id} className="theme-table-row-hover transition-colors">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-center">
                         <Badge variant="orange" mono>{mapping.from_system}</Badge>
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 font-mono text-xs">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm theme-text-muted font-mono text-xs">
                         {mapping.from_code_type}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-center">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
                         <Badge variant="red" mono>{mapping.from_code}</Badge>
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white text-center">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-center">
                         <Badge variant="blue" mono>{mapping.to_system}</Badge>
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 font-mono text-xs">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm theme-text-muted font-mono text-xs">
                         {mapping.to_code_type}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-center">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
                         <Badge variant="green" mono>{mapping.to_code}</Badge>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
@@ -209,14 +207,14 @@ export default function CodeMappingsPage() {
                           </span>
                         </Badge>
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate">
+                      <td className="px-4 py-3 text-sm theme-text-muted max-w-xs truncate">
                         {mapping.description || t('codeMappings.emptyDescription')}
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={8} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                    <td colSpan={8} className="px-6 py-4 text-center text-sm theme-text-muted">
                       {searchTerm ? t('codeMappings.emptyWithSearch') : t('codeMappings.emptyWithoutSearch')}
                     </td>
                   </tr>
@@ -227,9 +225,9 @@ export default function CodeMappingsPage() {
         </div>
 
         {/* Footer Note */}
-        <div className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
+        <div className="mt-6 text-center text-sm theme-text-muted">
           <p title={getEnglishTooltip('codeMappings.footer.prefix')}>
-            {t('codeMappings.footer.prefix')} <code className="font-mono bg-gray-100 dark:bg-white/10 px-1 rounded">
+            {t('codeMappings.footer.prefix')} <code className="font-mono theme-subtle px-1 rounded">
               POST /api/v1/code-mappings
             </code> {t('codeMappings.footer.suffix')}
           </p>

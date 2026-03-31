@@ -13,13 +13,13 @@ interface ActionableStatCardProps {
 }
 
 const ringClassByAccent: Record<Accent, { focus: string; active: string }> = {
-  green: { focus: 'focus-visible:ring-green-500', active: 'ring-green-500' },
-  red: { focus: 'focus-visible:ring-red-500', active: 'ring-red-500' },
-  blue: { focus: 'focus-visible:ring-blue-500', active: 'ring-blue-500' },
-  yellow: { focus: 'focus-visible:ring-yellow-500', active: 'ring-yellow-500' },
-  purple: { focus: 'focus-visible:ring-purple-500', active: 'ring-purple-500' },
-  gray: { focus: 'focus-visible:ring-slate-500', active: 'ring-slate-500' },
-  default: { focus: 'focus-visible:ring-blue-500', active: 'ring-blue-500' },
+  green: { focus: 'focus-visible:ring-[rgb(var(--ring-rgb))]', active: 'ring-[rgb(var(--ring-rgb))]' },
+  red: { focus: 'focus-visible:ring-[rgb(var(--ring-rgb))]', active: 'ring-[rgb(var(--ring-rgb))]' },
+  blue: { focus: 'focus-visible:ring-[rgb(var(--ring-rgb))]', active: 'ring-[rgb(var(--ring-rgb))]' },
+  yellow: { focus: 'focus-visible:ring-[rgb(var(--ring-rgb))]', active: 'ring-[rgb(var(--ring-rgb))]' },
+  purple: { focus: 'focus-visible:ring-[rgb(var(--ring-rgb))]', active: 'ring-[rgb(var(--ring-rgb))]' },
+  gray: { focus: 'focus-visible:ring-[rgb(var(--ring-rgb))]', active: 'ring-[rgb(var(--ring-rgb))]' },
+  default: { focus: 'focus-visible:ring-[rgb(var(--ring-rgb))]', active: 'ring-[rgb(var(--ring-rgb))]' },
 }
 
 export default function ActionableStatCard({
@@ -37,7 +37,7 @@ export default function ActionableStatCard({
     <button
       type="button"
       onClick={onClick}
-      className={`w-full text-left rounded-lg transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900 ${ringClasses.focus} ${isActive ? `ring-2 ring-offset-2 ring-offset-white dark:ring-offset-gray-900 ${ringClasses.active}` : ''}`}
+      className={`w-full text-left rounded-lg transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(var(--surface-rgb))] ${ringClasses.focus} ${isActive ? `ring-2 ring-offset-2 ring-offset-[rgb(var(--surface-rgb))] ${ringClasses.active}` : ''}`}
       aria-pressed={isActive}
       aria-label={ariaLabel}
     >

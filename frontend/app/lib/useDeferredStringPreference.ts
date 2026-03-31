@@ -3,6 +3,20 @@
 import { useCallback, useRef, useState } from 'react'
 import { useUserPreference } from './useUserPreference'
 
+// Session-scoped unsaved overrides survive component remounts/navigation
+// but are intentionally cleared on logout via resetDeferredPreferenceSession.
+const deferredSessionOverrides: Record<string, string> = {}
+
+function getDeferredSessionKey(pageKey: string, preferenceKey: string): string {
+  return `${pageKey}::${preferenceKey}`
+}
+
+export function resetDeferredPreferenceSession() {
+  Object.keys(deferredSessionOverrides).forEach((key) => {
+    delete deferredSessionOverrides[key]
+  })
+}
+
 interface DeferredStringPreferenceOptions {
   pageKey: string
   preferenceKey: string
@@ -40,8 +54,10 @@ export function useDeferredStringPreference({
   preferenceKey,
   defaultValue,
 }: DeferredStringPreferenceOptions): DeferredStringPreference {
+  const sessionKey = getDeferredSessionKey(pageKey, preferenceKey)
+  const sessionOverride = deferredSessionOverrides[sessionKey] ?? null
   const [storedValue, setStoredValue] = useUserPreference(pageKey, preferenceKey, defaultValue)
-  const [localValue, setLocalValue] = useState<string | null>(null)
+  const [localValue, setLocalValue] = useState<string | null>(sessionOverride)
   const [showPrompt, setShowPrompt] = useState(false)
   const [promptResetKey, setPromptResetKey] = useState(0)
   const pendingValue = useRef<string | null>(null)
@@ -55,17 +71,19 @@ export function useDeferredStringPreference({
   const value = localValue ?? storedValue
 
   const setValue = useCallback((next: string) => {
+    deferredSessionOverrides[sessionKey] = next
     setLocalValue(next)
     pendingValue.current = next
     setShowPrompt(true)
     setPromptResetKey((version) => version + 1)
-  }, [])
+  }, [sessionKey])
 
   const save = useCallback(() => {
     if (pendingValue.current !== null) {
       // Snapshot the current persisted value as the undo target.
       previousValue.current = storedValue
       setStoredValue(pendingValue.current)
+      delete deferredSessionOverrides[sessionKey]
       setLocalValue(null)
       pendingValue.current = null
     }
@@ -73,7 +91,7 @@ export function useDeferredStringPreference({
     // Show undo toast after saving.
     setShowUndo(true)
     setUndoResetKey((k) => k + 1)
-  }, [setStoredValue, storedValue])
+  }, [setStoredValue, sessionKey, storedValue])
 
   const dismiss = useCallback(() => {
     setShowPrompt(false)
@@ -84,12 +102,13 @@ export function useDeferredStringPreference({
   const saveCurrentValue = useCallback(() => {
     previousValue.current = storedValue
     setStoredValue(value)
+    delete deferredSessionOverrides[sessionKey]
     setLocalValue(null)
     pendingValue.current = null
     setShowPrompt(false)
     setShowUndo(true)
     setUndoResetKey((k) => k + 1)
-  }, [setStoredValue, storedValue, value])
+  }, [setStoredValue, sessionKey, storedValue, value])
 
   const undo = useCallback(() => {
     if (previousValue.current !== null) {

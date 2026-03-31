@@ -7,7 +7,7 @@ featured_image: "https://placehold.co/1200x630.png"
 categories: ["frontend"]
 tags: ["adr", "frontend", "theming", "ux", "tailwind", "css"]
 ai_note: "AI-assisted draft based on repository state and user request."
-summary: "Records the decision to implement a dual-mode theming system where each colour palette ships both a light and a dark variant, decoupling palette choice from the dark/light toggle, with four tweakcn-inspired palettes shipped immediately."
+summary: "Records the decision to implement a dual-mode theming system where each colour palette ships both a light and a dark variant, decoupling palette choice from the dark/light toggle, with five tweakcn-inspired palettes and semantic theme utility tokens."
 post_date: "2026-03-29"
 title: "ADR-0016: Multi-Theme System"
 status: "Accepted"
@@ -35,6 +35,14 @@ The issue raised (GitHub issue: *Themes/theming*) asks for:
 4. Long-term consideration of user-defined colour schemas.
 
 The issue specifically mentions [tweakcn.com](https://tweakcn.com/) as a candidate approach to investigate.
+
+Subsequent implementation refinements added:
+
+- Semantic utility classes and status tokens (`theme-*`) so components progressively move off hardcoded utility colours.
+- Pre-hydration theme bootstrap in the root layout to prevent first-paint theme flash.
+- Global browser scrollbar tokenization for theme consistency.
+- Session-scoped deferred preference overrides so unsaved theme and display changes persist across in-app navigation for the active authenticated session and reset on logout.
+- Custom themed select controls (`ThemedSelect`) replacing native `<select>` usage in app screens and shared controls to avoid OS/browser popup colour drift.
 
 The key insight from reviewing tweakcn is that **each theme is a colour palette that ships both a light and
 a dark variant**, independently of which mode the user has selected. A user picking "Supabase" should still
@@ -144,20 +152,20 @@ That decision is deferred to a future ADR.
 
 ### Initial Palettes
 
-Four tweakcn-inspired palettes are shipped with this ADR, each providing both light and dark variants:
+Five tweakcn-inspired palettes are shipped with this ADR, each providing both light and dark variants:
 
 | ID | Name | Light | Dark | Inspiration |
 | --- | --- | --- | --- | --- |
 | `default` | Default | Slate-50 bg, slate-900 fg | Slate-900 bg, slate-50 fg | Axiom's original palette |
 | `modern-minimal` | Modern Minimal | White bg, zinc-950 fg | Zinc-950 bg, zinc-50 fg | tweakcn Modern Minimal |
 | `supabase` | Supabase | White bg, #3ECF8E accent | Near-black bg, #3ECF8E accent | tweakcn Supabase |
-| `perpetuity` | Perpetuity | Indigo-50 bg, indigo-950 fg | Deep indigo bg, indigo-100 fg | tweakcn Perpetuity |
+| `perpetuity` | Perpetuity | Cyan/teal mist light palette | Cyan/teal terminal dark palette | tweakcn Perpetuity (retuned) |
 | `twitter` | Twitter | White bg, #1D9BF0 accent | #15202B bg, #1D9BF0 accent | tweakcn Twitter |
 
 ### Trade-offs Accepted
 
-- Component-level colour tokens (e.g., card backgrounds, border colours) are not yet driven by
-  CSS variables. Deeper theming will require incremental Tailwind utility replacement.
+- Some complex module screens still include legacy utility colour classes; complete migration remains
+  incremental and should continue during normal feature work.
 - User-defined themes are explicitly out of scope; the `theme.ts` registry is the only way to add
   palettes in this phase.
 
@@ -169,7 +177,13 @@ Four tweakcn-inspired palettes are shipped with this ADR, each providing both li
 - The palette model matches tweakcn's design philosophy, making a future full migration straightforward.
 - No additional HTTP requests or schema changes are required.
 - The `ThemeSelector` dropdown is accessible (ARIA `listbox` pattern, keyboard dismissal).
+- Shared semantic classes (`theme-panel`, `theme-btn-primary`, `theme-btn-neutral`, `theme-input`,
+  `theme-select`, `theme-table-*`, `theme-status-*`) reduce palette drift between pages.
+- Pre-hydration bootstrap prevents initial paint flicker to a default theme before preference load.
+- Browser scrollbars now match active theme tokens.
 - Adding a new palette requires changing only two files: `globals.css` and `theme.ts`.
+- Dropdown popups now follow palette tokens consistently because listbox rendering is app-controlled instead of browser-native.
+- Unsaved preference edits now behave predictably for users: they persist within the current signed-in session and revert to saved preferences on next login.
 
 ### Negative
 
@@ -177,12 +191,14 @@ Four tweakcn-inspired palettes are shipped with this ADR, each providing both li
   CSS custom properties — true per-theme component styling is a future milestone.
 - Existing users who had saved `global/theme = 'light'` will default to dark mode (the new
   `global/dark_mode` preference starts absent, defaulting to `'dark'`). They can toggle back in one click.
+- Custom select/listbox controls require ongoing accessibility and keyboard-interaction regression testing that native controls handled automatically.
 
 ### Mitigation
 
-- Incrementally replace hardcoded colour utilities with CSS variable references as components are
-  touched during regular feature work.
+- Continue incremental conversion of remaining hardcoded colour utilities to semantic token classes,
+  prioritizing shared components first.
 - If the project adopts shadcn/ui, revisit full tweakcn integration in a follow-up ADR.
+- Keep `ThemedSelect` as a shared primitive and validate keyboard/focus behavior during frontend smoke checks.
 
 ## References
 
@@ -197,5 +213,11 @@ Four tweakcn-inspired palettes are shipped with this ADR, each providing both li
 
 - **2026-03-29:** Initial decision — five single-mode themes, `ThemeSelector` component.
 - **2026-03-29:** Revised — each palette now ships both light and dark variants; `ThemeToggle` decoupled
-  to an independent `global/dark_mode` preference; palettes replaced with four tweakcn-inspired designs
+  to an independent `global/dark_mode` preference; palettes replaced with five tweakcn-inspired designs
   (Default, Modern Minimal, Supabase, Perpetuity, Twitter).
+- **2026-03-30:** Implementation refinement — semantic theme utility/status tokens introduced, pre-hydration
+  theme bootstrap added, browser scrollbar theming added, and palette values retuned for closer tweakcn
+  alignment (including Perpetuity cyan/teal and updated Modern Minimal/Twitter/Supabase variants).
+- **2026-03-31:** UX behavior refinement — deferred unsaved preferences now persist for the active authenticated
+  session and reset on logout; native selects replaced with shared `ThemedSelect` listbox to ensure
+  palette-consistent dropdown rendering across supported themes.

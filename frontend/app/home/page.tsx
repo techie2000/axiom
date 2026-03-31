@@ -18,7 +18,7 @@ export default function PublicDataHomePage() {
   return (
     <main className="min-h-screen p-8">
       <div className="max-w-7xl mx-auto">
-        <section className="mb-10 bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm rounded-2xl shadow-lg p-6 md:p-8">
+        <section className="mb-10 theme-panel border-2 backdrop-blur-sm rounded-2xl shadow-lg p-6 md:p-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div className="flex items-center gap-4 md:gap-5">
               <Image
@@ -26,17 +26,17 @@ export default function PublicDataHomePage() {
                 alt="Axiom brand"
                 width={88}
                 height={88}
-                className="rounded-xl border border-gray-200 dark:border-white/10"
+                className="rounded-xl border border-[rgb(var(--border-rgb))]"
                 priority
               />
               <div>
-                <span className="inline-block mb-2 text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                <span className="inline-block mb-2 text-xs uppercase tracking-wide theme-text-muted">
                   {t('publicHub.platformLabel')}
                 </span>
-                <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white" title={getEnglishTooltip('publicHub.title')}>
+                <h1 className="text-3xl md:text-4xl font-bold" title={getEnglishTooltip('publicHub.title')}>
                   {t('publicHub.title')}
                 </h1>
-                <p className="mt-2 text-gray-600 dark:text-gray-300" title={getEnglishTooltip('publicHub.subtitle')}>
+                <p className="mt-2 theme-text-muted" title={getEnglishTooltip('publicHub.subtitle')}>
                   {t('publicHub.subtitle')}
                 </p>
               </div>
@@ -47,7 +47,7 @@ export default function PublicDataHomePage() {
                 href={buildDocsUrl('')}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center justify-center rounded-md border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 transition-colors hover:bg-blue-100 dark:border-blue-500/40 dark:bg-blue-900/20 dark:text-blue-200 dark:hover:bg-blue-900/35"
+                className="inline-flex items-center justify-center rounded-md theme-btn-neutral px-4 py-2 text-sm font-medium"
                 title={getEnglishTooltip('nav.documentation')}
               >
                 {t('nav.documentation')}
@@ -58,8 +58,8 @@ export default function PublicDataHomePage() {
         </section>
 
         <section className="mb-8">
-          <h2 className="text-3xl font-bold mb-2 text-gray-900 dark:text-white" title={getEnglishTooltip('publicHub.catalogTitle')}>{t('publicHub.catalogTitle')}</h2>
-          <p className="text-gray-600 dark:text-gray-300" title={getEnglishTooltip('publicHub.catalogSubtitle')}>{t('publicHub.catalogSubtitle')}</p>
+          <h2 className="text-3xl font-bold mb-2" title={getEnglishTooltip('publicHub.catalogTitle')}>{t('publicHub.catalogTitle')}</h2>
+          <p className="theme-text-muted" title={getEnglishTooltip('publicHub.catalogSubtitle')}>{t('publicHub.catalogSubtitle')}</p>
         </section>
 
         <SignInPrompt />
