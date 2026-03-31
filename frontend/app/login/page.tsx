@@ -63,7 +63,7 @@ export default function LoginPage() {
     <main className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="flex justify-between items-center mb-8">
-          <Link href="/" className="text-blue-400 hover:text-blue-300 text-sm">
+          <Link href="/" className="theme-link hover:opacity-80 text-sm">
             {t('nav.backToHome')}
           </Link>
           <div className="flex items-center gap-2">
@@ -72,10 +72,10 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <div className="bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm rounded-lg shadow-lg p-8">
+        <div className="theme-panel border-2 backdrop-blur-sm rounded-lg shadow-lg p-8">
           <div className="text-center mb-6">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2" title={getEnglishTooltip('login.title')}>{t('login.title')}</h1>
-            <p className="text-gray-500 dark:text-gray-400 text-sm" title={getEnglishTooltip('login.subtitle')}>
+            <h1 className="text-3xl font-bold mb-2" title={getEnglishTooltip('login.title')}>{t('login.title')}</h1>
+            <p className="theme-text-muted text-sm" title={getEnglishTooltip('login.subtitle')}>
               {t('login.subtitle')}
             </p>
           </div>
@@ -90,7 +90,7 @@ export default function LoginPage() {
             <div>
               <label
                 htmlFor="email"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                className="block text-sm font-medium theme-text-muted mb-1"
               >
                 {t('login.emailLabel')}
               </label>
@@ -102,7 +102,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 title={getEnglishTooltip('login.emailPlaceholder')}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-white/20 rounded-md bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border rounded-md theme-input"
                 placeholder={t('login.emailPlaceholder')}
               />
             </div>
@@ -110,7 +110,7 @@ export default function LoginPage() {
             <div>
               <label
                 htmlFor="password"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                className="block text-sm font-medium theme-text-muted mb-1"
               >
                 {t('login.passwordLabel')}
               </label>
@@ -122,7 +122,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 title={getEnglishTooltip('login.passwordPlaceholder')}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-white/20 rounded-md bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border rounded-md theme-input"
                 placeholder={t('login.passwordPlaceholder')}
               />
             </div>
@@ -131,17 +131,17 @@ export default function LoginPage() {
               type="submit"
               disabled={loading}
               title={loading ? getEnglishTooltip('login.submittingButton') : getEnglishTooltip('login.submitButton')}
-              className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              className="w-full py-2 px-4 theme-btn-primary disabled:opacity-60 font-medium rounded-md theme-focus"
             >
               {loading ? t('login.submittingButton') : t('login.submitButton')}
             </button>
           </form>
 
-          <div className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
+          <div className="mt-6 text-center text-sm theme-text-muted">
             {t('login.noAccount')}{' '}
             <Link
               href="/register"
-              className="text-blue-500 hover:text-blue-400 font-medium"
+              className="theme-link hover:opacity-80 font-medium"
               title={getEnglishTooltip('login.requestAccessLink')}
             >
               {t('login.requestAccessLink')}

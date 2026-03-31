@@ -12,6 +12,9 @@ concurrency:
   group: aasc-weekly-rolling-checkin
   cancel-in-progress: false
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 jobs:
   upsert-checkin:
     name: Upsert Issue 207 Rolling Comment

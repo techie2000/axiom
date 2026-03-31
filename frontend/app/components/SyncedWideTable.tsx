@@ -26,15 +26,15 @@ export default function SyncedWideTable({
   bodyRows,
   dependencyKey,
   headerHeight = 44,
-  tableClassName = 'table-fixed w-max min-w-full divide-y divide-gray-200 dark:divide-white/10',
-  stickyHeaderClassName = 'bg-gray-50 dark:bg-gray-800',
-  mainHeaderClassName = 'bg-gray-50 dark:bg-white/5',
-  bodyClassName = 'bg-white dark:bg-white/5 divide-y divide-gray-200 dark:divide-white/10',
+  tableClassName = 'table-fixed w-max min-w-full theme-table-collapse',
+  stickyHeaderClassName = 'theme-table-header',
+  mainHeaderClassName = 'theme-table-header',
+  bodyClassName = 'theme-table-shell theme-table-divider',
   containerClassName = 'overflow-x-auto',
   containerStyle,
   tableStyle,
-  topScrollbarClassName = 'mb-1 overflow-x-auto bg-white border-b border-gray-200 dark:bg-white/5 dark:border-white/10 rounded-t-lg',
-  stickyContainerClassName = 'fixed z-30 overflow-x-auto bg-white border-b-2 border-gray-200 dark:bg-gray-800 dark:border-white/10 shadow-lg transition-all duration-200',
+  topScrollbarClassName = 'mb-1 overflow-x-auto theme-table-shell border-b [--tw-border-opacity:1] border-[rgb(var(--border-rgb)/0.75)] rounded-t-lg',
+  stickyContainerClassName = 'fixed z-30 overflow-x-auto theme-table-shell border-b-2 [--tw-border-opacity:1] border-[rgb(var(--border-rgb)/0.8)] shadow-lg transition-all duration-200',
   onMainHeaderWidthsChange,
 }: SyncedWideTableProps) {
   const STICKY_ACTIVATION_BUFFER = 16
@@ -155,7 +155,7 @@ export default function SyncedWideTable({
         <div
           ref={topScrollbarRef}
           onScroll={handleTopScrollbarScroll}
-          className={topScrollbarClassName}
+          className={`${topScrollbarClassName} theme-scrollbar`}
         >
           <div style={{ width: `${tableScrollWidth}px`, height: '1px' }} />
         </div>
@@ -164,7 +164,7 @@ export default function SyncedWideTable({
       <div
         ref={stickyHeaderScrollRef}
         onScroll={handleStickyHeaderHorizontalScroll}
-        className={`${stickyContainerClassName} ${
+        className={`${stickyContainerClassName} theme-scrollbar ${
           showStickyHeader ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4 pointer-events-none'
         }`}
         style={{
@@ -180,7 +180,7 @@ export default function SyncedWideTable({
         </div>
       </div>
 
-      <div ref={tableContainerRef} onScroll={handleTableHorizontalScroll} className={containerClassName} style={containerStyle}>
+      <div ref={tableContainerRef} onScroll={handleTableHorizontalScroll} className={`${containerClassName} theme-scrollbar`} style={containerStyle}>
         <table ref={tableRef} className={tableClassName} style={tableStyle}>
           <thead className={mainHeaderClassName}>{headerRow}</thead>
           <tbody className={bodyClassName}>{bodyRows}</tbody>

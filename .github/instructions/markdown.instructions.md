@@ -7,6 +7,17 @@ applyTo: '**/*.md'
 
 The following markdown content rules are enforced by markdownlint and MUST be followed:
 
+### Canonical Linter
+
+This repository standardizes on `markdownlint-cli2` as the canonical markdown linter for local
+checks, hooks, and CI workflows.
+
+- ✅ **GOOD**: `npx --yes markdownlint-cli2 --config .markdownlint.yaml "**/*.md"`
+- ✅ **GOOD**: `make docs-check`
+- ❌ **BAD**: introducing new `markdownlint-cli`-only commands or workflows alongside `markdownlint-cli2`
+
+When editing markdown, validate with the same toolchain CI uses rather than mixing different markdownlint wrappers.
+
 ### Markdownlint Rule Quick Reference
 
 Use this as a fast lookup for the MD rules configured in this repo:
@@ -414,6 +425,35 @@ example and keep blank lines around inner headings and fences.
 Use the GOOD pattern to avoid accidental MD022 (blank lines around headings) and MD031
 (blank lines around fences) violations in instruction files.
 
+### Common MD022/MD031/MD032 Combined Pattern
+
+- ✅ **GOOD heading + list + fence spacing**
+
+  ````markdown
+  Intro paragraph.
+
+  ### Validation Steps
+
+  - Run the linter.
+  - Fix all reported issues.
+
+  ```bash
+  make docs-check
+  ```
+  ````
+
+- ❌ **BAD heading + list + fence spacing**
+
+  ````markdown
+  Intro paragraph.
+  ### Validation Steps
+  - Run the linter.
+  - Fix all reported issues.
+  ```bash
+  make docs-check
+  ```
+  ````
+
 ### Mandatory Pre-Submission Checks (for any edited `.md` file)
 
 - Treat MD013 as a hard gate for non-code-block markdown lines: do not finish
@@ -421,6 +461,8 @@ Use the GOOD pattern to avoid accidental MD022 (blank lines around headings) and
 - In fenced code blocks, preserve executable integrity for command examples;
   do not split commands solely to satisfy line-length limits.
 - Run markdown diagnostics before finishing markdown edits.
+- Run `make docs-check` for markdown changes, or `npx --yes markdownlint-cli2 --config .markdownlint.yaml "**/*.md"`
+  when you need the direct linter command.
 - Fix **all MD001 heading-increment violations** in edited sections.
 - Fix **all MD013 line-length violations** introduced in edited  non-code-block sections (max 120 chars per line).
 - Fix **all MD022 heading-spacing violations** in edited sections.

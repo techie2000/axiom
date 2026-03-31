@@ -13,6 +13,7 @@ import SearchInputWithOverflowTooltip from '../components/SearchInputWithOverflo
 import SortableHeaderCell from '../components/SortableHeaderCell'
 import StatCard from '../components/StatCard'
 import SyncedWideTable from '../components/SyncedWideTable'
+import ThemedSelect from '../components/ThemedSelect'
 import { useDeferredBooleanPreference } from '../lib/useDeferredBooleanPreference'
 import { useEnglishTooltips } from '../lib/useEnglishTooltips'
 import { useButtonEmojiMode } from '../lib/useButtonEmojiMode'
@@ -575,7 +576,7 @@ export default function CountriesPage() {
             <>
               <button
                 onClick={expandedWidthPreference.toggle}
-                className="h-9 px-3 rounded-lg border border-gray-300 dark:border-white/20 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                className="theme-header-action rounded-lg theme-btn-neutral theme-focus"
                 title={effectiveExpandedWidth ? getEnglishTooltip('referenceLayout.normalButton') : getEnglishTooltip('referenceLayout.expandButton')}
                 aria-label={effectiveExpandedWidth ? t('referenceLayout.normalButton') : t('referenceLayout.expandButton')}
               >
@@ -584,7 +585,7 @@ export default function CountriesPage() {
               {expandedWidthPreference.hasUnsavedChanges && (
                 <button
                   onClick={expandedWidthPreference.saveCurrentValue}
-                  className="px-3 py-2 rounded-lg bg-green-700 hover:bg-green-600 transition-colors text-white text-xs font-medium"
+                  className="theme-header-action rounded-lg theme-btn-primary theme-focus"
                   title={getEnglishTooltip('referenceLayout.savePageWidthDefault')}
                 >
                   {formatLabel('💾 Save width')}
@@ -592,7 +593,7 @@ export default function CountriesPage() {
               )}
               <button
                 onClick={referenceDisplayPreference.toggle}
-                className="h-9 px-3 rounded-lg border border-gray-300 dark:border-white/20 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                className="theme-header-action rounded-lg theme-btn-neutral theme-focus"
                 title={showReferenceCodes ? getEnglishTooltip('referenceLayout.displayCodesButton') : getEnglishTooltip('referenceLayout.displayNamesButton')}
                 aria-label={showReferenceCodes ? t('referenceLayout.displayCodesButton') : t('referenceLayout.displayNamesButton')}
               >
@@ -601,24 +602,24 @@ export default function CountriesPage() {
               <div className="relative">
                 <button
                   onClick={() => setShowColumnSelector(!showColumnSelector)}
-                  className="h-9 px-3 rounded-lg border border-gray-300 dark:border-white/20 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                  className="theme-header-action rounded-lg theme-btn-neutral theme-focus"
                 >
                   {formatLabel(t('countries.actions.columns', { count: effectiveVisibleColumns.size }))}
                 </button>
 
                 {showColumnSelector && (
-                  <div className="absolute right-0 mt-2 w-72 max-h-96 overflow-y-auto bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-white/20 rounded-lg shadow-xl z-50 p-3">
+                  <div className="absolute right-0 mt-2 w-72 max-h-96 overflow-y-auto theme-dropdown theme-scrollbar border-2 rounded-lg shadow-xl z-50 p-3">
                     <div className="mb-3 flex items-start justify-between gap-2 text-xs">
                       <div className="flex flex-wrap gap-2">
                         <button
                           onClick={() => handleSetVisibleColumns(new Set(AVAILABLE_COLUMNS.map((column) => column.key)))}
-                          className="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-gray-700 dark:text-gray-100 rounded hover:bg-blue-200 dark:hover:bg-gray-600"
+                          className="px-2 py-1 rounded theme-filterchip"
                         >
                           {t('countries.actions.selectAll')}
                         </button>
                         <button
                           onClick={() => handleSetVisibleColumns(new Set(AVAILABLE_COLUMNS.filter((column) => column.defaultVisible).map((column) => column.key)))}
-                          className="px-2 py-1 bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                          className="px-2 py-1 rounded theme-filterchip"
                         >
                           {t('countries.actions.reset')}
                         </button>
@@ -626,7 +627,7 @@ export default function CountriesPage() {
                       {localColumns !== null && (
                         <button
                           onClick={handleSaveColumnsNow}
-                          className="shrink-0 whitespace-nowrap px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded hover:bg-green-200 dark:hover:bg-green-800"
+                          className="shrink-0 whitespace-nowrap px-2 py-1 rounded theme-btn-primary theme-focus"
                           title={getEnglishTooltip('countries.actions.saveAsDefault')}
                         >
                           <span aria-hidden="true">💾 </span>
@@ -638,7 +639,7 @@ export default function CountriesPage() {
                       {AVAILABLE_COLUMNS.map((column) => (
                         <label
                           key={column.key}
-                          className="flex items-center gap-2 px-2 py-1.5 hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors rounded cursor-pointer text-sm"
+                          className="flex items-center gap-2 px-2 py-1.5 theme-table-row-hover transition-colors rounded cursor-pointer text-sm"
                         >
                           <input
                             type="checkbox"
@@ -646,7 +647,7 @@ export default function CountriesPage() {
                             onChange={() => toggleColumn(column.key)}
                             className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                           />
-                          <span className="text-gray-900 dark:text-white" title={getEnglishTooltip(getColumnLabelTranslationKey(column))}>{getColumnLabel(column)}</span>
+                          <span title={getEnglishTooltip(getColumnLabelTranslationKey(column))}>{getColumnLabel(column)}</span>
                         </label>
                       ))}
                     </div>
@@ -684,10 +685,10 @@ export default function CountriesPage() {
           <StatCard title={t('countries.stats.dataStandard')} titleTooltip={getEnglishTooltip('countries.stats.dataStandard')} value={t('countries.stats.iso3166')} />
         </div>
 
-        <div className="mb-6 bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm rounded-lg p-6">
+        <div className="mb-6 theme-panel border-2 backdrop-blur-sm rounded-lg p-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
             <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">{t('countries.filters.search')}</label>
+              <label className="block text-sm font-medium mb-2 theme-text-muted">{t('countries.filters.search')}</label>
               <SearchInputWithOverflowTooltip
                 ref={searchInputRef}
                 type="text"
@@ -695,60 +696,72 @@ export default function CountriesPage() {
                 title={getEnglishTooltip('countries.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-white/20 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-white/5 text-gray-900 dark:text-white"
+                className="w-full px-4 py-2 border rounded-lg theme-input"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">{t('countries.filters.continent')}</label>
-              <select
+              <label className="block text-sm font-medium mb-2 theme-text-muted">{t('countries.filters.continent')}</label>
+              <ThemedSelect
                 value={continentFilter}
-                onChange={(e) => setContinentFilter(e.target.value)}
+                onChange={setContinentFilter}
+                ariaLabel={t('countries.filters.continent')}
                 title={continentFilter || (showReferenceCodes ? getEnglishTooltip('countries.filters.allContinentCodes') : getEnglishTooltip('countries.filters.allContinents'))}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-white/20 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-              >
-                <option value="" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white" title={showReferenceCodes ? getEnglishTooltip('countries.filters.allContinentCodes') : getEnglishTooltip('countries.filters.allContinents')}>{showReferenceCodes ? t('countries.filters.allContinentCodes') : t('countries.filters.allContinents')}</option>
-                {continentOptions.map((continent) => (
-                  <option key={continent} value={continent} className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">
-                    {getContinentDisplay(continent)}
-                  </option>
-                ))}
-              </select>
+                className="w-full"
+                options={[
+                  {
+                    value: '',
+                    label: showReferenceCodes ? t('countries.filters.allContinentCodes') : t('countries.filters.allContinents'),
+                    title: showReferenceCodes ? getEnglishTooltip('countries.filters.allContinentCodes') : getEnglishTooltip('countries.filters.allContinents'),
+                  },
+                  ...continentOptions.map((continent) => ({
+                    value: continent,
+                    label: getContinentDisplay(continent),
+                  })),
+                ]}
+              />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">{t('countries.filters.region')}</label>
-              <select
+              <label className="block text-sm font-medium mb-2 theme-text-muted">{t('countries.filters.region')}</label>
+              <ThemedSelect
                 value={regionFilter}
-                onChange={(e) => setRegionFilter(e.target.value)}
+                onChange={setRegionFilter}
+                ariaLabel={t('countries.filters.region')}
                 title={regionFilter || getEnglishTooltip('countries.filters.allRegions')}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-white/20 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-              >
-                <option value="" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white" title={getEnglishTooltip('countries.filters.allRegions')}>{t('countries.filters.allRegions')}</option>
-                {regionOptions.map((region) => (
-                  <option key={region} value={region} className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">
-                    {region}
-                  </option>
-                ))}
-              </select>
+                className="w-full"
+                options={[
+                  {
+                    value: '',
+                    label: t('countries.filters.allRegions'),
+                    title: getEnglishTooltip('countries.filters.allRegions'),
+                  },
+                  ...regionOptions.map((region) => ({
+                    value: region,
+                    label: region,
+                  })),
+                ]}
+              />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">{t('countries.filters.status')}</label>
-              <select
+              <label className="block text-sm font-medium mb-2 theme-text-muted">{t('countries.filters.status')}</label>
+              <ThemedSelect
                 value={activeFilter}
-                onChange={(e) => setActiveFilter(e.target.value as 'all' | 'active' | 'inactive')}
+                onChange={(next) => setActiveFilter(next as 'all' | 'active' | 'inactive')}
+                ariaLabel={t('countries.filters.status')}
                 title={getEnglishTooltip(activeFilterTranslationKey)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-white/20 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-              >
-                <option value="all" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white" title={getEnglishTooltip('countries.filters.all')}>{t('countries.filters.all')}</option>
-                <option value="active" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white" title={getEnglishTooltip('countries.filters.active')}>{t('countries.filters.active')}</option>
-                <option value="inactive" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white" title={getEnglishTooltip('countries.filters.inactive')}>{t('countries.filters.inactive')}</option>
-              </select>
+                className="w-full"
+                options={[
+                  { value: 'all', label: t('countries.filters.all'), title: getEnglishTooltip('countries.filters.all') },
+                  { value: 'active', label: t('countries.filters.active'), title: getEnglishTooltip('countries.filters.active') },
+                  { value: 'inactive', label: t('countries.filters.inactive'), title: getEnglishTooltip('countries.filters.inactive') },
+                ]}
+              />
             </div>
           </div>
           {hasActiveFilters && (
             <div className="flex gap-3">
               <button
                 onClick={clearFilters}
-                className="px-6 py-2 rounded-lg bg-white hover:bg-gray-100 dark:bg-gray-600 dark:hover:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-transparent transition-colors font-medium shadow-sm"
+                className="px-6 py-2 rounded-lg theme-btn-neutral font-medium shadow-sm"
                 title={getEnglishTooltip('actions.clearFilters')}
               >
                 {t('actions.clearFilters')}
@@ -760,15 +773,15 @@ export default function CountriesPage() {
         {hasActiveFilters && (
           <div
             ref={filterBarRef}
-            className="sticky top-0 z-40 mb-1 bg-blue-50 dark:bg-blue-900 border-2 border-blue-200 dark:border-blue-700 px-4 py-2 shadow-md rounded-lg"
+            className="sticky top-0 z-40 mb-1 theme-filterbar border-2 border-[rgb(var(--ring-rgb)/0.35)] px-4 py-2 shadow-md rounded-lg"
           >
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-semibold text-blue-900 dark:text-blue-100">{t('filters.activeFilters')}</span>
+                <span className="text-xs font-semibold theme-link">{t('filters.activeFilters')}</span>
                 {searchTerm && (
                   <button
                     onClick={() => setSearchTerm('')}
-                    className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors"
+                    className="px-2 py-1 rounded text-xs font-medium transition-colors theme-filterchip"
                     title={getEnglishTooltip('filters.searchChip', { value: searchTerm })}
                   >
                     {t('filters.searchChip', { value: searchTerm })}
@@ -777,7 +790,7 @@ export default function CountriesPage() {
                 {continentFilter && (
                   <button
                     onClick={() => setContinentFilter('')}
-                    className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors"
+                    className="px-2 py-1 rounded text-xs font-medium transition-colors theme-filterchip"
                   >
                     {t('countries.filters.continentChip', { value: getContinentDisplay(continentFilter) })}
                   </button>
@@ -785,7 +798,7 @@ export default function CountriesPage() {
                 {regionFilter && (
                   <button
                     onClick={() => setRegionFilter('')}
-                    className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors"
+                    className="px-2 py-1 rounded text-xs font-medium transition-colors theme-filterchip"
                     title={getEnglishTooltip('countries.filters.regionChip', { value: regionFilter })}
                   >
                     {t('countries.filters.regionChip', { value: regionFilter })}
@@ -794,7 +807,7 @@ export default function CountriesPage() {
                 {activeFilter !== 'all' && (
                   <button
                     onClick={() => setActiveFilter('all')}
-                    className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors"
+                    className="px-2 py-1 rounded text-xs font-medium transition-colors theme-filterchip"
                     title={getEnglishTooltip('countries.filters.statusChip', { value: t(`countries.filters.${activeFilter}`, { lng: 'en' }) })}
                   >
                     {t('countries.filters.statusChip', { value: t(`countries.filters.${activeFilter}`) })}
@@ -803,7 +816,7 @@ export default function CountriesPage() {
               </div>
               <button
                 onClick={clearFilters}
-                className="px-3 py-1 text-xs rounded-lg bg-white hover:bg-gray-100 dark:bg-blue-600 dark:hover:bg-blue-700 text-blue-900 dark:text-white border border-blue-300 dark:border-transparent transition-colors font-medium shadow-sm"
+                className="px-3 py-1 text-xs rounded-lg transition-colors font-medium shadow-sm theme-filterchip-clear"
                 title={getEnglishTooltip('filters.clearAll')}
               >
                 {t('filters.clearAll')}
@@ -812,7 +825,7 @@ export default function CountriesPage() {
           </div>
         )}
 
-        <div className="bg-white dark:bg-white/5 rounded-lg shadow border-2 border-gray-200 dark:border-white/10">
+        <div className="theme-table-shell rounded-lg shadow border-2">
           <SyncedWideTable
             stickyTopOffset={hasActiveFilters ? filterBarHeight : 0}
             dependencyKey={`${effectiveExpandedWidth}-${showReferenceCodes}-${visibleColumnsInOrder.map((column) => column.key).join('|')}-${filteredCountries.length}`}
@@ -821,7 +834,7 @@ export default function CountriesPage() {
                 {visibleColumnsInOrder.map((column) => (
                   <SortableHeaderCell
                     key={column.key}
-                    className={`${column.width || 'min-w-32'} px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-800`}
+                    className={`${column.width || 'min-w-32'} px-6 py-3 text-xs font-medium uppercase tracking-wider theme-table-header-cell`}
                     align={CENTER_ALIGNED_COLUMNS.has(column.key) ? 'center' : 'left'}
                     sortable={column.key !== 'flag'}
                     label={<span title={getEnglishTooltip(getColumnLabelTranslationKey(column))}>{getColumnLabel(column)}</span>}
@@ -836,7 +849,7 @@ export default function CountriesPage() {
               <>
                 {filteredCountries.length > 0 ? (
                   filteredCountries.map((country) => (
-                    <tr key={country.id} className="hover:bg-blue-50 dark:hover:bg-white/10 transition-colors">
+                    <tr key={country.id} className="theme-table-row-hover transition-colors">
                       {visibleColumnsInOrder.map((column) => {
                         switch (column.key) {
                           case 'flag':
@@ -845,67 +858,67 @@ export default function CountriesPage() {
                                 <CountryFlag
                                   countryCode={country.alpha2 || country.code}
                                   title={country.name}
-                                  className="h-4 w-6 rounded-sm border border-gray-200 dark:border-gray-700"
+                                  className="h-4 w-6 rounded-sm border border-[rgb(var(--border-rgb))]"
                                 />
                               </td>
                             )
                           case 'name':
                             return (
-                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white align-top">
+                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm font-medium align-top">
                                 {country.name}
                               </td>
                             )
                           case 'alpha2':
                             return (
-                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-center align-top">
+                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm theme-text-muted text-center align-top">
                                 <Badge variant="blue" mono>{country.alpha2 || '-'}</Badge>
                               </td>
                             )
                           case 'alpha3':
                             return (
-                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-center align-top">
+                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm theme-text-muted text-center align-top">
                                 <Badge variant="green" mono>{country.alpha3 || '-'}</Badge>
                               </td>
                             )
                           case 'numeric_code':
                             return (
-                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 font-mono align-top">
+                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm theme-text-muted font-mono align-top">
                                 {country.numeric_code || '-'}
                               </td>
                             )
                           case 'native_name':
                             return (
-                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 align-top">
+                              <td key={column.key} className="px-6 py-4 text-sm theme-text-muted align-top">
                                 {country.native_name || '-'}
                               </td>
                             )
                           case 'capital':
                             return (
-                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 align-top">
+                              <td key={column.key} className="px-6 py-4 text-sm theme-text-muted align-top">
                                 {country.capital || '-'}
                               </td>
                             )
                           case 'continent':
                             return (
-                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 align-top">
+                              <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm theme-text-muted align-top">
                                 {getContinentDisplay(country.continent)}
                               </td>
                             )
                           case 'region':
                             return (
-                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 align-top">
+                              <td key={column.key} className="px-6 py-4 text-sm theme-text-muted align-top">
                                 {country.region || '-'}
                               </td>
                             )
                           case 'phone_codes':
                             return (
-                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 align-top">
+                              <td key={column.key} className="px-6 py-4 text-sm theme-text-muted align-top">
                                 {formatPhoneCodeListValue(country.phone_codes)}
                               </td>
                             )
                           case 'currency_codes':
                             return (
-                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 whitespace-normal break-words align-top">
+                              <td key={column.key} className="px-6 py-4 text-sm theme-text-muted whitespace-normal break-words align-top">
                                 <ReferenceDetailList
                                   values={country.currency_codes}
                                   normalizeValue={(value) => String(value || '').trim().toUpperCase()}
@@ -928,7 +941,7 @@ export default function CountriesPage() {
                             )
                           case 'languages':
                             return (
-                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 whitespace-normal break-words align-top">
+                              <td key={column.key} className="px-6 py-4 text-sm theme-text-muted whitespace-normal break-words align-top">
                                 <ReferenceDetailList
                                   values={country.languages}
                                   normalizeValue={(value) => String(value || '').trim().toLowerCase()}
@@ -946,7 +959,7 @@ export default function CountriesPage() {
                             )
                           default:
                             return (
-                              <td key={column.key} className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 align-top">-
+                              <td key={column.key} className="px-6 py-4 text-sm theme-text-muted align-top">-
                               </td>
                             )
                         }
@@ -955,7 +968,7 @@ export default function CountriesPage() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={visibleColumnsInOrder.length || 1} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                    <td colSpan={visibleColumnsInOrder.length || 1} className="px-6 py-4 text-center text-sm theme-text-muted">
                       {t('countries.emptyWithSearch')}
                     </td>
                   </tr>
@@ -965,7 +978,7 @@ export default function CountriesPage() {
           />
         </div>
 
-        <div className="mt-6 text-center text-sm text-gray-500">
+        <div className="mt-6 text-center text-sm theme-text-muted">
           <p>{t('countries.footer')}</p>
         </div>
       </div>

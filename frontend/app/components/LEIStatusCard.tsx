@@ -114,63 +114,63 @@ export default function LEIStatusCard() {
   const totalRecords = fullStatus?.current_source_file?.total_records || 0
 
   return (
-    <Link href="/lei" className="group bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm rounded-lg shadow-lg hover:shadow-xl transition-all p-6 hover:border-purple-500 dark:hover:border-purple-400 min-h-[240px] flex flex-col">
+    <Link href="/lei" className="group theme-panel theme-card-hover border-2 backdrop-blur-sm rounded-lg shadow-lg hover:shadow-xl transition-all p-6 min-h-[240px] flex flex-col">
       <div className="flex items-stretch justify-between flex-1">
         <div className="flex flex-col flex-1 min-w-0">
           <div className="flex items-center gap-3 mb-2">
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white group-hover:text-purple-500 dark:group-hover:text-purple-400">
+            <h3 className="text-xl font-semibold theme-card-title">
               LEI Status →
             </h3>
             {!loading && (
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-1" title={`Ref Data Sync: ${masterDataHealth.label}`}>
                   <div className={`w-3 h-3 rounded-full ${masterDataHealth.color}`}></div>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">RefData</span>
+                  <span className="text-xs theme-text-muted">RefData</span>
                 </div>
                 <div className="flex items-center gap-1" title={`Level 1 Full Sync: ${fullHealth.label}`}>
                   <div className={`w-3 h-3 rounded-full ${fullHealth.color}`}></div>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">L1-Full</span>
+                  <span className="text-xs theme-text-muted">L1-Full</span>
                 </div>
                 <div className="flex items-center gap-1" title={`Level 1 Delta Sync: ${deltaHealth.label}`}>
                   <div className={`w-3 h-3 rounded-full ${deltaHealth.color}`}></div>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">L1-Delta</span>
+                  <span className="text-xs theme-text-muted">L1-Delta</span>
                 </div>
                 <div className="flex items-center gap-1" title={`Level 2 RR: ${rrHealth.label}`}>
                   <div className={`w-3 h-3 rounded-full ${rrHealth.color}`}></div>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">L2-RR</span>
+                  <span className="text-xs theme-text-muted">L2-RR</span>
                 </div>
                 <div className="flex items-center gap-1" title={`Level 2 REPEX: ${repexHealth.label}`}>
                   <div className={`w-3 h-3 rounded-full ${repexHealth.color}`}></div>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">L2-REPEX</span>
+                  <span className="text-xs theme-text-muted">L2-REPEX</span>
                 </div>
               </div>
             )}
           </div>
           
-          <p className="text-gray-600 dark:text-gray-300 flex-1 mb-4">
+          <p className="theme-text-muted flex-1 mb-4">
             Monitor GLEIF data synchronization in real-time
           </p>
 
           {loading ? (
-            <div className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+            <div className="text-sm theme-text-muted mb-3">
               Loading status...
             </div>
           ) : (
             <div className="space-y-2 mb-3">
               <div className="text-sm">
-                <span className="text-gray-600 dark:text-gray-400">Total Records: </span>
-                <span className="font-semibold text-gray-900 dark:text-white">{formatNumber(totalRecords)}</span>
+                <span className="theme-text-muted">Total Records: </span>
+                <span className="font-semibold">{formatNumber(totalRecords)}</span>
               </div>
               
               {fullStatus?.status === 'RUNNING' && fullStatus.total_records && (
                 <div className="space-y-1">
-                  <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400">
+                  <div className="flex justify-between text-xs theme-text-muted">
                     <span>Processing L1 Full Sync</span>
                     <span>{getProgress(fullStatus).toFixed(1)}%</span>
                   </div>
-                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                  <div className="w-full bg-[rgb(var(--surface-muted-rgb))] rounded-full h-1.5">
                     <div 
-                      className="bg-blue-500 h-1.5 rounded-full transition-all duration-500"
+                      className="bg-[rgb(var(--primary-rgb))] h-1.5 rounded-full transition-all duration-500"
                       style={{ width: `${getProgress(fullStatus)}%` }}
                     ></div>
                   </div>
@@ -186,10 +186,10 @@ export default function LEIStatusCard() {
           )}
 
           <div className="flex gap-2 mt-auto">
-            <span className="px-2 py-1 bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 text-xs rounded">
+            <span className="px-2 py-1 theme-subtle text-xs rounded">
               {getOverallStatus()}
             </span>
-            <span className="px-2 py-1 bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 text-xs rounded">Real-time</span>
+            <span className="px-2 py-1 theme-subtle text-xs rounded">Real-time</span>
           </div>
         </div>
         <span className="text-3xl ml-4 shrink-0">{getOverallIcon()}</span>

@@ -240,12 +240,11 @@ install-tools: ## Install development tools
 	go install github.com/swaggo/swag/cmd/swag@latest
 	go install github.com/golang-migrate/migrate/v4/cmd/migrate@latest
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-	@echo "Installing markdownlint-cli..."
+	@echo "Markdown lint uses npx --yes markdownlint-cli2; no global markdown package install needed."
 	@if command -v npm > /dev/null 2>&1; then \
-		npm install -g markdownlint-cli; \
 		npm install -g @finos/calm-cli; \
 	else \
-		echo "⚠️  npm not found. Install Node.js to get markdownlint-cli and @finos/calm-cli"; \
+		echo "⚠️  npm not found. Install Node.js to run npx --yes markdownlint-cli2 and @finos/calm-cli"; \
 	fi
 
 lint: ## Run linter
@@ -255,11 +254,11 @@ lint-all: lint lint-docs ## Run all linters (Go + Markdown)
 
 lint-docs: ## Lint markdown documentation
 	@echo "Linting markdown files..."
-	@markdownlint --config .markdownlint.yaml "**/*.md" || (echo "❌ markdownlint-cli not installed or failed. Run: make install-tools" && exit 1)
+	@npx --yes markdownlint-cli2 --config .markdownlint.yaml "**/*.md" "!**/node_modules/**" "!**/vendor/**" "!**/.git/**" || (echo "❌ markdownlint-cli2 failed. Ensure Node.js/npm is installed, then rerun make lint-docs" && exit 1)
 
 lint-docs-fix: ## Auto-fix markdown linting issues
 	@echo "Auto-fixing markdown files..."
-	@markdownlint --config .markdownlint.yaml "**/*.md" --fix || (echo "❌ markdownlint-cli not installed or failed. Run: make install-tools" && exit 1)
+	@npx --yes markdownlint-cli2 --config .markdownlint.yaml --fix "**/*.md" "!**/node_modules/**" "!**/vendor/**" "!**/.git/**" || (echo "❌ markdownlint-cli2 failed. Ensure Node.js/npm is installed, then rerun make lint-docs-fix" && exit 1)
 	@echo "✅ Markdown auto-fix complete"
 
 migrate-create: ## Create a new migration (usage: make migrate-create name=create_users_table)

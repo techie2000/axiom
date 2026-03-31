@@ -6,19 +6,19 @@ interface StatCardProps {
 }
 
 const accentClasses: Record<NonNullable<StatCardProps['accent']>, { border: string; text: string; label: string }> = {
-  green:   { border: 'border-green-200 dark:border-green-500/30', text: 'text-green-700 dark:text-green-400', label: 'text-green-700 dark:text-green-400' },
-  red:     { border: 'border-red-200 dark:border-red-500/30',     text: 'text-red-700 dark:text-red-400',     label: 'text-red-700 dark:text-red-400'     },
-  blue:    { border: 'border-blue-200 dark:border-blue-500/30',   text: 'text-blue-700 dark:text-blue-400',   label: 'text-blue-700 dark:text-blue-400'   },
-  yellow:  { border: 'border-yellow-200 dark:border-yellow-500/30', text: 'text-yellow-700 dark:text-yellow-400', label: 'text-yellow-700 dark:text-yellow-400' },
-  purple:  { border: 'border-purple-200 dark:border-purple-500/30', text: 'text-purple-700 dark:text-purple-400', label: 'text-purple-700 dark:text-purple-400' },
-  gray:    { border: 'border-slate-200 dark:border-slate-500/30', text: 'text-slate-700 dark:text-slate-300', label: 'text-slate-700 dark:text-slate-300' },
-  default: { border: 'border-gray-200 dark:border-white/10',      text: 'text-gray-900 dark:text-white',      label: 'text-gray-600 dark:text-gray-400'   },
+  green:   { border: 'theme-status-border-success', text: 'theme-status-text-success', label: 'theme-status-text-success' },
+  red:     { border: 'theme-status-border-danger',  text: 'theme-status-text-danger',  label: 'theme-status-text-danger'  },
+  blue:    { border: 'theme-status-border-info',    text: 'theme-status-text-info',    label: 'theme-status-text-info'    },
+  yellow:  { border: 'theme-status-border-warning', text: 'theme-status-text-warning', label: 'theme-status-text-warning' },
+  purple:  { border: 'theme-status-border-info',    text: 'theme-status-text-info',    label: 'theme-status-text-info'    },
+  gray:    { border: 'border-[rgb(var(--border-rgb)/0.7)]', text: 'theme-text-muted', label: 'theme-text-muted' },
+  default: { border: 'border-[rgb(var(--border-rgb))]',      text: '',      label: 'theme-text-muted'   },
 }
 
 export default function StatCard({ title, value, accent = 'default', titleTooltip }: StatCardProps) {
   const { border, text, label } = accentClasses[accent]
   return (
-    <div className={`bg-white dark:bg-white/5 rounded-lg shadow p-6 border-2 ${border}`}>
+    <div className={`theme-panel rounded-lg shadow p-6 border-2 ${border}`}>
       <h3 className={`text-sm font-medium ${label}`} title={titleTooltip}>{title}</h3>
       <p className={`text-3xl font-bold mt-2 ${text}`}>{value}</p>
     </div>

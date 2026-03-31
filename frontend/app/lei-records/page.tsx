@@ -11,6 +11,7 @@ import ReferenceDetailList from '../components/ReferenceDetailList'
 import SearchInputWithOverflowTooltip from '../components/SearchInputWithOverflowTooltip'
 import StatCard from '../components/StatCard'
 import SyncedWideTable from '../components/SyncedWideTable'
+import ThemedSelect from '../components/ThemedSelect'
 import { useDeferredBooleanPreference } from '../lib/useDeferredBooleanPreference'
 import { buildDocsUrl } from '../lib/docsLinks'
 import { useButtonEmojiMode } from '../lib/useButtonEmojiMode'
@@ -1161,10 +1162,10 @@ export default function LEIRecordsPage() {
 
   if (loading && records.length === 0) {
     return (
-      <div className="min-h-screen p-8">
+      <div className="min-h-screen p-8 theme-page">
         <div className="max-w-7xl mx-auto">
           <div className="text-center py-20">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 theme-spinner"></div>
             <p className="mt-4 opacity-70">{t('leiRecords.loading')}</p>
           </div>
         </div>
@@ -1173,7 +1174,7 @@ export default function LEIRecordsPage() {
   }
 
   return (
-    <div className="min-h-screen p-8">
+    <div className="min-h-screen p-8 theme-page">
       <div className={`${effectiveExpandedWidth ? 'max-w-full' : 'max-w-7xl'} mx-auto transition-all duration-300`}>
         <PageHeader
           title={t('leiRecords.title')}
@@ -1186,7 +1187,7 @@ export default function LEIRecordsPage() {
             <>
               <button
                 onClick={expandedWidthPreference.toggle}
-                className="h-9 px-3 rounded-lg border border-gray-300 dark:border-white/20 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                className="h-9 px-3 rounded-lg theme-btn-neutral theme-focus text-sm font-medium"
                 title={effectiveExpandedWidth ? getEnglishTooltip('referenceLayout.normalButton') : getEnglishTooltip('referenceLayout.expandButton')}
                 aria-label={effectiveExpandedWidth ? t('referenceLayout.normalButton') : t('referenceLayout.expandButton')}
               >
@@ -1196,7 +1197,7 @@ export default function LEIRecordsPage() {
               <div className="relative">
                 <button
                   onClick={() => setShowColumnSelector(!showColumnSelector)}
-                  className="h-9 px-3 rounded-lg border border-gray-300 dark:border-white/20 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                  className="h-9 px-3 rounded-lg theme-btn-neutral theme-focus text-sm font-medium"
                   title={getEnglishTooltip('leiRecords.columns.button')}
                   aria-label={t('leiRecords.columns.button', { count: effectiveVisibleColumns.size })}
                 >
@@ -1204,13 +1205,13 @@ export default function LEIRecordsPage() {
                 </button>
 
                 {showColumnSelector && (
-                  <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-white/20 rounded-lg shadow-xl z-50">
-                    <div className="sticky top-0 bg-white dark:bg-gray-800 border-b-2 border-gray-200 dark:border-white/10 p-3">
+                  <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto theme-scrollbar theme-dropdown rounded-lg shadow-xl z-50">
+                    <div className="sticky top-0 theme-dropdown border-b p-3">
                       <div className="flex justify-between items-center mb-2">
-                        <h3 className="font-semibold text-gray-900 dark:text-white">{t('leiRecords.columns.selector.title')}</h3>
+                        <h3 className="font-semibold">{t('leiRecords.columns.selector.title')}</h3>
                         <button
                           onClick={() => setShowColumnSelector(false)}
-                          className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                          className="theme-text-muted hover:opacity-80"
                           title={t('common.close')}
                         >
                           ✕
@@ -1219,14 +1220,14 @@ export default function LEIRecordsPage() {
                       <div className="flex gap-2 text-xs">
                         <button
                           onClick={() => handleSetVisibleColumns(new Set(AVAILABLE_COLUMNS.map(c => c.key)))}
-                          className="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-gray-700 dark:text-gray-100 rounded hover:bg-blue-200 dark:hover:bg-gray-600"
+                          className="px-2 py-1 theme-filterchip rounded"
                           title={getEnglishTooltip('leiRecords.columns.selector.selectAll')}
                         >
                           {t('leiRecords.columns.selector.selectAll')}
                         </button>
                         <button
                           onClick={() => handleSetVisibleColumns(new Set(AVAILABLE_COLUMNS.filter(c => c.defaultVisible).map(c => c.key)))}
-                          className="px-2 py-1 bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                          className="px-2 py-1 theme-btn-neutral rounded"
                           title={getEnglishTooltip('leiRecords.columns.selector.resetToDefault')}
                         >
                           {t('leiRecords.columns.selector.resetToDefault')}
@@ -1235,11 +1236,11 @@ export default function LEIRecordsPage() {
                     </div>
 
                     {Object.entries(getColumnsByGroup()).map(([groupKey, columns]) => (
-                      <div key={groupKey} className="border-b border-gray-200 dark:border-white/10 last:border-b-0">
+                      <div key={groupKey} className="border-b last:border-b-0" style={{ borderColor: 'rgb(var(--border-rgb) / 0.75)' }}>
                         <button
                           type="button"
                           onClick={() => toggleGroupColumns(groupKey)}
-                          className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-700 font-semibold text-sm text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors flex items-center justify-between gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                          className="w-full px-3 py-2.5 theme-subtle font-semibold text-sm cursor-pointer transition-colors flex items-center justify-between gap-3 theme-focus"
                           title={getEnglishTooltip('leiRecords.columns.selector.toggleGroup')}
                         >
                           <span className="flex items-center gap-2.5">
@@ -1248,7 +1249,7 @@ export default function LEIRecordsPage() {
                             </span>
                             <span>{t(groupKey)}</span>
                           </span>
-                          <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">
+                          <span className="text-xs theme-text-muted font-normal">
                             {columns.filter(c => effectiveVisibleColumns.has(c.key)).length}/{columns.length}
                           </span>
                         </button>
@@ -1256,16 +1257,16 @@ export default function LEIRecordsPage() {
                           {columns.map((column) => (
                             <label
                               key={String(column.key)}
-                              className="flex items-center gap-2 px-2 py-1.5 hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors rounded cursor-pointer text-sm"
+                              className="flex items-center gap-2 px-2 py-1.5 theme-table-row-hover transition-colors rounded cursor-pointer text-sm"
                             >
                               <input
                                 type="checkbox"
                                 checked={effectiveVisibleColumns.has(column.key)}
                                 onChange={() => toggleColumn(column.key)}
-                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                className="rounded"
                               />
                               <span
-                                className="text-gray-900 dark:text-white"
+                                className=""
                                 title={getEnglishTooltip(getColumnLabelTranslationKey(column))}
                               >
                                 {getColumnLabel(column)}
@@ -1281,7 +1282,7 @@ export default function LEIRecordsPage() {
 
               <button
                 onClick={toggleLocationDisplayMode}
-                className="h-9 px-3 rounded-lg border border-gray-300 dark:border-white/20 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                className="h-9 px-3 rounded-lg theme-btn-neutral theme-focus text-sm font-medium"
                 title={showLocationCodes ? getEnglishTooltip('leiRecords.display.codes') : getEnglishTooltip('leiRecords.display.names')}
                 aria-label={showLocationCodes ? t('leiRecords.display.codes') : t('leiRecords.display.names')}
               >
@@ -1322,10 +1323,10 @@ export default function LEIRecordsPage() {
           </Alert>
         )}
 
-        <div className="relative z-40 mb-6 bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm rounded-lg p-6">
+        <div className="relative z-40 mb-6 theme-panel border backdrop-blur-sm rounded-lg p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">{t('leiRecords.filters.search')}</label>
+              <label className="block text-sm font-medium mb-2">{t('leiRecords.filters.search')}</label>
               <SearchInputWithOverflowTooltip
                 ref={searchInputRef}
                 type="text"
@@ -1333,44 +1334,50 @@ export default function LEIRecordsPage() {
                 title={getEnglishTooltip('leiRecords.filters.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-4 py-2 rounded-lg border-2 border-gray-300 bg-gray-50 text-gray-900 placeholder-gray-500 dark:border-white/20 dark:bg-white/5 dark:text-white dark:placeholder-gray-400 focus:border-blue-500 focus:outline-none"
+                className="w-full px-4 py-2 rounded-lg border theme-input"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">{t('leiRecords.filters.status')}</label>
-              <select
+              <label className="block text-sm font-medium mb-2">{t('leiRecords.filters.status')}</label>
+              <ThemedSelect
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
+                onChange={setStatusFilter}
+                ariaLabel={t('leiRecords.filters.status')}
                 title={statusFilter || getEnglishTooltip('leiRecords.filters.allStatuses')}
-                className="w-full px-4 py-2 rounded-lg border-2 border-gray-300 bg-gray-50 text-gray-900 dark:border-white/20 dark:bg-white/5 dark:text-white focus:border-blue-500 focus:outline-none"
-              >
-                <option value="" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">{t('leiRecords.filters.allStatuses')}</option>
-                {statusOptions.map(status => (
-                  <option key={status} value={status} className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">
-                    {formatStatusFilterLabel(status)}
-                  </option>
-                ))}
-              </select>
+                className="w-full"
+                buttonClassName="px-4 py-2"
+                options={[
+                  { value: '', label: t('leiRecords.filters.allStatuses') },
+                  ...statusOptions.map((status) => ({
+                    value: status,
+                    label: formatStatusFilterLabel(status),
+                  })),
+                ]}
+              />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">{t('leiRecords.filters.category')}</label>
-              <select
+              <label className="block text-sm font-medium mb-2">{t('leiRecords.filters.category')}</label>
+              <ThemedSelect
                 value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
+                onChange={setCategoryFilter}
+                ariaLabel={t('leiRecords.filters.category')}
                 title={categoryFilter || getEnglishTooltip('leiRecords.filters.allCategories')}
-                className="w-full px-4 py-2 rounded-lg border-2 border-gray-300 bg-gray-50 text-gray-900 dark:border-white/20 dark:bg-white/5 dark:text-white focus:border-blue-500 focus:outline-none"
-              >
-                <option value="" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">{t('leiRecords.filters.allCategories')}</option>
-                {categoryOptions.map(category => (
-                  <option key={category} value={category} className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">{formatEnumDisplayValue(category)}</option>
-                ))}
-              </select>
+                className="w-full"
+                buttonClassName="px-4 py-2"
+                options={[
+                  { value: '', label: t('leiRecords.filters.allCategories') },
+                  ...categoryOptions.map((category) => ({
+                    value: category,
+                    label: formatEnumDisplayValue(category),
+                  })),
+                ]}
+              />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">{t('leiRecords.filters.country')}</label>
+              <label className="block text-sm font-medium mb-2">{t('leiRecords.filters.country')}</label>
               <div className="relative z-50" ref={countryDropdownRef}>
                 <SearchInputWithOverflowTooltip
                   type="text"
@@ -1382,18 +1389,19 @@ export default function LEIRecordsPage() {
                     setShowCountryDropdown(true)
                   }}
                   onFocus={() => setShowCountryDropdown(true)}
-                  className="w-full px-4 py-2 rounded-lg border-2 border-gray-300 bg-gray-50 text-gray-900 placeholder-gray-500 dark:border-white/20 dark:bg-white/5 dark:text-white dark:placeholder-gray-400 focus:border-blue-500 focus:outline-none"
+                  className="w-full px-4 py-2 rounded-lg border theme-input"
                 />
                 
                 {showCountryDropdown && (
-                  <div className="absolute z-50 w-full mt-1 max-h-60 overflow-y-auto bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-white/20 rounded-lg shadow-lg">
+                  <div className="absolute z-50 w-full mt-1 max-h-60 overflow-y-auto theme-scrollbar theme-dropdown rounded-lg shadow-lg">
                     <button
                       onClick={() => {
                         setCountryFilter('')
                         setCountrySearch('')
                         setShowCountryDropdown(false)
                       }}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700"
+                      className="w-full px-4 py-2 text-left theme-table-row-hover border-b"
+                      style={{ borderColor: 'rgb(var(--border-rgb) / 0.75)' }}
                     >
                       {t('leiRecords.filters.allCountries')}
                     </button>
@@ -1411,10 +1419,10 @@ export default function LEIRecordsPage() {
                             setCountrySearch(`${country.code} - ${country.name}`)
                             setShowCountryDropdown(false)
                           }}
-                          className={`w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-sm ${
+                          className={`w-full px-4 py-2 text-left theme-table-row-hover text-sm ${
                             countryFilter === country.code
-                              ? 'bg-blue-50 dark:bg-blue-900 text-blue-900 dark:text-blue-100 font-medium'
-                              : 'text-gray-900 dark:text-white'
+                              ? 'theme-filterchip font-medium'
+                              : ''
                           }`}
                         >
                           <span className="font-mono font-semibold">{country.code}</span> - {country.name}
@@ -1425,7 +1433,7 @@ export default function LEIRecordsPage() {
                       country.name.toLowerCase().includes(countrySearch.toLowerCase()) ||
                       country.code.toLowerCase().includes(countrySearch.toLowerCase())
                     ).length === 0 && (
-                      <div className="px-4 py-2 text-gray-500 dark:text-gray-400 text-sm">
+                      <div className="px-4 py-2 theme-text-muted text-sm">
                         {t('leiRecords.filters.noCountriesFound')}
                       </div>
                     )}
@@ -1433,7 +1441,7 @@ export default function LEIRecordsPage() {
                 )}
                 
                 {countryFilter && (
-                  <div className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                  <div className="mt-1 text-xs theme-text-muted">
                     {t('leiRecords.filters.filteredBy', { name: countryOptions.find(c => c.code === countryFilter)?.name || countryFilter })}
                   </div>
                 )}
@@ -1445,7 +1453,7 @@ export default function LEIRecordsPage() {
             {hasActiveFilters && (
               <button
                 onClick={clearFilters}
-                className="px-6 py-2 rounded-lg bg-white hover:bg-gray-100 dark:bg-gray-600 dark:hover:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-transparent transition-colors font-medium shadow-sm"
+                className="px-6 py-2 rounded-lg theme-btn-neutral transition-colors font-medium shadow-sm"
               >
                 ✕ {t('common.clearFilters')}
               </button>
@@ -1458,11 +1466,11 @@ export default function LEIRecordsPage() {
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-500 dark:disabled:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-white"
+              className="px-4 py-2 rounded-lg theme-btn-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {t('leiRecords.pagination.previous')}
             </button>
-            <span className="text-gray-700 dark:text-gray-300">
+            <span className="theme-text-muted">
                 {hasActiveFilters
                   ? t('leiRecords.pagination.pageFiltered', { page: currentPage, count: records.length })
                   : t('leiRecords.pagination.pageOf', { page: currentPage, total: totalPages.toLocaleString() })}
@@ -1470,7 +1478,7 @@ export default function LEIRecordsPage() {
             <button
               onClick={() => setCurrentPage(p => p + 1)}
               disabled={isLastPage}
-              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-500 dark:disabled:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-white"
+              className="px-4 py-2 rounded-lg theme-btn-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {t('leiRecords.pagination.next')}
             </button>
@@ -1479,14 +1487,14 @@ export default function LEIRecordsPage() {
 
         {/* Sticky filter summary bar - shows when scrolling */}
         {hasActiveFilters && (
-          <div ref={filterBarRef} className="sticky top-0 z-40 bg-blue-50 dark:bg-blue-900 border-b-2 border-blue-200 dark:border-blue-700 px-6 py-3 shadow-md rounded-t-lg">
+          <div ref={filterBarRef} className="sticky top-0 z-40 theme-filterbar px-6 py-3 shadow-md rounded-t-lg">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-3 flex-wrap text-sm">
-                <span className="font-medium text-blue-900 dark:text-blue-100">{t('leiRecords.filters.activeFilters')}</span>
+                <span className="font-medium">{t('leiRecords.filters.activeFilters')}</span>
                 {debouncedSearch && (
                   <button
                     onClick={() => setSearchTerm('')}
-                    className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors flex items-center gap-1"
+                    className="px-2 py-1 theme-filterchip rounded text-xs font-medium transition-colors flex items-center gap-1"
                   >
                     {t('leiRecords.filters.searchChip', { value: debouncedSearch })} <span className="ml-1">✕</span>
                   </button>
@@ -1494,7 +1502,7 @@ export default function LEIRecordsPage() {
                 {statusFilter && (
                   <button
                     onClick={() => setStatusFilter('')}
-                    className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors flex items-center gap-1"
+                    className="px-2 py-1 theme-filterchip rounded text-xs font-medium transition-colors flex items-center gap-1"
                   >
                     {t('leiRecords.filters.statusChip', { value: formatStatusFilterLabel(statusFilter) })} <span className="ml-1">✕</span>
                   </button>
@@ -1502,7 +1510,7 @@ export default function LEIRecordsPage() {
                 {categoryFilter && (
                   <button
                     onClick={() => setCategoryFilter('')}
-                    className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors flex items-center gap-1"
+                    className="px-2 py-1 theme-filterchip rounded text-xs font-medium transition-colors flex items-center gap-1"
                   >
                     {t('leiRecords.filters.categoryChip', { value: formatEnumDisplayValue(categoryFilter) })} <span className="ml-1">✕</span>
                   </button>
@@ -1510,7 +1518,7 @@ export default function LEIRecordsPage() {
                 {countryFilter && (
                   <button
                     onClick={() => setCountryFilter('')}
-                    className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors flex items-center gap-1"
+                    className="px-2 py-1 theme-filterchip rounded text-xs font-medium transition-colors flex items-center gap-1"
                   >
                     {t('leiRecords.filters.countryChip', { name: countryOptions.find(c => c.code === countryFilter)?.name || countryFilter })} <span className="ml-1">✕</span>
                   </button>
@@ -1518,7 +1526,7 @@ export default function LEIRecordsPage() {
               </div>
               <button
                 onClick={clearFilters}
-                className="px-3 py-1 text-xs rounded-lg bg-white hover:bg-gray-100 dark:bg-blue-600 dark:hover:bg-blue-700 text-blue-900 dark:text-white border border-blue-300 dark:border-transparent transition-colors font-medium shadow-sm"
+                className="px-3 py-1 text-xs rounded-lg theme-filterchip-clear transition-colors font-medium shadow-sm"
               >
                 ✕ {t('common.clearFilters')}
               </button>
@@ -1531,9 +1539,9 @@ export default function LEIRecordsPage() {
             {/* Loading overlay - Fixed to viewport for visibility when scrolled */}
             {loading && (
               <div className="fixed inset-0 bg-black/30 dark:bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
-                <div className="flex flex-col items-center gap-3 bg-white dark:bg-gray-800 px-8 py-6 rounded-lg shadow-2xl border-2 border-blue-500 dark:border-blue-400">
-                  <div className="animate-spin rounded-full h-16 w-16 border-4 border-gray-200 dark:border-gray-700 border-t-blue-600 dark:border-t-blue-400"></div>
-                  <p className="text-base font-semibold text-gray-900 dark:text-gray-100">{t('leiRecords.loadingResults')}</p>
+                <div className="flex flex-col items-center gap-3 theme-loader-shell px-8 py-6 rounded-lg shadow-2xl">
+                  <div className="animate-spin rounded-full h-16 w-16 border-4 theme-spinner"></div>
+                  <p className="text-base font-semibold">{t('leiRecords.loadingResults')}</p>
                 </div>
               </div>
             )}
@@ -1541,14 +1549,14 @@ export default function LEIRecordsPage() {
             <SyncedWideTable
               stickyTopOffset={hasActiveFilters ? filterBarHeight : 0}
               dependencyKey={`${effectiveExpandedWidth}-${showLocationCodes}-${visibleColumnsInOrder.map((column) => column.key).join('|')}-${records.length}-${currentPage}-${loading}`}
-              tableClassName="min-w-full"
-              tableStyle={{ tableLayout: 'auto', borderCollapse: 'collapse' }}
-              stickyHeaderClassName="bg-gray-100 dark:bg-gray-800"
-              mainHeaderClassName="bg-gray-100 dark:bg-gray-800"
-              bodyClassName="divide-y divide-gray-200 dark:divide-white/10"
-              topScrollbarClassName="mb-1 overflow-x-auto bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 rounded-t-lg"
-              stickyContainerClassName="fixed z-30 overflow-x-auto bg-white border-b-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm shadow-lg transition-all duration-300 ease-in-out"
-              containerClassName={`overflow-x-auto bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm shadow-lg transition-opacity duration-200 ${loading ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}
+              tableClassName="min-w-full theme-table-collapse"
+              tableStyle={{ tableLayout: 'auto' }}
+              stickyHeaderClassName="theme-table-header"
+              mainHeaderClassName="theme-table-header"
+              bodyClassName="theme-table-shell theme-table-divider"
+              topScrollbarClassName="mb-1 overflow-x-auto theme-table-shell border rounded-t-lg"
+              stickyContainerClassName="fixed z-30 overflow-x-auto theme-table-shell border-b backdrop-blur-sm shadow-lg transition-all duration-300 ease-in-out"
+              containerClassName={`overflow-x-auto theme-table-shell border backdrop-blur-sm shadow-lg transition-opacity duration-200 ${loading ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}
               containerStyle={{
                 borderTopLeftRadius: hasActiveFilters ? 0 : '0.5rem',
                 borderTopRightRadius: hasActiveFilters ? 0 : '0.5rem',
@@ -1574,8 +1582,8 @@ export default function LEIRecordsPage() {
                     <th
                       key={String(column.key)}
                       onClick={() => handleSort(column.key)}
-                      className={`${column.width || 'min-w-40'} ${column.key === 'lei' ? 'px-2' : 'px-4'} py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${
-                        column.key === 'lei' || column.key === 'legal_name' ? "relative bg-blue-100 hover:bg-blue-200 dark:bg-gray-800 dark:hover:bg-gray-700 shadow-[inset_-1px_0_0_0_rgba(203,213,225,1)] dark:shadow-[inset_-1px_0_0_0_rgba(55,65,81,1)]" : ''
+                      className={`${column.width || 'min-w-40'} ${column.key === 'lei' ? 'px-2' : 'px-4'} py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer transition-colors theme-table-header-cell ${
+                        column.key === 'lei' || column.key === 'legal_name' ? "relative bg-[rgb(var(--surface-muted-rgb))] hover:bg-[rgb(var(--surface-muted-rgb))] dark:bg-[rgb(var(--surface-muted-rgb))] dark:hover:bg-[rgb(var(--surface-muted-rgb))] shadow-[inset_-1px_0_0_0_rgba(203,213,225,1)] dark:shadow-[inset_-1px_0_0_0_rgba(55,65,81,1)]" : ''
                       }`}
                       style={(() => {
                         const pinnedWidth = getPinnedColumnWidth(column.key)
@@ -1597,7 +1605,7 @@ export default function LEIRecordsPage() {
                       >
                         {getColumnLabel(column)}
                         {sortField === column.key && (
-                          <span className="text-blue-600 dark:text-blue-400">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                          <span className="theme-sort-indicator">{sortDirection === 'asc' ? '↑' : '↓'}</span>
                         )}
                       </div>
                     </th>
@@ -1613,7 +1621,7 @@ export default function LEIRecordsPage() {
                         data-lei={record.lei}
                         data-row-index={index}
                         onClick={() => handleRecordClick(record)}
-                        className="group hover:bg-blue-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+                        className="group theme-table-row-hover transition-colors cursor-pointer"
                         style={{ height: 'auto', minHeight: '48px' }}
                       >
                         {visibleColumnsInOrder.map((column) => {
@@ -1631,9 +1639,9 @@ export default function LEIRecordsPage() {
                           return (
                             <td
                               key={String(column.key)}
-                              className={`${column.key === 'lei' ? 'px-2' : 'px-4'} py-3 text-sm ${column.key === 'lei' ? 'font-mono' : ''} text-gray-900 dark:text-gray-100 ${column.key.includes('date') || column.key === 'lei' ? 'whitespace-nowrap' : ''} ${
+                              className={`${column.key === 'lei' ? 'px-2' : 'px-4'} py-3 text-sm ${column.key === 'lei' ? 'font-mono' : ''} ${column.key.includes('date') || column.key === 'lei' ? 'whitespace-nowrap' : ''} ${
                                 column.key === 'lei' || column.key === 'legal_name'
-                                  ? "relative bg-blue-50 dark:bg-gray-900 group-hover:bg-blue-100 dark:group-hover:bg-gray-800 shadow-[inset_-1px_0_0_0_rgba(203,213,225,1)] dark:shadow-[inset_-1px_0_0_0_rgba(55,65,81,1)] overflow-hidden text-ellipsis"
+                                  ? "relative bg-[rgb(var(--surface-soft-rgb))] dark:bg-[rgb(var(--surface-rgb))] group-hover:bg-[rgb(var(--surface-muted-rgb))] dark:group-hover:bg-[rgb(var(--surface-muted-rgb))] shadow-[inset_-1px_0_0_0_rgba(203,213,225,1)] dark:shadow-[inset_-1px_0_0_0_rgba(55,65,81,1)] overflow-hidden text-ellipsis"
                                   : ''
                               }`}
                               style={(() => {
@@ -1661,7 +1669,7 @@ export default function LEIRecordsPage() {
                                     <span className={`px-2 py-1 text-xs rounded ${
                                       statusPresentation.isActive
                                         ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                                        : 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                                        : 'theme-subtle'
                                     }`}>
                                       {statusPresentation.label}
                                     </span>
@@ -1672,7 +1680,7 @@ export default function LEIRecordsPage() {
                                   <button
                                     type="button"
                                     onClick={(event) => handleLinkedLeiClick(event, normalizeLeiCode(String(value || '')))}
-                                    className="font-mono text-left text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+                                    className="font-mono text-left theme-link hover:underline"
                                   >
                                     {formatCellValue(value, column.key)}
                                   </button>
@@ -1681,7 +1689,7 @@ export default function LEIRecordsPage() {
                                     const cachedName = normalizedValue ? managingLouNames.get(normalizedValue) : null
                                     if (!cachedName) return null
                                     return (
-                                      <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                      <div className="mt-1 text-xs theme-text-muted">
                                         {cachedName}
                                       </div>
                                     )
@@ -1692,7 +1700,7 @@ export default function LEIRecordsPage() {
                                   <button
                                     type="button"
                                     onClick={(event) => handleLinkedLeiClick(event, normalizeLeiCode(String(value || '')))}
-                                    className="font-mono text-left text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+                                    className="font-mono text-left theme-link hover:underline"
                                   >
                                     {formatCellValue(value, column.key)}
                                   </button>
@@ -1701,7 +1709,7 @@ export default function LEIRecordsPage() {
                                     const cachedName = normalizedValue ? successorLeiNames.get(normalizedValue) : null
                                     if (!cachedName) return null
                                     return (
-                                      <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                      <div className="mt-1 text-xs theme-text-muted">
                                         {cachedName}
                                       </div>
                                     )
@@ -1728,7 +1736,7 @@ export default function LEIRecordsPage() {
                                 <CountryFlag
                                   countryCode={String(record.legal_address_country || '')}
                                   title={formatCountryDisplay(String(record.legal_address_country || ''))}
-                                  className="h-4 w-6 rounded-sm border border-gray-200 dark:border-gray-700"
+                                  className="h-4 w-6 rounded-sm border border-[rgb(var(--border-rgb))]"
                                 />
                               ) : isRegionColumn ? (
                                 formatRegionDisplay(String(value || ''))
@@ -1748,8 +1756,8 @@ export default function LEIRecordsPage() {
             />
           </div>
         ) : (
-            <div className="text-center py-12 bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm rounded-lg">
-              <p className="text-xl text-gray-600 dark:text-gray-400">{t('leiRecords.noRecordsFound')}</p>
+            <div className="text-center py-12 theme-panel border backdrop-blur-sm rounded-lg">
+              <p className="text-xl theme-text-muted">{t('leiRecords.noRecordsFound')}</p>
             </div>
           )}
 
@@ -1758,47 +1766,49 @@ export default function LEIRecordsPage() {
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-500 dark:disabled:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-white"
+              className="px-4 py-2 rounded-lg theme-btn-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {t('leiRecords.pagination.previous')}
             </button>
             <div className="flex items-center gap-4">
-              <span className="text-gray-700 dark:text-gray-300">
+              <span className="theme-text-muted">
                 {t('leiRecords.pagination.page', { page: currentPage })}{hasActiveFilters && ` (${t('leiRecords.stats.showing').toLowerCase()} ${records.length})`}
               </span>
               <div className="flex items-center gap-2">
-                <label htmlFor="items-per-page" className="text-sm text-gray-700 dark:text-gray-300">{t('leiRecords.pagination.itemsPerPage')}</label>
-                <select
-                  id="items-per-page"
-                  value={itemsPerPage}
-                  onChange={(e) => {
-                    setItemsPerPage(Number(e.target.value))
+                <label htmlFor="items-per-page" className="text-sm theme-text-muted">{t('leiRecords.pagination.itemsPerPage')}</label>
+                <ThemedSelect
+                  value={String(itemsPerPage)}
+                  onChange={(next) => {
+                    setItemsPerPage(Number(next))
                     setCurrentPage(1)
                   }}
-                  className="px-3 py-1 rounded-lg bg-white border-2 border-gray-200 dark:bg-gray-800 dark:border-white/10 text-gray-900 dark:text-white text-sm focus:border-blue-500 focus:outline-none"
-                >
-                  <option value="50">50</option>
-                  <option value="100">100</option>
-                  <option value="250">250</option>
-                  <option value="500">500</option>
-                </select>
+                  ariaLabel={t('leiRecords.pagination.itemsPerPage')}
+                  className="min-w-[5.5rem]"
+                  buttonClassName="px-3 py-1 text-sm"
+                  options={[
+                    { value: '50', label: '50' },
+                    { value: '100', label: '100' },
+                    { value: '250', label: '250' },
+                    { value: '500', label: '500' },
+                  ]}
+                />
               </div>
             </div>
             <button
               onClick={() => setCurrentPage(p => p + 1)}
               disabled={isLastPage}
-              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-500 dark:disabled:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-white"
+              className="px-4 py-2 rounded-lg theme-btn-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {t('leiRecords.pagination.next')}
             </button>
           </div>
         )}
 
-        <div className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">
+        <div className="mt-8 text-center text-sm text-[rgb(var(--muted-foreground-rgb))]">
           <p>{t('leiRecords.dataSource')}</p>
           <p className="mt-2">
             {t('leiRecords.totalDatabase', { count: totalRecords })} |
-            <Link href="/lei" className="ml-1 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 underline">
+            <Link href="/lei" className="ml-1 theme-link hover:opacity-80 underline">
               {t('leiRecords.viewSyncStatus')}
             </Link>
           </p>
@@ -1817,36 +1827,36 @@ export default function LEIRecordsPage() {
             role="dialog"
             aria-modal="true"
             aria-label={t('leiRecords.modal.title')}
-            className="bg-white dark:bg-gray-900 rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border-2 border-gray-300 dark:border-white/20"
+            className="bg-[rgb(var(--surface-rgb))] rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto theme-scrollbar border-2 border-[rgb(var(--border-rgb))]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="sticky top-0 bg-white dark:bg-gray-900 border-b-2 border-gray-200 dark:border-white/10 p-6 z-10">
+            <div className="sticky top-0 bg-[rgb(var(--surface-rgb))] border-b-2 border-[rgb(var(--border-rgb))] p-6 z-10">
               <div className="flex justify-between items-start mb-4">
                 <div className="flex-1">
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{t('leiRecords.modal.title')}</h2>
-                  <p className="text-lg font-mono text-blue-600 dark:text-blue-400">{selectedRecord.lei}</p>
+                  <h2 className="text-2xl font-bold text-[rgb(var(--foreground-rgb))] mb-2">{t('leiRecords.modal.title')}</h2>
+                  <p className="text-lg font-mono text-[rgb(var(--primary-rgb))] dark:text-[rgb(var(--primary-rgb))]">{selectedRecord.lei}</p>
                 </div>
                 <button
                   onClick={() => setSelectedRecord(null)}
-                  className="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors text-gray-900 dark:text-white font-medium"
+                  className="px-4 py-2 rounded-lg bg-[rgb(var(--surface-muted-rgb))] hover:bg-[rgb(var(--surface-muted-rgb))] dark:bg-[rgb(var(--surface-muted-rgb))] dark:hover:bg-[rgb(var(--surface-muted-rgb))] transition-colors text-[rgb(var(--foreground-rgb))] font-medium"
                 >
                   {t('leiRecords.modal.close')}
                 </button>
               </div>
               {/* Date Display Mode Toggle */}
               <div className="flex items-center gap-2 text-sm">
-                <span className="text-gray-600 dark:text-gray-400">{t('leiRecords.modal.dateDisplay')}</span>
+                <span className="text-[rgb(var(--muted-foreground-rgb))]">{t('leiRecords.modal.dateDisplay')}</span>
                 <button
                   onClick={() => setDateDisplayMode(dateDisplayMode === 'relative' ? 'absolute' : 'relative')}
-                  className="px-3 py-1 rounded-lg bg-blue-100 hover:bg-blue-200 dark:bg-blue-900 dark:hover:bg-blue-800 text-blue-900 dark:text-blue-100 transition-colors font-medium"
+                  className="px-3 py-1 rounded-lg theme-filterchip transition-colors font-medium"
                 >
                   {dateDisplayMode === 'relative' ? t('leiRecords.modal.dateRelative') : t('leiRecords.modal.dateDaysOnly')}
                 </button>
-                <span className="text-gray-600 dark:text-gray-400 ml-2">{t('leiRecords.modal.display')}</span>
+                <span className="text-[rgb(var(--muted-foreground-rgb))] ml-2">{t('leiRecords.modal.display')}</span>
                 <button
                   onClick={toggleLocationDisplayMode}
-                  className="px-3 py-1 rounded-lg bg-indigo-100 hover:bg-indigo-200 dark:bg-indigo-900 dark:hover:bg-indigo-800 text-indigo-900 dark:text-indigo-100 transition-colors font-medium"
+                  className="px-3 py-1 rounded-lg theme-filterchip transition-colors font-medium"
                 >
                   {showLocationCodes ? t('leiRecords.display.codes') : t('leiRecords.display.names')}
                 </button>
@@ -1854,25 +1864,25 @@ export default function LEIRecordsPage() {
             </div>
 
             {/* Modal Body */}
-            <div className="bg-white dark:bg-gray-900 pb-6">
+            <div className="bg-[rgb(var(--surface-rgb))] pb-6">
               {/* Core Information */}
-              <section className="bg-white dark:bg-gray-900 p-6 pb-0">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 pb-2 border-b border-gray-200 dark:border-white/10">
+              <section className="bg-[rgb(var(--surface-rgb))] p-6 pb-0">
+                <h3 className="text-lg font-semibold text-[rgb(var(--foreground-rgb))] mb-3 pb-2 border-b border-[rgb(var(--border-rgb))]">
                   {t('leiRecords.modal.coreInformation')}
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white dark:bg-gray-900">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-[rgb(var(--surface-rgb))]">
                   <div>
-                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Legal Name</span>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white mt-1">{selectedRecord.legal_name}</p>
+                    <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">Legal Name</span>
+                    <p className="text-sm font-semibold text-[rgb(var(--foreground-rgb))] mt-1">{selectedRecord.legal_name}</p>
                   </div>
                   {selectedRecord.transliterated_legal_name && (
                     <div>
-                      <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Transliterated Name</span>
-                      <p className="text-sm text-gray-900 dark:text-white mt-1">{selectedRecord.transliterated_legal_name}</p>
+                      <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">Transliterated Name</span>
+                      <p className="text-sm text-[rgb(var(--foreground-rgb))] mt-1">{selectedRecord.transliterated_legal_name}</p>
                     </div>
                   )}
                   <div>
-                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</span>
+                    <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">Status</span>
                     <p className="mt-1">
                       {(() => {
                         const statusPresentation = getStatusBadgePresentation(selectedRecord.entity_status)
@@ -1880,7 +1890,7 @@ export default function LEIRecordsPage() {
                       <span className={`px-2 py-1 text-xs rounded ${
                         statusPresentation.isActive
                           ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
-                          : 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                          : 'theme-subtle'
                       }`}>
                         {statusPresentation.label}
                       </span>
@@ -1889,19 +1899,19 @@ export default function LEIRecordsPage() {
                     </p>
                   </div>
                   <div>
-                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Category</span>
-                    <p className="text-sm text-gray-900 dark:text-white mt-1">{selectedRecord.entity_category || '-'}</p>
+                    <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">Category</span>
+                    <p className="text-sm text-[rgb(var(--foreground-rgb))] mt-1">{selectedRecord.entity_category || '-'}</p>
                   </div>
                   {selectedRecord.entity_sub_category && (
                     <div>
-                      <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Sub Category</span>
-                      <p className="text-sm text-gray-900 dark:text-white mt-1">{selectedRecord.entity_sub_category}</p>
+                      <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">Sub Category</span>
+                      <p className="text-sm text-[rgb(var(--foreground-rgb))] mt-1">{selectedRecord.entity_sub_category}</p>
                     </div>
                   )}
                   {selectedRecord.entity_legal_form && (
                     <div>
-                      <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{showLocationCodes ? 'Legal Form Code' : 'Legal Form Name'}</span>
-                      <p className="text-sm text-gray-900 dark:text-white mt-1">{formatLegalFormDisplay(selectedRecord.entity_legal_form)}</p>
+                      <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">{showLocationCodes ? 'Legal Form Code' : 'Legal Form Name'}</span>
+                      <p className="text-sm text-[rgb(var(--foreground-rgb))] mt-1">{formatLegalFormDisplay(selectedRecord.entity_legal_form)}</p>
                     </div>
                   )}
                 </div>
@@ -1909,26 +1919,26 @@ export default function LEIRecordsPage() {
                   otherNamesData={selectedRecord.other_names}
                   showCodes={showLocationCodes}
                   languagesByCode={languagesByCode}
-                  className="mt-4 pt-4 border-t border-gray-200 dark:border-white/10"
+                  className="mt-4 pt-4 border-t border-[rgb(var(--border-rgb))]"
                   showLabel={true}
                   label="Other Names"
-                  labelClassName="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase"
+                  labelClassName="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase"
                   listClassName="mt-2 space-y-1"
-                  itemClassName="text-sm text-gray-900 dark:text-white"
-                  languageClassName="ml-2 text-xs text-gray-500 dark:text-gray-400"
+                  itemClassName="text-sm text-[rgb(var(--foreground-rgb))]"
+                  languageClassName="ml-2 text-xs text-[rgb(var(--muted-foreground-rgb))]"
                 />
               </section>
 
               {/* Addresses - Side by Side with Aligned Fields */}
-              <section className="bg-white dark:bg-gray-900 p-6 pb-0">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 pb-2 border-b border-gray-200 dark:border-white/10">
+              <section className="bg-[rgb(var(--surface-rgb))] p-6 pb-0">
+                <h3 className="text-lg font-semibold text-[rgb(var(--foreground-rgb))] mb-3 pb-2 border-b border-[rgb(var(--border-rgb))]">
                   {t('leiRecords.modal.addresses')}
                 </h3>
                 
                 {/* Column Headers */}
-                <div className="grid grid-cols-2 gap-6 mb-4 bg-white dark:bg-gray-900">
+                <div className="grid grid-cols-2 gap-6 mb-4 bg-[rgb(var(--surface-rgb))]">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+                    <h4 className="text-sm font-semibold text-[rgb(var(--muted-foreground-rgb))] uppercase tracking-wide">
                       {t('leiRecords.modal.legalAddress')}
                     </h4>
                     {selectedRecord.legal_address_city && (
@@ -1943,7 +1953,7 @@ export default function LEIRecordsPage() {
                           country: selectedRecord.legal_address_country,
                           postalCode: selectedRecord.legal_address_postal_code
                         }), '_blank')}
-                        className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-xs font-medium flex items-center gap-1 transition-colors"
+                        className="text-[rgb(var(--primary-rgb))] dark:text-[rgb(var(--primary-rgb))] hover:text-[rgb(var(--primary-rgb))] dark:hover:text-[rgb(var(--primary-rgb))] text-xs font-medium flex items-center gap-1 transition-colors"
                         title="View on OpenStreetMap"
                       >
                         {t('leiRecords.modal.viewOnMap')}
@@ -1951,7 +1961,7 @@ export default function LEIRecordsPage() {
                     )}
                   </div>
                   <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+                    <h4 className="text-sm font-semibold text-[rgb(var(--muted-foreground-rgb))] uppercase tracking-wide">
                       {t('leiRecords.modal.hqAddress')}
                     </h4>
                     {!isHqAddressSameAsLegal(selectedRecord) && selectedRecord.hq_address_city && (
@@ -1966,7 +1976,7 @@ export default function LEIRecordsPage() {
                           country: selectedRecord.hq_address_country,
                           postalCode: selectedRecord.hq_address_postal_code
                         }), '_blank')}
-                        className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-xs font-medium flex items-center gap-1 transition-colors"
+                        className="text-[rgb(var(--primary-rgb))] dark:text-[rgb(var(--primary-rgb))] hover:text-[rgb(var(--primary-rgb))] dark:hover:text-[rgb(var(--primary-rgb))] text-xs font-medium flex items-center gap-1 transition-colors"
                         title="View on OpenStreetMap"
                       >
                         {t('leiRecords.modal.viewOnMap')}
@@ -1976,12 +1986,12 @@ export default function LEIRecordsPage() {
                 </div>
 
                 {isHqAddressSameAsLegal(selectedRecord) ? (
-                  <div className="space-y-4 bg-white dark:bg-gray-900">
+                  <div className="space-y-4 bg-[rgb(var(--surface-rgb))]">
                     {/* Address Row - Legal on left, message on right */}
                     <div className="grid grid-cols-2 gap-6">
                       <div>
-                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Address</span>
-                        <p className="text-sm text-gray-900 dark:text-white mt-1">
+                        <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">Address</span>
+                        <p className="text-sm text-[rgb(var(--foreground-rgb))] mt-1">
                           {selectedRecord.legal_address_line_1 || '-'}
                           {selectedRecord.legal_address_line_2 && <><br/>{selectedRecord.legal_address_line_2}</>}
                           {selectedRecord.legal_address_line_3 && <><br/>{selectedRecord.legal_address_line_3}</>}
@@ -1989,8 +1999,8 @@ export default function LEIRecordsPage() {
                         </p>
                       </div>
                       <div>
-                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Address</span>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 italic mt-1">
+                        <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">Address</span>
+                        <p className="text-sm text-[rgb(var(--muted-foreground-rgb))] italic mt-1">
                           {t('leiRecords.modal.sameAsLegal')}
                         </p>
                       </div>
@@ -1999,32 +2009,32 @@ export default function LEIRecordsPage() {
                     {/* City Row */}
                     <div className="grid grid-cols-2 gap-6">
                       <div>
-                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">City</span>
-                        <p className="text-sm text-gray-900 dark:text-white mt-1">{selectedRecord.legal_address_city || '-'}</p>
+                        <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">City</span>
+                        <p className="text-sm text-[rgb(var(--foreground-rgb))] mt-1">{selectedRecord.legal_address_city || '-'}</p>
                       </div>
                       <div>
-                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">City</span>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 italic mt-1">〃</p>
+                        <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">City</span>
+                        <p className="text-sm text-[rgb(var(--muted-foreground-rgb))] italic mt-1">〃</p>
                       </div>
                     </div>
 
                     {/* Region Row */}
                     <div className="grid grid-cols-2 gap-6">
                       <div>
-                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{showLocationCodes ? 'Region Code' : 'Region Name'}</span>
-                        <p className="text-sm text-gray-900 dark:text-white mt-1">{formatRegionDisplay(selectedRecord.legal_address_region)}</p>
+                        <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">{showLocationCodes ? 'Region Code' : 'Region Name'}</span>
+                        <p className="text-sm text-[rgb(var(--foreground-rgb))] mt-1">{formatRegionDisplay(selectedRecord.legal_address_region)}</p>
                       </div>
                       <div>
-                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{showLocationCodes ? 'Region Code' : 'Region Name'}</span>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 italic mt-1">〃</p>
+                        <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">{showLocationCodes ? 'Region Code' : 'Region Name'}</span>
+                        <p className="text-sm text-[rgb(var(--muted-foreground-rgb))] italic mt-1">〃</p>
                       </div>
                     </div>
 
                     {/* Country Row */}
                     <div className="grid grid-cols-2 gap-6">
                       <div>
-                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{showLocationCodes ? 'Country Code' : 'Country Name'}</span>
-                        <p className="text-sm text-gray-900 dark:text-white mt-1 flex items-center gap-2">
+                        <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">{showLocationCodes ? 'Country Code' : 'Country Name'}</span>
+                        <p className="text-sm text-[rgb(var(--foreground-rgb))] mt-1 flex items-center gap-2">
                           <ReferenceDetailList
                             values={[selectedRecord.legal_address_country]}
                             normalizeValue={(rawValue) => String(rawValue || '').trim().toUpperCase()}
@@ -2035,35 +2045,35 @@ export default function LEIRecordsPage() {
                           <CountryFlag
                             countryCode={String(selectedRecord.legal_address_country || '')}
                             title={formatCountryDisplay(selectedRecord.legal_address_country)}
-                            className="h-3.5 w-5 rounded-sm border border-gray-200 dark:border-gray-700"
+                            className="h-3.5 w-5 rounded-sm border border-[rgb(var(--border-rgb))]"
                           />
                         </p>
                       </div>
                       <div>
-                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{showLocationCodes ? 'Country Code' : 'Country Name'}</span>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 italic mt-1">〃</p>
+                        <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">{showLocationCodes ? 'Country Code' : 'Country Name'}</span>
+                        <p className="text-sm text-[rgb(var(--muted-foreground-rgb))] italic mt-1">〃</p>
                       </div>
                     </div>
 
                     {/* Postal Code Row */}
                     <div className="grid grid-cols-2 gap-6">
                       <div>
-                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Postal Code</span>
-                        <p className="text-sm text-gray-900 dark:text-white mt-1">{selectedRecord.legal_address_postal_code || '-'}</p>
+                        <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">Postal Code</span>
+                        <p className="text-sm text-[rgb(var(--foreground-rgb))] mt-1">{selectedRecord.legal_address_postal_code || '-'}</p>
                       </div>
                       <div>
-                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Postal Code</span>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 italic mt-1">〃</p>
+                        <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">Postal Code</span>
+                        <p className="text-sm text-[rgb(var(--muted-foreground-rgb))] italic mt-1">〃</p>
                       </div>
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-4 bg-white dark:bg-gray-900">
+                  <div className="space-y-4 bg-[rgb(var(--surface-rgb))]">
                     {/* Address Row */}
                     <div className="grid grid-cols-2 gap-6">
                       <div>
-                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Address</span>
-                        <p className="text-sm text-gray-900 dark:text-white mt-1">
+                        <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">Address</span>
+                        <p className="text-sm text-[rgb(var(--foreground-rgb))] mt-1">
                           {selectedRecord.legal_address_line_1 || '-'}
                           {selectedRecord.legal_address_line_2 && <><br/>{selectedRecord.legal_address_line_2}</>}
                           {selectedRecord.legal_address_line_3 && <><br/>{selectedRecord.legal_address_line_3}</>}
@@ -2071,8 +2081,8 @@ export default function LEIRecordsPage() {
                         </p>
                       </div>
                       <div>
-                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Address</span>
-                        <p className="text-sm text-gray-900 dark:text-white mt-1">
+                        <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">Address</span>
+                        <p className="text-sm text-[rgb(var(--foreground-rgb))] mt-1">
                           {selectedRecord.hq_address_line_1 || '-'}
                           {selectedRecord.hq_address_line_2 && <><br/>{selectedRecord.hq_address_line_2}</>}
                           {selectedRecord.hq_address_line_3 && <><br/>{selectedRecord.hq_address_line_3}</>}
@@ -2084,32 +2094,32 @@ export default function LEIRecordsPage() {
                     {/* City Row */}
                     <div className="grid grid-cols-2 gap-6">
                       <div>
-                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">City</span>
-                        <p className="text-sm text-gray-900 dark:text-white mt-1">{selectedRecord.legal_address_city || '-'}</p>
+                        <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">City</span>
+                        <p className="text-sm text-[rgb(var(--foreground-rgb))] mt-1">{selectedRecord.legal_address_city || '-'}</p>
                       </div>
                       <div>
-                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">City</span>
-                        <p className="text-sm text-gray-900 dark:text-white mt-1">{selectedRecord.hq_address_city || '-'}</p>
+                        <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">City</span>
+                        <p className="text-sm text-[rgb(var(--foreground-rgb))] mt-1">{selectedRecord.hq_address_city || '-'}</p>
                       </div>
                     </div>
 
                     {/* Region Row */}
                     <div className="grid grid-cols-2 gap-6">
                       <div>
-                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{showLocationCodes ? 'Region Code' : 'Region Name'}</span>
-                        <p className="text-sm text-gray-900 dark:text-white mt-1">{formatRegionDisplay(selectedRecord.legal_address_region)}</p>
+                        <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">{showLocationCodes ? 'Region Code' : 'Region Name'}</span>
+                        <p className="text-sm text-[rgb(var(--foreground-rgb))] mt-1">{formatRegionDisplay(selectedRecord.legal_address_region)}</p>
                       </div>
                       <div>
-                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{showLocationCodes ? 'Region Code' : 'Region Name'}</span>
-                        <p className="text-sm text-gray-900 dark:text-white mt-1">{formatRegionDisplay(selectedRecord.hq_address_region)}</p>
+                        <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">{showLocationCodes ? 'Region Code' : 'Region Name'}</span>
+                        <p className="text-sm text-[rgb(var(--foreground-rgb))] mt-1">{formatRegionDisplay(selectedRecord.hq_address_region)}</p>
                       </div>
                     </div>
 
                     {/* Country Row */}
                     <div className="grid grid-cols-2 gap-6">
                       <div>
-                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{showLocationCodes ? 'Country Code' : 'Country Name'}</span>
-                        <p className="text-sm text-gray-900 dark:text-white mt-1 flex items-center gap-2">
+                        <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">{showLocationCodes ? 'Country Code' : 'Country Name'}</span>
+                        <p className="text-sm text-[rgb(var(--foreground-rgb))] mt-1 flex items-center gap-2">
                           <ReferenceDetailList
                             values={[selectedRecord.legal_address_country]}
                             normalizeValue={(rawValue) => String(rawValue || '').trim().toUpperCase()}
@@ -2120,13 +2130,13 @@ export default function LEIRecordsPage() {
                           <CountryFlag
                             countryCode={String(selectedRecord.legal_address_country || '')}
                             title={formatCountryDisplay(selectedRecord.legal_address_country)}
-                            className="h-3.5 w-5 rounded-sm border border-gray-200 dark:border-gray-700"
+                            className="h-3.5 w-5 rounded-sm border border-[rgb(var(--border-rgb))]"
                           />
                         </p>
                       </div>
                       <div>
-                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{showLocationCodes ? 'Country Code' : 'Country Name'}</span>
-                        <p className="text-sm text-gray-900 dark:text-white mt-1 flex items-center gap-2">
+                        <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">{showLocationCodes ? 'Country Code' : 'Country Name'}</span>
+                        <p className="text-sm text-[rgb(var(--foreground-rgb))] mt-1 flex items-center gap-2">
                           <ReferenceDetailList
                             values={[selectedRecord.hq_address_country]}
                             normalizeValue={(rawValue) => String(rawValue || '').trim().toUpperCase()}
@@ -2137,7 +2147,7 @@ export default function LEIRecordsPage() {
                           <CountryFlag
                             countryCode={String(selectedRecord.hq_address_country || '')}
                             title={formatCountryDisplay(selectedRecord.hq_address_country)}
-                            className="h-3.5 w-5 rounded-sm border border-gray-200 dark:border-gray-700"
+                            className="h-3.5 w-5 rounded-sm border border-[rgb(var(--border-rgb))]"
                           />
                         </p>
                       </div>
@@ -2146,12 +2156,12 @@ export default function LEIRecordsPage() {
                     {/* Postal Code Row */}
                     <div className="grid grid-cols-2 gap-6">
                       <div>
-                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Postal Code</span>
-                        <p className="text-sm text-gray-900 dark:text-white mt-1">{selectedRecord.legal_address_postal_code || '-'}</p>
+                        <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">Postal Code</span>
+                        <p className="text-sm text-[rgb(var(--foreground-rgb))] mt-1">{selectedRecord.legal_address_postal_code || '-'}</p>
                       </div>
                       <div>
-                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Postal Code</span>
-                        <p className="text-sm text-gray-900 dark:text-white mt-1">{selectedRecord.hq_address_postal_code || '-'}</p>
+                        <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">Postal Code</span>
+                        <p className="text-sm text-[rgb(var(--foreground-rgb))] mt-1">{selectedRecord.hq_address_postal_code || '-'}</p>
                       </div>
                     </div>
                   </div>
@@ -2159,25 +2169,25 @@ export default function LEIRecordsPage() {
               </section>
 
               {/* Registration Information */}
-              <section className="bg-white dark:bg-gray-900 p-6 pb-0">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 pb-2 border-b border-gray-200 dark:border-white/10">
+              <section className="bg-[rgb(var(--surface-rgb))] p-6 pb-0">
+                <h3 className="text-lg font-semibold text-[rgb(var(--foreground-rgb))] mb-3 pb-2 border-b border-[rgb(var(--border-rgb))]">
                   {t('leiRecords.modal.registrationInformation')}
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white dark:bg-gray-900">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-[rgb(var(--surface-rgb))]">
                   <div>
-                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Registration Authority</span>
-                    <p className="text-sm text-gray-900 dark:text-white mt-1">{selectedRecord.registration_authority || '-'}</p>
+                    <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">Registration Authority</span>
+                    <p className="text-sm text-[rgb(var(--foreground-rgb))] mt-1">{selectedRecord.registration_authority || '-'}</p>
                   </div>
                   <div>
-                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Registration Number</span>
-                    <p className="text-sm font-mono text-gray-900 dark:text-white mt-1">{selectedRecord.registration_number || '-'}</p>
+                    <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">Registration Number</span>
+                    <p className="text-sm font-mono text-[rgb(var(--foreground-rgb))] mt-1">{selectedRecord.registration_number || '-'}</p>
                   </div>
                   <div>
-                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Initial Registration</span>
-                    <p className="text-sm text-gray-900 dark:text-white mt-1">
+                    <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">Initial Registration</span>
+                    <p className="text-sm text-[rgb(var(--foreground-rgb))] mt-1">
                       {formatCellValue(selectedRecord.initial_registration_date, 'initial_registration_date')}
                       {selectedRecord.initial_registration_date && selectedRecord.initial_registration_date !== '0001-01-01T00:00:00Z' && (
-                        <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                        <span className="ml-2 text-xs text-[rgb(var(--muted-foreground-rgb))]">
                           ({dateDisplayMode === 'relative' 
                             ? getRelativeTime(selectedRecord.initial_registration_date).relative
                             : `${Math.abs(getRelativeTime(selectedRecord.initial_registration_date).days)} days ago`})
@@ -2186,11 +2196,11 @@ export default function LEIRecordsPage() {
                     </p>
                   </div>
                   <div>
-                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Last Updated</span>
-                    <p className="text-sm text-gray-900 dark:text-white mt-1">
+                    <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">Last Updated</span>
+                    <p className="text-sm text-[rgb(var(--foreground-rgb))] mt-1">
                       {formatCellValue(selectedRecord.last_update_date, 'last_update_date')}
                       {selectedRecord.last_update_date && selectedRecord.last_update_date !== '0001-01-01T00:00:00Z' && (
-                        <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                        <span className="ml-2 text-xs text-[rgb(var(--muted-foreground-rgb))]">
                           ({dateDisplayMode === 'relative' 
                             ? getRelativeTime(selectedRecord.last_update_date).relative
                             : `${Math.abs(getRelativeTime(selectedRecord.last_update_date).days)} days ago`})
@@ -2199,11 +2209,11 @@ export default function LEIRecordsPage() {
                     </p>
                   </div>
                   <div>
-                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Next Renewal</span>
-                    <p className="text-sm text-gray-900 dark:text-white mt-1">
+                    <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">Next Renewal</span>
+                    <p className="text-sm text-[rgb(var(--foreground-rgb))] mt-1">
                       {formatCellValue(selectedRecord.next_renewal_date, 'next_renewal_date')}
                       {selectedRecord.next_renewal_date && selectedRecord.next_renewal_date !== '0001-01-01T00:00:00Z' && (
-                        <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                        <span className="ml-2 text-xs text-[rgb(var(--muted-foreground-rgb))]">
                           ({dateDisplayMode === 'relative' 
                             ? getRelativeTime(selectedRecord.next_renewal_date).relative
                             : `in ${getRelativeTime(selectedRecord.next_renewal_date).days} days`})
@@ -2216,31 +2226,31 @@ export default function LEIRecordsPage() {
 
               {/* Associated Entities */}
               {(selectedRecord.managing_lou || selectedRecord.successor_lei || predecessorLeiLoading || predecessorLeiReferences.length > 0) && (
-                <section className="bg-white dark:bg-gray-900 p-6 pb-0">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 pb-2 border-b border-gray-200 dark:border-white/10">
+                <section className="bg-[rgb(var(--surface-rgb))] p-6 pb-0">
+                  <h3 className="text-lg font-semibold text-[rgb(var(--foreground-rgb))] mb-3 pb-2 border-b border-[rgb(var(--border-rgb))]">
                     {t('leiRecords.modal.associatedEntities')}
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white dark:bg-gray-900">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-[rgb(var(--surface-rgb))]">
                     <div>
-                      <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('leiRecords.modal.predecessorLei')}</span>
+                      <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">{t('leiRecords.modal.predecessorLei')}</span>
                       <div className="mt-1 space-y-2">
                         {predecessorLeiLoading && (
-                          <p className="text-xs text-gray-400 dark:text-gray-500 italic">{t('leiRecords.modal.checkingPredecessorLinks')}</p>
+                          <p className="text-xs text-[rgb(var(--muted-foreground-rgb))] dark:text-[rgb(var(--muted-foreground-rgb))] italic">{t('leiRecords.modal.checkingPredecessorLinks')}</p>
                         )}
                         {!predecessorLeiLoading && predecessorLeiReferences.length === 0 && (
-                          <p className="text-xs text-gray-400 dark:text-gray-500 italic">{t('leiRecords.modal.noPredecessorLinks')}</p>
+                          <p className="text-xs text-[rgb(var(--muted-foreground-rgb))] dark:text-[rgb(var(--muted-foreground-rgb))] italic">{t('leiRecords.modal.noPredecessorLinks')}</p>
                         )}
                         {!predecessorLeiLoading && predecessorLeiReferences.map((reference) => (
                           <div key={reference.lei}>
                             <button
                               type="button"
                               onClick={(event) => handleLinkedLeiClick(event, reference.lei)}
-                              className="block font-mono text-sm text-left text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+                              className="block font-mono text-sm text-left text-[rgb(var(--primary-rgb))] hover:text-[rgb(var(--primary-rgb))] hover:underline dark:text-[rgb(var(--primary-rgb))] dark:hover:text-[rgb(var(--primary-rgb))]"
                             >
                               {reference.lei}
                             </button>
                             {reference.legal_name && (
-                              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{reference.legal_name}</p>
+                              <p className="text-xs text-[rgb(var(--muted-foreground-rgb))] mt-1">{reference.legal_name}</p>
                             )}
                           </div>
                         ))}
@@ -2248,49 +2258,49 @@ export default function LEIRecordsPage() {
                     </div>
 
                     <div>
-                      <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('leiRecords.modal.successorLei')}</span>
+                      <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">{t('leiRecords.modal.successorLei')}</span>
                       {selectedRecord.successor_lei ? (
                         <>
                           <button
                             type="button"
                             onClick={(event) => handleLinkedLeiClick(event, selectedRecord.successor_lei)}
-                            className="mt-1 block font-mono text-sm text-left text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+                            className="mt-1 block font-mono text-sm text-left text-[rgb(var(--primary-rgb))] hover:text-[rgb(var(--primary-rgb))] hover:underline dark:text-[rgb(var(--primary-rgb))] dark:hover:text-[rgb(var(--primary-rgb))]"
                           >
                             {selectedRecord.successor_lei}
                           </button>
                           {successorLeiName && (
-                            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{successorLeiName}</p>
+                            <p className="text-xs text-[rgb(var(--muted-foreground-rgb))] mt-1">{successorLeiName}</p>
                           )}
                           {successorLeiNameLoading && (
-                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 italic">{t('leiRecords.modal.loadingName')}</p>
+                            <p className="text-xs text-[rgb(var(--muted-foreground-rgb))] dark:text-[rgb(var(--muted-foreground-rgb))] mt-1 italic">{t('leiRecords.modal.loadingName')}</p>
                           )}
                           {!successorLeiNameLoading && !successorLeiName && (
-                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 italic">Name unavailable.</p>
+                            <p className="text-xs text-[rgb(var(--muted-foreground-rgb))] dark:text-[rgb(var(--muted-foreground-rgb))] mt-1 italic">Name unavailable.</p>
                           )}
                         </>
                       ) : (
-                        <p className="mt-1 text-xs text-gray-400 dark:text-gray-500 italic">No successor link found.</p>
+                        <p className="mt-1 text-xs text-[rgb(var(--muted-foreground-rgb))] dark:text-[rgb(var(--muted-foreground-rgb))] italic">No successor link found.</p>
                       )}
                     </div>
 
                     {selectedRecord.managing_lou && (
-                      <div className="md:col-span-2 border-t border-gray-200 pt-4 dark:border-white/10">
-                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('leiRecords.modal.managingLou')}</span>
+                      <div className="md:col-span-2 border-t border-[rgb(var(--border-rgb))] pt-4 dark:border-white/10">
+                        <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">{t('leiRecords.modal.managingLou')}</span>
                         <button
                           type="button"
                           onClick={(event) => handleLinkedLeiClick(event, selectedRecord.managing_lou)}
-                          className="mt-1 block font-mono text-sm text-left text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+                          className="mt-1 block font-mono text-sm text-left text-[rgb(var(--primary-rgb))] hover:text-[rgb(var(--primary-rgb))] hover:underline dark:text-[rgb(var(--primary-rgb))] dark:hover:text-[rgb(var(--primary-rgb))]"
                         >
                           {selectedRecord.managing_lou}
                         </button>
                         {managingLouName && (
-                          <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{managingLouName}</p>
+                          <p className="text-xs text-[rgb(var(--muted-foreground-rgb))] mt-1">{managingLouName}</p>
                         )}
                         {managingLouNameLoading && (
-                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 italic">{t('leiRecords.modal.loadingName')}</p>
+                          <p className="text-xs text-[rgb(var(--muted-foreground-rgb))] dark:text-[rgb(var(--muted-foreground-rgb))] mt-1 italic">{t('leiRecords.modal.loadingName')}</p>
                         )}
                         {!managingLouNameLoading && !managingLouName && (
-                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 italic">{t('leiRecords.modal.nameUnavailable')}</p>
+                          <p className="text-xs text-[rgb(var(--muted-foreground-rgb))] dark:text-[rgb(var(--muted-foreground-rgb))] mt-1 italic">{t('leiRecords.modal.nameUnavailable')}</p>
                         )}
                       </div>
                     )}
@@ -2300,14 +2310,14 @@ export default function LEIRecordsPage() {
 
               {/* Validation */}
               {selectedRecord.validation_authority && (
-                <section className="bg-white dark:bg-gray-900 p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 pb-2 border-b border-gray-200 dark:border-white/10">
+                <section className="bg-[rgb(var(--surface-rgb))] p-6">
+                  <h3 className="text-lg font-semibold text-[rgb(var(--foreground-rgb))] mb-3 pb-2 border-b border-[rgb(var(--border-rgb))]">
                     {t('leiRecords.modal.validation')}
                   </h3>
-                  <div className="grid grid-cols-1 gap-4 bg-white dark:bg-gray-900">
+                  <div className="grid grid-cols-1 gap-4 bg-[rgb(var(--surface-rgb))]">
                     <div>
-                      <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('leiRecords.modal.validationAuthority')}</span>
-                      <p className="text-sm text-gray-900 dark:text-white mt-1">{selectedRecord.validation_authority}</p>
+                      <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">{t('leiRecords.modal.validationAuthority')}</span>
+                      <p className="text-sm text-[rgb(var(--foreground-rgb))] mt-1">{selectedRecord.validation_authority}</p>
                     </div>
                   </div>
                 </section>

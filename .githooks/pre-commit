@@ -22,10 +22,10 @@ fi
 
 echo "Running markdown linting..."
 
-# Check if markdownlint-cli is installed
-if ! command -v markdownlint > /dev/null 2>&1; then
-    echo "❌ markdownlint-cli not found. Install with: npm install -g markdownlint-cli"
-    echo "   or run: make install-tools"
+# Check if npx is available for markdownlint-cli2
+if ! command -v npx > /dev/null 2>&1; then
+    echo "❌ npx not found. Install Node.js/npm to run markdownlint-cli2"
+    echo "   or install prerequisites with: make install-tools"
     exit 1
 fi
 
@@ -40,8 +40,8 @@ fi
 echo "Linting markdown files:"
 echo "$STAGED_MD_FILES"
 
-# Run markdownlint on staged files
-if echo "$STAGED_MD_FILES" | xargs markdownlint --config .markdownlint.yaml; then
+# Run markdownlint-cli2 on staged files
+if echo "$STAGED_MD_FILES" | xargs npx --yes markdownlint-cli2 --config .markdownlint.yaml; then
     echo "✅ Markdown linting passed"
     exit 0
 else
@@ -55,6 +55,7 @@ else
     echo ""
     echo "To fix automatically (where possible):"
     echo "  make lint-docs-fix"
+    echo "  or: npx --yes markdownlint-cli2 --config .markdownlint.yaml --fix <file>.md"
     echo ""
     echo "To skip this check (not recommended):"
     echo "  git commit --no-verify"

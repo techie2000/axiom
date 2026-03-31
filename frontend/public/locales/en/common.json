@@ -87,7 +87,23 @@
       "both": "Both",
       "text": "Text",
       "emoji": "Emoji"
-    }
+    },
+    "changeTheme": "Change theme",
+    "themes": {
+      "default": "Default",
+      "defaultDescription": "Axiom classic blue-slate palette",
+      "modernMinimal": "Modern Minimal",
+      "modernMinimalDescription": "Clean neutral palette, both light and dark",
+      "supabase": "Supabase",
+      "supabaseDescription": "Forest green accent inspired by Supabase",
+      "perpetuity": "Perpetuity",
+      "perpetuityDescription": "Cyan-teal terminal look for focused sessions",
+      "twitter": "Twitter",
+      "twitterDescription": "Classic Twitter blue accent"
+    },
+    "switchToLight": "Switch to light mode",
+    "switchToDark": "Switch to dark mode",
+    "saveDarkModeDefault": "Save as your default mode?"
   },
   "common": {
     "loading": "Loading…",

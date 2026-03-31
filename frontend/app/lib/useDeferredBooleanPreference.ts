@@ -3,6 +3,20 @@
 import { useCallback, useRef, useState } from 'react'
 import { useUserPreference } from './useUserPreference'
 
+// Session-scoped unsaved overrides survive component remounts/navigation
+// but are intentionally cleared on logout via resetDeferredBooleanPreferenceSession.
+const deferredBooleanSessionOverrides: Record<string, boolean> = {}
+
+function getDeferredBooleanSessionKey(pageKey: string, preferenceKey: string): string {
+  return `${pageKey}::${preferenceKey}`
+}
+
+export function resetDeferredBooleanPreferenceSession() {
+  Object.keys(deferredBooleanSessionOverrides).forEach((key) => {
+    delete deferredBooleanSessionOverrides[key]
+  })
+}
+
 interface DeferredBooleanPreferenceOptions {
   pageKey: string
   preferenceKey: string
@@ -42,8 +56,12 @@ export function useDeferredBooleanPreference({
   preferenceKey,
   defaultValue = false,
 }: DeferredBooleanPreferenceOptions): DeferredBooleanPreference {
+  const sessionKey = getDeferredBooleanSessionKey(pageKey, preferenceKey)
+  const sessionOverride = deferredBooleanSessionOverrides[sessionKey]
   const [storedValue, setStoredValue] = useUserPreference(pageKey, preferenceKey, String(defaultValue))
-  const [localValue, setLocalValue] = useState<boolean | null>(null)
+  const [localValue, setLocalValue] = useState<boolean | null>(
+    typeof sessionOverride === 'boolean' ? sessionOverride : null,
+  )
   const [showPrompt, setShowPrompt] = useState(false)
   const [promptResetKey, setPromptResetKey] = useState(0)
   const pendingValue = useRef<boolean | null>(null)
@@ -57,11 +75,12 @@ export function useDeferredBooleanPreference({
   const value = localValue ?? (storedValue === 'true')
 
   const setValue = useCallback((next: boolean) => {
+    deferredBooleanSessionOverrides[sessionKey] = next
     setLocalValue(next)
     pendingValue.current = next
     setShowPrompt(true)
     setPromptResetKey((version) => version + 1)
-  }, [])
+  }, [sessionKey])
 
   const toggle = useCallback(() => {
     setValue(!value)
@@ -72,6 +91,7 @@ export function useDeferredBooleanPreference({
       // Snapshot the current persisted value as the undo target.
       previousValue.current = storedValue === 'true'
       setStoredValue(String(pendingValue.current))
+      delete deferredBooleanSessionOverrides[sessionKey]
       setLocalValue(null)
       pendingValue.current = null
     }
@@ -79,7 +99,7 @@ export function useDeferredBooleanPreference({
     // Show undo toast after saving.
     setShowUndo(true)
     setUndoResetKey((k) => k + 1)
-  }, [setStoredValue, storedValue])
+  }, [sessionKey, setStoredValue, storedValue])
 
   const dismiss = useCallback(() => {
     setShowPrompt(false)
@@ -90,12 +110,13 @@ export function useDeferredBooleanPreference({
   const saveCurrentValue = useCallback(() => {
     previousValue.current = storedValue === 'true'
     setStoredValue(String(value))
+    delete deferredBooleanSessionOverrides[sessionKey]
     setLocalValue(null)
     pendingValue.current = null
     setShowPrompt(false)
     setShowUndo(true)
     setUndoResetKey((k) => k + 1)
-  }, [setStoredValue, storedValue, value])
+  }, [sessionKey, setStoredValue, storedValue, value])
 
   const undo = useCallback(() => {
     if (previousValue.current !== null) {

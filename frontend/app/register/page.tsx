@@ -76,17 +76,17 @@ export default function RegisterPage() {
     return (
       <main className="min-h-screen flex items-center justify-center p-4">
         <div className="w-full max-w-md">
-          <div className="bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm rounded-lg shadow-lg p-8 text-center">
+          <div className="theme-panel border-2 backdrop-blur-sm rounded-lg shadow-lg p-8 text-center">
             <div className="text-5xl mb-4">✅</div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+            <h1 className="text-2xl font-bold mb-3">
               {t('register_success.title')}
             </h1>
-            <p className="text-gray-600 dark:text-gray-300 mb-6" title={getEnglishTooltip('register_success.message')}>
+            <p className="theme-text-muted mb-6" title={getEnglishTooltip('register_success.message')}>
               {t('register_success.message')}
             </p>
             <Link
               href="/login"
-              className="inline-block py-2 px-6 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors"
+              className="inline-block py-2 px-6 theme-btn-primary font-medium rounded-md"
               title={getEnglishTooltip('register_success.backToLogin')}
             >
               {t('register_success.backToLogin')}
@@ -101,7 +101,7 @@ export default function RegisterPage() {
     <main className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="flex justify-between items-center mb-8">
-          <Link href="/login" className="text-blue-400 hover:text-blue-300 text-sm">
+          <Link href="/login" className="theme-link hover:opacity-80 text-sm">
             {t('nav.backToLogin')}
           </Link>
           <div className="flex items-center gap-2">
@@ -110,12 +110,12 @@ export default function RegisterPage() {
           </div>
         </div>
 
-        <div className="bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm rounded-lg shadow-lg p-8">
+        <div className="theme-panel border-2 backdrop-blur-sm rounded-lg shadow-lg p-8">
           <div className="text-center mb-6">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2" title={getEnglishTooltip('register.title')}>
+            <h1 className="text-3xl font-bold mb-2" title={getEnglishTooltip('register.title')}>
               {t('register.title')}
             </h1>
-            <p className="text-gray-500 dark:text-gray-400 text-sm" title={getEnglishTooltip('register.subtitle')}>
+            <p className="theme-text-muted text-sm" title={getEnglishTooltip('register.subtitle')}>
               {t('register.subtitle')}
             </p>
           </div>
@@ -130,7 +130,7 @@ export default function RegisterPage() {
             <div>
               <label
                 htmlFor="full_name"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                className="block text-sm font-medium theme-text-muted mb-1"
               >
                 {t('register.fullNameLabel')}
               </label>
@@ -142,7 +142,7 @@ export default function RegisterPage() {
                 value={form.full_name}
                 onChange={handleChange}
                 title={getEnglishTooltip('register.fullNamePlaceholder')}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-white/20 rounded-md bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border rounded-md theme-input"
                 placeholder={t('register.fullNamePlaceholder')}
               />
             </div>
@@ -150,7 +150,7 @@ export default function RegisterPage() {
             <div>
               <label
                 htmlFor="email"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                className="block text-sm font-medium theme-text-muted mb-1"
               >
                 {t('register.emailLabel')} <span className="text-red-500">{t('register.required')}</span>
               </label>
@@ -163,7 +163,7 @@ export default function RegisterPage() {
                 value={form.email}
                 onChange={handleChange}
                 title={getEnglishTooltip('register.emailPlaceholder')}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-white/20 rounded-md bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border rounded-md theme-input"
                 placeholder={t('register.emailPlaceholder')}
               />
             </div>
@@ -171,7 +171,7 @@ export default function RegisterPage() {
             <div>
               <label
                 htmlFor="username"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                className="block text-sm font-medium theme-text-muted mb-1"
               >
                 {t('register.usernameLabel')} <span className="text-red-500">{t('register.required')}</span>
               </label>
@@ -186,7 +186,7 @@ export default function RegisterPage() {
                 value={form.username}
                 onChange={handleChange}
                 title={getEnglishTooltip('register.usernamePlaceholder')}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-white/20 rounded-md bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border rounded-md theme-input"
                 placeholder={t('register.usernamePlaceholder')}
               />
             </div>
@@ -194,7 +194,7 @@ export default function RegisterPage() {
             <div>
               <label
                 htmlFor="password"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                className="block text-sm font-medium theme-text-muted mb-1"
               >
                 {t('register.passwordLabel')} <span className="text-red-500">{t('register.required')}</span>
               </label>
@@ -208,7 +208,7 @@ export default function RegisterPage() {
                 value={form.password}
                 onChange={handleChange}
                 title={getEnglishTooltip('register.passwordPlaceholder')}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-white/20 rounded-md bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border rounded-md theme-input"
                 placeholder={t('register.passwordPlaceholder')}
               />
             </div>
@@ -216,7 +216,7 @@ export default function RegisterPage() {
             <div>
               <label
                 htmlFor="confirmPassword"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                className="block text-sm font-medium theme-text-muted mb-1"
               >
                 {t('register.confirmPasswordLabel')} <span className="text-red-500">{t('register.required')}</span>
               </label>
@@ -229,7 +229,7 @@ export default function RegisterPage() {
                 value={form.confirmPassword}
                 onChange={handleChange}
                 title={getEnglishTooltip('register.confirmPasswordPlaceholder')}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-white/20 rounded-md bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border rounded-md theme-input"
                 placeholder={t('register.confirmPasswordPlaceholder')}
               />
             </div>
@@ -238,15 +238,15 @@ export default function RegisterPage() {
               type="submit"
               disabled={loading}
               title={loading ? getEnglishTooltip('register.submittingButton') : getEnglishTooltip('register.submitButton')}
-              className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              className="w-full py-2 px-4 theme-btn-primary disabled:opacity-60 font-medium rounded-md theme-focus"
             >
               {loading ? t('register.submittingButton') : t('register.submitButton')}
             </button>
           </form>
 
-          <div className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
+          <div className="mt-6 text-center text-sm theme-text-muted">
             {t('register.alreadyHaveAccount')}{' '}
-            <Link href="/login" className="text-blue-500 hover:text-blue-400 font-medium" title={getEnglishTooltip('register.signInLink')}>
+            <Link href="/login" className="theme-link hover:opacity-80 font-medium" title={getEnglishTooltip('register.signInLink')}>
               {t('register.signInLink')}
             </Link>
           </div>
