@@ -90,6 +90,19 @@ func main() {
 		logger.Warn().Err(err).Msg("Failed to load master data, continuing anyway...")
 	}
 
+	// Seed the Playwright end-to-end test user when running in dev/main environments.
+	// Controlled by PLAYWRIGHT_SEED_USER=true in the environment file.
+	// Never enable this in UAT or production.
+	if cfg.Testing.PlaywrightSeedUser {
+		logger.Info().Msg("PLAYWRIGHT_SEED_USER is enabled: ensuring Playwright test user exists...")
+		if err := services.Auth.EnsurePlaywrightTestUser(
+			cfg.Testing.PlaywrightUserEmail,
+			cfg.Testing.PlaywrightUserPassword,
+		); err != nil {
+			logger.Warn().Err(err).Msg("Failed to seed Playwright test user, continuing anyway...")
+		}
+	}
+
 	// Initialize scheduler service for LEI data acquisition and master data sync (with config for schedules)
 	schedulerService := service.NewSchedulerService(services.LEI, services.LEILevel2, services.MasterData, cfg)
 
