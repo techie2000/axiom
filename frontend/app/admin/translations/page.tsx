@@ -18,6 +18,7 @@ import ThemedSelect from '../../components/ThemedSelect'
 import { getAuthToken } from '../../lib/auth-token'
 import { buildDocsUrl } from '../../lib/docsLinks'
 import { useEnglishTooltips } from '../../lib/useEnglishTooltips'
+import { useSearchFocusShortcut } from '../../lib/useSearchFocusShortcut'
 
 const API_BASE_URL =
   typeof window !== 'undefined'
@@ -168,6 +169,8 @@ export default function AdminTranslationsPage() {
   const { t, i18n } = useTranslation('common')
   const { getEnglishTooltip } = useEnglishTooltips()
   const filterBarRef = useRef<HTMLDivElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  useSearchFocusShortcut(searchInputRef)
   const defaultFormLanguage = useMemo(
     () => getPreferredTargetLanguage(i18n.resolvedLanguage || i18n.language || ''),
     [i18n.language, i18n.resolvedLanguage]
@@ -847,6 +850,7 @@ export default function AdminTranslationsPage() {
               {t('common.search')}
             </label>
             <SearchInputWithOverflowTooltip
+              ref={searchInputRef}
               type="text"
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(0) }}

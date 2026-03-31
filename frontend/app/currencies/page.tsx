@@ -17,6 +17,7 @@ import { useDeferredBooleanPreference } from '../lib/useDeferredBooleanPreferenc
 import { buildDocsUrl } from '../lib/docsLinks'
 import { useEnglishTooltips } from '../lib/useEnglishTooltips'
 import { useButtonEmojiMode } from '../lib/useButtonEmojiMode'
+import { useSearchFocusShortcut } from '../lib/useSearchFocusShortcut'
 
 interface Currency {
   id: string
@@ -40,6 +41,8 @@ export default function CurrenciesPage() {
   const { getEnglishTooltip } = useEnglishTooltips()
   const { formatLabel } = useButtonEmojiMode()
   const filterBarRef = useRef<HTMLDivElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  useSearchFocusShortcut(searchInputRef)
 
   const [currencies, setCurrencies] = useState<Currency[]>([])
   const [loading, setLoading] = useState(true)
@@ -297,6 +300,7 @@ export default function CurrenciesPage() {
         <div className="mb-6 theme-panel border-2 backdrop-blur-sm rounded-lg p-6">
           <div className="flex flex-col sm:flex-row gap-3 mb-4">
           <SearchInputWithOverflowTooltip
+            ref={searchInputRef}
             type="text"
             placeholder={t('currencies.searchPlaceholder')}
             title={getEnglishTooltip('currencies.searchPlaceholder')}

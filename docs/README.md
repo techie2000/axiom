@@ -29,6 +29,8 @@ Located in [contributing/](./contributing/):
 
 - [**Branching Strategy**](./contributing/BRANCHING_STRATEGY.md) - Branch naming, promotion workflow,
   protection rules, and hotfix procedure
+- [**Git Hooks**](../.githooks/README.md) - Pre-commit and pre-push automation (markdown lint,
+  VS Code settings sort)
 
 ### 🎨 Frontend Patterns
 
@@ -140,7 +142,8 @@ Located in [performance/](./performance/):
 ### For Contributors
 
 1. **Branching and promotion workflow** → [Branching Strategy](./contributing/BRANCHING_STRATEGY.md)
-2. **Branch setup script** → [scripts/setup-branches.sh](../scripts/setup-branches.sh)
+2. **Git hooks (pre-commit / pre-push)** → [Git Hooks](../.githooks/README.md)
+3. **Branch setup script** → [scripts/setup-branches.sh](../scripts/setup-branches.sh)
 
 ---
 

@@ -16,6 +16,7 @@ import ThemedSelect from '../components/ThemedSelect'
 import { useDeferredBooleanPreference } from '../lib/useDeferredBooleanPreference'
 import { useEnglishTooltips } from '../lib/useEnglishTooltips'
 import { useButtonEmojiMode } from '../lib/useButtonEmojiMode'
+import { useSearchFocusShortcut } from '../lib/useSearchFocusShortcut'
 
 interface Language {
   code: string
@@ -32,6 +33,8 @@ export default function LanguagesPage() {
   const { getEnglishTooltip } = useEnglishTooltips()
   const { formatLabel } = useButtonEmojiMode()
   const filterBarRef = useRef<HTMLDivElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  useSearchFocusShortcut(searchInputRef)
 
   const [languages, setLanguages] = useState<Language[]>([])
   const [loading, setLoading] = useState(true)
@@ -284,6 +287,7 @@ export default function LanguagesPage() {
             <div>
               <label className="block text-sm font-medium mb-2 theme-text-muted">{t('languages.filters.search')}</label>
               <SearchInputWithOverflowTooltip
+                ref={searchInputRef}
                 type="text"
                 placeholder={t('languages.searchPlaceholder')}
                 title={getEnglishTooltip('languages.searchPlaceholder')}

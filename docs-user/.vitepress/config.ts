@@ -61,6 +61,7 @@ export default defineConfig({
           { text: 'Settlement Instructions (SSI)', link: '/workflows/ssi' },
           { text: 'Countries', link: '/workflows/countries' },
           { text: 'Currencies', link: '/workflows/currencies' },
+          { text: 'Languages', link: '/workflows/languages' },
           { text: 'Entities', link: '/workflows/entities' },
           { text: 'Instruments', link: '/workflows/instruments' },
           { text: 'Accounts', link: '/workflows/accounts' },

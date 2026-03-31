@@ -17,6 +17,7 @@ import { buildDocsUrl } from '../lib/docsLinks'
 import { useButtonEmojiMode } from '../lib/useButtonEmojiMode'
 import { useEnglishTooltips } from '../lib/useEnglishTooltips'
 import { useUserPreference } from '../lib/useUserPreference'
+import { useSearchFocusShortcut } from '../lib/useSearchFocusShortcut'
 import { formatEnumDisplayValue, formatLEICellValue, getStatusBadgePresentation, normalizeRecordNullLikeValues } from './null-utils'
 import { useTranslation } from 'react-i18next'
 
@@ -186,6 +187,8 @@ export default function LEIRecordsPage() {
   const [filterBarHeight, setFilterBarHeight] = useState(0)
   const countryDropdownRef = useRef<HTMLDivElement>(null)
   const filterBarRef = useRef<HTMLDivElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  useSearchFocusShortcut(searchInputRef)
 
   // Preference-backed column visibility – serialised as a comma-separated list in the store.
   const [storedColumns, setStoredColumns] = useUserPreference('lei-records', 'visible_columns', DEFAULT_VISIBLE_KEYS)
@@ -1325,6 +1328,7 @@ export default function LEIRecordsPage() {
             <div>
               <label className="block text-sm font-medium mb-2">{t('leiRecords.filters.search')}</label>
               <SearchInputWithOverflowTooltip
+                ref={searchInputRef}
                 type="text"
                 placeholder={t('leiRecords.filters.searchPlaceholder')}
                 title={getEnglishTooltip('leiRecords.filters.searchPlaceholder')}
