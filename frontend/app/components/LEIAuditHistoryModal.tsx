@@ -282,13 +282,14 @@ export default function LEIAuditHistoryModal({
       className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
       onClick={onClose}
     >
-      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/click-events-have-key-events -- role=dialog is interactive per ARIA spec */}
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- role=dialog is interactive per ARIA spec */}
       <div
         role="dialog"
         aria-modal="true"
         aria-label={t('leiAudit.title')}
         className="bg-[rgb(var(--surface-rgb))] rounded-lg shadow-2xl max-w-7xl w-full max-h-[95vh] flex flex-col border-2 border-[rgb(var(--border-rgb))]"
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => { if (e.key === 'Escape') onClose() }}
       >
         {/* ── Header ──────────────────────────────────────────────────── */}
         <div className="flex-shrink-0 bg-[rgb(var(--surface-rgb))] border-b-2 border-[rgb(var(--border-rgb))] p-4 z-10">
@@ -390,6 +391,10 @@ export default function LEIAuditHistoryModal({
                   onChange={(e) => setSelectedIndex(Number(e.target.value))}
                   className="flex-1 h-2 accent-[rgb(var(--primary-rgb))]"
                   aria-label={t('leiAudit.timelineSlider')}
+                  aria-valuetext={t('leiAudit.viewingVersion', {
+                    current: selectedIndex + 1,
+                    total: audits.length,
+                  })}
                 />
                 <span className="text-xs theme-text-muted whitespace-nowrap">
                   {t('leiAudit.newest')}

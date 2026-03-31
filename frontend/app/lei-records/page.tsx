@@ -1873,7 +1873,7 @@ export default function LEIRecordsPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => { setAuditRecord(selectedRecord); setSelectedRecord(null) }}
+                    onClick={() => setAuditRecord(selectedRecord)}
                     className="px-3 py-2 rounded-lg bg-[rgb(var(--surface-muted-rgb))] hover:bg-[rgb(var(--surface-muted-rgb))] transition-colors text-[rgb(var(--foreground-rgb))] text-sm font-medium"
                     title={t('leiAudit.viewAuditHistory')}
                   >
