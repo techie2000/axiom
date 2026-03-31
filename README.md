@@ -1,5 +1,8 @@
 # Axiom - Financial Services Static Data System
 
+[![CI](https://github.com/techie2000/axiom/actions/workflows/ci.yml/badge.svg)](https://github.com/techie2000/axiom/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/techie2000/axiom/graph/badge.svg)](https://codecov.io/gh/techie2000/axiom)
+
 A modular monolith financial services static data management system built with Go, Next.js, and PostgreSQL.
 
 ## Overview

@@ -1,5 +1,12 @@
-import { describe, expect, it } from 'vitest'
-import { applyEmojiMode } from './useButtonEmojiMode'
+// @vitest-environment happy-dom
+import { renderHook } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
+import { applyEmojiMode, useButtonEmojiMode } from './useButtonEmojiMode'
+import { useUserPreference } from './useUserPreference'
+
+vi.mock('./useUserPreference', () => ({
+  useUserPreference: vi.fn(() => ['both', vi.fn()]),
+}))
 
 describe('applyEmojiMode', () => {
   describe("mode 'both'", () => {
@@ -38,5 +45,38 @@ describe('applyEmojiMode', () => {
       expect(applyEmojiMode('Documentation', 'emoji')).toBe('Documentation')
       expect(applyEmojiMode('Normal', 'emoji')).toBe('Normal')
     })
+  })
+})
+
+describe('useButtonEmojiMode', () => {
+  it('returns emojiMode, setEmojiMode, and formatLabel', () => {
+    const { result } = renderHook(() => useButtonEmojiMode())
+
+    expect(result.current.emojiMode).toBe('both')
+    expect(typeof result.current.setEmojiMode).toBe('function')
+    expect(typeof result.current.formatLabel).toBe('function')
+  })
+
+  it('formatLabel applies the current mode', () => {
+    const { result } = renderHook(() => useButtonEmojiMode())
+
+    // Default mocked mode is 'both' so label is returned as-is
+    expect(result.current.formatLabel('⬅️ Normal')).toBe('⬅️ Normal')
+  })
+
+  it('formatLabel strips emoji when mode is text', () => {
+    vi.mocked(useUserPreference).mockReturnValueOnce(['text', vi.fn()])
+
+    const { result } = renderHook(() => useButtonEmojiMode())
+
+    expect(result.current.formatLabel('⬅️ Normal')).toBe('Normal')
+  })
+
+  it('formatLabel returns only the emoji when mode is emoji', () => {
+    vi.mocked(useUserPreference).mockReturnValueOnce(['emoji', vi.fn()])
+
+    const { result } = renderHook(() => useButtonEmojiMode())
+
+    expect(result.current.formatLabel('⬅️ Normal')).toBe('⬅️')
   })
 })
