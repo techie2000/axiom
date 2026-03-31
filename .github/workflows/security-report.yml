@@ -24,6 +24,9 @@ permissions:
   # the repository's Dependabot alerts to be enabled. If the step below errors,
   # check Settings → Code security → Dependabot alerts.
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 jobs:
   generate-report:
     name: Generate Security Report
@@ -31,7 +34,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -40,7 +43,7 @@ jobs:
           cache-dependency-path: backend/go.sum
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '22'
 
