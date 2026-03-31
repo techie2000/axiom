@@ -25,7 +25,7 @@ blocked.
 
 #### 2. Markdown linting
 
-Runs `markdownlint` against every staged `.md` file using the project rules in
+Runs `npx --yes markdownlint-cli2` against every staged `.md` file using the project rules in
 `.markdownlint.yaml`.
 
 **Rules enforced:**
@@ -35,8 +35,8 @@ Runs `markdownlint` against every staged `.md` file using the project rules in
 - MD060 — Table columns must use spaced pipe style
 - All other rules enabled in `.markdownlint.yaml`
 
-The hook **fails fast** if `markdownlint-cli` is not installed. This is intentional — markdown
-non-compliance is caught before review, not during it.
+The hook **fails fast** if `npx` is not available. This is intentional — markdown non-compliance
+is caught before review, not during it.
 
 ### pre-push
 
@@ -120,6 +120,7 @@ If the pre-commit hook fails on markdown linting:
    - MD013: Break long lines at 120 characters
    - MD040: Add a language tag to fenced code blocks (` ```bash`, ` ```json`, ` ```text`)
    - MD060: Ensure table header/separator rows use spaced pipes (`| col |`)
+   - MD022/MD031/MD032: Add blank lines around headings, lists, and fenced code blocks
 
 ### Fixing a Blocked pre-push
 
@@ -142,5 +143,5 @@ git config --unset core.hooksPath
 
 | Tool | Purpose | Install |
 | ---- | ------- | ------- |
-| `markdownlint-cli` | Markdown linting (pre-commit) | `make install-tools` or `npm install -g markdownlint-cli` |
+| `npx` with `markdownlint-cli2` | Markdown linting (pre-commit) | Install Node.js/npm, then run `npx --yes markdownlint-cli2 --version` |
 | `pwsh` (PowerShell 7+) | VS Code settings sort (pre-commit, pre-push) | [Install PowerShell](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell) |
