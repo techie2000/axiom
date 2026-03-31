@@ -88,40 +88,22 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
+
+      - name: Run markdownlint
+        uses: DavidAnson/markdownlint-cli2-action@v23
         with:
-          fetch-depth: 0
+          globs: |
+            **/*.md
+            !**/node_modules/**
+            !**/vendor/**
+            !**/.git/**
+          config: '.markdownlint.yaml'
+          fix: false
 
-      - name: Set up Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: '22'
-
-      - name: Install markdownlint-cli
-        run: npm install -g markdownlint-cli
-
-      - name: Run markdown docs check
-        shell: bash
+      - name: Markdown lint report
+        if: failure()
         run: |
-          set -euo pipefail
-
-          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-            BASE_SHA="${{ github.event.pull_request.base.sha }}"
-            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
-
-            md_files="$(git diff --name-only --diff-filter=ACMR "$BASE_SHA" "$HEAD_SHA" -- '*.md')"
-
-            if [ -z "$md_files" ]; then
-              echo "No markdown files changed in this pull request."
-              exit 0
-            fi
-
-            echo "Linting changed markdown files:"
-            printf '%s\n' "$md_files" | sed 's/^/ - /'
-
-            printf '%s\n' "$md_files" | xargs markdownlint --config .markdownlint.yaml
-          else
-            make docs-check
-          fi
+          echo "::error::Markdown linting failed. Run 'npx markdownlint-cli2 \"**/*.md\"' locally to see issues."
 
   validate-architecture-as-code:
     name: Architecture as Code Validate (warn)
