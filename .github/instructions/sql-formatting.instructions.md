@@ -231,7 +231,7 @@ COMMENT ON COLUMN source_files.retry_count IS
 ## Quick Reference
 
 | Rule | Requirement | Example |
-|------|-------------|---------|
+| ------ | ------------- | --------- |
 | LT01 | No trailing whitespace | `WHERE id = 1` (not `WHERE id = 1  `) |
 | LT02 | No root-level indentation | `ALTER TABLE` starts at column 1 |
 | LT05 | Max 120 chars per line | Break long lines at commas |

@@ -7,7 +7,10 @@ featured_image: "https://placehold.co/1200x630.png"
 categories: ["frontend"]
 tags: ["adr", "frontend", "theming", "ux", "tailwind", "css"]
 ai_note: "AI-assisted draft based on repository state and user request."
-summary: "Records the decision to implement a dual-mode theming system where each colour palette ships both a light and a dark variant, decoupling palette choice from the dark/light toggle, with five tweakcn-inspired palettes and semantic theme utility tokens."
+summary: >-
+  Records the decision to implement a dual-mode theming system where each colour palette
+  ships both a light and a dark variant, decoupling palette choice from the dark/light
+  toggle, with five tweakcn-inspired palettes and semantic theme utility tokens.
 post_date: "2026-03-29"
 title: "ADR-0016: Multi-Theme System"
 status: "Accepted"
@@ -41,12 +44,14 @@ Subsequent implementation refinements added:
 - Semantic utility classes and status tokens (`theme-*`) so components progressively move off hardcoded utility colours.
 - Pre-hydration theme bootstrap in the root layout to prevent first-paint theme flash.
 - Global browser scrollbar tokenization for theme consistency.
-- Session-scoped deferred preference overrides so unsaved theme and display changes persist across in-app navigation for the active authenticated session and reset on logout.
-- Custom themed select controls (`ThemedSelect`) replacing native `<select>` usage in app screens and shared controls to avoid OS/browser popup colour drift.
+- Session-scoped deferred preference overrides so unsaved theme and display changes persist
+  across in-app navigation for the active authenticated session and reset on logout.
+- Custom themed select controls (`ThemedSelect`) replacing native `<select>` usage in app
+  screens and shared controls to avoid OS/browser popup colour drift.
 
-The key insight from reviewing tweakcn is that **each theme is a colour palette that ships both a light and a
-dark variant**, independently of which mode the user has selected. A user picking "Supabase" should still be
-able to toggle between light and dark Supabase, not be locked into one mode.
+The key insight from reviewing tweakcn is that **each theme is a colour palette that ships both a light and a dark
+variant**, independently of which mode the user has selected. A user picking "Supabase" should still be able to
+toggle between light and dark Supabase, not be locked into one mode.
 
 ## Decision Drivers
 
@@ -159,7 +164,7 @@ Five tweakcn-inspired palettes are shipped with this ADR, each providing both li
 | `default` | Default | Slate-50 bg, slate-900 fg | Slate-900 bg, slate-50 fg | Axiom's original palette |
 | `modern-minimal` | Modern Minimal | White bg, zinc-950 fg | Zinc-950 bg, zinc-50 fg | tweakcn Modern Minimal |
 | `supabase` | Supabase | White bg, #3ECF8E accent | Near-black bg, #3ECF8E accent | tweakcn Supabase |
-| `perpetuity` | Perpetuity | Cyan/teal mist light palette | Cyan/teal terminal dark palette | tweakcn Perpetuity (retuned) |
+| `perpetuity` | Perpetuity | Cyan/teal mist light palette | Teal terminal dark palette | tweakcn Perpetuity (retuned) |
 | `twitter` | Twitter | White bg, #1D9BF0 accent | #15202B bg, #1D9BF0 accent | tweakcn Twitter |
 
 ### Trade-offs Accepted
@@ -182,7 +187,8 @@ Five tweakcn-inspired palettes are shipped with this ADR, each providing both li
 - Pre-hydration bootstrap prevents initial paint flicker to a default theme before preference load.
 - Browser scrollbars now match active theme tokens.
 - Adding a new palette requires changing only two files: `globals.css` and `theme.ts`.
-- Dropdown popups now follow palette tokens consistently because listbox rendering is app-controlled instead of browser-native.
+- Dropdown popups now follow palette tokens consistently because listbox rendering is
+  app-controlled instead of browser-native.
 - Unsaved preference edits now behave predictably for users: they persist within the current signed-in session
   and revert to saved preferences on next login.
 
@@ -190,9 +196,11 @@ Five tweakcn-inspired palettes are shipped with this ADR, each providing both li
 
 - Tailwind's `dark:` utilities in individual components remain unaffected by palette choice beyond the
   CSS custom properties — true per-theme component styling is a future milestone.
-- Existing users who had saved `global/theme = 'light'` will default to dark mode (the new
-  `global/dark_mode` preference starts absent, defaulting to `'dark'`). They can toggle back in one click.
-- Custom select/listbox controls require ongoing accessibility and keyboard-interaction regression testing that native controls handled automatically.
+- Existing users who had saved `global/theme = 'light'` will default to dark mode.
+  The new `global/dark_mode` preference starts absent, defaulting to `'dark'`.
+  They can toggle back in one click.
+- Custom select/listbox controls require ongoing accessibility and keyboard-interaction
+  regression testing that native controls handled automatically.
 
 ### Mitigation
 

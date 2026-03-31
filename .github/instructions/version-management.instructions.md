@@ -316,7 +316,7 @@ When setting up automated releases:
 ## Quick Reference
 
 | Scenario | Example | Next Version |
-|----------|---------|--------------|
+| ---------- | --------- | -------------- |
 | Bug fix | Fix delimiter parsing | 0.1.0 → 0.1.1 |
 | New feature | Add Kafka output | 0.1.1 → 0.2.0 |
 | Breaking change | Change CLI flags | 0.2.0 → 1.0.0 |
