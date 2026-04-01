@@ -18,9 +18,6 @@ permissions:
   contents: read
   pull-requests: read
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-
 jobs:
   golangci-lint:
     name: Go Linting
@@ -30,7 +27,7 @@ jobs:
         working-directory: ./backend
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -51,9 +48,38 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Lint Dockerfiles
         run: |
-          docker run --rm -i hadolint/hadolint < ./docker/Dockerfile.backend
-          docker run --rm -i hadolint/hadolint < ./docker/Dockerfile.frontend
+          set -euo pipefail
+
+          HADOLINT_IMAGE="hadolint/hadolint:v2.12.0"
+
+          for attempt in 1 2 3; do
+            if docker pull "$HADOLINT_IMAGE"; then
+              break
+            fi
+
+            if [ "$attempt" -eq 3 ]; then
+              echo "Failed to pull $HADOLINT_IMAGE after 3 attempts"
+              exit 1
+            fi
+
+            sleep $((attempt * 5))
+          done
+
+          for dockerfile in ./docker/Dockerfile.backend ./docker/Dockerfile.frontend; do
+            for attempt in 1 2 3; do
+              if docker run --rm -i "$HADOLINT_IMAGE" < "$dockerfile"; then
+                break
+              fi
+
+              if [ "$attempt" -eq 3 ]; then
+                echo "Hadolint failed for $dockerfile after 3 attempts"
+                exit 1
+              fi
+
+              sleep $((attempt * 5))
+            done
+          done

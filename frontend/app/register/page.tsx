@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import '../lib/i18n'
 import ThemeToggle from '../components/ThemeToggle'
 import LanguageSelector from '../components/LanguageSelector'
 import { useEnglishTooltips } from '../lib/useEnglishTooltips'
+import { resolveHydrationSafeLabel } from '../lib/hydrationSafeLabel'
 
 const API_BASE_URL =
   typeof window !== 'undefined'
@@ -16,6 +17,7 @@ const API_BASE_URL =
 export default function RegisterPage() {
   const { t } = useTranslation('common')
   const { getEnglishTooltip } = useEnglishTooltips()
+  const [hasHydrated, setHasHydrated] = useState(false)
   const [form, setForm] = useState({
     email: '',
     username: '',
@@ -26,6 +28,44 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+
+  useEffect(() => {
+    setHasHydrated(true)
+  }, [])
+
+  const hydrationSafeLabel = (translationKey: string, fallbackLabel: string) =>
+    resolveHydrationSafeLabel(undefined, hasHydrated, t(translationKey), fallbackLabel)
+
+  const backToLoginLabel = hydrationSafeLabel('nav.backToLogin', '← Back to Login')
+  const registerTitleLabel = hydrationSafeLabel('register.title', 'Request Access')
+  const registerSubtitleLabel = hydrationSafeLabel(
+    'register.subtitle',
+    'Submit a request for an Axiom account. An administrator will review and approve it.',
+  )
+  const fullNameLabel = hydrationSafeLabel('register.fullNameLabel', 'Full name')
+  const fullNamePlaceholder = hydrationSafeLabel('register.fullNamePlaceholder', 'Jane Smith')
+  const emailLabel = hydrationSafeLabel('register.emailLabel', 'Email address')
+  const emailPlaceholder = hydrationSafeLabel('register.emailPlaceholder', 'jane@example.com')
+  const usernameLabel = hydrationSafeLabel('register.usernameLabel', 'Username')
+  const usernamePlaceholder = hydrationSafeLabel('register.usernamePlaceholder', 'jsmith')
+  const passwordLabel = hydrationSafeLabel('register.passwordLabel', 'Password')
+  const passwordPlaceholder = hydrationSafeLabel('register.passwordPlaceholder', 'At least 8 characters')
+  const confirmPasswordLabel = hydrationSafeLabel('register.confirmPasswordLabel', 'Confirm password')
+  const confirmPasswordPlaceholder = hydrationSafeLabel(
+    'register.confirmPasswordPlaceholder',
+    'Repeat password',
+  )
+  const requiredLabel = hydrationSafeLabel('register.required', '*')
+  const submitButtonLabel = hydrationSafeLabel('register.submitButton', 'Submit request')
+  const submittingButtonLabel = hydrationSafeLabel('register.submittingButton', 'Submitting request...')
+  const alreadyHaveAccountLabel = hydrationSafeLabel('register.alreadyHaveAccount', 'Already have an account?')
+  const signInLabel = hydrationSafeLabel('register.signInLink', 'Sign in')
+  const registerSuccessTitle = hydrationSafeLabel('register_success.title', 'Request submitted')
+  const registerSuccessMessage = hydrationSafeLabel(
+    'register_success.message',
+    'Your account request has been sent. An administrator will review it shortly.',
+  )
+  const backToLoginSuccessLabel = hydrationSafeLabel('register_success.backToLogin', 'Back to sign in')
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -79,17 +119,17 @@ export default function RegisterPage() {
           <div className="theme-panel border-2 backdrop-blur-sm rounded-lg shadow-lg p-8 text-center">
             <div className="text-5xl mb-4">✅</div>
             <h1 className="text-2xl font-bold mb-3">
-              {t('register_success.title')}
+              {registerSuccessTitle}
             </h1>
             <p className="theme-text-muted mb-6" title={getEnglishTooltip('register_success.message')}>
-              {t('register_success.message')}
+              {registerSuccessMessage}
             </p>
             <Link
               href="/login"
               className="inline-block py-2 px-6 theme-btn-primary font-medium rounded-md"
               title={getEnglishTooltip('register_success.backToLogin')}
             >
-              {t('register_success.backToLogin')}
+              {backToLoginSuccessLabel}
             </Link>
           </div>
         </div>
@@ -102,7 +142,7 @@ export default function RegisterPage() {
       <div className="w-full max-w-md">
         <div className="flex justify-between items-center mb-8">
           <Link href="/login" className="theme-link hover:opacity-80 text-sm">
-            {t('nav.backToLogin')}
+            {backToLoginLabel}
           </Link>
           <div className="flex items-center gap-2">
             <LanguageSelector compact />
@@ -113,10 +153,10 @@ export default function RegisterPage() {
         <div className="theme-panel border-2 backdrop-blur-sm rounded-lg shadow-lg p-8">
           <div className="text-center mb-6">
             <h1 className="text-3xl font-bold mb-2" title={getEnglishTooltip('register.title')}>
-              {t('register.title')}
+              {registerTitleLabel}
             </h1>
             <p className="theme-text-muted text-sm" title={getEnglishTooltip('register.subtitle')}>
-              {t('register.subtitle')}
+              {registerSubtitleLabel}
             </p>
           </div>
 
@@ -132,7 +172,7 @@ export default function RegisterPage() {
                 htmlFor="full_name"
                 className="block text-sm font-medium theme-text-muted mb-1"
               >
-                {t('register.fullNameLabel')}
+                {fullNameLabel}
               </label>
               <input
                 id="full_name"
@@ -143,7 +183,7 @@ export default function RegisterPage() {
                 onChange={handleChange}
                 title={getEnglishTooltip('register.fullNamePlaceholder')}
                 className="w-full px-3 py-2 border rounded-md theme-input"
-                placeholder={t('register.fullNamePlaceholder')}
+                placeholder={fullNamePlaceholder}
               />
             </div>
 
@@ -152,7 +192,7 @@ export default function RegisterPage() {
                 htmlFor="email"
                 className="block text-sm font-medium theme-text-muted mb-1"
               >
-                {t('register.emailLabel')} <span className="text-red-500">{t('register.required')}</span>
+                {emailLabel} <span className="text-red-500">{requiredLabel}</span>
               </label>
               <input
                 id="email"
@@ -164,7 +204,7 @@ export default function RegisterPage() {
                 onChange={handleChange}
                 title={getEnglishTooltip('register.emailPlaceholder')}
                 className="w-full px-3 py-2 border rounded-md theme-input"
-                placeholder={t('register.emailPlaceholder')}
+                placeholder={emailPlaceholder}
               />
             </div>
 
@@ -173,7 +213,7 @@ export default function RegisterPage() {
                 htmlFor="username"
                 className="block text-sm font-medium theme-text-muted mb-1"
               >
-                {t('register.usernameLabel')} <span className="text-red-500">{t('register.required')}</span>
+                {usernameLabel} <span className="text-red-500">{requiredLabel}</span>
               </label>
               <input
                 id="username"
@@ -187,7 +227,7 @@ export default function RegisterPage() {
                 onChange={handleChange}
                 title={getEnglishTooltip('register.usernamePlaceholder')}
                 className="w-full px-3 py-2 border rounded-md theme-input"
-                placeholder={t('register.usernamePlaceholder')}
+                placeholder={usernamePlaceholder}
               />
             </div>
 
@@ -196,7 +236,7 @@ export default function RegisterPage() {
                 htmlFor="password"
                 className="block text-sm font-medium theme-text-muted mb-1"
               >
-                {t('register.passwordLabel')} <span className="text-red-500">{t('register.required')}</span>
+                {passwordLabel} <span className="text-red-500">{requiredLabel}</span>
               </label>
               <input
                 id="password"
@@ -209,7 +249,7 @@ export default function RegisterPage() {
                 onChange={handleChange}
                 title={getEnglishTooltip('register.passwordPlaceholder')}
                 className="w-full px-3 py-2 border rounded-md theme-input"
-                placeholder={t('register.passwordPlaceholder')}
+                placeholder={passwordPlaceholder}
               />
             </div>
 
@@ -218,7 +258,7 @@ export default function RegisterPage() {
                 htmlFor="confirmPassword"
                 className="block text-sm font-medium theme-text-muted mb-1"
               >
-                {t('register.confirmPasswordLabel')} <span className="text-red-500">{t('register.required')}</span>
+                {confirmPasswordLabel} <span className="text-red-500">{requiredLabel}</span>
               </label>
               <input
                 id="confirmPassword"
@@ -230,7 +270,7 @@ export default function RegisterPage() {
                 onChange={handleChange}
                 title={getEnglishTooltip('register.confirmPasswordPlaceholder')}
                 className="w-full px-3 py-2 border rounded-md theme-input"
-                placeholder={t('register.confirmPasswordPlaceholder')}
+                placeholder={confirmPasswordPlaceholder}
               />
             </div>
 
@@ -240,14 +280,14 @@ export default function RegisterPage() {
               title={loading ? getEnglishTooltip('register.submittingButton') : getEnglishTooltip('register.submitButton')}
               className="w-full py-2 px-4 theme-btn-primary disabled:opacity-60 font-medium rounded-md theme-focus"
             >
-              {loading ? t('register.submittingButton') : t('register.submitButton')}
+              {loading ? submittingButtonLabel : submitButtonLabel}
             </button>
           </form>
 
           <div className="mt-6 text-center text-sm theme-text-muted">
-            {t('register.alreadyHaveAccount')}{' '}
+            {alreadyHaveAccountLabel}{' '}
             <Link href="/login" className="theme-link hover:opacity-80 font-medium" title={getEnglishTooltip('register.signInLink')}>
-              {t('register.signInLink')}
+              {signInLabel}
             </Link>
           </div>
         </div>

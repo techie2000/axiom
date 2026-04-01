@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 
 .PHONY: help build run test clean migrate-up migrate-down docker-up docker-down
-.PHONY: docker-main-up docker-main-down docker-dev-up docker-dev-down docker-uat-up docker-uat-down docker-prod-up docker-prod-down
+.PHONY: docker-main-up docker-main-down docker-main-rebuild-safe docker-dev-up docker-dev-down docker-dev-rebuild-safe docker-uat-up docker-uat-down docker-uat-rebuild-safe docker-prod-up docker-prod-down docker-prod-rebuild-safe
 .PHONY: docker-all-up docker-all-down docker-all-status validate-env
 .PHONY: lint lint-docs lint-docs-fix docs-check docs-check-fix lint-all install-hooks settings-sort settings-sort-check
 .PHONY: smoke-api smoke-ssi cleanup-stale-translations docs-user-install docs-user-ci-install docs-user-build docs-user-check docs-user-dev
@@ -62,6 +62,14 @@ docker-all-up: ## Start all environments (main, dev, uat, prod)
 docker-dev-down: ## Stop development environment
 	docker-compose --env-file .env.dev -f docker-compose.dev.yml down
 
+docker-dev-rebuild-safe: ## Gracefully rebuild dev backend/frontend while reducing DB crash-recovery risk
+	@echo "Gracefully stopping app services first (frontend/backend)..."
+	docker-compose --env-file .env.dev -f docker-compose.dev.yml stop -t 45 frontend backend
+	@echo "Stopping stateful services with extended timeout (postgres/rabbitmq)..."
+	docker-compose --env-file .env.dev -f docker-compose.dev.yml stop -t 120 postgres rabbitmq
+	@echo "Rebuilding and starting services..."
+	docker-compose --env-file .env.dev -f docker-compose.dev.yml up -d --build postgres rabbitmq backend frontend
+
 docker-dev-logs: ## Show logs from development environment
 	docker-compose --env-file .env.dev -f docker-compose.dev.yml logs -f
 
@@ -101,6 +109,14 @@ docker-logs: ## Show logs from all services (default/legacy)
 docker-main-down: ## Stop main branch environment
 	docker-compose --env-file .env.main -f docker-compose.main.yml down
 
+docker-main-rebuild-safe: ## Gracefully rebuild main backend/frontend while reducing DB crash-recovery risk
+	@echo "Gracefully stopping app services first (frontend/backend)..."
+	docker-compose --env-file .env.main -f docker-compose.main.yml stop -t 45 frontend backend
+	@echo "Stopping stateful services with extended timeout (postgres/rabbitmq)..."
+	docker-compose --env-file .env.main -f docker-compose.main.yml stop -t 120 postgres rabbitmq
+	@echo "Rebuilding and starting services..."
+	docker-compose --env-file .env.main -f docker-compose.main.yml up -d --build postgres rabbitmq backend frontend
+
 docker-main-logs: ## Show logs from main branch environment
 	docker-compose --env-file .env.main -f docker-compose.main.yml logs -f
 
@@ -134,6 +150,14 @@ docker-main-up: ## Start main branch environment (ports: 48080, 43000, 45432)
 docker-prod-down: ## Stop production environment
 	docker-compose --env-file .env.prod -f docker-compose.prod.yml down
 
+docker-prod-rebuild-safe: ## Gracefully rebuild prod backend/frontend while reducing DB crash-recovery risk
+	@echo "Gracefully stopping app services first (frontend/backend)..."
+	docker-compose --env-file .env.prod -f docker-compose.prod.yml stop -t 45 frontend backend
+	@echo "Stopping stateful services with extended timeout (postgres/rabbitmq)..."
+	docker-compose --env-file .env.prod -f docker-compose.prod.yml stop -t 120 postgres rabbitmq
+	@echo "Rebuilding and starting services..."
+	docker-compose --env-file .env.prod -f docker-compose.prod.yml up -d --build postgres rabbitmq backend frontend
+
 docker-prod-logs: ## Show logs from production environment
 	docker-compose --env-file .env.prod -f docker-compose.prod.yml logs -f
 
@@ -162,6 +186,14 @@ docker-prod-up: ## Start production environment (ports: 38080, 33000, 35432)
 
 docker-uat-down: ## Stop UAT environment
 	docker-compose --env-file .env.uat -f docker-compose.uat.yml down
+
+docker-uat-rebuild-safe: ## Gracefully rebuild uat backend/frontend while reducing DB crash-recovery risk
+	@echo "Gracefully stopping app services first (frontend/backend)..."
+	docker-compose --env-file .env.uat -f docker-compose.uat.yml stop -t 45 frontend backend
+	@echo "Stopping stateful services with extended timeout (postgres/rabbitmq)..."
+	docker-compose --env-file .env.uat -f docker-compose.uat.yml stop -t 120 postgres rabbitmq
+	@echo "Rebuilding and starting services..."
+	docker-compose --env-file .env.uat -f docker-compose.uat.yml up -d --build postgres rabbitmq backend frontend
 
 docker-uat-logs: ## Show logs from UAT environment
 	docker-compose --env-file .env.uat -f docker-compose.uat.yml logs -f
