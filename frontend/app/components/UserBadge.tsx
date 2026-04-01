@@ -155,7 +155,11 @@ export default function UserBadge() {
                     }`}
                     aria-pressed={emojiMode === mode}
                   >
-                    {t(`preferences.buttonEmojiMode.${mode}`)}
+                    {mode === 'both'
+                      ? t('preferences.buttonEmojiMode.both')
+                      : mode === 'text'
+                        ? t('preferences.buttonEmojiMode.text')
+                        : t('preferences.buttonEmojiMode.emoji')}
                   </button>
                 ))}
               </div>
