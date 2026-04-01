@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import UserBadge from './UserBadge'
 import ContextDocsLink from './ContextDocsLink'
 import { useButtonEmojiMode } from '../lib/useButtonEmojiMode'
+import { resolveHydrationSafeLabel } from '../lib/hydrationSafeLabel'
 
 interface PageHeaderProps {
   title: string
@@ -18,15 +19,6 @@ interface PageHeaderProps {
   docsHref?: string
   docsLabel?: string
   actions?: React.ReactNode
-}
-
-export function resolveHydrationSafeLabel(
-  explicitLabel: string | undefined,
-  hasHydrated: boolean,
-  translatedLabel: string,
-  fallbackLabel: string,
-) {
-  return explicitLabel ?? (hasHydrated ? translatedLabel : fallbackLabel)
 }
 
 export default function PageHeader({

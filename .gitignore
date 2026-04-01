@@ -79,6 +79,11 @@ compose-output.txt
 /backend/coverage.html
 /frontend/coverage/
 
+# Playwright end-to-end tests
+/frontend/e2e/.auth/
+/frontend/playwright-report/
+/frontend/test-results/
+
 # Documentation
 /docs/*.pdf
 

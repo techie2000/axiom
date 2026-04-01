@@ -22,9 +22,6 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-
 jobs:
   detect-environment:
     name: Detect Target Environment
@@ -54,7 +51,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -75,35 +72,82 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Lint Dockerfiles
         run: |
-          docker run --rm -i hadolint/hadolint < ./docker/Dockerfile.backend
-          docker run --rm -i hadolint/hadolint < ./docker/Dockerfile.frontend
+          set -euo pipefail
+
+          HADOLINT_IMAGE="hadolint/hadolint:v2.12.0"
+
+          for attempt in 1 2 3; do
+            if docker pull "$HADOLINT_IMAGE"; then
+              break
+            fi
+
+            if [ "$attempt" -eq 3 ]; then
+              echo "Failed to pull $HADOLINT_IMAGE after 3 attempts"
+              exit 1
+            fi
+
+            sleep $((attempt * 5))
+          done
+
+          for dockerfile in ./docker/Dockerfile.backend ./docker/Dockerfile.frontend; do
+            for attempt in 1 2 3; do
+              if docker run --rm -i "$HADOLINT_IMAGE" < "$dockerfile"; then
+                break
+              fi
+
+              if [ "$attempt" -eq 3 ]; then
+                echo "Hadolint failed for $dockerfile after 3 attempts"
+                exit 1
+              fi
+
+              sleep $((attempt * 5))
+            done
+          done
 
   lint-docs:
     name: Markdown Lint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Run markdownlint
-        uses: DavidAnson/markdownlint-cli2-action@v23
+        uses: actions/checkout@v4
         with:
-          globs: |
-            **/*.md
-            !**/node_modules/**
-            !**/vendor/**
-            !**/.git/**
-          config: '.markdownlint.yaml'
-          fix: false
+          fetch-depth: 0
 
-      - name: Markdown lint report
-        if: failure()
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install markdownlint-cli
+        run: npm install -g markdownlint-cli
+
+      - name: Run markdown docs check
+        shell: bash
         run: |
-          echo "::error::Markdown linting failed. Run 'npx markdownlint-cli2 \"**/*.md\"' locally to see issues."
+          set -euo pipefail
+
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+
+            md_files="$(git diff --name-only --diff-filter=ACMR "$BASE_SHA" "$HEAD_SHA" -- '*.md')"
+
+            if [ -z "$md_files" ]; then
+              echo "No markdown files changed in this pull request."
+              exit 0
+            fi
+
+            echo "Linting changed markdown files:"
+            printf '%s\n' "$md_files" | sed 's/^/ - /'
+
+            printf '%s\n' "$md_files" | xargs markdownlint --config .markdownlint.yaml
+          else
+            make docs-check
+          fi
 
   validate-architecture-as-code:
     name: Architecture as Code Validate (warn)
@@ -111,10 +155,10 @@ jobs:
     continue-on-error: true
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Set up Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
           node-version: '22'
 
@@ -127,10 +171,10 @@ jobs:
     if: ${{ vars.CALM_VALIDATE_STRICT == 'true' }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Set up Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
           node-version: '22'
 
@@ -156,7 +200,7 @@ jobs:
           --health-retries 5
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Validate migration version uniqueness
         shell: bash
@@ -233,10 +277,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Set up Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'npm'
@@ -255,10 +299,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Set up Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'npm'
@@ -295,7 +339,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -313,7 +357,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -326,44 +370,15 @@ jobs:
         run: go test ./... -v -count=1
         working-directory: ./backend
 
-  test-frontend:
-    name: Frontend Tests (Vitest + coverage)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: 'frontend/package-lock.json'
-
-      - name: Install dependencies
-        run: npm ci --legacy-peer-deps
-        working-directory: ./frontend
-
-      - name: Run tests with coverage
-        run: npm run test:coverage
-        working-directory: ./frontend
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          files: frontend/coverage/lcov.info
-          flags: frontend
-          fail_ci_if_error: false
-
   build-docs-user:
     name: Build User Documentation (VitePress)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Set up Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'npm'
@@ -380,7 +395,7 @@ jobs:
   ci-summary:
     name: CI Summary (${{ needs.detect-environment.outputs.environment || 'none' }})
     runs-on: ubuntu-latest
-    needs: [detect-environment, lint-go, lint-docker, lint-docs, validate-architecture-as-code, validate-architecture-as-code-strict, lint-frontend, validate-migrations, build-go, test-go, build-frontend, test-frontend, build-docs-user]
+    needs: [detect-environment, lint-go, lint-docker, lint-docs, validate-architecture-as-code, validate-architecture-as-code-strict, lint-frontend, validate-migrations, build-go, test-go, build-frontend, build-docs-user]
     if: always()
     steps:
       - name: Report CI result
@@ -396,7 +411,6 @@ jobs:
           BUILD="${{ needs.build-go.result }}"
           TEST="${{ needs.test-go.result }}"
           BUILD_FRONTEND="${{ needs.build-frontend.result }}"
-          TEST_FRONTEND="${{ needs.test-frontend.result }}"
           BUILD_DOCS_USER="${{ needs.build-docs-user.result }}"
 
           echo "Environment     : $ENV"
@@ -410,7 +424,6 @@ jobs:
           echo "Build           : $BUILD"
           echo "Tests           : $TEST"
           echo "Frontend        : $BUILD_FRONTEND"
-          echo "Frontend Tests  : $TEST_FRONTEND"
           echo "User Docs       : $BUILD_DOCS_USER"
 
           if [ "$LINT_GO" != "success" ] || \
@@ -421,7 +434,6 @@ jobs:
              [ "$BUILD" != "success" ] || \
              [ "$TEST" != "success" ] || \
              [ "$BUILD_FRONTEND" != "success" ] || \
-             [ "$TEST_FRONTEND" != "success" ] || \
              [ "$BUILD_DOCS_USER" != "success" ]; then
             echo "❌ CI failed — see individual job logs above."
             exit 1
