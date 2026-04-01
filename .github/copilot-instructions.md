@@ -204,6 +204,7 @@ backgrounds: "#555" (dark gray) with white text
 ### Instructions (`instructions/*.instructions.md`)
 Coding standards that AI applies when generating or reviewing code:
 - **Language-specific**: `go.instructions.md` - Go idioms and best practices
+- **Frontend-specific**: `frontend-ui.instructions.md` - Theme consistency, sortable-table standards, and mandatory `PreferenceSavePrompt` UX for preference-backed toggles
 - **Cross-cutting**:
   - `security-and-owasp.instructions.md` - Security best practices
   - `performance-optimization.instructions.md` - Performance guidelines
