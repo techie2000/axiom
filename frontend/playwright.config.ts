@@ -11,7 +11,7 @@ import { AUTH_STATE_PATH } from './e2e/config'
  *   3. Start the full stack: `docker compose --env-file .env.dev -f docker-compose.dev.yml up`
  *
  * Running tests:
- *   npm run test:e2e          — headless, all browsers
+ *   npm run test:e2e          — headless, chromium (add firefox/webkit projects as needed)
  *   npm run test:e2e:ui       — interactive Playwright UI
  *   npm run test:e2e:report   — open the last HTML report
  *

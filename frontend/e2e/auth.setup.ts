@@ -12,7 +12,7 @@
  */
 import { test as setup, expect } from '@playwright/test'
 import path from 'path'
-import { AUTH_STATE_PATH } from '../config'
+import { AUTH_STATE_PATH } from './config'
 
 const authFile = path.join(__dirname, '..', AUTH_STATE_PATH)
 

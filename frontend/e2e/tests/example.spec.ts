@@ -24,7 +24,7 @@ test.describe('Authenticated navigation', () => {
     // Should NOT be redirected back to login.
     await expect(page).not.toHaveURL(/\/login/)
 
-    // The page must have a visible heading or meaningful content.
-    await expect(page.locator('h1, h2, main')).toBeVisible()
+    // The page must have a visible main content area.
+    await expect(page.locator('main')).toBeVisible()
   })
 })

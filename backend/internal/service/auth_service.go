@@ -307,22 +307,57 @@ func (s *authService) EnsurePlaywrightTestUser(email, password string) error {
 
 	// Check whether the user already exists (by the fixed ID).
 	existing, err := s.repo.FindByID(playwrightTestUserID)
-	if err == nil && existing != nil {
-		// User exists. If it's not active, reactivate it so tests can log in.
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return fmt.Errorf("database error while checking playwright test user: %w", err)
+	}
+
+	updated := false
+
+	if existing != nil {
+		// User exists. Ensure email matches the configured Playwright email.
+		if existing.Email != email {
+			existing.Email = email
+			updated = true
+		}
+
+		// Ensure username matches the one derived from the email.
+		if existing.Username != username {
+			existing.Username = username
+			updated = true
+		}
+
+		// Ensure the password hash matches the configured Playwright password.
+		if err := bcrypt.CompareHashAndPassword([]byte(existing.PasswordHash), []byte(password)); err != nil {
+			hash, hashErr := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+			if hashErr != nil {
+				return fmt.Errorf("failed to hash playwright test user password: %w", hashErr)
+			}
+			existing.PasswordHash = string(hash)
+			updated = true
+		}
+
+		// Ensure the user is active so tests can log in.
 		if existing.Status != domain.UserStatusActive {
 			existing.Status = domain.UserStatusActive
+			updated = true
+		}
+
+		if updated {
 			if updateErr := s.repo.Update(existing); updateErr != nil {
-				return fmt.Errorf("failed to reactivate playwright test user: %w", updateErr)
+				return fmt.Errorf("failed to reconcile playwright test user: %w", updateErr)
 			}
-			logger.Info().Msg("Playwright test user reactivated")
+			logger.Info().Msg("Playwright test user reconciled to match configured credentials")
 		} else {
-			logger.Info().Msg("Playwright test user already exists and is active")
+			logger.Info().Msg("Playwright test user already exists with matching credentials")
 		}
 		return nil
 	}
 
 	// Also check by email in case of a collision with a manually created account.
 	byEmail, emailErr := s.repo.FindByEmail(email)
+	if emailErr != nil && !errors.Is(emailErr, gorm.ErrRecordNotFound) {
+		return fmt.Errorf("database error while checking email: %w", emailErr)
+	}
 	if emailErr == nil && byEmail != nil {
 		logger.Warn().
 			Str("email", email).
