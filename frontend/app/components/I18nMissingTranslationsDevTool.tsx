@@ -611,14 +611,14 @@ export default function I18nMissingTranslationsDevTool() {
       <button
         type="button"
         onClick={() => setIsOpen((open) => !open)}
-        className="fixed bottom-4 right-4 z-[70] rounded-full px-4 py-2 text-xs font-semibold shadow-lg transition-colors theme-btn-neutral"
+        className="fixed bottom-4 right-4 z-40 rounded-full px-4 py-2 text-xs font-semibold shadow-lg transition-colors theme-btn-neutral"
         title="Dev only: detect and submit missing translations from this page"
       >
         Missing Translations: {pendingCount}
       </button>
 
       {isOpen && (
-        <div className="fixed bottom-16 right-4 z-[70] w-[32rem] max-h-[70vh] overflow-hidden rounded-lg border shadow-2xl theme-panel">
+        <div className="fixed bottom-16 right-4 z-40 w-[32rem] max-h-[70vh] overflow-hidden rounded-lg border shadow-2xl theme-panel">
           <div className="flex items-center justify-between border-b border-[rgb(var(--border-rgb)/0.75)] px-4 py-3">
             <div>
               <p className="text-sm font-semibold">Missing translations (dev)</p>

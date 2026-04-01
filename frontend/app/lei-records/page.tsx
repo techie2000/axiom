@@ -19,6 +19,7 @@ import { useEnglishTooltips } from '../lib/useEnglishTooltips'
 import { useUserPreference } from '../lib/useUserPreference'
 import { useSearchFocusShortcut } from '../lib/useSearchFocusShortcut'
 import { formatEnumDisplayValue, formatLEICellValue, getStatusBadgePresentation, normalizeRecordNullLikeValues } from './null-utils'
+import { formatCurrentPageStatValue } from './stats-format'
 import { useTranslation } from 'react-i18next'
 
 interface LEIRecord {
@@ -1307,7 +1308,12 @@ export default function LEIRecordsPage() {
           <StatCard
             title={t('leiRecords.stats.currentPage')}
             titleTooltip={getEnglishTooltip('leiRecords.stats.currentPage')}
-            value={hasActiveFilters ? t('leiRecords.stats.currentPageFiltered', { page: currentPage }) : t('leiRecords.stats.currentPageOf', { page: currentPage, total: totalPages.toLocaleString() })}
+            value={formatCurrentPageStatValue({
+              hasActiveFilters,
+              currentPage,
+              totalPages,
+              t,
+            })}
           />
           <StatCard
             title={t('leiRecords.stats.showing')}
