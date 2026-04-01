@@ -19,7 +19,7 @@ import { useEnglishTooltips } from '../lib/useEnglishTooltips'
 import { useUserPreference } from '../lib/useUserPreference'
 import { useSearchFocusShortcut } from '../lib/useSearchFocusShortcut'
 import { formatEnumDisplayValue, formatLEICellValue, getStatusBadgePresentation, normalizeRecordNullLikeValues } from './null-utils'
-import { formatCurrentPageStatValue } from './stats-format'
+import { computeShowingEnd, formatCurrentPageStatValue } from './stats-format'
 import { useTranslation } from 'react-i18next'
 
 interface LEIRecord {
@@ -1318,7 +1318,7 @@ export default function LEIRecordsPage() {
           <StatCard
             title={t('leiRecords.stats.showing')}
             titleTooltip={getEnglishTooltip('leiRecords.stats.showing')}
-            value={`${((currentPage - 1) * itemsPerPage) + 1}-${Math.min(currentPage * itemsPerPage, totalRecords)}`}
+            value={`${((currentPage - 1) * itemsPerPage) + 1}-${computeShowingEnd(currentPage, itemsPerPage, totalRecords, records.length)}`}
           />
         </div>
 
@@ -1477,7 +1477,7 @@ export default function LEIRecordsPage() {
               {t('leiRecords.pagination.previous')}
             </button>
             <span className="theme-text-muted">
-                {hasActiveFilters
+                {hasActiveFilters || totalPages === 0
                   ? t('leiRecords.pagination.pageFiltered', { page: currentPage, count: records.length })
                   : t('leiRecords.pagination.pageOf', { page: currentPage, total: totalPages.toLocaleString() })}
             </span>
