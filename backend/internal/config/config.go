@@ -16,6 +16,7 @@ type Config struct {
 	Log      LogConfig
 	CORS     CORSConfig
 	LEI      LEIConfig
+	Testing  TestingConfig
 }
 
 // ServerConfig holds server configuration
@@ -58,6 +59,22 @@ type CORSConfig struct {
 	AllowedHeaders []string `mapstructure:"allowed_headers"`
 }
 
+// TestingConfig holds configuration for automated testing environments.
+// These settings are only intended for dev and main environments and must
+// never be enabled in UAT or production.
+type TestingConfig struct {
+	// PlaywrightSeedUser controls whether a dedicated Playwright test user is
+	// automatically created on startup. Set PLAYWRIGHT_SEED_USER=true in
+	// dev/main .env files only — never in UAT or production.
+	PlaywrightSeedUser bool `mapstructure:"playwrightseeduser"`
+	// PlaywrightUserEmail is the email address for the Playwright test user.
+	// Controlled by PLAYWRIGHT_USER_EMAIL; defaults to playwright@axiom.local.
+	PlaywrightUserEmail string `mapstructure:"playwrightuseremail"`
+	// PlaywrightUserPassword is the password for the Playwright test user.
+	// Controlled by PLAYWRIGHT_USER_PASSWORD; defaults to Playwright1!
+	PlaywrightUserPassword string `mapstructure:"playwrightuserpassword"`
+}
+
 // LEIConfig holds LEI data acquisition and scheduling configuration
 type LEIConfig struct {
 	DataDir           string // Directory to store LEI files
@@ -91,6 +108,12 @@ func Load() (*Config, error) {
 	// Map DATABASE_HOST to database.host, DATABASE_PORT to database.port, etc.
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
+
+	// Bind user-friendly env var names for Playwright testing configuration.
+	// These override the default TESTING_* prefix that AutomaticEnv would produce.
+	_ = viper.BindEnv("testing.playwrightseeduser", "PLAYWRIGHT_SEED_USER")
+	_ = viper.BindEnv("testing.playwrightuseremail", "PLAYWRIGHT_USER_EMAIL")
+	_ = viper.BindEnv("testing.playwrightuserpassword", "PLAYWRIGHT_USER_PASSWORD")
 
 	var config Config
 	if err := viper.Unmarshal(&config); err != nil {
@@ -137,4 +160,9 @@ func setDefaults() {
 	viper.SetDefault("lei.cleanuptime", "00:00")    // Midnight - runs BEFORE all syncs
 	viper.SetDefault("lei.keepfullfiles", 2)        // Keep 2 full files (~1.8GB)
 	viper.SetDefault("lei.keepdeltafiles", 5)       // Keep 5 delta files (~65MB)
+
+	// Testing defaults (only active when PLAYWRIGHT_SEED_USER=true)
+	viper.SetDefault("testing.playwrightseeduser", false)
+	viper.SetDefault("testing.playwrightuseremail", "playwright@axiom.local")
+	viper.SetDefault("testing.playwrightuserpassword", "Playwright1!")
 }

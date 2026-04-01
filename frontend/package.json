@@ -16,7 +16,11 @@
     "i18n:verify": "npm run i18n:extract && npm run i18n:check && git diff --exit-code -- public/locales",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report",
+    "playwright:install": "playwright install --with-deps chromium"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.0.2",
@@ -37,6 +41,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
+    "@playwright/test": "^1.52.0",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
