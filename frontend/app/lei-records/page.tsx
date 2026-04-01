@@ -1304,7 +1304,7 @@ export default function LEIRecordsPage() {
         )}
 
         <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <StatCard title={t('leiRecords.stats.totalRecords')} titleTooltip={getEnglishTooltip('leiRecords.stats.totalRecords')} value={totalRecords.toLocaleString()} />
+          <StatCard title={t('leiRecords.stats.totalRecords')} titleTooltip={getEnglishTooltip('leiRecords.stats.totalRecords')} value={totalRecords > 0 ? totalRecords.toLocaleString() : '—'} />
           <StatCard
             title={t('leiRecords.stats.currentPage')}
             titleTooltip={getEnglishTooltip('leiRecords.stats.currentPage')}

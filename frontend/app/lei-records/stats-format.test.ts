@@ -80,12 +80,19 @@ describe('computeShowingEnd', () => {
     expect(computeShowingEnd(3, 50, 120, 20)).toBe(120) // page 3 ends at record 120 (totalRecords cap)
   })
 
-  it('falls back to recordsLength when totalRecords is 0', () => {
+  it('falls back to page-offset + recordsLength on page 1 when totalRecords is 0', () => {
+    // Page 1 with 37 records → showing "1-37"
     expect(computeShowingEnd(1, 50, 0, 37)).toBe(37)
   })
 
-  it('caps showing-end at pageEnd even when fallback is used', () => {
-    // recordsLength equals itemsPerPage — normal full page
-    expect(computeShowingEnd(2, 50, 0, 50)).toBe(50)
+  it('accounts for page offset correctly on later pages when totalRecords is 0', () => {
+    // Page 2, 50 records → showing "51-100"
+    expect(computeShowingEnd(2, 50, 0, 50)).toBe(100)
+    // Page 3, 12 records (partial last page) → showing "101-112"
+    expect(computeShowingEnd(3, 50, 0, 12)).toBe(112)
+  })
+
+  it('works for a full first page when totalRecords is 0', () => {
+    expect(computeShowingEnd(1, 50, 0, 50)).toBe(50)
   })
 })

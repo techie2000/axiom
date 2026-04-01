@@ -38,7 +38,15 @@ export function formatCurrentPageStatValue({
 
 /**
  * Compute the end value for the "Showing X-Y" stat card.
- * Falls back to recordsLength when totalRecords is 0 (status endpoint unavailable).
+ *
+ * When totalRecords > 0 we cap at totalRecords so the last page shows the
+ * correct upper bound (e.g. "951-1000" not "951-1000").
+ *
+ * When totalRecords is 0 (status endpoint unavailable / no full sync yet) we
+ * fall back to the actual page offset plus the number of records returned on
+ * this page, which is always correct regardless of which page we are on:
+ *   Page 1, 37 records → 37
+ *   Page 3, 12 records → (3-1)*50 + 12 = 112
  */
 export function computeShowingEnd(
   currentPage: number,
@@ -50,5 +58,6 @@ export function computeShowingEnd(
   if (totalRecords > 0) {
     return Math.min(pageEnd, totalRecords)
   }
-  return Math.min(pageEnd, recordsLength)
+  // totalRecords unknown — derive end from page offset + actual records returned
+  return (currentPage - 1) * itemsPerPage + recordsLength
 }
