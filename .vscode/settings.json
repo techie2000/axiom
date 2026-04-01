@@ -81,7 +81,9 @@
       "matchCommandLine": true
     },
     "docker pull": true,
-    "docker tag": true
+    "docker tag": true,
+    ".vscode/settings.json": true,
+    "npm test": true
   },
   "cSpell.words": [
     "ACMR",

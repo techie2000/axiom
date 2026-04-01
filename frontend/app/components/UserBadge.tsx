@@ -21,6 +21,11 @@ export default function UserBadge() {
     setEnglishTooltipsPreferenceEnabled,
   } = useEnglishTooltips()
   const { emojiMode, setEmojiMode } = useButtonEmojiMode()
+  const emojiModeLabels: Record<EmojiMode, string> = {
+    both: t('preferences.buttonEmojiMode.both'),
+    text: t('preferences.buttonEmojiMode.text'),
+    emoji: t('preferences.buttonEmojiMode.emoji'),
+  }
   const [user, setUser] = useState<StoredUser | null>(null)
   const [mounted, setMounted] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -155,7 +160,7 @@ export default function UserBadge() {
                     }`}
                     aria-pressed={emojiMode === mode}
                   >
-                    {t(`preferences.buttonEmojiMode.${mode}`)}
+                    {emojiModeLabels[mode]}
                   </button>
                 ))}
               </div>

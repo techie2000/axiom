@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { resolveHydrationSafeLabel } from './PageHeader'
+import { resolveHydrationSafeLabel } from '../lib/hydrationSafeLabel'
 
 describe('resolveHydrationSafeLabel', () => {
   it('prefers an explicit label when one is provided', () => {

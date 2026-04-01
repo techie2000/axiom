@@ -20,6 +20,8 @@ import (
 type authRepoStub struct {
 	users            map[string]*domain.User // keyed by ID string
 	createErr        error
+	findByEmailErr   error
+	findByIDErr      error
 	updateErr        error
 	activeAdminCount int64
 	countErr         error
@@ -45,6 +47,9 @@ func (r *authRepoStub) Create(u *domain.User) error {
 }
 
 func (r *authRepoStub) FindByID(id string) (*domain.User, error) {
+	if r.findByIDErr != nil {
+		return nil, r.findByIDErr
+	}
 	u, ok := r.users[id]
 	if !ok {
 		return nil, gorm.ErrRecordNotFound
@@ -53,6 +58,9 @@ func (r *authRepoStub) FindByID(id string) (*domain.User, error) {
 }
 
 func (r *authRepoStub) FindByEmail(email string) (*domain.User, error) {
+	if r.findByEmailErr != nil {
+		return nil, r.findByEmailErr
+	}
 	for _, u := range r.users {
 		if u.Email == email {
 			return u, nil
@@ -827,6 +835,30 @@ func TestEnsurePlaywrightTestUser_CreateError_Propagated(t *testing.T) {
 
 	if err := svc.EnsurePlaywrightTestUser(pwEmail, pwPassword); err == nil {
 		t.Error("expected error when repository.Create fails")
+	}
+}
+
+// When FindByID returns a non-ErrRecordNotFound error, it must be propagated.
+func TestEnsurePlaywrightTestUser_FindByIDError_Propagated(t *testing.T) {
+	repo := newAuthRepoStub()
+	repo.findByIDErr = errors.New("db read failure")
+	svc := newSvc(repo)
+
+	err := svc.EnsurePlaywrightTestUser(pwEmail, pwPassword)
+	if err == nil || !strings.Contains(err.Error(), "database error while checking playwright test user") {
+		t.Fatalf("expected wrapped FindByID error, got %v", err)
+	}
+}
+
+// When FindByEmail returns a non-ErrRecordNotFound error, it must be propagated.
+func TestEnsurePlaywrightTestUser_FindByEmailError_Propagated(t *testing.T) {
+	repo := newAuthRepoStub()
+	repo.findByEmailErr = errors.New("db email lookup failure")
+	svc := newSvc(repo)
+
+	err := svc.EnsurePlaywrightTestUser(pwEmail, pwPassword)
+	if err == nil || !strings.Contains(err.Error(), "database error while checking email") {
+		t.Fatalf("expected wrapped FindByEmail error, got %v", err)
 	}
 }
 

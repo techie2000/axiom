@@ -21,7 +21,6 @@ import { AUTH_STATE_PATH } from './e2e/config'
  *
  * Environment variables (all optional — sensible defaults are provided):
  *   PLAYWRIGHT_BASE_URL        Frontend origin.       Default: http://localhost:13000
- *   PLAYWRIGHT_API_URL         Backend API origin.    Default: http://localhost:18080
  *   PLAYWRIGHT_USER_EMAIL      Test user email.       Default: playwright@axiom.local
  *   PLAYWRIGHT_USER_PASSWORD   Test user password.    Default: Playwright1!
  */
