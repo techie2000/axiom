@@ -396,10 +396,29 @@ export default function LEIRecordsPage() {
     fetchLanguages()
   }, [API_BASE_URL])
 
-  // Fetch total records count from API
-  // Uses /api/v1/lei/count — an actual database COUNT, available even before any sync has run
+  // Fetch total records count from API.
+  // Primary source: /api/v1/lei/status/DAILY_FULL (fast, reflects last completed sync).
+  // Fallback: /api/v1/lei/count (actual DB COUNT, used when no DAILY_FULL sync has completed yet).
   useEffect(() => {
     const fetchTotalRecords = async () => {
+      try {
+        const statusResp = await fetch(`${API_BASE_URL}/api/v1/lei/status/DAILY_FULL`, {
+          method: 'GET',
+          cache: 'no-store',
+          next: { revalidate: 0 }
+        })
+        if (statusResp.ok) {
+          const statusData = await statusResp.json()
+          const syncTotal: number = statusData.current_source_file?.total_records ?? 0
+          if (syncTotal > 0) {
+            setTotalRecords(syncTotal)
+            return
+          }
+        }
+      } catch (err) {
+        console.warn('Status endpoint unavailable, falling back to DB count:', err)
+      }
+      // Fallback: no completed DAILY_FULL sync — query the database directly
       try {
         const countResp = await fetch(`${API_BASE_URL}/api/v1/lei/count`, {
           method: 'GET',
