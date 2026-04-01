@@ -21,7 +21,7 @@ export interface AuditColumnConfig {
   defaultVisible: boolean
 }
 
-type ParsedChangedFields = Record<string, { old: unknown; new: unknown }>
+type ParsedChangedFields = Record<string, { old_value: unknown; new_value: unknown; field_name?: string }>
 type ParsedSnapshot = Record<string, unknown>
 
 function parseJSON<T>(value: unknown, fallback: T): T {
@@ -381,7 +381,7 @@ export default function LEIAuditHistoryModal({
             <div className="mt-3">
               <div className="flex items-center gap-3">
                 <span className="text-xs theme-text-muted whitespace-nowrap">
-                  {t('leiAudit.oldest')}
+                  {t('leiAudit.newest')}
                 </span>
                 <input
                   type="range"
@@ -397,7 +397,7 @@ export default function LEIAuditHistoryModal({
                   })}
                 />
                 <span className="text-xs theme-text-muted whitespace-nowrap">
-                  {t('leiAudit.newest')}
+                  {t('leiAudit.oldest')}
                 </span>
               </div>
               <p className="text-xs theme-text-muted text-center mt-1">
@@ -526,10 +526,10 @@ export default function LEIAuditHistoryModal({
                                 {labelMap.get(field) ?? field}
                               </span>
                               <span className="text-red-600 dark:text-red-400 line-through break-all">
-                                {formatSnapshotValue(change.old)}
+                                {formatSnapshotValue(change.old_value)}
                               </span>
                               <span className="text-green-600 dark:text-green-400 font-medium break-all">
-                                {formatSnapshotValue(change.new)}
+                                {formatSnapshotValue(change.new_value)}
                               </span>
                             </div>
                           ))}
