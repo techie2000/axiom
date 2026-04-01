@@ -1309,7 +1309,7 @@ export default function LEIRecordsPage() {
             title={t('leiRecords.stats.currentPage')}
             titleTooltip={getEnglishTooltip('leiRecords.stats.currentPage')}
             value={formatCurrentPageStatValue({
-              hasActiveFilters,
+              hasActiveFilters: Boolean(hasActiveFilters),
               currentPage,
               totalPages,
               t,
