@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 
 .PHONY: help build run test clean migrate-up migrate-down docker-up docker-down
-.PHONY: docker-main-up docker-main-down docker-dev-up docker-dev-down docker-uat-up docker-uat-down docker-prod-up docker-prod-down
+.PHONY: docker-main-up docker-main-down docker-main-rebuild-safe docker-dev-up docker-dev-down docker-dev-rebuild-safe docker-uat-up docker-uat-down docker-uat-rebuild-safe docker-prod-up docker-prod-down docker-prod-rebuild-safe
 .PHONY: docker-all-up docker-all-down docker-all-status validate-env
 .PHONY: lint lint-docs lint-docs-fix docs-check docs-check-fix lint-all install-hooks settings-sort settings-sort-check
 .PHONY: smoke-api smoke-ssi cleanup-stale-translations docs-user-install docs-user-ci-install docs-user-build docs-user-check docs-user-dev
@@ -62,6 +62,14 @@ docker-all-up: ## Start all environments (main, dev, uat, prod)
 docker-dev-down: ## Stop development environment
 	docker-compose --env-file .env.dev -f docker-compose.dev.yml down
 
+docker-dev-rebuild-safe: ## Gracefully rebuild dev backend/frontend while reducing DB crash-recovery risk
+	@echo "Gracefully stopping app services first (frontend/backend)..."
+	docker-compose --env-file .env.dev -f docker-compose.dev.yml stop -t 45 frontend backend
+	@echo "Stopping stateful services with extended timeout (postgres/rabbitmq)..."
+	docker-compose --env-file .env.dev -f docker-compose.dev.yml stop -t 120 postgres rabbitmq
+	@echo "Rebuilding and starting services..."
+	docker-compose --env-file .env.dev -f docker-compose.dev.yml up -d --build postgres rabbitmq backend frontend
+
 docker-dev-logs: ## Show logs from development environment
 	docker-compose --env-file .env.dev -f docker-compose.dev.yml logs -f
 
@@ -101,6 +109,14 @@ docker-logs: ## Show logs from all services (default/legacy)
 docker-main-down: ## Stop main branch environment
 	docker-compose --env-file .env.main -f docker-compose.main.yml down
 
+docker-main-rebuild-safe: ## Gracefully rebuild main backend/frontend while reducing DB crash-recovery risk
+	@echo "Gracefully stopping app services first (frontend/backend)..."
+	docker-compose --env-file .env.main -f docker-compose.main.yml stop -t 45 frontend backend
+	@echo "Stopping stateful services with extended timeout (postgres/rabbitmq)..."
+	docker-compose --env-file .env.main -f docker-compose.main.yml stop -t 120 postgres rabbitmq
+	@echo "Rebuilding and starting services..."
+	docker-compose --env-file .env.main -f docker-compose.main.yml up -d --build postgres rabbitmq backend frontend
+
 docker-main-logs: ## Show logs from main branch environment
 	docker-compose --env-file .env.main -f docker-compose.main.yml logs -f
 
@@ -134,6 +150,14 @@ docker-main-up: ## Start main branch environment (ports: 48080, 43000, 45432)
 docker-prod-down: ## Stop production environment
 	docker-compose --env-file .env.prod -f docker-compose.prod.yml down
 
+docker-prod-rebuild-safe: ## Gracefully rebuild prod backend/frontend while reducing DB crash-recovery risk
+	@echo "Gracefully stopping app services first (frontend/backend)..."
+	docker-compose --env-file .env.prod -f docker-compose.prod.yml stop -t 45 frontend backend
+	@echo "Stopping stateful services with extended timeout (postgres/rabbitmq)..."
+	docker-compose --env-file .env.prod -f docker-compose.prod.yml stop -t 120 postgres rabbitmq
+	@echo "Rebuilding and starting services..."
+	docker-compose --env-file .env.prod -f docker-compose.prod.yml up -d --build postgres rabbitmq backend frontend
+
 docker-prod-logs: ## Show logs from production environment
 	docker-compose --env-file .env.prod -f docker-compose.prod.yml logs -f
 
@@ -162,6 +186,14 @@ docker-prod-up: ## Start production environment (ports: 38080, 33000, 35432)
 
 docker-uat-down: ## Stop UAT environment
 	docker-compose --env-file .env.uat -f docker-compose.uat.yml down
+
+docker-uat-rebuild-safe: ## Gracefully rebuild uat backend/frontend while reducing DB crash-recovery risk
+	@echo "Gracefully stopping app services first (frontend/backend)..."
+	docker-compose --env-file .env.uat -f docker-compose.uat.yml stop -t 45 frontend backend
+	@echo "Stopping stateful services with extended timeout (postgres/rabbitmq)..."
+	docker-compose --env-file .env.uat -f docker-compose.uat.yml stop -t 120 postgres rabbitmq
+	@echo "Rebuilding and starting services..."
+	docker-compose --env-file .env.uat -f docker-compose.uat.yml up -d --build postgres rabbitmq backend frontend
 
 docker-uat-logs: ## Show logs from UAT environment
 	docker-compose --env-file .env.uat -f docker-compose.uat.yml logs -f
@@ -240,11 +272,12 @@ install-tools: ## Install development tools
 	go install github.com/swaggo/swag/cmd/swag@latest
 	go install github.com/golang-migrate/migrate/v4/cmd/migrate@latest
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-	@echo "Markdown lint uses npx --yes markdownlint-cli2; no global markdown package install needed."
+	@echo "Installing markdownlint-cli..."
 	@if command -v npm > /dev/null 2>&1; then \
+		npm install -g markdownlint-cli; \
 		npm install -g @finos/calm-cli; \
 	else \
-		echo "⚠️  npm not found. Install Node.js to run npx --yes markdownlint-cli2 and @finos/calm-cli"; \
+		echo "⚠️  npm not found. Install Node.js to get markdownlint-cli and @finos/calm-cli"; \
 	fi
 
 lint: ## Run linter
@@ -254,11 +287,11 @@ lint-all: lint lint-docs ## Run all linters (Go + Markdown)
 
 lint-docs: ## Lint markdown documentation
 	@echo "Linting markdown files..."
-	@npx --yes markdownlint-cli2 --config .markdownlint.yaml "**/*.md" "!**/node_modules/**" "!**/vendor/**" "!**/.git/**" || (echo "❌ markdownlint-cli2 failed. Ensure Node.js/npm is installed, then rerun make lint-docs" && exit 1)
+	@markdownlint --config .markdownlint.yaml "**/*.md" || (echo "❌ markdownlint-cli not installed or failed. Run: make install-tools" && exit 1)
 
 lint-docs-fix: ## Auto-fix markdown linting issues
 	@echo "Auto-fixing markdown files..."
-	@npx --yes markdownlint-cli2 --config .markdownlint.yaml --fix "**/*.md" "!**/node_modules/**" "!**/vendor/**" "!**/.git/**" || (echo "❌ markdownlint-cli2 failed. Ensure Node.js/npm is installed, then rerun make lint-docs-fix" && exit 1)
+	@markdownlint --config .markdownlint.yaml "**/*.md" --fix || (echo "❌ markdownlint-cli not installed or failed. Run: make install-tools" && exit 1)
 	@echo "✅ Markdown auto-fix complete"
 
 migrate-create: ## Create a new migration (usage: make migrate-create name=create_users_table)
