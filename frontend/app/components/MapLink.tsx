@@ -59,8 +59,8 @@ export default function MapLink({ address, className }: MapLinkProps) {
     'openstreetmap',
   )
 
-  const preferredId = storedProvider as MapProviderId
-  const preferredProvider = getMapProvider(preferredId)
+  const preferredProvider = getMapProvider(storedProvider)
+  const preferredId = preferredProvider.id
 
   // Local state for the dropdown and the "save as default" prompt.
   const [dropdownOpen, setDropdownOpen] = useState(false)
@@ -89,14 +89,14 @@ export default function MapLink({ address, className }: MapLinkProps) {
 
   /** Open the preferred provider directly. */
   const handleMainClick = useCallback(() => {
-    window.open(buildMapUrl(address, preferredId), '_blank')
+    window.open(buildMapUrl(address, preferredId), '_blank', 'noopener,noreferrer')
   }, [address, preferredId])
 
   /** Open an alternative provider and track usage. */
   const handleAlternativeClick = useCallback(
     (providerId: MapProviderId) => {
       setDropdownOpen(false)
-      window.open(buildMapUrl(address, providerId), '_blank')
+      window.open(buildMapUrl(address, providerId), '_blank', 'noopener,noreferrer')
 
       if (providerId === preferredId) return
 
@@ -128,14 +128,18 @@ export default function MapLink({ address, className }: MapLinkProps) {
 
   const newDefaultProvider = promptProviderId ? getMapProvider(promptProviderId) : null
   const savePromptLabel = newDefaultProvider
-    ? t('mapProvider.setDefaultPrompt', { provider: newDefaultProvider.label })
+    ? t('mapProvider.setDefaultPrompt', {
+        provider: t(newDefaultProvider.labelKey, { defaultValue: newDefaultProvider.label }),
+      })
     : undefined
 
   const mainBtnClass =
     className ??
     'text-[rgb(var(--primary-rgb))] hover:text-[rgb(var(--primary-rgb))] text-xs font-medium flex items-center gap-1 transition-colors'
 
-  const viewOnMapLabel = t('mapProvider.viewOnMapTitle', { provider: preferredProvider.label })
+  const viewOnMapLabel = t('mapProvider.viewOnMapTitle', {
+    provider: t(preferredProvider.labelKey, { defaultValue: preferredProvider.label }),
+  })
   const chooseProviderLabel = t('mapProvider.chooseProvider')
 
   return (
@@ -172,7 +176,10 @@ export default function MapLink({ address, className }: MapLinkProps) {
             role="listbox"
             aria-label={t('mapProvider.chooseProvider', { defaultValue: 'Choose map provider' })}
           >
-            <p className="px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-wide theme-text-muted border-b border-[rgb(var(--border-rgb))] mb-1">
+            <p
+              role="presentation"
+              className="px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-wide theme-text-muted border-b border-[rgb(var(--border-rgb))] mb-1"
+            >
               {t('mapProvider.openWith')}
             </p>
             {MAP_PROVIDERS.map((provider) => (
@@ -189,7 +196,7 @@ export default function MapLink({ address, className }: MapLinkProps) {
                 }`}
               >
                 <span aria-hidden="true">{provider.emoji}</span>
-                {provider.label}
+                {t(provider.labelKey, { defaultValue: provider.label })}
                 {provider.id === preferredId && (
                   <span className="ml-auto text-[0.6rem] theme-text-muted">
                     {t('mapProvider.default')}

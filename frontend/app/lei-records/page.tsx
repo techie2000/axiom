@@ -1927,7 +1927,7 @@ export default function LEIRecordsPage() {
                           line4: selectedRecord.legal_address_line_4,
                           city: selectedRecord.legal_address_city,
                           region: selectedRecord.legal_address_region,
-                          country: selectedRecord.legal_address_country,
+                          country: getCountryNameByCode(selectedRecord.legal_address_country) || selectedRecord.legal_address_country,
                           postalCode: selectedRecord.legal_address_postal_code,
                         }}
                       />
@@ -1946,7 +1946,7 @@ export default function LEIRecordsPage() {
                           line4: selectedRecord.hq_address_line_4,
                           city: selectedRecord.hq_address_city,
                           region: selectedRecord.hq_address_region,
-                          country: selectedRecord.hq_address_country,
+                          country: getCountryNameByCode(selectedRecord.hq_address_country) || selectedRecord.hq_address_country,
                           postalCode: selectedRecord.hq_address_postal_code,
                         }}
                       />

@@ -9,7 +9,7 @@ import { resetDeferredBooleanPreferenceSession } from '../lib/useDeferredBoolean
 import { resetDeferredPreferenceSession } from '../lib/useDeferredStringPreference'
 import { useEnglishTooltips } from '../lib/useEnglishTooltips'
 import { useButtonEmojiMode, EmojiMode } from '../lib/useButtonEmojiMode'
-import { MAP_PROVIDERS, MapProviderId } from '../lib/map-providers'
+import { getMapProvider, MAP_PROVIDERS, MapProviderId } from '../lib/map-providers'
 import { useUserPreference } from '../lib/useUserPreference'
 import ThemeSelector from './ThemeSelector'
 import ThemeToggle from './ThemeToggle'
@@ -28,6 +28,7 @@ export default function UserBadge() {
     'map_provider',
     'openstreetmap',
   )
+  const normalizedMapProviderId = getMapProvider(storedMapProvider).id
   const [user, setUser] = useState<StoredUser | null>(null)
   const [mounted, setMounted] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -174,7 +175,7 @@ export default function UserBadge() {
                 <span className="block text-xs theme-text-muted">{t('preferences.mapProviderDescription')}</span>
               </div>
               <select
-                value={storedMapProvider}
+                value={normalizedMapProviderId}
                 onChange={(e) => {
                   const selected = e.target.value
                   if (MAP_PROVIDERS.some((p) => p.id === selected)) {
@@ -186,7 +187,7 @@ export default function UserBadge() {
               >
                 {MAP_PROVIDERS.map((p) => (
                   <option key={p.id} value={p.id} className="bg-[rgb(var(--surface-rgb))] text-[rgb(var(--foreground-rgb))]">
-                    {p.emoji} {p.label}
+                    {p.emoji} {t(p.labelKey, { defaultValue: p.label })}
                   </option>
                 ))}
               </select>

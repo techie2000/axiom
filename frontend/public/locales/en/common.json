@@ -86,8 +86,7 @@
     "buttonEmojiMode": {
       "both": "Both",
       "text": "Text",
-      "emoji": "Emoji",
-      "${mode}": "preferences.buttonEmojiMode.${mode}"
+      "emoji": "Emoji"
     },
     "changeTheme": "Change theme",
     "themes": {
