@@ -32,7 +32,7 @@ export default function LoginPage() {
   const hydrationSafeLabel = (translationKey: string, fallbackLabel: string) =>
     resolveHydrationSafeLabel(undefined, hasHydrated, t(translationKey), fallbackLabel)
 
-  const backToHomeLabel = hydrationSafeLabel('nav.backToHome', '<- Back to Home')
+  const backToHomeLabel = hydrationSafeLabel('nav.backToHome', '← Back to Home')
   const loginTitleLabel = hydrationSafeLabel('login.title', 'Sign In')
   const loginSubtitleLabel = hydrationSafeLabel(
     'login.subtitle',

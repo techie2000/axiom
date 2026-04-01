@@ -36,7 +36,7 @@ export default function RegisterPage() {
   const hydrationSafeLabel = (translationKey: string, fallbackLabel: string) =>
     resolveHydrationSafeLabel(undefined, hasHydrated, t(translationKey), fallbackLabel)
 
-  const backToLoginLabel = hydrationSafeLabel('nav.backToLogin', '<- Back to Login')
+  const backToLoginLabel = hydrationSafeLabel('nav.backToLogin', '← Back to Login')
   const registerTitleLabel = hydrationSafeLabel('register.title', 'Request Access')
   const registerSubtitleLabel = hydrationSafeLabel(
     'register.subtitle',
