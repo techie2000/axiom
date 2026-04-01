@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { getCountryFlagEmoji } from '../lib/country-flag'
 
 export interface LEIAuditEntry {
   id: string
@@ -18,11 +19,18 @@ export interface LEIAuditEntry {
 export interface AuditColumnConfig {
   key: string
   labelKey: string
+  groupKey: string
   defaultVisible: boolean
 }
 
 type ParsedChangedFields = Record<string, { old_value: unknown; new_value: unknown; field_name?: string }>
 type ParsedSnapshot = Record<string, unknown>
+
+/** Fields whose values are ISO 3166-1 alpha-2 country codes — rendered with a flag. */
+const COUNTRY_CODE_FIELDS = new Set(['legal_address_country', 'hq_address_country'])
+const ALPHA2_RE = /^[A-Z]{2}$/
+/** Border colour that uses the theme token at 75% opacity. Used in column-selector group rows. */
+const GROUP_BORDER_STYLE: React.CSSProperties = { borderColor: 'rgb(var(--border-rgb) / 0.75)' }
 
 function parseJSON<T>(value: unknown, fallback: T): T {
   if (value && typeof value === 'object') return value as T
@@ -60,6 +68,22 @@ function formatSnapshotValue(value: unknown): string {
     return value
   }
   return String(value)
+}
+
+/** Renders a value with an optional country flag for country-code fields. */
+function SnapshotValue({ fieldKey, value }: { fieldKey: string; value: unknown }) {
+  const text = formatSnapshotValue(value)
+  if (text === '—') return <span className="theme-text-muted">—</span>
+  if (COUNTRY_CODE_FIELDS.has(fieldKey) && typeof value === 'string' && ALPHA2_RE.test(value.toUpperCase())) {
+    const flag = getCountryFlagEmoji(value)
+    return (
+      <span className="inline-flex items-center gap-1.5">
+        <span aria-hidden="true">{flag}</span>
+        <span>{text}</span>
+      </span>
+    )
+  }
+  return <>{text}</>
 }
 
 interface ActionBadgeProps {
@@ -109,29 +133,38 @@ function SnapshotTable({ snapshot, columns, changedFields, labelMap }: SnapshotT
             const rawValue = snapshot[col.key]
             const isChanged = Object.prototype.hasOwnProperty.call(changedFields, col.key)
             const label = labelMap.get(col.key) ?? col.key
+            const change = isChanged ? changedFields[col.key] : null
             return (
               <tr
                 key={col.key}
                 className={`border-t border-[rgb(var(--border-rgb))] ${
-                  isChanged ? 'bg-amber-50 dark:bg-amber-900/20' : ''
+                  isChanged ? 'bg-red-50 dark:bg-red-900/15' : ''
                 }`}
               >
                 <td
                   className={`px-3 py-2 font-medium text-xs whitespace-nowrap ${
                     isChanged
-                      ? 'text-amber-700 dark:text-amber-400'
+                      ? 'text-red-700 dark:text-red-400'
                       : 'theme-text-muted'
                   }`}
                 >
                   {isChanged && <span className="mr-1" aria-hidden="true">⚑</span>}
                   {label}
                 </td>
-                <td
-                  className={`px-3 py-2 break-all ${
-                    isChanged ? 'text-amber-700 dark:text-amber-300 font-semibold' : ''
-                  }`}
-                >
-                  {formatSnapshotValue(rawValue)}
+                <td className="px-3 py-2 break-all">
+                  {isChanged && change !== null ? (
+                    /* Show old → new inline so the change is immediately obvious */
+                    <span className="flex flex-col gap-0.5">
+                      <span className="text-red-600 dark:text-red-400 text-xs">
+                        <SnapshotValue fieldKey={col.key} value={change.old_value} />
+                      </span>
+                      <span className="text-green-600 dark:text-green-400 font-semibold">
+                        <SnapshotValue fieldKey={col.key} value={change.new_value} />
+                      </span>
+                    </span>
+                  ) : (
+                    <SnapshotValue fieldKey={col.key} value={rawValue} />
+                  )}
                 </td>
               </tr>
             )
@@ -276,6 +309,49 @@ export default function LEIAuditHistoryModal({
     })
   }
 
+  /** Build a { groupKey → columns[] } map preserving group order. */
+  const columnsByGroup = useMemo<Record<string, AuditColumnConfig[]>>(() => {
+    const groups: Record<string, AuditColumnConfig[]> = {}
+    availableColumns.forEach((col) => {
+      const g = col.groupKey || 'other'
+      if (!groups[g]) groups[g] = []
+      groups[g].push(col)
+    })
+    return groups
+  }, [availableColumns])
+
+  const isGroupFullySelected = (groupKey: string) => {
+    const cols = columnsByGroup[groupKey] ?? []
+    return cols.every((c) => localColumns.has(c.key))
+  }
+
+  const isGroupPartiallySelected = (groupKey: string) => {
+    const cols = columnsByGroup[groupKey] ?? []
+    return cols.some((c) => localColumns.has(c.key)) && !isGroupFullySelected(groupKey)
+  }
+
+  const toggleGroupColumns = (groupKey: string) => {
+    const cols = columnsByGroup[groupKey] ?? []
+    if (isGroupFullySelected(groupKey)) {
+      setLocalColumns((prev) => {
+        const next = new Set(prev)
+        cols.forEach((c) => next.delete(c.key))
+        return next
+      })
+    } else {
+      setLocalColumns((prev) => {
+        const next = new Set(prev)
+        cols.forEach((c) => next.add(c.key))
+        return next
+      })
+    }
+  }
+
+  const defaultColumnKeys = useMemo(
+    () => new Set(availableColumns.filter((c) => c.defaultVisible).map((c) => c.key)),
+    [availableColumns]
+  )
+
   return (
     <div
       role="presentation"
@@ -289,7 +365,6 @@ export default function LEIAuditHistoryModal({
         aria-label={t('leiAudit.title')}
         className="bg-[rgb(var(--surface-rgb))] rounded-lg shadow-2xl max-w-7xl w-full max-h-[95vh] flex flex-col border-2 border-[rgb(var(--border-rgb))]"
         onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => { if (e.key === 'Escape') onClose() }}
       >
         {/* ── Header ──────────────────────────────────────────────────── */}
         <div className="flex-shrink-0 bg-[rgb(var(--surface-rgb))] border-b-2 border-[rgb(var(--border-rgb))] p-4 z-10">
@@ -304,7 +379,7 @@ export default function LEIAuditHistoryModal({
               )}
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              {/* Column selector */}
+              {/* Column selector — groups + Select All + Reset, matching LEI page style */}
               <div className="relative">
                 <button
                   onClick={() => setShowColumnSelector(!showColumnSelector)}
@@ -313,29 +388,67 @@ export default function LEIAuditHistoryModal({
                   ⚙️ {t('leiAudit.columns')} ({localColumns.size})
                 </button>
                 {showColumnSelector && (
-                  <div className="absolute right-0 mt-2 w-64 max-h-80 overflow-y-auto theme-scrollbar theme-dropdown rounded-lg shadow-xl z-50 border border-[rgb(var(--border-rgb))]">
-                    <div className="sticky top-0 theme-dropdown border-b p-2 flex justify-between items-center">
-                      <span className="text-sm font-semibold">{t('leiAudit.selectColumns')}</span>
-                      <button
-                        onClick={() => setShowColumnSelector(false)}
-                        className="theme-text-muted hover:opacity-80 text-sm"
-                      >
-                        ✕
-                      </button>
+                  <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto theme-scrollbar theme-dropdown rounded-lg shadow-xl z-50">
+                    <div className="sticky top-0 theme-dropdown border-b p-3">
+                      <div className="flex justify-between items-center mb-2">
+                        <h3 className="font-semibold">{t('leiRecords.columns.selector.title')}</h3>
+                        <button
+                          onClick={() => setShowColumnSelector(false)}
+                          className="theme-text-muted hover:opacity-80"
+                          title={t('common.close')}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      <div className="flex gap-2 text-xs">
+                        <button
+                          onClick={() => setLocalColumns(new Set(availableColumns.map((c) => c.key)))}
+                          className="px-2 py-1 theme-filterchip rounded"
+                        >
+                          {t('leiRecords.columns.selector.selectAll')}
+                        </button>
+                        <button
+                          onClick={() => setLocalColumns(new Set(defaultColumnKeys))}
+                          className="px-2 py-1 theme-btn-neutral rounded"
+                        >
+                          {t('leiRecords.columns.selector.resetToDefault')}
+                        </button>
+                      </div>
                     </div>
-                    {availableColumns.map((col) => (
-                      <label
-                        key={col.key}
-                        className="flex items-center gap-2 px-3 py-1.5 hover:bg-[rgb(var(--surface-muted-rgb))] cursor-pointer text-sm"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={localColumns.has(col.key)}
-                          onChange={() => toggleColumn(col.key)}
-                          className="rounded"
-                        />
-                        <span>{t(col.labelKey)}</span>
-                      </label>
+                    {Object.entries(columnsByGroup).map(([groupKey, cols]) => (
+                      <div key={groupKey} className="border-b last:border-b-0" style={GROUP_BORDER_STYLE}>
+                        <button
+                          type="button"
+                          onClick={() => toggleGroupColumns(groupKey)}
+                          className="w-full px-3 py-2.5 theme-subtle font-semibold text-sm cursor-pointer transition-colors flex items-center justify-between gap-3 theme-focus"
+                        >
+                          <span className="flex items-center gap-2.5">
+                            <span className="text-base leading-none">
+                              {isGroupFullySelected(groupKey) ? '☑' : isGroupPartiallySelected(groupKey) ? '◐' : '☐'}
+                            </span>
+                            <span>{t(groupKey)}</span>
+                          </span>
+                          <span className="text-xs theme-text-muted font-normal">
+                            {cols.filter((c) => localColumns.has(c.key)).length}/{cols.length}
+                          </span>
+                        </button>
+                        <div className="p-2">
+                          {cols.map((col) => (
+                            <label
+                              key={col.key}
+                              className="flex items-center gap-2 px-2 py-1.5 theme-table-row-hover transition-colors rounded cursor-pointer text-sm"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={localColumns.has(col.key)}
+                                onChange={() => toggleColumn(col.key)}
+                                className="rounded"
+                              />
+                              <span>{t(col.labelKey)}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
                     ))}
                   </div>
                 )}
@@ -525,7 +638,7 @@ export default function LEIAuditHistoryModal({
                               <span className="font-mono font-medium text-[rgb(var(--foreground-rgb))]">
                                 {labelMap.get(field) ?? field}
                               </span>
-                              <span className="text-red-600 dark:text-red-400 line-through break-all">
+                              <span className="text-red-600 dark:text-red-400 break-all">
                                 {formatSnapshotValue(change.old_value)}
                               </span>
                               <span className="text-green-600 dark:text-green-400 font-medium break-all">
