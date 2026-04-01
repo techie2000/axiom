@@ -8,13 +8,29 @@ describe('resetPreferencesCache', () => {
     expect(() => resetPreferencesCache()).not.toThrow()
   })
 
-  it('resets the cache so fresh defaults are returned after clearing', async () => {
+  it('resets cache so subsequent mounts re-read localStorage', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => [] }))
-    localStorage.setItem('axiom_token', 'test-token')
-    localStorage.setItem('axiom-pref-mypage::mykey', 'previous-value')
+    localStorage.clear()
+    localStorage.setItem('axiom_pref::mypage::mykey', 'previous-value')
 
-    // After a cache reset the hook should re-read from storage/API.
+    const { result: firstResult } = renderHook(() =>
+      useUserPreference('mypage', 'mykey', 'default-val'),
+    )
+    await act(async () => {})
+    const [firstValue] = firstResult.current
+    expect(firstValue).toBe('previous-value')
+
+    localStorage.setItem('axiom_pref::mypage::mykey', 'next-value')
+
     resetPreferencesCache()
+
+    const { result: secondResult } = renderHook(() =>
+      useUserPreference('mypage', 'mykey', 'default-val'),
+    )
+    await act(async () => {})
+    const [secondValue, , loadingAfterReset] = secondResult.current
+    expect(secondValue).toBe('next-value')
+    expect(typeof loadingAfterReset).toBe('boolean')
 
     // Calling again should not throw.
     expect(() => resetPreferencesCache()).not.toThrow()
