@@ -450,6 +450,7 @@
       "currentPage": "Current Page",
       "currentPageFiltered": "{{page}} (filtered)",
       "currentPageOf": "{{page}} of {{total}}",
+      "currentPageOnly": "{{page}}",
       "showing": "Showing"
     },
     "infoAlert": {

@@ -36,8 +36,9 @@ describe('formatCurrentPageStatValue', () => {
 
   it('shows only the page number when totalPages is 0 (status endpoint unavailable)', () => {
     const t = (key: string, options?: Record<string, unknown>) => {
-      if (key === 'leiRecords.stats.currentPageFiltered') return `Page ${options?.page}`
+      if (key === 'leiRecords.stats.currentPageFiltered') return `Page ${options?.page} (filtered)`
       if (key === 'leiRecords.stats.currentPageOf') return `Page ${options?.page} of ${options?.total}`
+      if (key === 'leiRecords.stats.currentPageOnly') return `Page ${options?.page}`
       return key
     }
 
@@ -48,9 +49,28 @@ describe('formatCurrentPageStatValue', () => {
       t,
     })
 
-    // Must not render "1 of 0" – just the current page
+    // Must not render "1 of 0" and must not show "(filtered)" when no filters are active
     expect(value).toBe('Page 1')
     expect(value).not.toContain('of 0')
+    expect(value).not.toContain('filtered')
+  })
+
+  it('shows filtered label when filters are active even if totalPages is 0', () => {
+    const t = (key: string, options?: Record<string, unknown>) => {
+      if (key === 'leiRecords.stats.currentPageFiltered') return `Page ${options?.page} (filtered)`
+      if (key === 'leiRecords.stats.currentPageOf') return `Page ${options?.page} of ${options?.total}`
+      if (key === 'leiRecords.stats.currentPageOnly') return `Page ${options?.page}`
+      return key
+    }
+
+    const value = formatCurrentPageStatValue({
+      hasActiveFilters: true,
+      currentPage: 2,
+      totalPages: 0,
+      t,
+    })
+
+    expect(value).toBe('Page 2 (filtered)')
   })
 })
 

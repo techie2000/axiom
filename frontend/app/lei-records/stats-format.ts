@@ -9,9 +9,12 @@ interface CurrentPageStatInput {
 
 /**
  * Format the LEI current-page stat card value without duplicating page numbers.
+ *
  * When totalPages is 0 the total is not yet known (status endpoint unavailable or
- * no completed full sync); in that case just show the current page number so the
- * card does not display a misleading "1 of 0".
+ * no completed full sync).  In that case:
+ * - With active filters → show "N (filtered)" as usual.
+ * - Without active filters → show just the page number ("N") so the card
+ *   does not display a misleading "1 of 0" or a spurious "(filtered)" label.
  */
 export function formatCurrentPageStatValue({
   hasActiveFilters,
@@ -24,7 +27,7 @@ export function formatCurrentPageStatValue({
   }
 
   if (totalPages === 0) {
-    return t('leiRecords.stats.currentPageFiltered', { page: currentPage })
+    return t('leiRecords.stats.currentPageOnly', { page: currentPage })
   }
 
   return t('leiRecords.stats.currentPageOf', {
