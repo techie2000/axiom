@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import PreferenceSavePrompt from './PreferenceSavePrompt'
+import MapProviderIcon from './MapProviderIcon'
 import {
   AddressComponents,
   MAP_PROVIDERS,
@@ -153,6 +154,7 @@ export default function MapLink({ address, className }: MapLinkProps) {
           title={viewOnMapLabel}
           aria-label={viewOnMapLabel}
         >
+          <MapProviderIcon providerId={preferredId} className="w-3.5 h-3.5 shrink-0" />
           {t('leiRecords.modal.viewOnMap')}
         </button>
 
@@ -195,7 +197,7 @@ export default function MapLink({ address, className }: MapLinkProps) {
                     : 'theme-text-muted'
                 }`}
               >
-                <span aria-hidden="true">{provider.emoji}</span>
+                <MapProviderIcon providerId={provider.id} className="w-3.5 h-3.5 shrink-0" />
                 {t(provider.labelKey, { defaultValue: provider.label })}
                 {provider.id === preferredId && (
                   <span className="ml-auto text-[0.6rem] theme-text-muted">

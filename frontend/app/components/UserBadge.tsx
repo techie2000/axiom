@@ -11,6 +11,7 @@ import { useEnglishTooltips } from '../lib/useEnglishTooltips'
 import { useButtonEmojiMode, EmojiMode } from '../lib/useButtonEmojiMode'
 import { getMapProvider, MAP_PROVIDERS, MapProviderId } from '../lib/map-providers'
 import { useUserPreference } from '../lib/useUserPreference'
+import MapProviderIcon from './MapProviderIcon'
 import ThemeSelector from './ThemeSelector'
 import ThemeToggle from './ThemeToggle'
 import LanguageSelector from './LanguageSelector'
@@ -179,23 +180,26 @@ export default function UserBadge() {
                 <span className="block text-sm theme-text-muted">{t('preferences.mapProvider')}</span>
                 <span className="block text-xs theme-text-muted">{t('preferences.mapProviderDescription')}</span>
               </div>
-              <select
-                value={normalizedMapProviderId}
-                onChange={(e) => {
-                  const selected = e.target.value
-                  if (MAP_PROVIDERS.some((p) => p.id === selected)) {
-                    setStoredMapProvider(selected as MapProviderId)
-                  }
-                }}
-                className="shrink-0 text-xs rounded border theme-btn-neutral theme-focus px-1.5 py-1 bg-[rgb(var(--surface-rgb))] text-[rgb(var(--foreground-rgb))]"
-                aria-label={t('preferences.mapProvider')}
-              >
-                {MAP_PROVIDERS.map((p) => (
-                  <option key={p.id} value={p.id} className="bg-[rgb(var(--surface-rgb))] text-[rgb(var(--foreground-rgb))]">
-                    {p.emoji} {t(p.labelKey, { defaultValue: p.label })}
-                  </option>
-                ))}
-              </select>
+              <div className="flex items-center gap-1 shrink-0">
+                <MapProviderIcon providerId={normalizedMapProviderId} className="w-3.5 h-3.5 shrink-0" />
+                <select
+                  value={normalizedMapProviderId}
+                  onChange={(e) => {
+                    const selected = e.target.value
+                    if (MAP_PROVIDERS.some((p) => p.id === selected)) {
+                      setStoredMapProvider(selected as MapProviderId)
+                    }
+                  }}
+                  className="shrink-0 text-xs rounded border theme-btn-neutral theme-focus px-1.5 py-1 bg-[rgb(var(--surface-rgb))] text-[rgb(var(--foreground-rgb))]"
+                  aria-label={t('preferences.mapProvider')}
+                >
+                  {MAP_PROVIDERS.map((p) => (
+                    <option key={p.id} value={p.id} className="bg-[rgb(var(--surface-rgb))] text-[rgb(var(--foreground-rgb))]">
+                      {t(p.labelKey, { defaultValue: p.label })}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
 

@@ -33,15 +33,13 @@ export interface MapProvider {
   labelKey: string
   /** Human-readable label shown in dropdowns and preferences. */
   label: string
-  /** Short emoji used alongside the label. */
-  emoji: string
 }
 
 export const MAP_PROVIDERS: MapProvider[] = [
-  { id: 'openstreetmap', labelKey: 'mapProvider.providers.openstreetmap', label: 'OpenStreetMap', emoji: '🗺️' },
-  { id: 'google',        labelKey: 'mapProvider.providers.google',        label: 'Google Maps',   emoji: '🌍' },
-  { id: 'bing',          labelKey: 'mapProvider.providers.bing',          label: 'Bing Maps',     emoji: '🔵' },
-  { id: 'apple',         labelKey: 'mapProvider.providers.apple',         label: 'Apple Maps',    emoji: '🍎' },
+  { id: 'openstreetmap', labelKey: 'mapProvider.providers.openstreetmap', label: 'OpenStreetMap' },
+  { id: 'google',        labelKey: 'mapProvider.providers.google',        label: 'Google Maps'   },
+  { id: 'bing',          labelKey: 'mapProvider.providers.bing',          label: 'Bing Maps'     },
+  { id: 'apple',         labelKey: 'mapProvider.providers.apple',         label: 'Apple Maps'    },
 ]
 
 export const DEFAULT_MAP_PROVIDER: MapProviderId = 'openstreetmap'
