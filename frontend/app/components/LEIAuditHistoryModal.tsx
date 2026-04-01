@@ -32,6 +32,37 @@ const ALPHA2_RE = /^[A-Z]{2}$/
 /** Border colour that uses the theme token at 75% opacity. Used in column-selector group rows. */
 const GROUP_BORDER_STYLE: React.CSSProperties = { borderColor: 'rgb(var(--border-rgb) / 0.75)' }
 
+/**
+ * Convert a PascalCase or camelCase Go struct field name to the equivalent
+ * JSON snake_case name.  This normalises `changed_fields` keys stored in the
+ * database by older backend versions that used struct names instead of JSON
+ * tag names (e.g. HQAddressLine1 → hq_address_line_1).
+ *
+ * If the key is already snake_case (no uppercase letters) it is returned
+ * unchanged.
+ */
+function normalizeFieldKey(key: string): string {
+  if (key === key.toLowerCase()) return key // already snake_case
+  return key
+    // HQAddress → HQ_Address  (sequence of caps before a cap+lowercase pair)
+    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1_$2')
+    // addressLine → address_Line  (lowercase before uppercase)
+    .replace(/([a-z])([A-Z])/g, '$1_$2')
+    // line1 → line_1  (letter before digit)
+    .replace(/([a-zA-Z])(\d)/g, '$1_$2')
+    .toLowerCase()
+}
+
+/** Re-key a parsed changed_fields object so all keys are snake_case. */
+function normalizeChangedFields(cf: ParsedChangedFields): ParsedChangedFields {
+  const out: ParsedChangedFields = {}
+  for (const [key, val] of Object.entries(cf)) {
+    const nk = normalizeFieldKey(key)
+    out[nk] = { ...val, field_name: nk }
+  }
+  return out
+}
+
 function parseJSON<T>(value: unknown, fallback: T): T {
   if (value && typeof value === 'object') return value as T
   if (typeof value === 'string' && value.length > 0) {
@@ -372,9 +403,13 @@ export default function LEIAuditHistoryModal({
   }, [compareAudit])
 
   const selectedChangedFields = useMemo<ParsedChangedFields>(() => {
-    return selectedAudit
+    const raw = selectedAudit
       ? parseJSON<ParsedChangedFields>(selectedAudit.changed_fields, {})
       : {}
+    // Normalise keys: old DB records used Go struct names (PascalCase); new
+    // records use JSON tag names (snake_case).  After normalisation both match
+    // the snake_case column keys used by the rest of the UI.
+    return normalizeChangedFields(raw)
   }, [selectedAudit])
 
   // "Show changed fields only" – restrict displayColumns to those that changed
