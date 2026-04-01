@@ -1343,6 +1343,14 @@ func (r *leiRepository) detectChanges(old, new *domain.LEIRecord) map[string]dom
 			continue
 		}
 
+		// Use the JSON tag name as the map key so it matches the record_snapshot keys.
+		// Fall back to the struct field name if no JSON tag is present.
+		jsonTag := field.Tag.Get("json")
+		jsonKey := strings.SplitN(jsonTag, ",", 2)[0]
+		if jsonKey == "" || jsonKey == "-" {
+			jsonKey = fieldName
+		}
+
 		oldFieldVal := oldVal.Field(i).Interface()
 		newFieldVal := newVal.Field(i).Interface()
 
@@ -1357,8 +1365,8 @@ func (r *leiRepository) detectChanges(old, new *domain.LEIRecord) map[string]dom
 				}
 			}
 
-			changes[fieldName] = domain.LEIChangeDetection{
-				FieldName: fieldName,
+			changes[jsonKey] = domain.LEIChangeDetection{
+				FieldName: jsonKey,
 				OldValue:  oldFieldVal,
 				NewValue:  newFieldVal,
 			}

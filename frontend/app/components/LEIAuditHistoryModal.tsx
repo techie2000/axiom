@@ -138,13 +138,13 @@ function SnapshotTable({ snapshot, columns, changedFields, labelMap }: SnapshotT
               <tr
                 key={col.key}
                 className={`border-t border-[rgb(var(--border-rgb))] ${
-                  isChanged ? 'bg-red-50 dark:bg-red-900/15' : ''
+                  isChanged ? 'bg-amber-50 dark:bg-amber-900/15' : ''
                 }`}
               >
                 <td
                   className={`px-3 py-2 font-medium text-xs whitespace-nowrap ${
                     isChanged
-                      ? 'text-red-700 dark:text-red-400'
+                      ? 'text-amber-700 dark:text-amber-400'
                       : 'theme-text-muted'
                   }`}
                 >
@@ -165,6 +165,95 @@ function SnapshotTable({ snapshot, columns, changedFields, labelMap }: SnapshotT
                   ) : (
                     <SnapshotValue fieldKey={col.key} value={rawValue} />
                   )}
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+interface CompareTableProps {
+  columns: AuditColumnConfig[]
+  changedFields: ParsedChangedFields
+  currentSnapshot: ParsedSnapshot
+  compareSnapshot: ParsedSnapshot
+  labelMap: Map<string, string>
+  currentLabel: string
+  compareLabel: string
+}
+
+/** Single merged table for compare mode — rows are always aligned. */
+function CompareTable({
+  columns,
+  changedFields,
+  currentSnapshot,
+  compareSnapshot,
+  labelMap,
+  currentLabel,
+  compareLabel,
+}: CompareTableProps) {
+  const { t } = useTranslation('common')
+  if (columns.length === 0) {
+    return <p className="text-sm theme-text-muted py-4">{t('leiAudit.noColumnsSelected')}</p>
+  }
+  return (
+    <div className="rounded-lg border border-[rgb(var(--border-rgb))] overflow-hidden overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="bg-[rgb(var(--surface-muted-rgb))]">
+            <th className="px-3 py-2 text-left text-xs font-medium theme-text-muted uppercase tracking-wider w-40">
+              {t('leiAudit.field')}
+            </th>
+            <th className="px-3 py-2 text-left text-xs font-medium text-green-700 dark:text-green-400 uppercase tracking-wider">
+              {currentLabel}
+            </th>
+            <th className="px-3 py-2 text-left text-xs font-medium text-red-700 dark:text-red-400 uppercase tracking-wider">
+              {compareLabel}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {columns.map((col) => {
+            const isChanged = Object.prototype.hasOwnProperty.call(changedFields, col.key)
+            const change = isChanged ? changedFields[col.key] : null
+            const label = labelMap.get(col.key) ?? col.key
+            // Current version shows new_value for changed fields; fallback to snapshot
+            const currentValue = isChanged && change ? change.new_value : currentSnapshot[col.key]
+            // Compare (older) version shows old_value for changed fields; fallback to its snapshot
+            const compareValue = isChanged && change ? change.old_value : compareSnapshot[col.key]
+            return (
+              <tr
+                key={col.key}
+                className={`border-t border-[rgb(var(--border-rgb))] ${
+                  isChanged ? 'bg-amber-50 dark:bg-amber-900/15' : ''
+                }`}
+              >
+                <td
+                  className={`px-3 py-2 font-medium text-xs whitespace-nowrap ${
+                    isChanged ? 'text-amber-700 dark:text-amber-400' : 'theme-text-muted'
+                  }`}
+                >
+                  {isChanged && <span className="mr-1" aria-hidden="true">⚑</span>}
+                  {label}
+                </td>
+                {/* Current (new) value */}
+                <td
+                  className={`px-3 py-2 break-all ${
+                    isChanged ? 'text-green-700 dark:text-green-400 font-semibold' : ''
+                  }`}
+                >
+                  <SnapshotValue fieldKey={col.key} value={currentValue} />
+                </td>
+                {/* Older (previous) value */}
+                <td
+                  className={`px-3 py-2 break-all ${
+                    isChanged ? 'text-red-600 dark:text-red-400' : 'theme-text-muted'
+                  }`}
+                >
+                  <SnapshotValue fieldKey={col.key} value={compareValue} />
                 </td>
               </tr>
             )
@@ -652,49 +741,23 @@ export default function LEIAuditHistoryModal({
 
                   {/* Record view: compare or single */}
                   {compareMode ? (
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <h3 className="text-sm font-semibold mb-2 pb-1 border-b border-[rgb(var(--border-rgb))]">
-                          #{selectedIndex + 1} — {formatTimestamp(selectedAudit.created_at)}
-                          {selectedIndex === 0 && (
-                            <span className="ml-2 text-xs text-green-600 dark:text-green-400">
-                              ({t('leiAudit.latest')})
-                            </span>
-                          )}
-                        </h3>
-                        <SnapshotTable
-                          snapshot={selectedSnapshot}
+                    <>
+                      {compareAudit ? (
+                        <CompareTable
                           columns={filteredDisplayColumns}
                           changedFields={selectedChangedFields}
+                          currentSnapshot={selectedSnapshot}
+                          compareSnapshot={compareSnapshot}
                           labelMap={labelMap}
+                          currentLabel={`#${selectedIndex + 1} — ${formatTimestamp(selectedAudit.created_at)}${selectedIndex === 0 ? ` (${t('leiAudit.latest')})` : ''}`}
+                          compareLabel={`#${selectedIndex + 2} — ${formatTimestamp(compareAudit.created_at)} (${t('leiAudit.olderVersion')})`}
                         />
-                      </div>
-                      <div>
-                        {compareAudit ? (
-                          <>
-                            <h3 className="text-sm font-semibold mb-2 pb-1 border-b border-[rgb(var(--border-rgb))]">
-                              #{selectedIndex + 2} — {formatTimestamp(compareAudit.created_at)}
-                              <span className="ml-2 text-xs theme-text-muted">
-                                ({t('leiAudit.olderVersion')})
-                              </span>
-                            </h3>
-                            <SnapshotTable
-                              snapshot={compareSnapshot}
-                              columns={filteredDisplayColumns}
-                              changedFields={parseJSON<ParsedChangedFields>(
-                                compareAudit.changed_fields,
-                                {}
-                              )}
-                              labelMap={labelMap}
-                            />
-                          </>
-                        ) : (
-                          <div className="flex items-center justify-center h-40 text-sm theme-text-muted">
-                            {t('leiAudit.noPreviousVersion')}
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                      ) : (
+                        <div className="flex items-center justify-center h-40 text-sm theme-text-muted">
+                          {t('leiAudit.noPreviousVersion')}
+                        </div>
+                      )}
+                    </>
                   ) : (
                     <div>
                       <h3 className="text-sm font-semibold mb-2 pb-1 border-b border-[rgb(var(--border-rgb))]">
