@@ -16,8 +16,6 @@ var leiRepo = &leiRepository{}
 // (PascalCase).  This ensures the frontend can correlate changed_fields entries
 // with the record_snapshot, which is serialised using JSON tags.
 func TestDetectChangesUsesJSONTagKeys(t *testing.T) {
-	t.Helper()
-
 	old := &domain.LEIRecord{LegalName: "Old Name", HQAddressLine1: "123 Main St"}
 	nw := &domain.LEIRecord{LegalName: "New Name", HQAddressLine1: "456 Oak Ave"}
 
@@ -41,8 +39,6 @@ func TestDetectChangesUsesJSONTagKeys(t *testing.T) {
 // TestDetectChangesFieldNameMatchesKey verifies that the FieldName inside each
 // LEIChangeDetection entry equals its map key (both use the JSON tag name).
 func TestDetectChangesFieldNameMatchesKey(t *testing.T) {
-	t.Helper()
-
 	old := &domain.LEIRecord{LegalName: "Foo"}
 	nw := &domain.LEIRecord{LegalName: "Bar"}
 
@@ -58,8 +54,6 @@ func TestDetectChangesFieldNameMatchesKey(t *testing.T) {
 
 // TestDetectChangesReturnsEmptyWhenNothingChanged verifies the no-op path.
 func TestDetectChangesReturnsEmptyWhenNothingChanged(t *testing.T) {
-	t.Helper()
-
 	rec := &domain.LEIRecord{LegalName: "Same", EntityStatus: "ACTIVE"}
 	changes := leiRepo.detectChanges(rec, rec)
 	if len(changes) != 0 {
@@ -70,8 +64,6 @@ func TestDetectChangesReturnsEmptyWhenNothingChanged(t *testing.T) {
 // TestDetectChangesBothZeroTimesProducesNoChange mirrors the level-2 test for
 // the zero-time special case.
 func TestDetectChangesBothZeroTimesProducesNoChange(t *testing.T) {
-	t.Helper()
-
 	var zero time.Time
 	old := &domain.LEIRecord{LastUpdateDate: zero}
 	nw := &domain.LEIRecord{LastUpdateDate: zero}
