@@ -1,17 +1,20 @@
 /**
  * MapProviderIcon renders each provider's recognised brand logo as an inline SVG.
  *
- * SVG paths are sourced from the Simple Icons project (https://simpleicons.org/),
- * which releases all icon artwork under the CC0 1.0 Universal public domain
- * dedication.  The brand names, colours, and marks remain the intellectual
- * property of their respective owners and are used here solely to identify the
- * map service to the end user.
+ * The brand names, colours, and marks remain the intellectual property of their
+ * respective owners and are used here solely to identify the map service to the
+ * end user (descriptive / trademark fair use).
  *
  * Sources:
- *  • OpenStreetMap  – simpleicons.org, slug "openstreetmap", brand colour #7EBC6F
- *  • Google Maps    – simpleicons.org, slug "googlemaps",    brand colour #4285F4
- *  • Apple (Maps)   – simpleicons.org, slug "apple",         coloured #FF3B30 (Maps red)
- *  • Bing           – Wikimedia Commons, File:Bing_favicon.svg (CC0), colour #00809D
+ *  • OpenStreetMap  – Simple Icons (simpleicons.org, CC0), slug "openstreetmap",
+ *                     brand colour #7EBC6F
+ *  • Google Maps    – Wikimedia Commons, File:Google_Maps_Logo_2020.svg; pin portion
+ *                     extracted; brand colours: #4285F4, #34A853, #FBBC04, #EA4335,
+ *                     #1A73E8
+ *  • Apple (Maps)   – Simple Icons (simpleicons.org, CC0), slug "apple",
+ *                     tinted #FF3B30 (Apple Maps red)
+ *  • Bing Maps      – Wikimedia Commons, File:Bing_favicon.svg; teal #0C8484 background
+ *                     with white mark
  */
 
 import { MapProviderId } from '../lib/map-providers'
@@ -93,23 +96,40 @@ function OpenStreetMapIcon({ className, ariaLabel }: { className?: string; ariaL
 }
 
 // ── Google Maps ───────────────────────────────────────────────────────────────
-// Source: simpleicons.org / slug "googlemaps" / CC0
-// Brand colour: #4285F4
-// prettier-ignore
-const GOOGLE_MAPS_PATH = `M19.527 4.799c1.212 2.608.937 5.678-.405 8.173-1.101 2.047-2.744 3.74-4.098
-5.614-.619.858-1.244 1.75-1.669 2.727-.141.325-.263.658-.383.992-.121.333-.224.673-.34 1.008-.109.314
--.236.684-.627.687h-.007c-.466-.001-.579-.53-.695-.887-.284-.874-.581-1.713-1.019-2.525-.51-.944
--1.145-1.817-1.79-2.671L19.527 4.799zM8.545 7.705l-3.959 4.707c.724 1.54 1.821 2.863 2.871 4.18.247.31
-.494.622.737.936l4.984-5.925-.029.01c-1.741.601-3.691-.291-4.392-1.987a3.377 3.377 0 0 1-.209-.716
-c-.063-.437-.077-.761-.004-1.198l.001-.007zM5.492 3.149l-.003.004c-1.947 2.466-2.281 5.88-1.117 8.77
-l4.785-5.689-.058-.05-3.607-3.035zM14.661.436l-3.838 4.563a.295.295 0 0 1 .027-.01c1.6-.551 3.403.15
-4.22 1.626.176.319.323.683.377 1.045.068.446.085.773.012 1.22l-.003.016 3.836-4.561A8.382 8.382 0 0 0
-14.67.439l-.009-.003zM9.466 5.868L14.162.285l-.047-.012A8.31 8.31 0 0 0 11.986 0a8.439 8.439 0 0
-0-6.169 2.766l-.016.018 3.665 3.084z`
+// Source: Wikimedia Commons, File:Google_Maps_Logo_2020.svg (trademark fair use)
+// Pin portion extracted from the full logo SVG; bounding box x≈580–1458, y≈0–1228.
+// viewBox trimmed to contain only the coloured pin mark.
+// Brand colours: #4285F4 blue, #34A853 green, #FBBC04 yellow, #EA4335 red, #1A73E8 dark blue.
 
 function GoogleMapsIcon({ className, ariaLabel }: { className?: string; ariaLabel?: string }) {
   return (
-    <BrandIcon viewBox="0 0 24 24" fill="#4285F4" d={GOOGLE_MAPS_PATH} className={className} ariaLabel={ariaLabel} />
+    <BrandIcon viewBox="580 0 878 1240" fill="" className={className} ariaLabel={ariaLabel}>
+      {/* Green – south/lower section of globe mark */}
+      <path
+        d="M831 909.9c37.9 47.4 76.5 107 96.7 143 24.6 46.8 34.8 78.4 53.1 135 10.7 31 20.9 40.4 42.3 40.4 23.4 0 34.1-15.8 42.3-40.4 17.1-53.1 30.3-93.5 51.2-132 80.6-152 212-260 286-408 0 0 48.7-90.4 48.7-217 0-118-48-200-48-200l-572 680z"
+        fill="#34a853"
+      />
+      {/* Yellow – eastern section */}
+      <path
+        d="M637 631.9c46.1 105 134 197 194 278l318-377s-44.9 58.8-126 58.8c-90.4 0-164-72-164-163 0-62.6 37.3-106 37.3-106-234 34.8-221 91.5-260 309z"
+        fill="#fbbc04"
+      />
+      {/* Blue – top section */}
+      <path
+        d="M1153 19.6c106 34.1 196 106 250 211l-254 303s37.3-43.6 37.3-106c0-92.9-78.4-163-163-163-80.3 0-126 58.1-126 58.1 19.5-44.4 221-288 256-303z"
+        fill="#4285f4"
+      />
+      {/* Dark blue – upper left */}
+      <path
+        d="M695 152.9c63.2-75.2 174-153 327-153 73.9 0 130 19.6 130 19.6l-255 303c-17.2-9.33-185-140-202-170z"
+        fill="#1a73e8"
+      />
+      {/* Red – western section */}
+      <path
+        d="M637 631.9s-41.7-82.8-41.7-202c0-113 44.2-212 100-276l202 170-260 308z"
+        fill="#ea4335"
+      />
+    </BrandIcon>
   )
 }
 
@@ -129,14 +149,21 @@ function AppleMapsIcon({ className, ariaLabel }: { className?: string; ariaLabel
 }
 
 // ── Bing Maps ─────────────────────────────────────────────────────────────────
-// Source: Wikimedia Commons, File:Bing_favicon.svg (CC0)
-// Brand colour: #00809D (Bing teal/turquoise)
-// The path is the distinctive Bing "b" / folded-paper mark.
-const BING_PATH = 'M16 0L16 21L10.61 16.64L7.13 21.14L4.98 5.69L15.2 4.42L5.97 3.15L0 14.54L0 0Z'
+// Source: Wikimedia Commons, File:Bing_favicon.svg (trademark fair use)
+// The actual Bing favicon: teal (#0C8484) background with white "B" mark.
+// viewBox matches the source: "0 0 32 32"
 
 function BingMapsIcon({ className, ariaLabel }: { className?: string; ariaLabel?: string }) {
   return (
-    <BrandIcon viewBox="0 0 16 21" fill="#00809D" d={BING_PATH} className={className} ariaLabel={ariaLabel} />
+    <BrandIcon viewBox="0 0 32 32" fill="" className={className} ariaLabel={ariaLabel}>
+      {/* Teal background */}
+      <path d="M 0,0 H 32 V 32 H 0 Z" fill="#0c8484" />
+      {/* Bing "B" mark in white – path from Wikimedia Commons Bing_favicon.svg */}
+      <path
+        d="m 6.777203,2.7889395 5.251356,1.8503537 V 23.129801 l 7.401414,-4.274057 -3.629039,-1.700501 -2.286881,-5.694399 11.655925,4.098143 v 5.955012 L 12.028559,29.091328 6.770688,26.165945 V 2.7889395 Z"
+        fill="#ffffff"
+      />
+    </BrandIcon>
   )
 }
 
