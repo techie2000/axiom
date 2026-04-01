@@ -397,17 +397,18 @@ export default function LEIRecordsPage() {
   }, [API_BASE_URL])
 
   // Fetch total records count from API
+  // Uses /api/v1/lei/count — an actual database COUNT, available even before any sync has run
   useEffect(() => {
     const fetchTotalRecords = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/v1/lei/status/DAILY_FULL`, { 
+        const countResp = await fetch(`${API_BASE_URL}/api/v1/lei/count`, {
           method: 'GET',
           cache: 'no-store',
           next: { revalidate: 0 }
         })
-        if (response.ok) {
-          const data = await response.json()
-          setTotalRecords(data.current_source_file?.total_records || 0)
+        if (countResp.ok) {
+          const countData = await countResp.json()
+          setTotalRecords(countData.count ?? 0)
         }
       } catch (err) {
         console.error('Failed to fetch total records:', err)
