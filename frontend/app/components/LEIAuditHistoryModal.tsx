@@ -87,11 +87,17 @@ function formatTimestamp(dateStr: string): string {
   }
 }
 
-/** Fallback label for fields not in the column config: snake_case → Title Case */
+/** Fallback label for fields not in the column config: snake_case → Title Case with acronym handling */
 function formatFieldLabel(key: string): string {
-  return key
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (c) => c.toUpperCase())
+  const words = key.split('_').map((word) => {
+    // Preserve all-caps acronyms (HQ, LEI, ISO, etc.)
+    if (word.length > 1 && word === word.toUpperCase()) {
+      return word
+    }
+    // Title case: first letter uppercase, rest lowercase
+    return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+  })
+  return words.join(' ')
 }
 
 /** Format a single name-object entry ({ name, type?, language? }) as "Name (Type) [lang]". */
