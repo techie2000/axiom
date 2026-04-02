@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { getCountryFlagEmoji } from '../lib/country-flag'
+import CountryFlag from './CountryFlag'
 
 export interface LEIAuditEntry {
   id: string
@@ -157,37 +157,46 @@ interface SnapshotValueProps {
   showCodes?: boolean
   countryByCode?: Map<string, string>
   onLeiClick?: (lei: string) => void
+  linkedLeiNames?: Map<string, string>
 }
 
 /** Renders a value with optional country flag, names/codes display mode, and LEI code links. */
-function SnapshotValue({ fieldKey, value, showCodes = true, countryByCode, onLeiClick }: SnapshotValueProps) {
+function SnapshotValue({ fieldKey, value, showCodes = true, countryByCode, onLeiClick, linkedLeiNames }: SnapshotValueProps) {
   const text = formatSnapshotValue(value)
   if (text === '—') return <span className="theme-text-muted">—</span>
-  if (COUNTRY_CODE_FIELDS.has(fieldKey) && typeof value === 'string' && ALPHA2_RE.test(value.toUpperCase())) {
-    const code = value.toUpperCase()
-    const flag = getCountryFlagEmoji(code)
+  if (COUNTRY_CODE_FIELDS.has(fieldKey) && typeof value === 'string' && ALPHA2_RE.test(value.trim().toUpperCase())) {
+    const code = value.trim().toUpperCase()
     const displayText = (!showCodes && countryByCode) ? (countryByCode.get(code) ?? code) : code
     return (
       <span className="inline-flex items-center gap-1.5">
-        <span aria-hidden="true">{flag}</span>
+        <CountryFlag countryCode={code} />
         <span>{displayText}</span>
       </span>
     )
   }
   if (LEI_CODE_FIELDS.has(fieldKey) && typeof value === 'string' && value.trim().length > 0) {
     const lei = value.trim()
-    if (onLeiClick) {
+    const entityName = linkedLeiNames?.get(lei) || ''
+    const leiEl = onLeiClick ? (
+      <button
+        type="button"
+        onClick={() => onLeiClick(lei)}
+        className="font-mono text-[rgb(var(--primary-rgb))] hover:underline focus:outline-none focus-visible:ring-1 focus-visible:ring-[rgb(var(--primary-rgb))] rounded"
+      >
+        {lei}
+      </button>
+    ) : (
+      <span className="font-mono text-[rgb(var(--primary-rgb))]">{lei}</span>
+    )
+    if (entityName) {
       return (
-        <button
-          type="button"
-          onClick={() => onLeiClick(lei)}
-          className="font-mono text-[rgb(var(--primary-rgb))] hover:underline focus:outline-none focus-visible:ring-1 focus-visible:ring-[rgb(var(--primary-rgb))] rounded"
-        >
-          {lei}
-        </button>
+        <span className="flex flex-col gap-0.5">
+          {leiEl}
+          <span className="text-xs theme-text-muted">{entityName}</span>
+        </span>
       )
     }
-    return <span className="font-mono text-[rgb(var(--primary-rgb))]">{lei}</span>
+    return leiEl
   }
   // Multi-line values (e.g. other_names with multiple entries)
   if (text.includes('\n')) {
@@ -244,9 +253,10 @@ interface SnapshotTableProps {
   showCodes?: boolean
   countryByCode?: Map<string, string>
   onLeiClick?: (lei: string) => void
+  linkedLeiNames?: Map<string, string>
 }
 
-function SnapshotTable({ snapshot, columns, changedFields, labelMap, showCodes = true, countryByCode, onLeiClick }: SnapshotTableProps) {
+function SnapshotTable({ snapshot, columns, changedFields, labelMap, showCodes = true, countryByCode, onLeiClick, linkedLeiNames }: SnapshotTableProps) {
   const { t } = useTranslation('common')
   if (columns.length === 0) {
     return <p className="text-sm theme-text-muted py-4">{t('leiAudit.noColumnsSelected')}</p>
@@ -303,14 +313,14 @@ function SnapshotTable({ snapshot, columns, changedFields, labelMap, showCodes =
                       /* Show old → new inline so the change is immediately obvious */
                       <span className="flex flex-col gap-0.5">
                         <span className="text-red-600 dark:text-red-400 text-xs">
-                          <SnapshotValue fieldKey={col.key} value={change.old_value} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} />
+                          <SnapshotValue fieldKey={col.key} value={change.old_value} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} />
                         </span>
                         <span className="text-green-600 dark:text-green-400 font-semibold">
-                          <SnapshotValue fieldKey={col.key} value={change.new_value} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} />
+                          <SnapshotValue fieldKey={col.key} value={change.new_value} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} />
                         </span>
                       </span>
                     ) : (
-                      <SnapshotValue fieldKey={col.key} value={rawValue} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} />
+                      <SnapshotValue fieldKey={col.key} value={rawValue} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} />
                     )}
                   </td>
                 </tr>
@@ -334,6 +344,7 @@ interface CompareTableProps {
   showCodes?: boolean
   countryByCode?: Map<string, string>
   onLeiClick?: (lei: string) => void
+  linkedLeiNames?: Map<string, string>
 }
 
 /** Single merged table for compare mode — rows always aligned. Older (red) on left, Newer (green) on right. */
@@ -348,6 +359,7 @@ function CompareTable({
   showCodes = true,
   countryByCode,
   onLeiClick,
+  linkedLeiNames,
 }: CompareTableProps) {
   const { t } = useTranslation('common')
   if (columns.length === 0) {
@@ -412,7 +424,7 @@ function CompareTable({
                       isChanged ? 'text-red-600 dark:text-red-400' : 'theme-text-muted'
                     }`}
                   >
-                    <SnapshotValue fieldKey={col.key} value={olderValue} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} />
+                    <SnapshotValue fieldKey={col.key} value={olderValue} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} />
                   </td>
                   {/* Newer (current) value — green */}
                   <td
@@ -420,7 +432,7 @@ function CompareTable({
                       isChanged ? 'text-green-700 dark:text-green-400 font-semibold' : ''
                     }`}
                   >
-                    <SnapshotValue fieldKey={col.key} value={newerValue} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} />
+                    <SnapshotValue fieldKey={col.key} value={newerValue} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} />
                   </td>
                 </tr>
               </React.Fragment>
@@ -552,6 +564,10 @@ export default function LEIAuditHistoryModal({
     return () => controller.abort()
   }, [apiBaseUrl])
 
+  // Ref and state for entity names fetched for LEI code fields (managing_lou, successor_lei, etc.)
+  const linkedLeiNamesCache = React.useRef<Map<string, string>>(new Map())
+  const [linkedLeiNames, setLinkedLeiNames] = useState<Map<string, string>>(new Map())
+
   // Columns shown in the snapshot view, respecting localColumns
   const displayColumns = useMemo<AuditColumnConfig[]>(() => {
     return availableColumns.filter((col) => localColumns.has(col.key))
@@ -580,6 +596,34 @@ export default function LEIAuditHistoryModal({
       ? parseJSON<ParsedSnapshot>(compareAudit.record_snapshot, {})
       : {}
   }, [compareAudit])
+
+  // Fetch entity names for LEI code fields whenever the visible snapshots change
+  useEffect(() => {
+    const cache = linkedLeiNamesCache.current
+    const leiCodes = new Set<string>()
+    for (const snap of [selectedSnapshot, compareSnapshot]) {
+      for (const fieldKey of [...LEI_CODE_FIELDS]) {
+        const val = snap[fieldKey]
+        if (typeof val === 'string' && val.trim().length > 0) leiCodes.add(val.trim())
+      }
+    }
+    const toFetch = [...leiCodes].filter((code) => !cache.has(code))
+    if (toFetch.length === 0) return
+    toFetch.forEach((code) => cache.set(code, '')) // mark as in-progress
+    void Promise.all(
+      toFetch.map(async (code) => {
+        try {
+          const res = await fetch(`${apiBaseUrl}/api/v1/lei/${encodeURIComponent(code)}`)
+          if (res.ok) {
+            const data: { legal_name?: string } = await res.json()
+            cache.set(code, data.legal_name || '')
+          }
+        } catch {
+          // best-effort: name display is non-critical
+        }
+      })
+    ).then(() => setLinkedLeiNames(new Map(cache)))
+  }, [selectedSnapshot, compareSnapshot, apiBaseUrl])
 
   const selectedChangedFields = useMemo<ParsedChangedFields>(() => {
     const raw = selectedAudit
@@ -863,7 +907,7 @@ export default function LEIAuditHistoryModal({
                 className="px-3 py-1.5 rounded-lg theme-btn-neutral text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                 title={showCodes ? t('leiAudit.displayToggleNamesTitle') : t('leiAudit.displayToggleCodesTitle')}
               >
-                {showCodes ? t('leiAudit.displayToggleNames') : t('leiAudit.displayToggleCodes')}
+                {showCodes ? t('leiAudit.displayToggleCodes') : t('leiAudit.displayToggleNames')}
               </button>
 
               <button
@@ -892,7 +936,7 @@ export default function LEIAuditHistoryModal({
                     className="w-full h-2 accent-[rgb(var(--primary-rgb))]"
                     aria-label={t('leiAudit.timelineSlider')}
                     aria-valuetext={t('leiAudit.viewingVersion', {
-                      current: selectedIndex + 1,
+                      current: audits.length - selectedIndex,
                       total: audits.length,
                     })}
                   />
@@ -913,7 +957,7 @@ export default function LEIAuditHistoryModal({
               </div>
               <p className="text-xs theme-text-muted text-center mt-1">
                 {t('leiAudit.viewingVersion', {
-                  current: selectedIndex + 1,
+                  current: audits.length - selectedIndex,
                   total: audits.length,
                 })}
                 {selectedIndex === 0 && (
@@ -1089,10 +1133,10 @@ export default function LEIAuditHistoryModal({
                                     {labelMap.get(field) ?? formatFieldLabel(field)}
                                   </span>
                                   <span className="text-red-600 dark:text-red-400 break-all">
-                                    <SnapshotValue fieldKey={field} value={change.old_value} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} />
+                                    <SnapshotValue fieldKey={field} value={change.old_value} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} />
                                   </span>
                                   <span className="text-green-600 dark:text-green-400 font-medium break-all">
-                                    <SnapshotValue fieldKey={field} value={change.new_value} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} />
+                                    <SnapshotValue fieldKey={field} value={change.new_value} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} />
                                   </span>
                                 </div>
                               </React.Fragment>
@@ -1117,6 +1161,7 @@ export default function LEIAuditHistoryModal({
                           showCodes={showCodes}
                           countryByCode={countryByCode}
                           onLeiClick={onLeiClick}
+                          linkedLeiNames={linkedLeiNames}
                         />
                       ) : (
                         <div className="flex flex-col items-center justify-center h-40 gap-2 text-sm theme-text-muted">
@@ -1138,6 +1183,7 @@ export default function LEIAuditHistoryModal({
                         showCodes={showCodes}
                         countryByCode={countryByCode}
                         onLeiClick={onLeiClick}
+                        linkedLeiNames={linkedLeiNames}
                       />
                     </div>
                   )}
