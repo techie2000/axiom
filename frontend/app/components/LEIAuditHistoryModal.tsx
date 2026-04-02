@@ -197,7 +197,7 @@ function SnapshotValue({ fieldKey, value, showCodes = true, countryByCode, onLei
     )
     if (entityName) {
       return (
-        <span className="flex flex-col gap-0.5">
+        <span className="flex flex-col items-start gap-0.5">
           {leiEl}
           <span className="text-xs theme-text-muted">{entityName}</span>
         </span>
@@ -315,7 +315,7 @@ function SnapshotTable({ snapshot, columns, changedFields, labelMap, showCodes =
                     {isChanged && <span className="mr-1" aria-hidden="true">⚑</span>}
                     {label}
                   </td>
-                  <td className="px-3 py-2 break-all">
+                  <td className="px-3 py-2 break-words">
                     {isChanged && change !== null ? (
                       /* Show old → new inline so the change is immediately obvious */
                       <span className="flex flex-col gap-0.5">
@@ -432,7 +432,7 @@ function CompareTable({
                   </td>
                   {/* Older (previous) value — red */}
                   <td
-                    className={`px-3 py-2 break-all ${
+                    className={`px-3 py-2 break-words ${
                       isChanged ? 'text-red-600 dark:text-red-400' : 'theme-text-muted'
                     }`}
                   >
@@ -440,7 +440,7 @@ function CompareTable({
                   </td>
                   {/* Newer (current) value — green */}
                   <td
-                    className={`px-3 py-2 break-all ${
+                    className={`px-3 py-2 break-words ${
                       isChanged ? 'text-green-700 dark:text-green-400 font-semibold' : ''
                     }`}
                   >
@@ -818,6 +818,7 @@ export default function LEIAuditHistoryModal({
                 <button
                   onClick={() => setShowColumnSelector(!showColumnSelector)}
                   className="px-3 py-1.5 rounded-lg theme-btn-neutral text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                  title={t('leiAudit.selectColumns')}
                 >
                   {formatLabel(`⚙️ ${t('leiAudit.columns')} (${localColumns.size})`)}
                 </button>
@@ -938,6 +939,7 @@ export default function LEIAuditHistoryModal({
               <button
                 onClick={onClose}
                 className="px-3 py-1.5 rounded-lg theme-btn-neutral text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                title={t('leiRecords.modal.close')}
               >
                 {formatLabel(t('leiRecords.modal.close'))}
               </button>
@@ -1157,10 +1159,10 @@ export default function LEIAuditHistoryModal({
                                   <span className="font-medium text-[rgb(var(--foreground-rgb))]">
                                     {labelMap.get(field) ?? formatFieldLabel(field)}
                                   </span>
-                                  <span className="text-red-600 dark:text-red-400 break-all">
+                                  <span className="text-red-600 dark:text-red-400 break-words">
                                     <SnapshotValue fieldKey={field} value={change.old_value} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} />
                                   </span>
-                                  <span className="text-green-600 dark:text-green-400 font-medium break-all">
+                                  <span className="text-green-600 dark:text-green-400 font-medium break-words">
                                     <SnapshotValue fieldKey={field} value={change.new_value} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} />
                                   </span>
                                 </div>

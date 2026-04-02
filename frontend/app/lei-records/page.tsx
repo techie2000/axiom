@@ -116,7 +116,6 @@ const AVAILABLE_COLUMNS: ColumnConfig[] = [
   { key: 'entity_status', labelKey: 'leiRecords.columns.labels.status', groupKey: 'leiRecords.columns.groups.core', defaultVisible: true, width: 'w-32' },
   { key: 'entity_category', labelKey: 'leiRecords.columns.labels.category', groupKey: 'leiRecords.columns.groups.core', defaultVisible: true, width: 'w-40' },
   { key: 'country_flag', labelKey: 'leiRecords.columns.labels.countryFlag', groupKey: 'leiRecords.columns.groups.core', defaultVisible: false, width: 'w-20' },
-  { key: 'legal_address_country', labelKey: 'leiRecords.columns.labels.countryName', groupKey: 'leiRecords.columns.groups.legalAddress', defaultVisible: true, width: 'w-24' },
   { key: 'last_update_date', labelKey: 'leiRecords.columns.labels.lastUpdated', groupKey: 'leiRecords.columns.groups.core', defaultVisible: true, width: 'w-32' },
   
   // Additional Entity Info
@@ -131,6 +130,7 @@ const AVAILABLE_COLUMNS: ColumnConfig[] = [
   { key: 'legal_address_line_4', labelKey: 'leiRecords.columns.labels.legalAddressLine4', groupKey: 'leiRecords.columns.groups.legalAddress', defaultVisible: false, width: 'min-w-48' },
   { key: 'legal_address_city', labelKey: 'leiRecords.columns.labels.legalCity', groupKey: 'leiRecords.columns.groups.legalAddress', defaultVisible: false, width: 'w-40' },
   { key: 'legal_address_region', labelKey: 'leiRecords.columns.labels.regionName', groupKey: 'leiRecords.columns.groups.legalAddress', defaultVisible: false, width: 'w-32' },
+  { key: 'legal_address_country', labelKey: 'leiRecords.columns.labels.countryName', groupKey: 'leiRecords.columns.groups.legalAddress', defaultVisible: true, width: 'w-24' },
   { key: 'legal_address_postal_code', labelKey: 'leiRecords.columns.labels.legalPostalCode', groupKey: 'leiRecords.columns.groups.legalAddress', defaultVisible: false, width: 'w-28' },
   
   // HQ Address (natural order: address lines, then city/region/country/postal)
