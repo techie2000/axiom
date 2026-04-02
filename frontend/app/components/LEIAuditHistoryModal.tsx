@@ -376,7 +376,7 @@ function CompareTable({
         </colgroup>
         <thead>
           <tr className="bg-[rgb(var(--surface-muted-rgb))]">
-            <th className="px-3 py-2 text-left text-xs font-medium theme-text-muted uppercase tracking-wider w-44">
+            <th className="px-3 py-2 text-left text-xs font-medium theme-text-muted uppercase tracking-wider">
               {t('leiAudit.field')}
             </th>
             {/* Older (previous) on left — red, matches "Old value" position in diff panel */}
@@ -816,7 +816,16 @@ export default function LEIAuditHistoryModal({
                   {formatLabel(`⚙️ ${t('leiAudit.columns')} (${localColumns.size})`)}
                 </button>
                 {showColumnSelector && (
-                  <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto theme-scrollbar theme-dropdown rounded-lg shadow-xl z-50">
+                  <div
+                    className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto theme-scrollbar theme-dropdown rounded-lg shadow-xl z-50"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') {
+                        e.stopPropagation()
+                        setShowColumnSelector(false)
+                      }
+                    }}
+                    role="listbox"
+                  >
                     <div className="sticky top-0 theme-dropdown border-b p-3">
                       <div className="flex justify-between items-center mb-2">
                         <h3 className="font-semibold">{t('leiRecords.columns.selector.title')}</h3>
