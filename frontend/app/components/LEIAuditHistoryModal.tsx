@@ -29,6 +29,8 @@ type ParsedSnapshot = Record<string, unknown>
 /** Fields whose values are ISO 3166-1 alpha-2 country codes — rendered with a flag. */
 const COUNTRY_CODE_FIELDS = new Set(['legal_address_country', 'hq_address_country'])
 const ALPHA2_RE = /^[A-Z]{2}$/
+/** Fields whose values are LEI codes — rendered with monospace primary styling + optional click. */
+const LEI_CODE_FIELDS = new Set(['managing_lou', 'successor_lei'])
 /** Border colour that uses the theme token at 75% opacity. Used in column-selector group rows. */
 const GROUP_BORDER_STYLE: React.CSSProperties = { borderColor: 'rgb(var(--border-rgb) / 0.75)' }
 
@@ -91,6 +93,17 @@ function formatFieldLabel(key: string): string {
     .replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
+/** Format a single name-object entry ({ name, type?, language? }) as "Name (Type) [lang]". */
+function formatNameEntry(obj: Record<string, unknown>): string {
+  const name = typeof obj.name === 'string' ? obj.name : ''
+  if (!name) return JSON.stringify(obj)
+  const type = typeof obj.type === 'string' ? obj.type : null
+  const lang = typeof obj.language === 'string' ? obj.language : null
+  const typePart = type ? ` (${type.replace(/_/g, ' ')})` : ''
+  const langPart = lang ? ` [${lang}]` : ''
+  return `${name}${typePart}${langPart}`
+}
+
 function formatSnapshotValue(value: unknown): string {
   if (value === null || value === undefined || value === '') return '—'
   if (typeof value === 'string') {
@@ -103,6 +116,18 @@ function formatSnapshotValue(value: unknown): string {
         return value
       }
     }
+    // JSON-encoded arrays/objects stored as strings (e.g. other_names in record_snapshot)
+    if (
+      (value.startsWith('[') && value.endsWith(']')) ||
+      (value.startsWith('{') && value.endsWith('}'))
+    ) {
+      try {
+        const parsed: unknown = JSON.parse(value)
+        if (parsed !== null && typeof parsed !== 'string') return formatSnapshotValue(parsed)
+      } catch {
+        // fall through to plain string return
+      }
+    }
     return value
   }
   // Handle arrays (e.g. other_names: [{name, type, language}, …])
@@ -113,13 +138,12 @@ function formatSnapshotValue(value: unknown): string {
         if (typeof item === 'object' && item !== null) {
           // Expected shape from backend: { name, type, language } (other_names array elements)
           const obj = item as Record<string, unknown>
-          // For name objects render the name field; fall back to JSON
-          if (obj.name) return String(obj.name)
+          if (obj.name) return formatNameEntry(obj)
           return JSON.stringify(item)
         }
         return String(item)
       })
-      .join('; ')
+      .join('\n')
   }
   if (typeof value === 'object') {
     return JSON.stringify(value)
@@ -132,10 +156,11 @@ interface SnapshotValueProps {
   value: unknown
   showCodes?: boolean
   countryByCode?: Map<string, string>
+  onLeiClick?: (lei: string) => void
 }
 
-/** Renders a value with optional country flag and names/codes display mode. */
-function SnapshotValue({ fieldKey, value, showCodes = true, countryByCode }: SnapshotValueProps) {
+/** Renders a value with optional country flag, names/codes display mode, and LEI code links. */
+function SnapshotValue({ fieldKey, value, showCodes = true, countryByCode, onLeiClick }: SnapshotValueProps) {
   const text = formatSnapshotValue(value)
   if (text === '—') return <span className="theme-text-muted">—</span>
   if (COUNTRY_CODE_FIELDS.has(fieldKey) && typeof value === 'string' && ALPHA2_RE.test(value.toUpperCase())) {
@@ -146,6 +171,31 @@ function SnapshotValue({ fieldKey, value, showCodes = true, countryByCode }: Sna
       <span className="inline-flex items-center gap-1.5">
         <span aria-hidden="true">{flag}</span>
         <span>{displayText}</span>
+      </span>
+    )
+  }
+  if (LEI_CODE_FIELDS.has(fieldKey) && typeof value === 'string' && value.trim().length > 0) {
+    const lei = value.trim()
+    if (onLeiClick) {
+      return (
+        <button
+          type="button"
+          onClick={() => onLeiClick(lei)}
+          className="font-mono text-[rgb(var(--primary-rgb))] hover:underline focus:outline-none focus-visible:ring-1 focus-visible:ring-[rgb(var(--primary-rgb))] rounded"
+        >
+          {lei}
+        </button>
+      )
+    }
+    return <span className="font-mono text-[rgb(var(--primary-rgb))]">{lei}</span>
+  }
+  // Multi-line values (e.g. other_names with multiple entries)
+  if (text.includes('\n')) {
+    return (
+      <span className="flex flex-col gap-0.5">
+        {text.split('\n').map((line, i) => (
+          <span key={i}>{line}</span>
+        ))}
       </span>
     )
   }
@@ -193,9 +243,10 @@ interface SnapshotTableProps {
   labelMap: Map<string, string>
   showCodes?: boolean
   countryByCode?: Map<string, string>
+  onLeiClick?: (lei: string) => void
 }
 
-function SnapshotTable({ snapshot, columns, changedFields, labelMap, showCodes = true, countryByCode }: SnapshotTableProps) {
+function SnapshotTable({ snapshot, columns, changedFields, labelMap, showCodes = true, countryByCode, onLeiClick }: SnapshotTableProps) {
   const { t } = useTranslation('common')
   if (columns.length === 0) {
     return <p className="text-sm theme-text-muted py-4">{t('leiAudit.noColumnsSelected')}</p>
@@ -214,44 +265,56 @@ function SnapshotTable({ snapshot, columns, changedFields, labelMap, showCodes =
           </tr>
         </thead>
         <tbody>
-          {columns.map((col) => {
+          {columns.map((col, i) => {
             const rawValue = snapshot[col.key]
             const isChanged = Object.prototype.hasOwnProperty.call(changedFields, col.key)
             const label = labelMap.get(col.key) ?? formatFieldLabel(col.key)
             const change = isChanged ? changedFields[col.key] : null
+            const isNewGroup = i === 0 || col.groupKey !== columns[i - 1].groupKey
             return (
-              <tr
-                key={col.key}
-                className={`border-t border-[rgb(var(--border-rgb))] ${
-                  isChanged ? 'bg-amber-50 dark:bg-amber-900/15' : ''
-                }`}
-              >
-                <td
-                  className={`px-3 py-2 font-medium text-xs whitespace-nowrap ${
-                    isChanged
-                      ? 'text-amber-700 dark:text-amber-400'
-                      : 'theme-text-muted'
+              <React.Fragment key={col.key}>
+                {isNewGroup && (
+                  <tr className="bg-[rgb(var(--surface-muted-rgb))]">
+                    <td
+                      colSpan={2}
+                      className="px-3 py-1 text-xs font-semibold theme-text-muted uppercase tracking-wider border-t border-[rgb(var(--border-rgb))]"
+                    >
+                      {t(col.groupKey)}
+                    </td>
+                  </tr>
+                )}
+                <tr
+                  className={`border-t border-[rgb(var(--border-rgb))] ${
+                    isChanged ? 'bg-amber-50 dark:bg-amber-900/15' : ''
                   }`}
                 >
-                  {isChanged && <span className="mr-1" aria-hidden="true">⚑</span>}
-                  {label}
-                </td>
-                <td className="px-3 py-2 break-all">
-                  {isChanged && change !== null ? (
-                    /* Show old → new inline so the change is immediately obvious */
-                    <span className="flex flex-col gap-0.5">
-                      <span className="text-red-600 dark:text-red-400 text-xs">
-                        <SnapshotValue fieldKey={col.key} value={change.old_value} showCodes={showCodes} countryByCode={countryByCode} />
+                  <td
+                    className={`px-3 py-2 font-medium text-xs whitespace-nowrap ${
+                      isChanged
+                        ? 'text-amber-700 dark:text-amber-400'
+                        : 'theme-text-muted'
+                    }`}
+                  >
+                    {isChanged && <span className="mr-1" aria-hidden="true">⚑</span>}
+                    {label}
+                  </td>
+                  <td className="px-3 py-2 break-all">
+                    {isChanged && change !== null ? (
+                      /* Show old → new inline so the change is immediately obvious */
+                      <span className="flex flex-col gap-0.5">
+                        <span className="text-red-600 dark:text-red-400 text-xs">
+                          <SnapshotValue fieldKey={col.key} value={change.old_value} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} />
+                        </span>
+                        <span className="text-green-600 dark:text-green-400 font-semibold">
+                          <SnapshotValue fieldKey={col.key} value={change.new_value} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} />
+                        </span>
                       </span>
-                      <span className="text-green-600 dark:text-green-400 font-semibold">
-                        <SnapshotValue fieldKey={col.key} value={change.new_value} showCodes={showCodes} countryByCode={countryByCode} />
-                      </span>
-                    </span>
-                  ) : (
-                    <SnapshotValue fieldKey={col.key} value={rawValue} showCodes={showCodes} countryByCode={countryByCode} />
-                  )}
-                </td>
-              </tr>
+                    ) : (
+                      <SnapshotValue fieldKey={col.key} value={rawValue} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} />
+                    )}
+                  </td>
+                </tr>
+              </React.Fragment>
             )
           })}
         </tbody>
@@ -270,6 +333,7 @@ interface CompareTableProps {
   olderLabel: string
   showCodes?: boolean
   countryByCode?: Map<string, string>
+  onLeiClick?: (lei: string) => void
 }
 
 /** Single merged table for compare mode — rows always aligned. Older (red) on left, Newer (green) on right. */
@@ -283,6 +347,7 @@ function CompareTable({
   olderLabel,
   showCodes = true,
   countryByCode,
+  onLeiClick,
 }: CompareTableProps) {
   const { t } = useTranslation('common')
   if (columns.length === 0) {
@@ -293,7 +358,7 @@ function CompareTable({
       <table className="w-full text-sm">
         <thead>
           <tr className="bg-[rgb(var(--surface-muted-rgb))]">
-            <th className="px-3 py-2 text-left text-xs font-medium theme-text-muted uppercase tracking-wider w-40">
+            <th className="px-3 py-2 text-left text-xs font-medium theme-text-muted uppercase tracking-wider w-44">
               {t('leiAudit.field')}
             </th>
             {/* Older (previous) on left — red, matches "Old value" position in diff panel */}
@@ -307,7 +372,7 @@ function CompareTable({
           </tr>
         </thead>
         <tbody>
-          {columns.map((col) => {
+          {columns.map((col, i) => {
             const isChanged = Object.prototype.hasOwnProperty.call(changedFields, col.key)
             const change = isChanged ? changedFields[col.key] : null
             const label = labelMap.get(col.key) ?? formatFieldLabel(col.key)
@@ -315,38 +380,50 @@ function CompareTable({
             const olderValue = isChanged && change ? change.old_value : olderSnapshot[col.key]
             // Newer value: use new_value from changedFields if available, else newer snapshot
             const newerValue = isChanged && change ? change.new_value : newerSnapshot[col.key]
+            const isNewGroup = i === 0 || col.groupKey !== columns[i - 1].groupKey
             return (
-              <tr
-                key={col.key}
-                className={`border-t border-[rgb(var(--border-rgb))] ${
-                  isChanged ? 'bg-amber-50 dark:bg-amber-900/15' : ''
-                }`}
-              >
-                <td
-                  className={`px-3 py-2 font-medium text-xs whitespace-nowrap ${
-                    isChanged ? 'text-amber-700 dark:text-amber-400' : 'theme-text-muted'
+              <React.Fragment key={col.key}>
+                {isNewGroup && (
+                  <tr className="bg-[rgb(var(--surface-muted-rgb))]">
+                    <td
+                      colSpan={3}
+                      className="px-3 py-1 text-xs font-semibold theme-text-muted uppercase tracking-wider border-t border-[rgb(var(--border-rgb))]"
+                    >
+                      {t(col.groupKey)}
+                    </td>
+                  </tr>
+                )}
+                <tr
+                  className={`border-t border-[rgb(var(--border-rgb))] ${
+                    isChanged ? 'bg-amber-50 dark:bg-amber-900/15' : ''
                   }`}
                 >
-                  {isChanged && <span className="mr-1" aria-hidden="true">⚑</span>}
-                  {label}
-                </td>
-                {/* Older (previous) value — red */}
-                <td
-                  className={`px-3 py-2 break-all ${
-                    isChanged ? 'text-red-600 dark:text-red-400' : 'theme-text-muted'
-                  }`}
-                >
-                  <SnapshotValue fieldKey={col.key} value={olderValue} showCodes={showCodes} countryByCode={countryByCode} />
-                </td>
-                {/* Newer (current) value — green */}
-                <td
-                  className={`px-3 py-2 break-all ${
-                    isChanged ? 'text-green-700 dark:text-green-400 font-semibold' : ''
-                  }`}
-                >
-                  <SnapshotValue fieldKey={col.key} value={newerValue} showCodes={showCodes} countryByCode={countryByCode} />
-                </td>
-              </tr>
+                  <td
+                    className={`px-3 py-2 font-medium text-xs whitespace-nowrap ${
+                      isChanged ? 'text-amber-700 dark:text-amber-400' : 'theme-text-muted'
+                    }`}
+                  >
+                    {isChanged && <span className="mr-1" aria-hidden="true">⚑</span>}
+                    {label}
+                  </td>
+                  {/* Older (previous) value — red */}
+                  <td
+                    className={`px-3 py-2 break-all ${
+                      isChanged ? 'text-red-600 dark:text-red-400' : 'theme-text-muted'
+                    }`}
+                  >
+                    <SnapshotValue fieldKey={col.key} value={olderValue} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} />
+                  </td>
+                  {/* Newer (current) value — green */}
+                  <td
+                    className={`px-3 py-2 break-all ${
+                      isChanged ? 'text-green-700 dark:text-green-400 font-semibold' : ''
+                    }`}
+                  >
+                    <SnapshotValue fieldKey={col.key} value={newerValue} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} />
+                  </td>
+                </tr>
+              </React.Fragment>
             )
           })}
         </tbody>
@@ -362,6 +439,7 @@ interface Props {
   apiBaseUrl: string
   availableColumns: AuditColumnConfig[]
   visibleColumns: Set<string>
+  onLeiClick?: (lei: string) => void
 }
 
 export default function LEIAuditHistoryModal({
@@ -371,6 +449,7 @@ export default function LEIAuditHistoryModal({
   apiBaseUrl,
   availableColumns,
   visibleColumns,
+  onLeiClick,
 }: Props) {
   const { t } = useTranslation('common')
 
@@ -611,6 +690,42 @@ export default function LEIAuditHistoryModal({
     [availableColumns]
   )
 
+  /** Index of each column key in availableColumns — used to sort the diff panel. */
+  const columnOrder = useMemo<Map<string, number>>(() => {
+    const map = new Map<string, number>()
+    availableColumns.forEach((col, idx) => map.set(col.key, idx))
+    return map
+  }, [availableColumns])
+
+  /** Map from column key → groupKey for diff panel section headers. */
+  const columnGroupMap = useMemo<Map<string, string>>(() => {
+    const map = new Map<string, string>()
+    availableColumns.forEach((col) => map.set(col.key, col.groupKey))
+    return map
+  }, [availableColumns])
+
+  /** Changed field entries sorted by column config order. */
+  const activeChangedFields = compareMode ? compareChangedFields : selectedChangedFields
+  const sortedChangedFieldEntries = useMemo<Array<[string, ParsedChangedFields[string]]>>(() => {
+    const entries = Object.entries(activeChangedFields)
+    return entries.sort((a, b) => (columnOrder.get(a[0]) ?? 999) - (columnOrder.get(b[0]) ?? 999))
+  }, [activeChangedFields, columnOrder])
+
+  /**
+   * Positioning percentages for the compare-range highlight on the slider.
+   * `null` when compare mode is inactive or no second version is selected.
+   */
+  const sliderRangeStyle = useMemo<{ left: string; right: string } | null>(() => {
+    if (!compareMode || resolvedCompareIndex === null || audits.length <= 1) return null
+    const total = audits.length - 1
+    const lo = Math.min(selectedIndex, resolvedCompareIndex)
+    const hi = Math.max(selectedIndex, resolvedCompareIndex)
+    return {
+      left: `${(lo / total) * 100}%`,
+      right: `${100 - (hi / total) * 100}%`,
+    }
+  }, [compareMode, resolvedCompareIndex, selectedIndex, audits.length])
+
   return (
     <div
       role="presentation"
@@ -767,19 +882,31 @@ export default function LEIAuditHistoryModal({
                 <span className="text-xs theme-text-muted whitespace-nowrap">
                   {t('leiAudit.newest')}
                 </span>
-                <input
-                  type="range"
-                  min={0}
-                  max={audits.length - 1}
-                  value={selectedIndex}
-                  onChange={(e) => setSelectedIndex(Number(e.target.value))}
-                  className="flex-1 h-2 accent-[rgb(var(--primary-rgb))]"
-                  aria-label={t('leiAudit.timelineSlider')}
-                  aria-valuetext={t('leiAudit.viewingVersion', {
-                    current: selectedIndex + 1,
-                    total: audits.length,
-                  })}
-                />
+                <div className="relative flex-1">
+                  <input
+                    type="range"
+                    min={0}
+                    max={audits.length - 1}
+                    value={selectedIndex}
+                    onChange={(e) => setSelectedIndex(Number(e.target.value))}
+                    className="w-full h-2 accent-[rgb(var(--primary-rgb))]"
+                    aria-label={t('leiAudit.timelineSlider')}
+                    aria-valuetext={t('leiAudit.viewingVersion', {
+                      current: selectedIndex + 1,
+                      total: audits.length,
+                    })}
+                  />
+                  {/* Range highlight between selected and compare version */}
+                  {sliderRangeStyle && (
+                    <div className="absolute bottom-0 left-0 right-0 h-1 pointer-events-none">
+                      <div
+                        className="absolute h-full bg-blue-400/50 dark:bg-blue-500/50 rounded-full"
+                        style={sliderRangeStyle}
+                        aria-hidden="true"
+                      />
+                    </div>
+                  )}
+                </div>
                 <span className="text-xs theme-text-muted whitespace-nowrap">
                   {t('leiAudit.oldest')}
                 </span>
@@ -851,7 +978,10 @@ export default function LEIAuditHistoryModal({
                     >
                       <div className="flex items-center justify-between mb-1">
                         <ActionBadge action={audit.action} />
-                        <span className="flex items-center gap-1">
+                        <span className="flex items-center gap-1.5">
+                          <span className="text-xs font-mono text-[rgb(var(--muted-foreground-rgb,128,128,128))] opacity-60">
+                            v{audits.length - idx}
+                          </span>
                           {isPinned && (
                             <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
                               {t('leiAudit.pinned')}
@@ -931,25 +1061,43 @@ export default function LEIAuditHistoryModal({
                           {t('leiAudit.changedFields')}
                         </h4>
                         <div className="space-y-1.5">
-                          {/* Header */}
-                          <div className="grid grid-cols-3 gap-2 text-xs font-semibold theme-text-muted border-b border-amber-200 dark:border-amber-800 pb-1 mb-1">
+                          {/* Header — field column matches w-44 in snapshot table */}
+                          <div
+                            className="grid gap-2 text-xs font-semibold theme-text-muted border-b border-amber-200 dark:border-amber-800 pb-1 mb-1"
+                            style={{ gridTemplateColumns: '11rem 1fr 1fr' }}
+                          >
                             <span>{t('leiAudit.field')}</span>
-                            <span>{t('leiAudit.oldValue')}</span>
-                            <span>{t('leiAudit.newValue')}</span>
+                            <span className="text-red-600 dark:text-red-400">{t('leiAudit.oldValue')}</span>
+                            <span className="text-green-700 dark:text-green-400">{t('leiAudit.newValue')}</span>
                           </div>
-                          {Object.entries(selectedChangedFields).map(([field, change]) => (
-                            <div key={field} className="grid grid-cols-3 gap-2 text-xs">
-                              <span className="font-medium text-[rgb(var(--foreground-rgb))]">
-                                {labelMap.get(field) ?? formatFieldLabel(field)}
-                              </span>
-                              <span className="text-red-600 dark:text-red-400 break-all">
-                                <SnapshotValue fieldKey={field} value={change.old_value} showCodes={showCodes} countryByCode={countryByCode} />
-                              </span>
-                              <span className="text-green-600 dark:text-green-400 font-medium break-all">
-                                <SnapshotValue fieldKey={field} value={change.new_value} showCodes={showCodes} countryByCode={countryByCode} />
-                              </span>
-                            </div>
-                          ))}
+                          {sortedChangedFieldEntries.map(([field, change], i) => {
+                            const group = columnGroupMap.get(field)
+                            const prevGroup = i > 0 ? columnGroupMap.get(sortedChangedFieldEntries[i - 1][0]) : undefined
+                            const showGroupHeader = group && group !== prevGroup
+                            return (
+                              <React.Fragment key={field}>
+                                {showGroupHeader && (
+                                  <div className="text-xs font-semibold theme-text-muted uppercase tracking-wider pt-1.5 border-t border-amber-200 dark:border-amber-700 mt-1">
+                                    {t(group)}
+                                  </div>
+                                )}
+                                <div
+                                  className="grid gap-2 text-xs"
+                                  style={{ gridTemplateColumns: '11rem 1fr 1fr' }}
+                                >
+                                  <span className="font-medium text-[rgb(var(--foreground-rgb))]">
+                                    {labelMap.get(field) ?? formatFieldLabel(field)}
+                                  </span>
+                                  <span className="text-red-600 dark:text-red-400 break-all">
+                                    <SnapshotValue fieldKey={field} value={change.old_value} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} />
+                                  </span>
+                                  <span className="text-green-600 dark:text-green-400 font-medium break-all">
+                                    <SnapshotValue fieldKey={field} value={change.new_value} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} />
+                                  </span>
+                                </div>
+                              </React.Fragment>
+                            )
+                          })}
                         </div>
                       </div>
                     )}
@@ -964,10 +1112,11 @@ export default function LEIAuditHistoryModal({
                           newerSnapshot={newerSnapshot}
                           olderSnapshot={olderSnapshot}
                           labelMap={labelMap}
-                          newerLabel={`#${(newerIdx ?? 0) + 1} — ${formatTimestamp(newerAudit.created_at)}${(newerIdx ?? 0) === 0 ? ` (${t('leiAudit.latest')})` : ''}`}
-                          olderLabel={`#${(olderIdx ?? 0) + 1} — ${formatTimestamp(olderAudit.created_at)}`}
+                          newerLabel={`v${audits.length - (newerIdx ?? 0)} — ${formatTimestamp(newerAudit.created_at)}${(newerIdx ?? 0) === 0 ? ` (${t('leiAudit.latest')})` : ''}`}
+                          olderLabel={`v${audits.length - (olderIdx ?? 0)} — ${formatTimestamp(olderAudit.created_at)}`}
                           showCodes={showCodes}
                           countryByCode={countryByCode}
+                          onLeiClick={onLeiClick}
                         />
                       ) : (
                         <div className="flex flex-col items-center justify-center h-40 gap-2 text-sm theme-text-muted">
@@ -988,6 +1137,7 @@ export default function LEIAuditHistoryModal({
                         labelMap={labelMap}
                         showCodes={showCodes}
                         countryByCode={countryByCode}
+                        onLeiClick={onLeiClick}
                       />
                     </div>
                   )}

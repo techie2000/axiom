@@ -743,6 +743,18 @@ export default function LEIRecordsPage() {
     }
   }
 
+  /** Called from LEIAuditHistoryModal when the user clicks a LEI link (managing_lou / successor_lei). */
+  const handleAuditLeiClick = useCallback((leiCode: string) => {
+    const normalizedLeiCode = (leiCode || '').trim()
+    if (!normalizedLeiCode) return
+    // Close the audit modal then open the detail modal for the clicked LEI
+    setAuditRecord(null)
+    void fetch(`${API_BASE_URL}/api/v1/lei/${normalizedLeiCode}`)
+      .then((r) => r.ok ? r.json() : Promise.reject(new Error('not found')))
+      .then((record) => setSelectedRecord(normalizeRecordNullLikeValues(record as LEIRecord)))
+      .catch(() => { /* best-effort: user may retry manually */ })
+  }, [API_BASE_URL])
+
   // Fetch managing LOU name when modal opens
   useEffect(() => {
     const fetchManagingLouName = async () => {
@@ -2414,8 +2426,9 @@ export default function LEIRecordsPage() {
           legalName={auditRecord.legal_name}
           onClose={() => setAuditRecord(null)}
           apiBaseUrl={API_BASE_URL}
-          availableColumns={AVAILABLE_COLUMNS}
+          availableColumns={AVAILABLE_COLUMNS.filter((c) => c.key !== 'country_flag')}
           visibleColumns={effectiveVisibleColumns}
+          onLeiClick={handleAuditLeiClick}
         />
       )}
 
