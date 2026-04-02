@@ -83,8 +83,8 @@ func TestDetectChangesDetectsGenuineDateChange(t *testing.T) {
 	}
 
 	changes := leiRepo.detectChanges(old, rec)
-	if _, ok := changes["LastUpdateDate"]; !ok {
-		t.Fatalf("expected LastUpdateDate to be detected as changed")
+	if _, ok := changes["last_update_date"]; !ok {
+		t.Fatalf("expected last_update_date to be detected as changed")
 	}
 	if len(changes) != 1 {
 		t.Fatalf("expected exactly 1 changed field, got %d: %v", len(changes), changes)
@@ -135,8 +135,8 @@ func TestDetectChangesDetectsStringFieldChange(t *testing.T) {
 	rec := &domain.LEIRecord{LegalName: "New Name Ltd"}
 
 	changes := leiRepo.detectChanges(old, rec)
-	if _, ok := changes["LegalName"]; !ok {
-		t.Fatalf("expected LegalName to be detected as changed")
+	if _, ok := changes["legal_name"]; !ok {
+		t.Fatalf("expected legal_name to be detected as changed")
 	}
 	if len(changes) != 1 {
 		t.Fatalf("expected exactly 1 changed field, got %d: %v", len(changes), changes)
@@ -179,8 +179,8 @@ func TestDetectChangesDetectsGenuineOtherNamesChange(t *testing.T) {
 	rec := &domain.LEIRecord{OtherNames: domain.JSONBString(`[{"language":"lb","name":"New Name Ltd","type":"PREVIOUS_LEGAL_NAME"}]`)}
 
 	changes := leiRepo.detectChanges(old, rec)
-	if _, ok := changes["OtherNames"]; !ok {
-		t.Fatal("expected OtherNames to be detected as changed when name value differs")
+	if _, ok := changes["other_names"]; !ok {
+		t.Fatal("expected other_names to be detected as changed when name value differs")
 	}
 }
 
@@ -227,20 +227,20 @@ func TestDetectChangesMixedGenuineAndFalsePositive(t *testing.T) {
 
 	changes := leiRepo.detectChanges(old, rec)
 
-	if _, ok := changes["EntityStatus"]; !ok {
-		t.Error("expected EntityStatus to be detected as changed")
+	if _, ok := changes["entity_status"]; !ok {
+		t.Error("expected entity_status to be detected as changed")
 	}
-	if _, ok := changes["HQAddressLine1"]; !ok {
-		t.Error("expected HQAddressLine1 to be detected as changed")
+	if _, ok := changes["hq_address_line_1"]; !ok {
+		t.Error("expected hq_address_line_1 to be detected as changed")
 	}
-	if _, ok := changes["NextRenewalDate"]; ok {
-		t.Error("expected NextRenewalDate NOT to be detected as changed (same instant, different *Location)")
+	if _, ok := changes["next_renewal_date"]; ok {
+		t.Error("expected next_renewal_date NOT to be detected as changed (same instant, different *Location)")
 	}
-	if _, ok := changes["OtherNames"]; ok {
-		t.Error("expected OtherNames NOT to be detected as changed (same content, different key ordering)")
+	if _, ok := changes["other_names"]; ok {
+		t.Error("expected other_names NOT to be detected as changed (same content, different key ordering)")
 	}
 	if len(changes) != 2 {
-		t.Fatalf("expected exactly 2 changed fields (EntityStatus, HQAddressLine1), got %d: %v", len(changes), changes)
+		t.Fatalf("expected exactly 2 changed fields (entity_status, hq_address_line_1), got %d: %v", len(changes), changes)
 	}
 }
 
