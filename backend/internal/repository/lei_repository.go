@@ -1348,11 +1348,13 @@ func (r *leiRepository) detectChanges(old, new *domain.LEIRecord) map[string]dom
 
 		// Compare values
 		if !reflect.DeepEqual(oldFieldVal, newFieldVal) {
-			// Special handling for time.Time zero values
+			// Use time.Equal for time.Time fields to avoid false positives caused by
+			// differences in timezone/location representation or monotonic clock readings
+			// between database-loaded and parsed values.
 			if field.Type == reflect.TypeOf(time.Time{}) {
 				oldTime := oldFieldVal.(time.Time)
 				newTime := newFieldVal.(time.Time)
-				if oldTime.IsZero() && newTime.IsZero() {
+				if oldTime.Equal(newTime) {
 					continue
 				}
 			}
