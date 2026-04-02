@@ -1348,11 +1348,24 @@ func (r *leiRepository) detectChanges(old, new *domain.LEIRecord) map[string]dom
 
 		// Compare values
 		if !reflect.DeepEqual(oldFieldVal, newFieldVal) {
-			// Special handling for time.Time zero values
+			// Use time.Equal for time.Time fields to avoid false positives caused by
+			// differences in timezone/location representation or monotonic clock readings
+			// between database-loaded and parsed values.
 			if field.Type == reflect.TypeOf(time.Time{}) {
 				oldTime := oldFieldVal.(time.Time)
 				newTime := newFieldVal.(time.Time)
-				if oldTime.IsZero() && newTime.IsZero() {
+				if oldTime.Equal(newTime) {
+					continue
+				}
+			}
+
+			// Use semantic JSON comparison for JSONBString fields to avoid false
+			// positives caused by different JSON key ordering. Go's json.Marshal
+			// sorts map keys alphabetically (e.g. language < name < type), but the
+			// string stored in PostgreSQL preserves the original insertion order.
+			// The raw strings therefore differ even though the content is identical.
+			if field.Type == reflect.TypeOf(domain.JSONBString("")) {
+				if jsonBStringsSemanticEqual(oldFieldVal.(domain.JSONBString), newFieldVal.(domain.JSONBString)) {
 					continue
 				}
 			}
@@ -1366,6 +1379,40 @@ func (r *leiRepository) detectChanges(old, new *domain.LEIRecord) map[string]dom
 	}
 
 	return changes
+}
+
+// jsonBStringsSemanticEqual compares two JSONBString values by content rather
+// than by raw string equality. Both values are unmarshalled into a generic
+// interface{} and re-marshalled to canonical JSON (json.Marshal sorts map keys
+// alphabetically), so differences in object-key ordering do not cause a false
+// positive change detection.
+//
+// Returns true (equal) when:
+//   - the raw strings are identical (fast path), OR
+//   - both unmarshal to equivalent JSON values regardless of key ordering.
+//
+// Returns false (not equal) when either string is invalid JSON or the content
+// genuinely differs.
+func jsonBStringsSemanticEqual(a, b domain.JSONBString) bool {
+	if a == b {
+		return true
+	}
+	var aVal, bVal interface{}
+	if err := json.Unmarshal([]byte(a), &aVal); err != nil {
+		return false
+	}
+	if err := json.Unmarshal([]byte(b), &bVal); err != nil {
+		return false
+	}
+	aCanon, err := json.Marshal(aVal)
+	if err != nil {
+		return false
+	}
+	bCanon, err := json.Marshal(bVal)
+	if err != nil {
+		return false
+	}
+	return string(aCanon) == string(bCanon)
 }
 
 // recordToJSON converts an LEI record to JSON string
