@@ -116,7 +116,7 @@ const AVAILABLE_COLUMNS: ColumnConfig[] = [
   { key: 'entity_status', labelKey: 'leiRecords.columns.labels.status', groupKey: 'leiRecords.columns.groups.core', defaultVisible: true, width: 'w-32' },
   { key: 'entity_category', labelKey: 'leiRecords.columns.labels.category', groupKey: 'leiRecords.columns.groups.core', defaultVisible: true, width: 'w-40' },
   { key: 'country_flag', labelKey: 'leiRecords.columns.labels.countryFlag', groupKey: 'leiRecords.columns.groups.core', defaultVisible: false, width: 'w-20' },
-  { key: 'legal_address_country', labelKey: 'leiRecords.columns.labels.countryName', groupKey: 'leiRecords.columns.groups.core', defaultVisible: true, width: 'w-24' },
+  { key: 'legal_address_country', labelKey: 'leiRecords.columns.labels.countryName', groupKey: 'leiRecords.columns.groups.legalAddress', defaultVisible: true, width: 'w-24' },
   { key: 'last_update_date', labelKey: 'leiRecords.columns.labels.lastUpdated', groupKey: 'leiRecords.columns.groups.core', defaultVisible: true, width: 'w-32' },
   
   // Additional Entity Info
@@ -1866,13 +1866,13 @@ export default function LEIRecordsPage() {
                     className="px-3 py-2 rounded-lg bg-[rgb(var(--surface-muted-rgb))] hover:bg-[rgb(var(--surface-muted-rgb))] transition-colors text-[rgb(var(--foreground-rgb))] text-sm font-medium"
                     title={t('leiAudit.viewAuditHistory')}
                   >
-                    {t('leiAudit.historyButton')}
+                    {formatLabel(t('leiAudit.historyButton'))}
                   </button>
                   <button
                     onClick={() => setSelectedRecord(null)}
                     className="px-4 py-2 rounded-lg bg-[rgb(var(--surface-muted-rgb))] hover:bg-[rgb(var(--surface-muted-rgb))] dark:bg-[rgb(var(--surface-muted-rgb))] dark:hover:bg-[rgb(var(--surface-muted-rgb))] transition-colors text-[rgb(var(--foreground-rgb))] font-medium"
                   >
-                    {t('leiRecords.modal.close')}
+                    {formatLabel(t('leiRecords.modal.close'))}
                   </button>
                 </div>
               </div>
@@ -1883,14 +1883,14 @@ export default function LEIRecordsPage() {
                   onClick={() => setDateDisplayMode(dateDisplayMode === 'relative' ? 'absolute' : 'relative')}
                   className="px-3 py-1 rounded-lg theme-filterchip transition-colors font-medium"
                 >
-                  {dateDisplayMode === 'relative' ? t('leiRecords.modal.dateRelative') : t('leiRecords.modal.dateDaysOnly')}
+                  {formatLabel(dateDisplayMode === 'relative' ? t('leiRecords.modal.dateRelative') : t('leiRecords.modal.dateDaysOnly'))}
                 </button>
                 <span className="text-[rgb(var(--muted-foreground-rgb))] ml-2">{t('leiRecords.modal.display')}</span>
                 <button
                   onClick={toggleLocationDisplayMode}
                   className="px-3 py-1 rounded-lg theme-filterchip transition-colors font-medium"
                 >
-                  {showLocationCodes ? t('leiRecords.display.codes') : t('leiRecords.display.names')}
+                  {formatLabel(showLocationCodes ? t('leiRecords.display.codes') : t('leiRecords.display.names'))}
                 </button>
               </div>
             </div>
@@ -2372,7 +2372,7 @@ export default function LEIRecordsPage() {
               void handleRecordClick(contextMenu.record)
             }}
           >
-            {t('leiAudit.viewDetails')}
+            {formatLabel(t('leiAudit.viewDetails'))}
           </button>
           <button
             role="menuitem"
@@ -2383,7 +2383,7 @@ export default function LEIRecordsPage() {
               setAuditRecord(contextMenu.record)
             }}
           >
-            {t('leiAudit.viewAuditHistory')}
+            {formatLabel(t('leiAudit.viewAuditHistory'))}
           </button>
         </div>
       )}

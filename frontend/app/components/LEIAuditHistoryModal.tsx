@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import CountryFlag from './CountryFlag'
+import { useButtonEmojiMode } from '../lib/useButtonEmojiMode'
 
 export interface LEIAuditEntry {
   id: string
@@ -367,7 +368,12 @@ function CompareTable({
   }
   return (
     <div className="rounded-lg border border-[rgb(var(--border-rgb))] overflow-hidden overflow-x-auto">
-      <table className="w-full text-sm">
+      <table className="w-full text-sm table-fixed">
+        <colgroup>
+          <col style={{ width: '11rem' }} />
+          <col style={{ width: 'calc((100% - 11rem) / 2)' }} />
+          <col style={{ width: 'calc((100% - 11rem) / 2)' }} />
+        </colgroup>
         <thead>
           <tr className="bg-[rgb(var(--surface-muted-rgb))]">
             <th className="px-3 py-2 text-left text-xs font-medium theme-text-muted uppercase tracking-wider w-44">
@@ -464,6 +470,7 @@ export default function LEIAuditHistoryModal({
   onLeiClick,
 }: Props) {
   const { t } = useTranslation('common')
+  const { formatLabel } = useButtonEmojiMode()
 
   const [audits, setAudits] = useState<LEIAuditEntry[]>([])
   const [loading, setLoading] = useState(true)
@@ -775,8 +782,11 @@ export default function LEIAuditHistoryModal({
       role="presentation"
       className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
       onClick={onClose}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') onClose()
+      }}
     >
-      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- role=dialog is interactive per ARIA spec */}
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/click-events-have-key-events -- role=dialog is interactive per ARIA spec; stopPropagation is required for backdrop click-to-close */}
       <div
         role="dialog"
         aria-modal="true"
@@ -793,7 +803,7 @@ export default function LEIAuditHistoryModal({
               </h2>
               <p className="text-sm font-mono text-[rgb(var(--primary-rgb))] mt-0.5">{lei}</p>
               {legalName && (
-                <p className="text-sm theme-text-muted mt-0.5">{legalName}</p>
+                <p className="text-sm theme-text-muted mt-0.5 break-words leading-5">{legalName}</p>
               )}
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -803,7 +813,7 @@ export default function LEIAuditHistoryModal({
                   onClick={() => setShowColumnSelector(!showColumnSelector)}
                   className="px-3 py-1.5 rounded-lg theme-btn-neutral text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                 >
-                  ⚙️ {t('leiAudit.columns')} ({localColumns.size})
+                  {formatLabel(`⚙️ ${t('leiAudit.columns')} (${localColumns.size})`)}
                 </button>
                 {showColumnSelector && (
                   <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto theme-scrollbar theme-dropdown rounded-lg shadow-xl z-50">
@@ -882,7 +892,7 @@ export default function LEIAuditHistoryModal({
                 }`}
                 title={t('leiAudit.showChangedOnlyTitle')}
               >
-                {t('leiAudit.showChangedOnly')}
+                {formatLabel(t('leiAudit.showChangedOnly'))}
               </button>
 
               {/* Compare mode toggle */}
@@ -898,7 +908,7 @@ export default function LEIAuditHistoryModal({
                 }`}
                 title={t('leiAudit.compareModeTitle')}
               >
-                {t('leiAudit.compareMode')}
+                {formatLabel(t('leiAudit.compareMode'))}
               </button>
 
               {/* Names / Codes display toggle */}
@@ -907,14 +917,14 @@ export default function LEIAuditHistoryModal({
                 className="px-3 py-1.5 rounded-lg theme-btn-neutral text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                 title={showCodes ? t('leiAudit.displayToggleNamesTitle') : t('leiAudit.displayToggleCodesTitle')}
               >
-                {showCodes ? t('leiAudit.displayToggleCodes') : t('leiAudit.displayToggleNames')}
+                {formatLabel(showCodes ? t('leiAudit.displayToggleCodes') : t('leiAudit.displayToggleNames'))}
               </button>
 
               <button
                 onClick={onClose}
                 className="px-3 py-1.5 rounded-lg theme-btn-neutral text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
               >
-                {t('leiRecords.modal.close')}
+                {formatLabel(t('leiRecords.modal.close'))}
               </button>
             </div>
           </div>
@@ -1108,7 +1118,7 @@ export default function LEIAuditHistoryModal({
                           {/* Header — field column matches w-44 in snapshot table */}
                           <div
                             className="grid gap-2 text-xs font-semibold theme-text-muted border-b border-amber-200 dark:border-amber-800 pb-1 mb-1"
-                            style={{ gridTemplateColumns: '11rem 1fr 1fr' }}
+                            style={{ gridTemplateColumns: '11rem minmax(0, 1fr) minmax(0, 1fr)' }}
                           >
                             <span>{t('leiAudit.field')}</span>
                             <span className="text-red-600 dark:text-red-400">{t('leiAudit.oldValue')}</span>
@@ -1127,7 +1137,7 @@ export default function LEIAuditHistoryModal({
                                 )}
                                 <div
                                   className="grid gap-2 text-xs"
-                                  style={{ gridTemplateColumns: '11rem 1fr 1fr' }}
+                                  style={{ gridTemplateColumns: '11rem minmax(0, 1fr) minmax(0, 1fr)' }}
                                 >
                                   <span className="font-medium text-[rgb(var(--foreground-rgb))]">
                                     {labelMap.get(field) ?? formatFieldLabel(field)}
