@@ -153,49 +153,49 @@ func TestDetectChangesDetectsStringFieldChange(t *testing.T) {
 // already stored in PostgreSQL preserves the original insertion order.  The raw
 // JSONBString values therefore differ even when the content is identical.
 func TestDetectChangesNoFalsePositiveForOtherNamesKeyOrdering(t *testing.T) {
-t.Helper()
+	t.Helper()
 
-// Simulate what PostgreSQL returns: original insertion key ordering.
-dbOrder := domain.JSONBString(`[{"name":"Capsugel Holdings S.A.","type":"PREVIOUS_LEGAL_NAME","language":"lb"},{"name":"Chester Holdings S.à r.l.","type":"PREVIOUS_LEGAL_NAME","language":"lb"}]`)
+	// Simulate what PostgreSQL returns: original insertion key ordering.
+	dbOrder := domain.JSONBString(`[{"name":"Capsugel Holdings S.A.","type":"PREVIOUS_LEGAL_NAME","language":"lb"},{"name":"Chester Holdings S.à r.l.","type":"PREVIOUS_LEGAL_NAME","language":"lb"}]`)
 
-// Simulate what json.Marshal produces for the same data: alphabetical key ordering.
-goOrder := domain.JSONBString(`[{"language":"lb","name":"Capsugel Holdings S.A.","type":"PREVIOUS_LEGAL_NAME"},{"language":"lb","name":"Chester Holdings S.à r.l.","type":"PREVIOUS_LEGAL_NAME"}]`)
+	// Simulate what json.Marshal produces for the same data: alphabetical key ordering.
+	goOrder := domain.JSONBString(`[{"language":"lb","name":"Capsugel Holdings S.A.","type":"PREVIOUS_LEGAL_NAME"},{"language":"lb","name":"Chester Holdings S.à r.l.","type":"PREVIOUS_LEGAL_NAME"}]`)
 
-old := &domain.LEIRecord{OtherNames: dbOrder}
-rec := &domain.LEIRecord{OtherNames: goOrder}
+	old := &domain.LEIRecord{OtherNames: dbOrder}
+	rec := &domain.LEIRecord{OtherNames: goOrder}
 
-changes := leiRepo.detectChanges(old, rec)
-if _, ok := changes["OtherNames"]; ok {
-t.Fatalf("expected no change for OtherNames with different key ordering but identical content, got: %v", changes)
-}
+	changes := leiRepo.detectChanges(old, rec)
+	if _, ok := changes["OtherNames"]; ok {
+		t.Fatalf("expected no change for OtherNames with different key ordering but identical content, got: %v", changes)
+	}
 }
 
 // TestDetectChangesDetectsGenuineOtherNamesChange verifies that a real change
 // to OtherNames is still reported correctly after the semantic comparison fix.
 func TestDetectChangesDetectsGenuineOtherNamesChange(t *testing.T) {
-t.Helper()
+	t.Helper()
 
-old := &domain.LEIRecord{OtherNames: domain.JSONBString(`[{"language":"lb","name":"Old Name Ltd","type":"PREVIOUS_LEGAL_NAME"}]`)}
-rec := &domain.LEIRecord{OtherNames: domain.JSONBString(`[{"language":"lb","name":"New Name Ltd","type":"PREVIOUS_LEGAL_NAME"}]`)}
+	old := &domain.LEIRecord{OtherNames: domain.JSONBString(`[{"language":"lb","name":"Old Name Ltd","type":"PREVIOUS_LEGAL_NAME"}]`)}
+	rec := &domain.LEIRecord{OtherNames: domain.JSONBString(`[{"language":"lb","name":"New Name Ltd","type":"PREVIOUS_LEGAL_NAME"}]`)}
 
-changes := leiRepo.detectChanges(old, rec)
-if _, ok := changes["OtherNames"]; !ok {
-t.Fatal("expected OtherNames to be detected as changed when name value differs")
-}
+	changes := leiRepo.detectChanges(old, rec)
+	if _, ok := changes["OtherNames"]; !ok {
+		t.Fatal("expected OtherNames to be detected as changed when name value differs")
+	}
 }
 
 // TestDetectChangesOtherNamesEmptyArrayEqual verifies that two empty
 // OtherNames arrays are considered equal.
 func TestDetectChangesOtherNamesEmptyArrayEqual(t *testing.T) {
-t.Helper()
+	t.Helper()
 
-old := &domain.LEIRecord{OtherNames: domain.JSONBString(`[]`)}
-rec := &domain.LEIRecord{OtherNames: domain.JSONBString(`[]`)}
+	old := &domain.LEIRecord{OtherNames: domain.JSONBString(`[]`)}
+	rec := &domain.LEIRecord{OtherNames: domain.JSONBString(`[]`)}
 
-changes := leiRepo.detectChanges(old, rec)
-if _, ok := changes["OtherNames"]; ok {
-t.Fatalf("expected no change for two empty OtherNames arrays, got: %v", changes)
-}
+	changes := leiRepo.detectChanges(old, rec)
+	if _, ok := changes["OtherNames"]; ok {
+		t.Fatalf("expected no change for two empty OtherNames arrays, got: %v", changes)
+	}
 }
 
 // TestDetectChangesMixedGenuineAndFalsePositive verifies the scenario from the
@@ -203,45 +203,45 @@ t.Fatalf("expected no change for two empty OtherNames arrays, got: %v", changes)
 // false-positive fields (OtherNames with different key ordering, date fields
 // with different *Location).  Only the genuine changes should be detected.
 func TestDetectChangesMixedGenuineAndFalsePositive(t *testing.T) {
-t.Helper()
+	t.Helper()
 
-utcFixed := time.FixedZone("UTC", 0)
-sameInstant := time.Date(2018, 7, 19, 15, 49, 0, 0, time.UTC)
+	utcFixed := time.FixedZone("UTC", 0)
+	sameInstant := time.Date(2018, 7, 19, 15, 49, 0, 0, time.UTC)
 
-// OtherNames: same content but different key ordering.
-dbOtherNames := domain.JSONBString(`[{"name":"Capsugel Holdings S.A.","type":"PREVIOUS_LEGAL_NAME","language":"lb"}]`)
-goOtherNames := domain.JSONBString(`[{"language":"lb","name":"Capsugel Holdings S.A.","type":"PREVIOUS_LEGAL_NAME"}]`)
+	// OtherNames: same content but different key ordering.
+	dbOtherNames := domain.JSONBString(`[{"name":"Capsugel Holdings S.A.","type":"PREVIOUS_LEGAL_NAME","language":"lb"}]`)
+	goOtherNames := domain.JSONBString(`[{"language":"lb","name":"Capsugel Holdings S.A.","type":"PREVIOUS_LEGAL_NAME"}]`)
 
-old := &domain.LEIRecord{
-EntityStatus:    "ACTIVE",
-HQAddressLine1:  "63, rue de Rollingergrund",
-NextRenewalDate: time.Date(2018, 7, 19, 15, 49, 0, 0, utcFixed), // same instant, fixed zone
-OtherNames:      dbOtherNames,
-}
-rec := &domain.LEIRecord{
-EntityStatus:    "INACTIVE",
-HQAddressLine1:  "2, Rue Edward Steichen",
-NextRenewalDate: sameInstant,
-OtherNames:      goOtherNames,
-}
+	old := &domain.LEIRecord{
+		EntityStatus:    "ACTIVE",
+		HQAddressLine1:  "63, rue de Rollingergrund",
+		NextRenewalDate: time.Date(2018, 7, 19, 15, 49, 0, 0, utcFixed), // same instant, fixed zone
+		OtherNames:      dbOtherNames,
+	}
+	rec := &domain.LEIRecord{
+		EntityStatus:    "INACTIVE",
+		HQAddressLine1:  "2, Rue Edward Steichen",
+		NextRenewalDate: sameInstant,
+		OtherNames:      goOtherNames,
+	}
 
-changes := leiRepo.detectChanges(old, rec)
+	changes := leiRepo.detectChanges(old, rec)
 
-if _, ok := changes["EntityStatus"]; !ok {
-t.Error("expected EntityStatus to be detected as changed")
-}
-if _, ok := changes["HQAddressLine1"]; !ok {
-t.Error("expected HQAddressLine1 to be detected as changed")
-}
-if _, ok := changes["NextRenewalDate"]; ok {
-t.Error("expected NextRenewalDate NOT to be detected as changed (same instant, different *Location)")
-}
-if _, ok := changes["OtherNames"]; ok {
-t.Error("expected OtherNames NOT to be detected as changed (same content, different key ordering)")
-}
-if len(changes) != 2 {
-t.Fatalf("expected exactly 2 changed fields (EntityStatus, HQAddressLine1), got %d: %v", len(changes), changes)
-}
+	if _, ok := changes["EntityStatus"]; !ok {
+		t.Error("expected EntityStatus to be detected as changed")
+	}
+	if _, ok := changes["HQAddressLine1"]; !ok {
+		t.Error("expected HQAddressLine1 to be detected as changed")
+	}
+	if _, ok := changes["NextRenewalDate"]; ok {
+		t.Error("expected NextRenewalDate NOT to be detected as changed (same instant, different *Location)")
+	}
+	if _, ok := changes["OtherNames"]; ok {
+		t.Error("expected OtherNames NOT to be detected as changed (same content, different key ordering)")
+	}
+	if len(changes) != 2 {
+		t.Fatalf("expected exactly 2 changed fields (EntityStatus, HQAddressLine1), got %d: %v", len(changes), changes)
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -249,32 +249,32 @@ t.Fatalf("expected exactly 2 changed fields (EntityStatus, HQAddressLine1), got 
 // ---------------------------------------------------------------------------
 
 func TestJSONBStringsSemanticEqualIdentical(t *testing.T) {
-a := domain.JSONBString(`[{"language":"lb","name":"A","type":"T"}]`)
-if !jsonBStringsSemanticEqual(a, a) {
-t.Fatal("expected identical JSONBStrings to be equal")
-}
+	a := domain.JSONBString(`[{"language":"lb","name":"A","type":"T"}]`)
+	if !jsonBStringsSemanticEqual(a, a) {
+		t.Fatal("expected identical JSONBStrings to be equal")
+	}
 }
 
 func TestJSONBStringsSemanticEqualDifferentKeyOrder(t *testing.T) {
-a := domain.JSONBString(`{"name":"A","type":"T","language":"lb"}`)
-b := domain.JSONBString(`{"language":"lb","name":"A","type":"T"}`)
-if !jsonBStringsSemanticEqual(a, b) {
-t.Fatal("expected objects with different key ordering but same content to be equal")
-}
+	a := domain.JSONBString(`{"name":"A","type":"T","language":"lb"}`)
+	b := domain.JSONBString(`{"language":"lb","name":"A","type":"T"}`)
+	if !jsonBStringsSemanticEqual(a, b) {
+		t.Fatal("expected objects with different key ordering but same content to be equal")
+	}
 }
 
 func TestJSONBStringsSemanticEqualDifferentContent(t *testing.T) {
-a := domain.JSONBString(`{"name":"A"}`)
-b := domain.JSONBString(`{"name":"B"}`)
-if jsonBStringsSemanticEqual(a, b) {
-t.Fatal("expected objects with different content to be not equal")
-}
+	a := domain.JSONBString(`{"name":"A"}`)
+	b := domain.JSONBString(`{"name":"B"}`)
+	if jsonBStringsSemanticEqual(a, b) {
+		t.Fatal("expected objects with different content to be not equal")
+	}
 }
 
 func TestJSONBStringsSemanticEqualInvalidJSON(t *testing.T) {
-a := domain.JSONBString(`not-json`)
-b := domain.JSONBString(`{"name":"A"}`)
-if jsonBStringsSemanticEqual(a, b) {
-t.Fatal("expected invalid JSON to compare as not equal")
-}
+	a := domain.JSONBString(`not-json`)
+	b := domain.JSONBString(`{"name":"A"}`)
+	if jsonBStringsSemanticEqual(a, b) {
+		t.Fatal("expected invalid JSON to compare as not equal")
+	}
 }
