@@ -18,6 +18,7 @@ import { useButtonEmojiMode } from '../lib/useButtonEmojiMode'
 import { useEnglishTooltips } from '../lib/useEnglishTooltips'
 import { useUserPreference } from '../lib/useUserPreference'
 import { useSearchFocusShortcut } from '../lib/useSearchFocusShortcut'
+import MapLink from '../components/MapLink'
 import { formatEnumDisplayValue, formatLEICellValue, getStatusBadgePresentation, normalizeRecordNullLikeValues } from './null-utils'
 import { useTranslation } from 'react-i18next'
 import LEIAuditHistoryModal from '../components/LEIAuditHistoryModal'
@@ -654,30 +655,6 @@ export default function LEIRecordsPage() {
     }
     
     return { days: diffDays, relative }
-  }
-
-  // Build OpenStreetMap URL from address components
-  const buildMapUrl = (address: {
-    line1?: string
-    line2?: string
-    line3?: string
-    line4?: string
-    city?: string
-    region?: string
-    country?: string
-    postalCode?: string
-  }) => {
-    const parts = [
-      address.line1,
-      address.line2,
-      address.line3,
-      address.line4,
-      address.city,
-      address.postalCode
-    ].filter(Boolean)
-    
-    const query = parts.join(', ')
-    return `https://www.openstreetmap.org/search?query=${encodeURIComponent(query)}`
   }
 
   // Handler to fetch complete record for detail view
@@ -1997,22 +1974,18 @@ export default function LEIRecordsPage() {
                       {t('leiRecords.modal.legalAddress')}
                     </h4>
                     {selectedRecord.legal_address_city && (
-                      <button
-                        onClick={() => window.open(buildMapUrl({
+                      <MapLink
+                        address={{
                           line1: selectedRecord.legal_address_line_1,
                           line2: selectedRecord.legal_address_line_2,
                           line3: selectedRecord.legal_address_line_3,
                           line4: selectedRecord.legal_address_line_4,
                           city: selectedRecord.legal_address_city,
                           region: selectedRecord.legal_address_region,
-                          country: selectedRecord.legal_address_country,
-                          postalCode: selectedRecord.legal_address_postal_code
-                        }), '_blank')}
-                        className="text-[rgb(var(--primary-rgb))] dark:text-[rgb(var(--primary-rgb))] hover:text-[rgb(var(--primary-rgb))] dark:hover:text-[rgb(var(--primary-rgb))] text-xs font-medium flex items-center gap-1 transition-colors"
-                        title="View on OpenStreetMap"
-                      >
-                        {t('leiRecords.modal.viewOnMap')}
-                      </button>
+                          country: getCountryNameByCode(selectedRecord.legal_address_country) || selectedRecord.legal_address_country,
+                          postalCode: selectedRecord.legal_address_postal_code,
+                        }}
+                      />
                     )}
                   </div>
                   <div className="flex items-center justify-between">
@@ -2020,22 +1993,18 @@ export default function LEIRecordsPage() {
                       {t('leiRecords.modal.hqAddress')}
                     </h4>
                     {!isHqAddressSameAsLegal(selectedRecord) && selectedRecord.hq_address_city && (
-                      <button
-                        onClick={() => window.open(buildMapUrl({
+                      <MapLink
+                        address={{
                           line1: selectedRecord.hq_address_line_1,
                           line2: selectedRecord.hq_address_line_2,
                           line3: selectedRecord.hq_address_line_3,
                           line4: selectedRecord.hq_address_line_4,
                           city: selectedRecord.hq_address_city,
                           region: selectedRecord.hq_address_region,
-                          country: selectedRecord.hq_address_country,
-                          postalCode: selectedRecord.hq_address_postal_code
-                        }), '_blank')}
-                        className="text-[rgb(var(--primary-rgb))] dark:text-[rgb(var(--primary-rgb))] hover:text-[rgb(var(--primary-rgb))] dark:hover:text-[rgb(var(--primary-rgb))] text-xs font-medium flex items-center gap-1 transition-colors"
-                        title="View on OpenStreetMap"
-                      >
-                        {t('leiRecords.modal.viewOnMap')}
-                      </button>
+                          country: getCountryNameByCode(selectedRecord.hq_address_country) || selectedRecord.hq_address_country,
+                          postalCode: selectedRecord.hq_address_postal_code,
+                        }}
+                      />
                     )}
                   </div>
                 </div>

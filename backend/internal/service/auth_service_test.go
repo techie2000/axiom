@@ -20,6 +20,8 @@ import (
 type authRepoStub struct {
 	users            map[string]*domain.User // keyed by ID string
 	createErr        error
+	findByEmailErr   error
+	findByIDErr      error
 	updateErr        error
 	activeAdminCount int64
 	countErr         error
@@ -45,6 +47,9 @@ func (r *authRepoStub) Create(u *domain.User) error {
 }
 
 func (r *authRepoStub) FindByID(id string) (*domain.User, error) {
+	if r.findByIDErr != nil {
+		return nil, r.findByIDErr
+	}
 	u, ok := r.users[id]
 	if !ok {
 		return nil, gorm.ErrRecordNotFound
@@ -53,6 +58,9 @@ func (r *authRepoStub) FindByID(id string) (*domain.User, error) {
 }
 
 func (r *authRepoStub) FindByEmail(email string) (*domain.User, error) {
+	if r.findByEmailErr != nil {
+		return nil, r.findByEmailErr
+	}
 	for _, u := range r.users {
 		if u.Email == email {
 			return u, nil
@@ -731,5 +739,145 @@ func TestEnsureBootstrapAdmin_CountError_Propagated(t *testing.T) {
 
 	if err := svc.EnsureBootstrapAdmin(); err == nil {
 		t.Error("expected error when CountActiveAdmins fails")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// EnsurePlaywrightTestUser tests
+// ---------------------------------------------------------------------------
+
+const pwEmail = "playwright@axiom.local"
+const pwPassword = "Playwright1!"
+
+// Happy path: creates the test user when it does not exist.
+func TestEnsurePlaywrightTestUser_CreatesUser(t *testing.T) {
+	repo := newAuthRepoStub()
+	svc := newSvc(repo)
+
+	if err := svc.EnsurePlaywrightTestUser(pwEmail, pwPassword); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// The user must be stored at the fixed ID.
+	u, err := repo.FindByID(playwrightTestUserID)
+	if err != nil {
+		t.Fatalf("user not found after creation: %v", err)
+	}
+	if u.Email != pwEmail {
+		t.Errorf("email = %q; want %q", u.Email, pwEmail)
+	}
+	if u.Username != "playwright" {
+		// Username is derived from the email local part (before '@').
+		t.Errorf("username = %q; want %q", u.Username, "playwright")
+	}
+	if u.Status != domain.UserStatusActive {
+		t.Errorf("status = %q; want active", u.Status)
+	}
+	if u.Role != domain.UserRoleAdmin {
+		t.Errorf("role = %q; want admin", u.Role)
+	}
+	// The stored password hash must match the plaintext password.
+	if bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(pwPassword)) != nil {
+		t.Error("stored password hash does not match the provided password")
+	}
+}
+
+// When the user already exists and is active, the call must be a no-op.
+func TestEnsurePlaywrightTestUser_AlreadyExists_NoOp(t *testing.T) {
+	repo := newAuthRepoStub()
+	hash, _ := bcrypt.GenerateFromPassword([]byte(pwPassword), bcrypt.DefaultCost)
+	existing := &domain.User{
+		BaseModel:    domain.BaseModel{ID: uuid.MustParse(playwrightTestUserID)},
+		Email:        pwEmail,
+		Username:     "playwright",
+		PasswordHash: string(hash),
+		Role:         domain.UserRoleAdmin,
+		Status:       domain.UserStatusActive,
+	}
+	repo.addUser(existing)
+	svc := newSvc(repo)
+
+	if err := svc.EnsurePlaywrightTestUser(pwEmail, pwPassword); err != nil {
+		t.Fatalf("unexpected error on idempotent call: %v", err)
+	}
+}
+
+// When the user exists but is inactive, the call must reactivate it.
+func TestEnsurePlaywrightTestUser_Inactive_Reactivated(t *testing.T) {
+	repo := newAuthRepoStub()
+	hash, _ := bcrypt.GenerateFromPassword([]byte(pwPassword), bcrypt.DefaultCost)
+	inactive := &domain.User{
+		BaseModel:    domain.BaseModel{ID: uuid.MustParse(playwrightTestUserID)},
+		Email:        pwEmail,
+		Username:     "playwright",
+		PasswordHash: string(hash),
+		Role:         domain.UserRoleAdmin,
+		Status:       domain.UserStatusInactive,
+	}
+	repo.addUser(inactive)
+	svc := newSvc(repo)
+
+	if err := svc.EnsurePlaywrightTestUser(pwEmail, pwPassword); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	u, _ := repo.FindByID(playwrightTestUserID)
+	if u.Status != domain.UserStatusActive {
+		t.Errorf("expected user to be reactivated; status = %q", u.Status)
+	}
+}
+
+// When Create returns an error, it must be propagated.
+func TestEnsurePlaywrightTestUser_CreateError_Propagated(t *testing.T) {
+	repo := newAuthRepoStub()
+	repo.createErr = errors.New("db write failure")
+	svc := newSvc(repo)
+
+	if err := svc.EnsurePlaywrightTestUser(pwEmail, pwPassword); err == nil {
+		t.Error("expected error when repository.Create fails")
+	}
+}
+
+// When FindByID returns a non-ErrRecordNotFound error, it must be propagated.
+func TestEnsurePlaywrightTestUser_FindByIDError_Propagated(t *testing.T) {
+	repo := newAuthRepoStub()
+	repo.findByIDErr = errors.New("db read failure")
+	svc := newSvc(repo)
+
+	err := svc.EnsurePlaywrightTestUser(pwEmail, pwPassword)
+	if err == nil || !strings.Contains(err.Error(), "database error while checking playwright test user") {
+		t.Fatalf("expected wrapped FindByID error, got %v", err)
+	}
+}
+
+// When FindByEmail returns a non-ErrRecordNotFound error, it must be propagated.
+func TestEnsurePlaywrightTestUser_FindByEmailError_Propagated(t *testing.T) {
+	repo := newAuthRepoStub()
+	repo.findByEmailErr = errors.New("db email lookup failure")
+	svc := newSvc(repo)
+
+	err := svc.EnsurePlaywrightTestUser(pwEmail, pwPassword)
+	if err == nil || !strings.Contains(err.Error(), "database error while checking email") {
+		t.Fatalf("expected wrapped FindByEmail error, got %v", err)
+	}
+}
+
+// When the email is already taken by a different account (different ID),
+// the call must skip creation gracefully without error.
+func TestEnsurePlaywrightTestUser_EmailConflict_GracefulSkip(t *testing.T) {
+	repo := newAuthRepoStub()
+	// A pre-existing user with the playwright email but a different ID.
+	conflict := &domain.User{
+		BaseModel: domain.BaseModel{ID: uuid.New()},
+		Email:     pwEmail,
+		Username:  "someone-else",
+		Role:      domain.UserRoleUser,
+		Status:    domain.UserStatusActive,
+	}
+	repo.addUser(conflict)
+	svc := newSvc(repo)
+
+	if err := svc.EnsurePlaywrightTestUser(pwEmail, pwPassword); err != nil {
+		t.Errorf("expected graceful skip on email conflict, got error: %v", err)
 	}
 }
