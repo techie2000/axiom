@@ -822,6 +822,7 @@ export default function LEIAuditHistoryModal({
                   {formatLabel(`⚙️ ${t('leiAudit.columns')} (${localColumns.size})`)}
                 </button>
                 {showColumnSelector && (
+                  // eslint-disable-next-line jsx-a11y/no-static-element-interactions
                   <div
                     className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto theme-scrollbar theme-dropdown rounded-lg shadow-xl z-50"
                     onKeyDown={(e) => {
@@ -830,7 +831,6 @@ export default function LEIAuditHistoryModal({
                         setShowColumnSelector(false)
                       }
                     }}
-                    role="listbox"
                   >
                     <div className="sticky top-0 theme-dropdown border-b p-3">
                       <div className="flex justify-between items-center mb-2">
