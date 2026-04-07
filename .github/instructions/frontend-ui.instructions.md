@@ -119,6 +119,18 @@ const API_BASE_URL = typeof window !== 'undefined'
   </select>
   ```
 
+### Theme Palette Consistency Standard (Required)
+
+- New pages must follow the established app palette in both light and dark modes.
+- Do not use page-local bright/legacy blue backgrounds for dark-mode page shells, cards, table containers, or filter bars.
+- Prefer neutral dark surfaces consistent with existing pages, for example:
+  - page shell: `dark:from-slate-950 dark:to-slate-900`
+  - card/surface: `dark:bg-slate-900/60` with `dark:border-slate-700/50`
+  - row hover: `dark:hover:bg-white/5` (or approved equivalent)
+- Reserve blue for intent emphasis (primary actions, links, focus rings), not dominant dark-mode background surfaces.
+- Before merge, compare new pages against reference pages (`lei-records`,
+  `countries`, `currencies`, `languages`) in both themes.
+
 ### UI Element Visibility Checklist
 
 **CRITICAL**: Always verify visibility when implementing or modifying UI elements. Complete this checklist for
@@ -293,6 +305,8 @@ selector.
 - Clear pending refs and local state inside `handleSave*` callbacks.
 - Do **not** clear local state in `handleDismiss*` callbacks — the UI change persists for the
   session even when the user declines to save.
+- For preference-backed toggles (including `Expand/Normal` width), showing a `PreferenceSavePrompt`
+  after local state changes is mandatory.
 
 #### Quick-start
 
@@ -423,6 +437,14 @@ step-by-step guide and integration checklist.
 - Use `hover:bg-blue-50` for light mode row hover states (or stronger approved equivalent), not subtle gray shades.
 - Preserve dark mode row hover behavior (for example, `dark:hover:bg-white/10` or `dark:hover:bg-white/5`).
 - Include `transition-colors` on interactive table rows for consistent visual feedback.
+
+### Sortable Header Standard (Required)
+
+- Interactive review/list tables where users compare values must support sorting on data columns.
+- Sortable headers must always show a visual affordance and display clear direction arrows for active sort state.
+- Use shared `SortableHeaderCell` for consistency; avoid page-local sortable header implementations.
+- Keep action-only columns (for example `Actions`) non-sortable.
+- Use client-side sorting for loaded rows unless server-side sorting is explicitly required.
 
 ### Table Cell Content Visibility Standard (Required)
 
