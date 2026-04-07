@@ -629,7 +629,7 @@ Only ask follow-up questions if required metadata cannot be applied (for example
 
 ## GitHub Comment Formatting (REQUIRED)
 
-When posting PR/issue comments, checklists, or review summaries via CLI/API:
+When posting PR/issue comments, checklists, PR descriptions, or review summaries via CLI/API:
 
 1. Use **real multiline Markdown**, not escaped newline text. The rendered comment must show bullets and checkboxes on separate lines.
 2. **Do not post literal escape sequences** like `\\n`, `\\t`, or JSON-escaped text into comment bodies.
@@ -638,6 +638,15 @@ When posting PR/issue comments, checklists, or review summaries via CLI/API:
    - `gh api ... --method PATCH/POST -f "body=..."` where the body variable already contains real newlines.
 4. Immediately verify the posted body (for example with `gh api ... --jq .body` or `gh pr view --comments`) and fix in-place if formatting is not human-readable.
 5. For checklist comments, keep concise one-line bullets and avoid shell-escaped artifacts in the final rendered text.
+
+## Markdown Authoring Guardrail (REQUIRED)
+
+When creating or editing markdown in `.github/` (especially `*.instructions.md`):
+
+1. Keep lines within markdownlint line-length limits (MD013, currently 120 chars).
+2. Always add explicit language tags to fenced code blocks (MD040), for example `bash`, `powershell`, `json`, `yaml`, `markdown`, or `text`.
+3. Keep required blank lines around headings, lists, and fenced blocks (MD022/MD031/MD032).
+4. Before pushing, run `make docs-check-fix` then `make docs-check`; if lint still fails, fix manually until clean.
 
 ## Git Ref Cleanup Guardrail (REQUIRED)
 
