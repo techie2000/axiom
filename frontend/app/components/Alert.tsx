@@ -11,20 +11,20 @@ interface AlertProps {
 
 const variantClasses: Record<AlertVariant, { wrapper: string; text: string }> = {
   info: {
-    wrapper: 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800',
-    text:    'text-blue-800 dark:text-blue-200',
+    wrapper: 'theme-status-info',
+    text:    'theme-status-text-info',
   },
   warning: {
-    wrapper: 'bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800',
-    text:    'text-yellow-800 dark:text-yellow-200',
+    wrapper: 'theme-status-warning',
+    text:    'theme-status-text-warning',
   },
   error: {
-    wrapper: 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800',
-    text:    'text-red-800 dark:text-red-200',
+    wrapper: 'theme-status-danger',
+    text:    'theme-status-text-danger',
   },
   success: {
-    wrapper: 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800',
-    text:    'text-green-800 dark:text-green-200',
+    wrapper: 'theme-status-success',
+    text:    'theme-status-text-success',
   },
 }
 

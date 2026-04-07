@@ -204,6 +204,7 @@ backgrounds: "#555" (dark gray) with white text
 ### Instructions (`instructions/*.instructions.md`)
 Coding standards that AI applies when generating or reviewing code:
 - **Language-specific**: `go.instructions.md` - Go idioms and best practices
+- **Frontend-specific**: `frontend-ui.instructions.md` - Theme consistency, sortable-table standards, and mandatory `PreferenceSavePrompt` UX for preference-backed toggles
 - **Cross-cutting**:
   - `security-and-owasp.instructions.md` - Security best practices
   - `performance-optimization.instructions.md` - Performance guidelines
@@ -286,6 +287,34 @@ Rules:
 
 - Do not commit markdown changes while markdown lint is failing.
 - Treat markdown lint failures as blocking, not advisory.
+
+### Feature Test Gate (REQUIRED)
+
+When an agent adds or changes functional behavior, it must also add or update automated tests in the same change whenever automated coverage is feasible.
+
+Rules:
+
+1. Treat feature work as incomplete until tests for the new behavior exist.
+2. Do not wait for review comments to request tests; add them proactively.
+3. For backend Go changes, update or add `*_test.go` coverage in the affected module.
+4. For frontend changes, add or update the nearest existing Vitest coverage when the area already has a test pattern or harness.
+5. For frontend behavior changes, prefer testing user-visible behavior, transformation logic, and state transitions over implementation details.
+6. When frontend UI logic is hard to test directly, extract a pure helper and cover it with Vitest.
+7. For frontend i18n, filtering, formatting, preferences, and null-handling changes, add focused regression tests for the changed path.
+8. For bug fixes, add a regression test that would fail before the fix when practical.
+9. If tests cannot be added, state the reason explicitly in the final response or PR summary.
+
+Minimum test expectation for behavior changes:
+
+- happy path
+- failure or validation path
+- at least one edge case for the new logic
+
+Frontend validation expectation when relevant:
+
+- `cd frontend && npm test`
+- `cd frontend && npm run lint`
+- `cd frontend && npm run i18n:verify` for i18n-related changes
 
 ### Self-Explanatory Code
 `self-explanatory-code-commenting.instructions.md` emphasizes:
@@ -600,7 +629,7 @@ Only ask follow-up questions if required metadata cannot be applied (for example
 
 ## GitHub Comment Formatting (REQUIRED)
 
-When posting PR/issue comments, checklists, or review summaries via CLI/API:
+When posting PR/issue comments, checklists, PR descriptions, or review summaries via CLI/API:
 
 1. Use **real multiline Markdown**, not escaped newline text. The rendered comment must show bullets and checkboxes on separate lines.
 2. **Do not post literal escape sequences** like `\\n`, `\\t`, or JSON-escaped text into comment bodies.
@@ -609,6 +638,15 @@ When posting PR/issue comments, checklists, or review summaries via CLI/API:
    - `gh api ... --method PATCH/POST -f "body=..."` where the body variable already contains real newlines.
 4. Immediately verify the posted body (for example with `gh api ... --jq .body` or `gh pr view --comments`) and fix in-place if formatting is not human-readable.
 5. For checklist comments, keep concise one-line bullets and avoid shell-escaped artifacts in the final rendered text.
+
+## Markdown Authoring Guardrail (REQUIRED)
+
+When creating or editing markdown in `.github/` (especially `*.instructions.md`):
+
+1. Keep lines within markdownlint line-length limits (MD013, currently 120 chars).
+2. Always add explicit language tags to fenced code blocks (MD040), for example `bash`, `powershell`, `json`, `yaml`, `markdown`, or `text`.
+3. Keep required blank lines around headings, lists, and fenced blocks (MD022/MD031/MD032).
+4. Before pushing, run `make docs-check-fix` then `make docs-check`; if lint still fails, fix manually until clean.
 
 ## Git Ref Cleanup Guardrail (REQUIRED)
 

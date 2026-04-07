@@ -1,5 +1,8 @@
 # Axiom - Financial Services Static Data System
 
+[![CI](https://github.com/techie2000/axiom/actions/workflows/ci.yml/badge.svg)](https://github.com/techie2000/axiom/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/techie2000/axiom/graph/badge.svg)](https://codecov.io/gh/techie2000/axiom)
+
 A modular monolith financial services static data management system built with Go, Next.js, and PostgreSQL.
 
 ## Overview
@@ -523,7 +526,14 @@ go test ./...
 # Frontend tests
 cd frontend
 npm test
+
+# Frontend tests with coverage report (enforces ≥ 50% line/statement coverage)
+cd frontend
+npm run test:coverage
 ```
+
+Coverage is reported to [Codecov](https://codecov.io/gh/techie2000/axiom) on every CI run.
+The coverage badge at the top of this file reflects the latest `main` branch result.
 
 ## API Documentation
 
@@ -632,16 +642,16 @@ make lint-docs-fix
 make lint-all
 ```
 
-**Pre-commit Hooks:**
+**Git Hooks (pre-commit and pre-push):**
 
-Install git hooks to automatically validate markdown files before commits:
+Install git hooks to automatically run quality checks on every commit and push:
 
 ```bash
 make install-hooks
 ```
 
-This prevents commits with markdown linting errors (line length > 120 chars, missing code block languages,
-table formatting issues). See [.githooks/README.md](.githooks/README.md) for details.
+The hooks validate markdown linting, VS Code settings sort order, and more.
+See [.githooks/README.md](.githooks/README.md) for the full list of checks and requirements.
 
 ### Go Code
 
@@ -679,6 +689,7 @@ Published site: <https://techie2000.github.io/axiom/docs-user/>
 - [LEI Records](docs-user/workflows/lei-records.md)
 - [Countries](docs-user/workflows/countries.md)
 - [Currencies](docs-user/workflows/currencies.md)
+- [Languages](docs-user/workflows/languages.md)
 - [Entities](docs-user/workflows/entities.md)
 - [Settlement Instructions (SSI)](docs-user/workflows/ssi.md)
 

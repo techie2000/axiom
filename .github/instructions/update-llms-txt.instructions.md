@@ -16,6 +16,7 @@ documentation.
 Update `llms.txt` immediately when ANY of the following occur:
 
 ### Documentation Changes
+
 - **New documentation file added** in `docs/` or subdirectories
 - **Documentation file removed or renamed**
 - **Significant documentation restructuring** (moving files between directories)
@@ -23,23 +24,27 @@ Update `llms.txt` immediately when ANY of the following occur:
 - **New ADR (Architecture Decision Record) added** in `docs/adr/`
 
 ### Infrastructure Changes
+
 - **New service added** to docker-compose files
 - **New Dockerfile created** or existing one significantly changed
 - **New deployment environment added** (e.g., staging, canary)
 - **Major architecture pattern change** requiring new documentation section
 
 ### Feature Changes
+
 - **Major feature added** that includes new documentation
 - **Integration with new external system** (e.g., LEI was added, would need llms.txt update)
 - **New API endpoints documented** in separate files
 
 ### Configuration Changes
+
 - **New configuration files added** that are important for understanding the system
 - **Environment setup process changed** requiring new documentation reference
 
 ## What NOT to Update For
 
 Do NOT update `llms.txt` for:
+
 - Minor documentation typo fixes or formatting changes
 - Code implementation changes without documentation impact
 - Version bumps in dependencies
@@ -51,6 +56,7 @@ Do NOT update `llms.txt` for:
 ### Step 1: Review the Change
 
 Ask yourself:
+
 1. Does this change add, remove, or rename a documentation file?
 2. Does this change alter how someone would understand the repository?
 3. Would an LLM benefit from knowing about this file?
@@ -75,6 +81,7 @@ Format the generated `llms.txt` entries as: descriptive name, relative URL, then
 Literal structure: `[descriptive-name]` + `(relative-url)` + `: brief description`
 
 **Guidelines:**
+
 - Use clear, descriptive link text (not just "Documentation" or "README")
 - Provide brief description explaining the file's purpose
 - Keep descriptions concise (one line, under 120 characters)
@@ -91,6 +98,7 @@ Literal structure: `[descriptive-name]` + `(relative-url)` + `: brief descriptio
 ### Step 5: Verify Compliance
 
 After updating, ensure:
+
 - [ ] File follows https://llmstxt.org/ format specification
 - [ ] All links use relative paths from repository root
 - [ ] H1 header remains unchanged (project name)
@@ -107,6 +115,7 @@ After updating, ensure:
 **Scenario**: New ADR created at `docs/adr/adr-0008-grpc-microservices.md`
 
 **Update Required**:
+
 ```text
 ## Architecture Decision Records
 
@@ -122,6 +131,7 @@ After updating, ensure:
 
 **Update Required**:
 Create new section or add to existing relevant section:
+
 ```text
 ## Core Features
 
@@ -135,6 +145,7 @@ Create new section or add to existing relevant section:
 
 **Update Required**:
 Remove the corresponding line from `llms.txt`:
+
 ```text
 ## API Documentation
 
@@ -149,6 +160,7 @@ Remove the corresponding line from `llms.txt`:
 
 **Update Required**:
 Update all affected paths:
+
 ```text
 ## API Documentation
 
@@ -177,6 +189,7 @@ docs
 ## Integration with CI/CD
 
 Consider adding a CI check (future enhancement) that:
+
 - Detects when documentation files are added/removed
 - Validates llms.txt links are not broken
 - Warns if new documentation in `docs/` is not referenced in llms.txt
@@ -213,6 +226,7 @@ Before committing `llms.txt` updates:
 ## Support
 
 If unsure whether a change requires an llms.txt update, ask:
+
 - "Would an LLM benefit from knowing this file exists?"
 - "Is this file essential for understanding a major component?"
 - "Does this change how someone would navigate the repository?"

@@ -1,5 +1,7 @@
 'use client'
 
+import ThemedSelect from './ThemedSelect'
+
 interface TablePaginationControlsProps {
   currentPage: number
   isFirstPage: boolean
@@ -36,31 +38,30 @@ export default function TablePaginationControls({
       <button
         onClick={onPrevious}
         disabled={isFirstPage}
-        className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-600 dark:disabled:bg-gray-600 dark:disabled:text-gray-400 disabled:cursor-not-allowed transition-colors text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+        className="px-4 py-2 rounded-lg theme-btn-primary theme-focus disabled:opacity-60 disabled:cursor-not-allowed"
       >
         {previousLabel}
       </button>
 
       <div className="flex items-center gap-4">
-        <span className="text-gray-700 dark:text-gray-300">{pageLabel}</span>
+        <span className="theme-text-muted">{pageLabel}</span>
         <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-700 dark:text-gray-300">{itemsPerPageLabel}</label>
-          <select
-            value={pageSize}
-            onChange={(event) => onPageSizeChange(Number(event.target.value))}
-            className="px-3 py-1 rounded-lg bg-white border-2 border-gray-200 dark:bg-gray-800 dark:border-white/10 text-gray-900 dark:text-white text-sm focus:border-blue-500 focus:outline-none"
-          >
-            {pageSizeOptions.map((size) => (
-              <option key={size} value={size}>{size}</option>
-            ))}
-          </select>
+          <label className="text-sm theme-text-muted">{itemsPerPageLabel}</label>
+          <ThemedSelect
+            value={String(pageSize)}
+            onChange={(next) => onPageSizeChange(Number(next))}
+            ariaLabel={itemsPerPageLabel}
+            className="min-w-[5.5rem]"
+            buttonClassName="px-3 py-1 text-sm"
+            options={pageSizeOptions.map((size) => ({ value: String(size), label: String(size) }))}
+          />
         </div>
       </div>
 
       <button
         onClick={onNext}
         disabled={isLastPage}
-        className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-600 dark:disabled:bg-gray-600 dark:disabled:text-gray-400 disabled:cursor-not-allowed transition-colors text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+        className="px-4 py-2 rounded-lg theme-btn-primary theme-focus disabled:opacity-60 disabled:cursor-not-allowed"
       >
         {nextLabel}
       </button>

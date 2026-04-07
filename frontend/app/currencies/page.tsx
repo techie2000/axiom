@@ -12,10 +12,12 @@ import SearchInputWithOverflowTooltip from '../components/SearchInputWithOverflo
 import SortableHeaderCell from '../components/SortableHeaderCell'
 import StatCard from '../components/StatCard'
 import SyncedWideTable from '../components/SyncedWideTable'
+import ThemedSelect from '../components/ThemedSelect'
 import { useDeferredBooleanPreference } from '../lib/useDeferredBooleanPreference'
 import { buildDocsUrl } from '../lib/docsLinks'
 import { useEnglishTooltips } from '../lib/useEnglishTooltips'
 import { useButtonEmojiMode } from '../lib/useButtonEmojiMode'
+import { useSearchFocusShortcut } from '../lib/useSearchFocusShortcut'
 
 interface Currency {
   id: string
@@ -39,6 +41,8 @@ export default function CurrenciesPage() {
   const { getEnglishTooltip } = useEnglishTooltips()
   const { formatLabel } = useButtonEmojiMode()
   const filterBarRef = useRef<HTMLDivElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  useSearchFocusShortcut(searchInputRef)
 
   const [currencies, setCurrencies] = useState<Currency[]>([])
   const [loading, setLoading] = useState(true)
@@ -219,7 +223,7 @@ export default function CurrenciesPage() {
   const backHref = isLoggedIn ? '/dashboard' : '/home'
 
   return (
-    <div className="min-h-screen p-8">
+    <div className="min-h-screen p-8 pb-14">
       <div className={`${effectiveExpandedWidth ? 'max-w-full' : 'max-w-7xl'} mx-auto transition-all duration-300`}>
         {/* Header */}
         <PageHeader
@@ -233,7 +237,7 @@ export default function CurrenciesPage() {
             <>
               <button
                 onClick={expandedWidthPreference.toggle}
-                className="h-9 px-3 rounded-lg border border-gray-300 dark:border-white/20 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                className="theme-header-action rounded-lg theme-btn-neutral theme-focus"
                 title={effectiveExpandedWidth ? getEnglishTooltip('referenceLayout.normalButton') : getEnglishTooltip('referenceLayout.expandButton')}
                 aria-label={effectiveExpandedWidth ? t('referenceLayout.normalButton') : t('referenceLayout.expandButton')}
               >
@@ -242,7 +246,7 @@ export default function CurrenciesPage() {
               {expandedWidthPreference.hasUnsavedChanges && (
                 <button
                   onClick={expandedWidthPreference.saveCurrentValue}
-                  className="px-3 py-2 rounded-lg bg-green-700 hover:bg-green-600 transition-colors text-white text-xs font-medium"
+                  className="theme-header-action rounded-lg theme-btn-primary theme-focus"
                   title={getEnglishTooltip('referenceLayout.savePageWidthDefault')}
                 >
                   {formatLabel('💾 Save width')}
@@ -293,50 +297,53 @@ export default function CurrenciesPage() {
         </div>
 
         {/* Search and compliance filter */}
-        <div className="mb-6 bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm rounded-lg p-6">
+        <div className="mb-6 theme-panel border-2 backdrop-blur-sm rounded-lg p-6">
           <div className="flex flex-col sm:flex-row gap-3 mb-4">
           <SearchInputWithOverflowTooltip
+            ref={searchInputRef}
             type="text"
             placeholder={t('currencies.searchPlaceholder')}
             title={getEnglishTooltip('currencies.searchPlaceholder')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1 px-4 py-2 border border-gray-300 dark:border-white/20 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-white/5 text-gray-900 dark:text-white"
+            className="flex-1 px-4 py-2 border rounded-lg theme-input"
           />
-          <select
+          <ThemedSelect
             value={complianceFilter}
-            onChange={(e) => setComplianceFilter(e.target.value as ComplianceFilter)}
+            onChange={(next) => setComplianceFilter(next as ComplianceFilter)}
+            ariaLabel={t('currencies.filters.complianceChip', {
+              value: complianceFilter === 'alert_cls'
+                ? t('currencies.filters.alertClsAllowed')
+                : complianceFilter === 'ofac'
+                  ? t('currencies.filters.ofacSanctioned')
+                  : t('currencies.filters.allCurrencies'),
+            })}
             title={getEnglishTooltip(complianceFilterTranslationKey)}
-            className="px-4 py-2 border border-gray-300 dark:border-white/20 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-          >
-            <option
-              className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-              value="all"
-              title={getEnglishTooltip('currencies.filters.allCurrencies')}
-            >
-              {t('currencies.filters.allCurrencies')}
-            </option>
-            <option
-              className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-              value="alert_cls"
-              title={getEnglishTooltip('currencies.filters.alertClsAllowed')}
-            >
-              {t('currencies.filters.alertClsAllowed')}
-            </option>
-            <option
-              className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-              value="ofac"
-              title={getEnglishTooltip('currencies.filters.ofacSanctioned')}
-            >
-              {t('currencies.filters.ofacSanctioned')}
-            </option>
-          </select>
+            className="min-w-[13rem]"
+            options={[
+              {
+                value: 'all',
+                label: t('currencies.filters.allCurrencies'),
+                title: getEnglishTooltip('currencies.filters.allCurrencies'),
+              },
+              {
+                value: 'alert_cls',
+                label: t('currencies.filters.alertClsAllowed'),
+                title: getEnglishTooltip('currencies.filters.alertClsAllowed'),
+              },
+              {
+                value: 'ofac',
+                label: t('currencies.filters.ofacSanctioned'),
+                title: getEnglishTooltip('currencies.filters.ofacSanctioned'),
+              },
+            ]}
+          />
           </div>
           {hasActiveFilters && (
             <div className="flex gap-3">
               <button
                 onClick={clearFilters}
-                className="px-6 py-2 rounded-lg bg-white hover:bg-gray-100 dark:bg-gray-600 dark:hover:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-transparent transition-colors font-medium shadow-sm"
+                className="px-6 py-2 rounded-lg theme-btn-neutral transition-colors font-medium shadow-sm"
                 title={getEnglishTooltip('actions.clearFilters')}
               >
                 {t('actions.clearFilters')}
@@ -348,15 +355,15 @@ export default function CurrenciesPage() {
         {hasActiveFilters && (
           <div
             ref={filterBarRef}
-            className="sticky top-0 z-40 mb-1 bg-blue-50 dark:bg-blue-900 border-2 border-blue-200 dark:border-blue-700 px-4 py-2 shadow-md rounded-lg"
+            className="sticky top-0 z-40 mb-1 theme-filterbar border-2 border-[rgb(var(--ring-rgb)/0.35)] px-4 py-2 shadow-md rounded-lg"
           >
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-semibold text-blue-900 dark:text-blue-100">{t('filters.activeFilters')}</span>
+                <span className="text-xs font-semibold theme-link">{t('filters.activeFilters')}</span>
                 {searchTerm && (
                   <button
                     onClick={() => setSearchTerm('')}
-                    className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors"
+                    className="px-2 py-1 rounded text-xs font-medium transition-colors theme-filterchip"
                     title={getEnglishTooltip('filters.searchChip', { value: searchTerm })}
                   >
                     {t('filters.searchChip', { value: searchTerm })}
@@ -365,7 +372,7 @@ export default function CurrenciesPage() {
                 {complianceFilter !== 'all' && (
                   <button
                     onClick={() => setComplianceFilter('all')}
-                    className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs font-medium hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors"
+                    className="px-2 py-1 rounded text-xs font-medium transition-colors theme-filterchip"
                     title={getEnglishTooltip('currencies.filters.complianceChip', {
                       value: complianceFilter === 'alert_cls' ? t('currencies.filters.alertClsAllowed', { lng: 'en' }) : t('currencies.filters.ofacSanctioned', { lng: 'en' })
                     })}
@@ -378,7 +385,7 @@ export default function CurrenciesPage() {
               </div>
               <button
                 onClick={clearFilters}
-                className="px-3 py-1 text-xs rounded-lg bg-white hover:bg-gray-100 dark:bg-blue-600 dark:hover:bg-blue-700 text-blue-900 dark:text-white border border-blue-300 dark:border-transparent transition-colors font-medium shadow-sm"
+                className="px-3 py-1 text-xs rounded-lg theme-filterchip-clear transition-colors font-medium shadow-sm"
                 title={getEnglishTooltip('filters.clearAll')}
               >
                 {t('filters.clearAll')}
@@ -388,14 +395,14 @@ export default function CurrenciesPage() {
         )}
 
         {/* Currencies Table */}
-        <div className="bg-white dark:bg-white/5 rounded-lg shadow border-2 border-gray-200 dark:border-white/10">
+        <div className="theme-table-shell rounded-lg shadow border-2">
           <SyncedWideTable
             stickyTopOffset={hasActiveFilters ? filterBarHeight : 0}
             dependencyKey={`${effectiveExpandedWidth}-${filteredCurrencies.length}-${complianceFilter}-${searchTerm}`}
             headerRow={(
               <tr>
                 <SortableHeaderCell
-                  className="w-20 px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="w-20 px-4 py-3 text-xs font-medium uppercase tracking-wider theme-table-header-cell"
                   align="center"
                   label={<span title={getEnglishTooltip('currencies.columns.code')}>{t('currencies.columns.code')}</span>}
                   onSort={() => handleSort('code')}
@@ -403,21 +410,21 @@ export default function CurrenciesPage() {
                   sortDirection={sortDirection}
                 />
                 <SortableHeaderCell
-                  className="w-80 px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="w-80 px-4 py-3 text-xs font-medium uppercase tracking-wider theme-table-header-cell"
                   label={<span title={getEnglishTooltip('currencies.columns.name')}>{t('currencies.columns.name')}</span>}
                   onSort={() => handleSort('name')}
                   isActiveSort={sortField === 'name'}
                   sortDirection={sortDirection}
                 />
                 <SortableHeaderCell
-                  className="w-40 px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="w-40 px-4 py-3 text-xs font-medium uppercase tracking-wider theme-table-header-cell"
                   label={<span title={getEnglishTooltip('currencies.columns.symbol')}>{t('currencies.columns.symbol')}</span>}
                   onSort={() => handleSort('symbol')}
                   isActiveSort={sortField === 'symbol'}
                   sortDirection={sortDirection}
                 />
                 <SortableHeaderCell
-                  className="w-24 px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="w-24 px-4 py-3 text-xs font-medium uppercase tracking-wider theme-table-header-cell"
                   align="center"
                   label={<span title={getEnglishTooltip('currencies.columns.decimals')}>{t('currencies.columns.decimals')}</span>}
                   onSort={() => handleSort('decimal_digits')}
@@ -425,7 +432,7 @@ export default function CurrenciesPage() {
                   sortDirection={sortDirection}
                 />
                 <SortableHeaderCell
-                  className="w-32 px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="w-32 px-4 py-3 text-xs font-medium uppercase tracking-wider theme-table-header-cell"
                   align="center"
                   label={<span title={getEnglishTooltip('currencies.columns.alertCls')}>{t('currencies.columns.alertCls')}</span>}
                   onSort={() => handleSort('is_alert_cls_allowed')}
@@ -433,7 +440,7 @@ export default function CurrenciesPage() {
                   sortDirection={sortDirection}
                 />
                 <SortableHeaderCell
-                  className="w-36 px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="w-36 px-4 py-3 text-xs font-medium uppercase tracking-wider theme-table-header-cell"
                   align="center"
                   label={<span title={getEnglishTooltip('currencies.columns.ofac')}>{t('currencies.columns.ofac')}</span>}
                   onSort={() => handleSort('is_ofac_sanctioned')}
@@ -446,46 +453,46 @@ export default function CurrenciesPage() {
               <>
                 {filteredCurrencies.length > 0 ? (
                   filteredCurrencies.map((currency) => (
-                    <tr key={currency.id} className="hover:bg-blue-50 dark:hover:bg-white/10 transition-colors">
-                      <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white text-center">
+                    <tr key={currency.id} className="theme-table-row-hover transition-colors">
+                      <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-center">
                         <Badge variant="blue" mono>{currency.code}</Badge>
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        <span className="text-gray-900 dark:text-white">{currency.name}</span>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm theme-text-muted">
+                        <span>{currency.name}</span>
                         {currency.name_plural && currency.name_plural !== currency.name && (
-                          <span className="ml-1 text-xs text-gray-400 dark:text-gray-500">
+                          <span className="ml-1 text-xs theme-text-muted">
                             ({currency.name_plural})
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      <td className="px-4 py-4 whitespace-nowrap text-sm theme-text-muted">
                         <span className="text-lg">{currency.symbol}</span>
                         {currency.symbol_native && currency.symbol_native !== currency.symbol && (
-                          <span className="ml-2 text-xs text-gray-400 dark:text-gray-500">{currency.symbol_native}</span>
+                          <span className="ml-2 text-xs theme-text-muted">{currency.symbol_native}</span>
                         )}
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 font-mono text-center">
+                      <td className="px-4 py-4 whitespace-nowrap text-sm theme-text-muted font-mono text-center">
                         {currency.decimal_digits}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-center">
                         {currency.is_alert_cls_allowed ? (
                           <Badge variant="green" shape="pill"><span title={getEnglishTooltip('currencies.status.allowed')}>{t('currencies.status.allowed')}</span></Badge>
                         ) : (
-                          <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>
+                          <span className="theme-text-muted text-xs">—</span>
                         )}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-center">
                         {currency.is_ofac_sanctioned ? (
                           <Badge variant="red" shape="pill"><span title={getEnglishTooltip('currencies.status.sanctioned')}>{t('currencies.status.sanctioned')}</span></Badge>
                         ) : (
-                          <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>
+                          <span className="theme-text-muted text-xs">—</span>
                         )}
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                    <td colSpan={6} className="px-6 py-4 text-center text-sm theme-text-muted">
                       {t('currencies.emptyWithSearch')}
                     </td>
                   </tr>
@@ -496,7 +503,7 @@ export default function CurrenciesPage() {
         </div>
 
         {/* Footer Note */}
-        <div className="mt-6 text-center text-sm text-gray-500">
+        <div className="mt-6 text-center text-sm theme-text-muted">
           <p title={getEnglishTooltip('currencies.footer')}>{t('currencies.footer')}</p>
         </div>
       </div>

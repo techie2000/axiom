@@ -125,22 +125,22 @@ export default function PreferenceSavePrompt({
       <div
         role="status"
         aria-live="polite"
-        className="fixed bottom-5 right-5 z-50 flex max-w-[calc(100vw-2.5rem)] items-center gap-3 rounded-lg border border-white/20 bg-gray-800/95 px-4 py-3 text-sm text-white shadow-xl backdrop-blur-sm transition-all"
+        className="fixed bottom-5 right-5 z-50 flex max-w-[calc(100vw-2.5rem)] items-center gap-3 rounded-lg border theme-panel px-4 py-3 text-sm shadow-xl backdrop-blur-sm transition-all"
       >
-        <span className="text-gray-300">
+        <span className="theme-text-muted">
           {undoPromptLabel}
         </span>
         {onUndo && (
           <button
             onClick={handleUndo}
-            className="rounded bg-amber-600 px-3 py-1 text-xs font-semibold text-white hover:bg-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-400"
+            className="rounded theme-btn-primary theme-focus px-3 py-1 text-xs font-semibold"
           >
             {undoButtonLabel}
           </button>
         )}
         <button
           onClick={handleUndoDismiss}
-          className="rounded bg-white/10 px-3 py-1 text-xs font-semibold text-gray-300 hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/30"
+          className="rounded theme-btn-neutral theme-focus px-3 py-1 text-xs font-semibold"
           aria-label={dismissButtonLabel}
         >
           ✕
@@ -156,20 +156,20 @@ export default function PreferenceSavePrompt({
     <div
       role="status"
       aria-live="polite"
-      className="fixed bottom-5 right-5 z-50 flex max-w-[calc(100vw-2.5rem)] items-center gap-3 rounded-lg border border-white/20 bg-gray-800/95 px-4 py-3 text-sm text-white shadow-xl backdrop-blur-sm transition-all"
+      className="fixed bottom-5 right-5 z-50 flex max-w-[calc(100vw-2.5rem)] items-center gap-3 rounded-lg border theme-panel px-4 py-3 text-sm shadow-xl backdrop-blur-sm transition-all"
     >
-      <span className="text-gray-300">
+      <span className="theme-text-muted">
         {savePromptLabel}
       </span>
       <button
         onClick={handleSave}
-        className="rounded bg-blue-600 px-3 py-1 text-xs font-semibold text-white hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400"
+        className="rounded theme-btn-primary theme-focus px-3 py-1 text-xs font-semibold"
       >
         {saveButtonLabel}
       </button>
       <button
         onClick={handleDismiss}
-        className="rounded bg-white/10 px-3 py-1 text-xs font-semibold text-gray-300 hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/30"
+        className="rounded theme-btn-neutral theme-focus px-3 py-1 text-xs font-semibold"
       >
         {noThanksButtonLabel}
       </button>

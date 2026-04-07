@@ -109,6 +109,24 @@ func (h *LEIHandler) GetDistinctLegalForms(c *gin.Context) {
 	c.JSON(http.StatusOK, legalForms)
 }
 
+// GetLEICount returns the total number of LEI records in the database
+// @Summary Get total LEI record count
+// @Description Returns the total count of LEI records stored in the database, regardless of sync status
+// @Tags LEI
+// @Produce json
+// @Success 200 {object} map[string]int64
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/lei/count [get]
+func (h *LEIHandler) GetLEICount(c *gin.Context) {
+	count, err := h.leiService.CountLEIRecords()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to count LEI records")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to count LEI records"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"count": count})
+}
+
 // GetLEIByCode retrieves an LEI record by LEI code
 // @Summary Get LEI record by code
 // @Description Get a specific LEI record by its LEI code

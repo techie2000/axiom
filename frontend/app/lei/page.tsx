@@ -327,25 +327,25 @@ export default function LEIStatusPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'RUNNING':
-        return 'bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900 dark:text-blue-200 dark:border-blue-700'
+        return 'theme-filterchip border-[rgb(var(--ring-rgb))]'
       case 'COMPLETED':
         return 'bg-green-100 text-green-800 border-green-300 dark:bg-green-900 dark:text-green-200 dark:border-green-700'
       case 'FAILED':
         return 'bg-red-100 text-red-800 border-red-300 dark:bg-red-900 dark:text-red-200 dark:border-red-700'
       case 'IDLE':
-        return 'bg-gray-100 text-gray-800 border-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600'
+        return 'theme-subtle border-[rgb(var(--border-rgb))]'
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600'
+        return 'theme-subtle border-[rgb(var(--border-rgb))]'
     }
   }
 
   const getStatusDot = (status: string) => {
     switch (status) {
-      case 'RUNNING': return 'bg-blue-500 animate-pulse'
+      case 'RUNNING': return 'bg-[rgb(var(--primary-rgb))] animate-pulse'
       case 'COMPLETED': return 'bg-green-500'
       case 'FAILED': return 'bg-red-500'
-      case 'IDLE': return 'bg-gray-400'
-      default: return 'bg-gray-400'
+      case 'IDLE': return 'bg-[rgb(var(--muted-foreground-rgb))]'
+      default: return 'bg-[rgb(var(--muted-foreground-rgb))]'
     }
   }
 
@@ -473,7 +473,7 @@ export default function LEIStatusPage() {
       return (
         <div id={cardId} className={`rounded-lg shadow-md p-6 border-2 ${
           isDisabled
-            ? 'bg-gray-100 dark:bg-gray-800/30 border-gray-300 dark:border-gray-700 opacity-60'
+            ? 'bg-[rgb(var(--surface-muted-rgb))] dark:bg-[rgb(var(--surface-muted-rgb))]/30 border-[rgb(var(--border-rgb))] dark:border-[rgb(var(--border-rgb))] opacity-60'
             : 'bg-white/5 backdrop-blur-sm border-white/10'
         }`}>
           <h2 className="text-2xl font-bold mb-4">{title}</h2>
@@ -511,7 +511,7 @@ export default function LEIStatusPage() {
     return (
       <div id={cardId} className={`rounded-lg shadow-md p-6 border-2 ${
         isDisabled
-          ? 'bg-gray-100 dark:bg-gray-800/30 border-gray-300 dark:border-gray-700 opacity-60'
+          ? 'bg-[rgb(var(--surface-muted-rgb))] dark:bg-[rgb(var(--surface-muted-rgb))]/30 border-[rgb(var(--border-rgb))] dark:border-[rgb(var(--border-rgb))] opacity-60'
           : 'bg-white/5 backdrop-blur-sm border-white/10'
       }`}>
         <div className="flex justify-between items-start mb-4">
@@ -520,7 +520,7 @@ export default function LEIStatusPage() {
             <button
               onClick={() => toggleCardExpand(jobKey)}
               disabled={!canToggle}
-              className="px-3 py-1 rounded-full text-xs font-semibold border border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="px-3 py-1 rounded-full text-xs font-semibold border border-[rgb(var(--border-rgb))] text-[rgb(var(--muted-foreground-rgb))] hover:bg-[rgb(var(--surface-muted-rgb))] dark:border-[rgb(var(--border-rgb))] dark:text-[rgb(var(--muted-foreground-rgb))] dark:hover:bg-[rgb(var(--surface-muted-rgb))] disabled:opacity-60 disabled:cursor-not-allowed"
               title={canToggle ? (isExpanded ? 'Collapse details' : 'Expand details') : 'Running jobs stay expanded'}
             >
               {isExpanded ? 'Collapse' : 'Expand'}
@@ -531,37 +531,37 @@ export default function LEIStatusPage() {
           </div>
         </div>
 
-        <div className="mb-4 bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+        <div className="mb-4 bg-[rgb(var(--surface-muted-rgb))] rounded-lg p-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-600 dark:text-gray-400">Schedule:</span>
-              <span className="font-medium text-gray-900 dark:text-white">{frequency || 'N/A'}</span>
+              <span className="text-[rgb(var(--muted-foreground-rgb))]">Schedule:</span>
+              <span className="font-medium text-[rgb(var(--foreground-rgb))]">{frequency || 'N/A'}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600 dark:text-gray-400">Depends On:</span>
-              <span className="font-medium text-gray-900 dark:text-white">{dependency}</span>
+              <span className="text-[rgb(var(--muted-foreground-rgb))]">Depends On:</span>
+              <span className="font-medium text-[rgb(var(--foreground-rgb))]">{dependency}</span>
             </div>
           </div>
         </div>
 
         <div className="space-y-2 text-sm mb-4">
           <div className="flex justify-between">
-            <span className="text-gray-600 dark:text-gray-400">Last Run:</span>
-            <span className="font-medium text-gray-900 dark:text-white">{formatDate(status.last_run_at)}</span>
+            <span className="text-[rgb(var(--muted-foreground-rgb))]">Last Run:</span>
+            <span className="font-medium text-[rgb(var(--foreground-rgb))]">{formatDate(status.last_run_at)}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-gray-600 dark:text-gray-400">Last Success:</span>
-            <span className="font-medium text-gray-900 dark:text-white">{formatDate(status.last_success_at)}</span>
+            <span className="text-[rgb(var(--muted-foreground-rgb))]">Last Success:</span>
+            <span className="font-medium text-[rgb(var(--foreground-rgb))]">{formatDate(status.last_success_at)}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-gray-600 dark:text-gray-400">Next Run:</span>
-            <span className="font-medium text-gray-900 dark:text-white">
+            <span className="text-[rgb(var(--muted-foreground-rgb))]">Next Run:</span>
+            <span className="font-medium text-[rgb(var(--foreground-rgb))]">
               {getNextRunDisplay(status, dependency)}
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-gray-600 dark:text-gray-400">Current File:</span>
-            <span className="font-medium text-gray-900 dark:text-white truncate max-w-[70%] text-right">
+            <span className="text-[rgb(var(--muted-foreground-rgb))]">Current File:</span>
+            <span className="font-medium text-[rgb(var(--foreground-rgb))] truncate max-w-[70%] text-right">
               {currentFileLabel}
             </span>
           </div>
@@ -572,55 +572,55 @@ export default function LEIStatusPage() {
             {file && status.status === 'RUNNING' && (
               <div className="mb-6">
                 {progressMessage && (
-                  <p className="text-sm text-blue-700 dark:text-blue-300 mb-2">⏳ {progressMessage}</p>
+                  <p className="text-sm text-[rgb(var(--primary-rgb))] dark:text-[rgb(var(--primary-rgb))] mb-2">⏳ {progressMessage}</p>
                 )}
                 {file.total_records > 0 ? (
                   <>
                     <div className="flex justify-between text-sm mb-2">
-                      <span className="font-medium text-gray-900 dark:text-white">Processing Progress</span>
-                      <span className="text-gray-600 dark:text-gray-400">
+                      <span className="font-medium text-[rgb(var(--foreground-rgb))]">Processing Progress</span>
+                      <span className="text-[rgb(var(--muted-foreground-rgb))]">
                         {file.processed_records.toLocaleString()} / {file.total_records.toLocaleString()} records ({progress.toFixed(1)}%)
                       </span>
                     </div>
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden">
+                    <div className="w-full bg-[rgb(var(--surface-muted-rgb))] dark:bg-[rgb(var(--surface-muted-rgb))] rounded-full h-4 overflow-hidden">
                       <div
-                        className="bg-blue-600 dark:bg-blue-500 h-4 rounded-full transition-all duration-500 ease-out"
+                        className="bg-[rgb(var(--primary-rgb))] dark:bg-[rgb(var(--surface-soft-rgb))]0 h-4 rounded-full transition-all duration-500 ease-out"
                         style={{ width: `${Math.min(progress, 100)}%` }}
                       />
                     </div>
                   </>
                 ) : (
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                  <div className="text-sm text-[rgb(var(--muted-foreground-rgb))]">
                     <p className="mb-2">
                       ⏳ {progressMessage || 'Preparing file for processing...'} ({file.processed_records.toLocaleString()} records processed)
                     </p>
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden">
-                      <div className="bg-blue-600 dark:bg-blue-500 h-4 rounded-full animate-pulse" style={{ width: '30%' }} />
+                    <div className="w-full bg-[rgb(var(--surface-muted-rgb))] dark:bg-[rgb(var(--surface-muted-rgb))] rounded-full h-4 overflow-hidden">
+                      <div className="bg-[rgb(var(--primary-rgb))] dark:bg-[rgb(var(--surface-soft-rgb))]0 h-4 rounded-full animate-pulse" style={{ width: '30%' }} />
                     </div>
                   </div>
                 )}
               </div>
             )}
 
-            <div className="mb-4 bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-              <h3 className="font-semibold mb-2 text-sm text-gray-700 dark:text-gray-200">Processing Summary</h3>
+            <div className="mb-4 bg-[rgb(var(--surface-muted-rgb))] rounded-lg p-4">
+              <h3 className="font-semibold mb-2 text-sm text-[rgb(var(--muted-foreground-rgb))] dark:text-[rgb(var(--muted-foreground-rgb))]">Processing Summary</h3>
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Total Records:</span>
-                  <span className="font-medium text-gray-900 dark:text-white">
+                  <span className="text-[rgb(var(--muted-foreground-rgb))]">Total Records:</span>
+                  <span className="font-medium text-[rgb(var(--foreground-rgb))]">
                     {totalRecords > 0 ? totalRecords.toLocaleString() : '-'}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Successfully Processed:</span>
+                  <span className="text-[rgb(var(--muted-foreground-rgb))]">Successfully Processed:</span>
                   <span className="font-medium text-green-600 dark:text-green-400">
                     {totalRecords > 0 ? successfulProcessed.toLocaleString() : '-'}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Failed Records:</span>
+                  <span className="text-[rgb(var(--muted-foreground-rgb))]">Failed Records:</span>
                   <div className="flex items-center gap-2">
-                    <span className={`font-medium ${failedRecords > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-gray-900 dark:text-white'}`}>
+                    <span className={`font-medium ${failedRecords > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-[rgb(var(--foreground-rgb))]'}`}>
                       {totalRecords > 0
                         ? `${failedRecords > 0 ? '⚠️ ' : ''}${failedRecords.toLocaleString()}`
                         : '-'}
@@ -640,9 +640,9 @@ export default function LEIStatusPage() {
             </div>
 
             {isImportJob && level2JobKey && level2FailuresOpen && (
-              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mb-4">
+              <div className="bg-[rgb(var(--surface-muted-rgb))] rounded-lg p-4 mb-4">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-200">
+                  <h3 className="font-semibold text-sm text-[rgb(var(--muted-foreground-rgb))] dark:text-[rgb(var(--muted-foreground-rgb))]">
                     Failed Records {level2OpenOnly ? '(Open)' : '(Open + Resolved)'}
                   </h3>
                   <div className="flex items-center gap-2">
@@ -650,8 +650,8 @@ export default function LEIStatusPage() {
                       type="button"
                       onClick={() => void switchLevel2FailureMode(level2JobKey, true)}
                       className={`text-xs px-2 py-1 rounded border ${level2OpenOnly
-                        ? 'border-blue-300 text-blue-700 bg-blue-50 dark:border-blue-700 dark:text-blue-300 dark:bg-blue-900/20'
-                        : 'border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700'
+                        ? 'theme-filterchip border-[rgb(var(--ring-rgb))]'
+                        : 'theme-btn-neutral'
                       }`}
                     >
                       Open only
@@ -660,20 +660,20 @@ export default function LEIStatusPage() {
                       type="button"
                       onClick={() => void switchLevel2FailureMode(level2JobKey, false)}
                       className={`text-xs px-2 py-1 rounded border ${!level2OpenOnly
-                        ? 'border-blue-300 text-blue-700 bg-blue-50 dark:border-blue-700 dark:text-blue-300 dark:bg-blue-900/20'
-                        : 'border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700'
+                        ? 'theme-filterchip border-[rgb(var(--ring-rgb))]'
+                        : 'theme-btn-neutral'
                       }`}
                     >
                       Include resolved
                     </button>
                   </div>
                 </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                <p className="text-xs text-[rgb(var(--muted-foreground-rgb))] mb-3">
                   Showing {level2Failures.length.toLocaleString()} of {level2FailuresTotal.toLocaleString()} records
                 </p>
 
                 {level2FailuresLoading && (
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Loading failure details...</p>
+                  <p className="text-sm text-[rgb(var(--muted-foreground-rgb))]">Loading failure details...</p>
                 )}
 
                 {!level2FailuresLoading && level2FailuresError && (
@@ -681,15 +681,15 @@ export default function LEIStatusPage() {
                 )}
 
                 {!level2FailuresLoading && !level2FailuresError && level2Failures.length === 0 && (
-                  <p className="text-sm text-gray-600 dark:text-gray-400">No matching failed records.</p>
+                  <p className="text-sm text-[rgb(var(--muted-foreground-rgb))]">No matching failed records.</p>
                 )}
 
                 {!level2FailuresLoading && !level2FailuresError && level2Failures.length > 0 && (
-                  <div className="space-y-2 max-h-72 overflow-y-auto">
+                  <div className="space-y-2 max-h-72 overflow-y-auto theme-scrollbar">
                     {level2Failures.map((failure) => (
-                      <div key={failure.id} className="rounded border border-gray-200 dark:border-gray-700 p-3 bg-white dark:bg-gray-900/30">
+                      <div key={failure.id} className="rounded border border-[rgb(var(--border-rgb))] p-3 bg-[rgb(var(--surface-rgb))]/30">
                         <div className="flex items-center justify-between gap-2 mb-1">
-                          <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">{failure.failure_stage}</span>
+                          <span className="text-xs font-semibold text-[rgb(var(--muted-foreground-rgb))] dark:text-[rgb(var(--muted-foreground-rgb))]">{failure.failure_stage}</span>
                           <span className={`text-[11px] px-2 py-0.5 rounded-full border ${failure.resolved
                             ? 'border-green-300 text-green-700 dark:border-green-700 dark:text-green-300'
                             : 'border-orange-300 text-orange-700 dark:border-orange-700 dark:text-orange-300'
@@ -697,11 +697,11 @@ export default function LEIStatusPage() {
                             {failure.resolved ? 'RESOLVED' : 'OPEN'}
                           </span>
                         </div>
-                        <p className="text-xs text-gray-600 dark:text-gray-300 break-all">
+                        <p className="text-xs text-[rgb(var(--muted-foreground-rgb))] dark:text-[rgb(var(--muted-foreground-rgb))] break-all">
                           <span className="font-medium">Key:</span> {failure.natural_key || '(none)'}
                         </p>
                         <p className="text-xs text-red-600 dark:text-red-400 mt-1 break-words">{failure.error_message}</p>
-                        <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+                        <p className="text-[11px] text-[rgb(var(--muted-foreground-rgb))] mt-1">
                           Raised: {formatDate(failure.created_at)}
                           {failure.resolved_at ? ` • Resolved: ${formatDate(failure.resolved_at)}` : ''}
                         </p>
@@ -712,22 +712,22 @@ export default function LEIStatusPage() {
               </div>
             )}
 
-            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mb-4">
-              <h3 className="font-semibold mb-2 text-sm text-gray-700 dark:text-gray-200">Current File</h3>
-              <div className="space-y-1 text-sm text-gray-900 dark:text-gray-100">
-                <p className="truncate"><span className="font-medium text-gray-700 dark:text-gray-300">Name:</span> {currentFileLabel}</p>
-                <p><span className="font-medium text-gray-700 dark:text-gray-300">Status:</span> {file?.processing_status || status.status}</p>
-                <p><span className="font-medium text-gray-700 dark:text-gray-300">Total Records:</span> {totalRecords > 0 ? totalRecords.toLocaleString() : '-'}</p>
-                <p><span className="font-medium text-gray-700 dark:text-gray-300">Processed:</span> {totalRecords > 0 ? `${successfulProcessed.toLocaleString()} records` : '-'}</p>
-                <p className="truncate"><span className="font-medium text-gray-700 dark:text-gray-300">Last LEI:</span> {file?.last_processed_lei || '-'}</p>
+            <div className="bg-[rgb(var(--surface-muted-rgb))] rounded-lg p-4 mb-4">
+              <h3 className="font-semibold mb-2 text-sm text-[rgb(var(--muted-foreground-rgb))] dark:text-[rgb(var(--muted-foreground-rgb))]">Current File</h3>
+              <div className="space-y-1 text-sm text-[rgb(var(--foreground-rgb))]">
+                <p className="truncate"><span className="font-medium text-[rgb(var(--muted-foreground-rgb))]">Name:</span> {currentFileLabel}</p>
+                <p><span className="font-medium text-[rgb(var(--muted-foreground-rgb))]">Status:</span> {file?.processing_status || status.status}</p>
+                <p><span className="font-medium text-[rgb(var(--muted-foreground-rgb))]">Total Records:</span> {totalRecords > 0 ? totalRecords.toLocaleString() : '-'}</p>
+                <p><span className="font-medium text-[rgb(var(--muted-foreground-rgb))]">Processed:</span> {totalRecords > 0 ? `${successfulProcessed.toLocaleString()} records` : '-'}</p>
+                <p className="truncate"><span className="font-medium text-[rgb(var(--muted-foreground-rgb))]">Last LEI:</span> {file?.last_processed_lei || '-'}</p>
                 {status.status === 'RUNNING' && progressMessage && (
-                  <p className="text-blue-700 dark:text-blue-300">
+                  <p className="text-[rgb(var(--primary-rgb))] dark:text-[rgb(var(--primary-rgb))]">
                     <span className="font-medium">Progress:</span> {progressMessage}
                   </p>
                 )}
                 {isMasterDataJob && masterDataCounts && (
                   <p>
-                    <span className="font-medium text-gray-700 dark:text-gray-300">Breakdown:</span>{' '}
+                    <span className="font-medium text-[rgb(var(--muted-foreground-rgb))]">Breakdown:</span>{' '}
                     {`Countries ${masterDataCounts.countries.toLocaleString()}, Currencies ${masterDataCounts.currencies.toLocaleString()}, Languages ${masterDataCounts.languages.toLocaleString()}`}
                   </p>
                 )}
@@ -763,7 +763,7 @@ export default function LEIStatusPage() {
     <button
       type="button"
       onClick={onToggle}
-      className="w-5 h-5 shrink-0 inline-flex items-center justify-center rounded-md border border-transparent bg-transparent text-gray-500 hover:border-gray-300 hover:bg-gray-100/80 hover:text-gray-700 focus-visible:outline-none focus-visible:border-gray-400 dark:text-gray-400 dark:hover:border-white/25 dark:hover:bg-white/10 dark:hover:text-gray-200 dark:focus-visible:border-white/35"
+      className="w-5 h-5 shrink-0 inline-flex items-center justify-center rounded-md border border-transparent bg-transparent text-[rgb(var(--muted-foreground-rgb))] hover:border-[rgb(var(--border-rgb))] hover:bg-[rgb(var(--surface-muted-rgb))]/80 hover:text-[rgb(var(--muted-foreground-rgb))] focus-visible:outline-none focus-visible:border-[rgb(var(--border-rgb))] dark:text-[rgb(var(--muted-foreground-rgb))] dark:hover:border-white/25 dark:hover:bg-white/10 dark:hover:text-[rgb(var(--muted-foreground-rgb))] dark:focus-visible:border-white/35"
       aria-label={label}
       title={label}
     >
@@ -782,7 +782,7 @@ export default function LEIStatusPage() {
     <button
       type="button"
       onClick={onClick}
-      className="w-7 h-7 inline-flex items-center justify-center rounded-md border border-transparent bg-transparent text-gray-500 hover:border-gray-300 hover:bg-gray-100/80 hover:text-gray-700 focus-visible:outline-none focus-visible:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed dark:text-gray-400 dark:hover:border-white/25 dark:hover:bg-white/10 dark:hover:text-gray-200 dark:focus-visible:border-white/35"
+      className="w-7 h-7 inline-flex items-center justify-center rounded-md border border-transparent bg-transparent text-[rgb(var(--muted-foreground-rgb))] hover:border-[rgb(var(--border-rgb))] hover:bg-[rgb(var(--surface-muted-rgb))]/80 hover:text-[rgb(var(--muted-foreground-rgb))] focus-visible:outline-none focus-visible:border-[rgb(var(--border-rgb))] disabled:opacity-50 disabled:cursor-not-allowed dark:text-[rgb(var(--muted-foreground-rgb))] dark:hover:border-white/25 dark:hover:bg-white/10 dark:hover:text-[rgb(var(--muted-foreground-rgb))] dark:focus-visible:border-white/35"
       disabled={disabled}
       title={title}
       aria-label={title}
@@ -794,12 +794,12 @@ export default function LEIStatusPage() {
   )
 
   const renderRowTimestamps = (status: ProcessingStatus | null, className: string = 'mt-1') => (
-    <div className={`${className} text-xs text-gray-500 dark:text-gray-500`}>
+    <div className={`${className} text-xs text-[rgb(var(--muted-foreground-rgb))]`}>
       <span>
-        Last run: <span className="font-mono text-gray-700 dark:text-gray-300">{formatDate(status?.last_run_at ?? null)}</span>
+        Last run: <span className="font-mono text-[rgb(var(--muted-foreground-rgb))]">{formatDate(status?.last_run_at ?? null)}</span>
       </span>
       <span className="ml-4">
-        Last success: <span className="font-mono text-gray-700 dark:text-gray-300">{formatDate(status?.last_success_at ?? null)}</span>
+        Last success: <span className="font-mono text-[rgb(var(--muted-foreground-rgb))]">{formatDate(status?.last_success_at ?? null)}</span>
       </span>
     </div>
   )
@@ -816,17 +816,17 @@ export default function LEIStatusPage() {
     const label = getJobDisplayName(jobType)
     const badge = status
       ? <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${getStatusColor(status.status)}`}>{status.status}</span>
-      : <span className="px-2 py-0.5 rounded-full text-xs font-semibold border bg-gray-100 text-gray-500 border-gray-300 dark:bg-gray-700 dark:text-gray-400 dark:border-gray-600">UNKNOWN</span>
+      : <span className="px-2 py-0.5 rounded-full text-xs font-semibold border bg-[rgb(var(--surface-muted-rgb))] text-[rgb(var(--muted-foreground-rgb))] border-[rgb(var(--border-rgb))] dark:bg-[rgb(var(--surface-muted-rgb))] dark:text-[rgb(var(--muted-foreground-rgb))] dark:border-[rgb(var(--border-rgb))]">UNKNOWN</span>
 
     return (
-      <div className={`flex items-start gap-3 py-3 ${indentClass} border-b border-gray-200 dark:border-white/10 last:border-b-0`}>
+      <div className={`flex items-start gap-3 py-3 ${indentClass} border-b border-[rgb(var(--border-rgb))] last:border-b-0`}>
         {control}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <a href={`#${getCardId(jobType)}`} className="font-semibold text-sm text-blue-700 hover:underline dark:text-blue-300">{label}</a>
+            <a href={`#${getCardId(jobType)}`} className="font-semibold text-sm theme-link hover:underline">{label}</a>
             {badge}
-            <span className="text-xs text-gray-500 dark:text-gray-400">depends on: {getJobDisplayName(dependsOn)}</span>
-            {collapsedHint && <span className="text-xs text-gray-500 dark:text-gray-400">• {collapsedHint}</span>}
+            <span className="text-xs text-[rgb(var(--muted-foreground-rgb))]">depends on: {getJobDisplayName(dependsOn)}</span>
+            {collapsedHint && <span className="text-xs text-[rgb(var(--muted-foreground-rgb))]">• {collapsedHint}</span>}
           </div>
           {renderRowTimestamps(status)}
           {status?.error_message && (
@@ -835,7 +835,7 @@ export default function LEIStatusPage() {
             </p>
           )}
           {!status?.error_message && status?.status === 'RUNNING' && status?.progress_message && (
-            <p className="text-blue-700 dark:text-blue-300 text-xs mt-1 truncate" title={status.progress_message}>
+            <p className="text-[rgb(var(--primary-rgb))] dark:text-[rgb(var(--primary-rgb))] text-xs mt-1 truncate" title={status.progress_message}>
               ⏳ {status.progress_message}
             </p>
           )}
@@ -865,7 +865,7 @@ export default function LEIStatusPage() {
             <>
               <button
                 onClick={fetchStatus}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="h-9 px-3 inline-flex items-center justify-center theme-btn-primary rounded-lg transition-colors text-sm font-medium"
               >
                 🔄 Refresh Now
               </button>
@@ -898,20 +898,20 @@ export default function LEIStatusPage() {
         )}
 
         {/* Pipeline Overview */}
-        <div className="mb-8 bg-white dark:bg-white/5 rounded-lg shadow-md p-6 border-2 border-gray-200 dark:border-white/10 backdrop-blur-sm">
-          <h2 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">Job Pipeline</h2>
+        <div className="mb-8 bg-white dark:bg-white/5 rounded-lg shadow-md p-6 border-2 border-[rgb(var(--border-rgb))] backdrop-blur-sm">
+          <h2 className="text-lg font-bold mb-4 text-[rgb(var(--foreground-rgb))]">Job Pipeline</h2>
           <div className="space-y-1">
             {/* Root: Master Data Sync */}
-            <div className="flex items-center gap-3 py-3 border-b border-gray-200 dark:border-white/10">
+            <div className="flex items-center gap-3 py-3 border-b border-[rgb(var(--border-rgb))]">
               {renderControlSpacer()}
               <div className="flex-1 flex items-center gap-2 flex-wrap">
-                <a href={`#${getCardId('MASTER_DATA_SYNC')}`} className="font-semibold text-sm text-blue-700 hover:underline dark:text-blue-300">{getJobDisplayName('MASTER_DATA_SYNC')}</a>
+                <a href={`#${getCardId('MASTER_DATA_SYNC')}`} className="font-semibold text-sm theme-link hover:underline">{getJobDisplayName('MASTER_DATA_SYNC')}</a>
                 {masterDataStatus && (
                   <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${getStatusColor(masterDataStatus.status)}`}>
                     {masterDataStatus.status}
                   </span>
                 )}
-                <span className="text-xs text-gray-500 dark:text-gray-400">root job · daily · countries, currencies, languages</span>
+                <span className="text-xs text-[rgb(var(--muted-foreground-rgb))]">root job · daily · countries, currencies, languages</span>
                 {renderRowTimestamps(masterDataStatus, 'w-full mt-1')}
               </div>
               <div className="shrink-0 flex items-center gap-3">
@@ -924,22 +924,22 @@ export default function LEIStatusPage() {
             </div>
 
             {/* Level 1 Full Sync — depends on MASTER_DATA_SYNC */}
-            <div className="flex items-center gap-3 py-3 pl-4 border-b border-gray-200 dark:border-white/10">
+            <div className="flex items-center gap-3 py-3 pl-4 border-b border-[rgb(var(--border-rgb))]">
               {renderDisclosureButton(
                 showFullChildren,
                 () => setFullExpanded((prev) => !prev),
                 showFullChildren ? 'Collapse Level 2 jobs' : 'Expand Level 2 jobs',
               )}
               <div className="flex-1 flex items-center gap-2 flex-wrap">
-                <a href={`#${getCardId('DAILY_FULL')}`} className="font-semibold text-sm text-blue-700 hover:underline dark:text-blue-300">{getJobDisplayName('DAILY_FULL')}</a>
+                <a href={`#${getCardId('DAILY_FULL')}`} className="font-semibold text-sm theme-link hover:underline">{getJobDisplayName('DAILY_FULL')}</a>
                 {fullStatus && (
                   <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${getStatusColor(fullStatus.status)}`}>
                     {fullStatus.status}
                   </span>
                 )}
-                <span className="text-xs text-gray-500 dark:text-gray-400">depends on: MASTER_DATA_SYNC</span>
+                <span className="text-xs text-[rgb(var(--muted-foreground-rgb))]">depends on: MASTER_DATA_SYNC</span>
                 {!showFullChildren && (
-                  <span className="text-xs text-gray-500 dark:text-gray-400">• 2 child jobs hidden</span>
+                  <span className="text-xs text-[rgb(var(--muted-foreground-rgb))]">• 2 child jobs hidden</span>
                 )}
                 {renderRowTimestamps(fullStatus, 'w-full mt-1')}
               </div>
@@ -994,8 +994,8 @@ export default function LEIStatusPage() {
             <div className="flex items-center gap-3 py-3 opacity-50">
               {renderControlSpacer()}
               <div className="flex-1 flex items-center gap-2 flex-wrap">
-                <a href={`#${getCardId('DAILY_DELTA')}`} className="font-semibold text-sm text-blue-700 hover:underline dark:text-blue-300">{getJobDisplayName('DAILY_DELTA')}</a>
-                <span className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded">DISABLED</span>
+                <a href={`#${getCardId('DAILY_DELTA')}`} className="font-semibold text-sm theme-link hover:underline">{getJobDisplayName('DAILY_DELTA')}</a>
+                <span className="text-xs theme-subtle px-2 py-0.5 rounded">DISABLED</span>
                 {renderRowTimestamps(deltaStatus, 'w-full mt-1')}
               </div>
               <div className="shrink-0">
@@ -1009,8 +1009,8 @@ export default function LEIStatusPage() {
           </div>
 
           {/* Manual job triggers with dependency-aware disable rules */}
-          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/10">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+          <div className="mt-4 pt-4 border-t border-[rgb(var(--border-rgb))]">
+            <p className="text-sm text-[rgb(var(--muted-foreground-rgb))]">
               Use the Run buttons on each row. Actions are disabled while blocking dependencies are running.
             </p>
           </div>
@@ -1024,32 +1024,32 @@ export default function LEIStatusPage() {
           {renderStatusCard(getJobDisplayName('LEVEL2_REPEX'), repexStatus, false, getCardId('LEVEL2_REPEX'), 'LEVEL2_REPEX')}
           <div className="relative">
             {renderStatusCard(getJobDisplayName('DAILY_DELTA'), deltaStatus, true, getCardId('DAILY_DELTA'), 'DAILY_DELTA')}
-            <div className="absolute top-4 right-4 bg-gray-500 text-white text-xs px-2 py-1 rounded">
+            <div className="absolute top-4 right-4 bg-[rgb(var(--surface-muted-rgb))] text-white text-xs px-2 py-1 rounded">
               DISABLED
             </div>
           </div>
         </div>
 
         {/* Legend */}
-        <div className="bg-white dark:bg-white/5 rounded-lg shadow-md p-4 border-2 border-gray-200 dark:border-white/10">
-          <h3 className="font-semibold mb-3 text-gray-700 dark:text-gray-200">Status Legend</h3>
+        <div className="bg-white dark:bg-white/5 rounded-lg shadow-md p-4 border-2 border-[rgb(var(--border-rgb))]">
+          <h3 className="font-semibold mb-3 text-[rgb(var(--muted-foreground-rgb))] dark:text-[rgb(var(--muted-foreground-rgb))]">Status Legend</h3>
           <div className="flex flex-wrap gap-4 text-sm">
             <div className="flex items-center gap-2">
               <span className={`px-3 py-1 rounded-full font-semibold border-2 ${getStatusColor('IDLE')}`}>IDLE</span>
-              <span className="text-gray-600 dark:text-gray-400">Waiting for next scheduled run</span>
+              <span className="text-[rgb(var(--muted-foreground-rgb))]">Waiting for next scheduled run</span>
             </div>
             <div className="flex items-center gap-2">
               <span className={`px-3 py-1 rounded-full font-semibold border-2 ${getStatusColor('RUNNING')}`}>RUNNING</span>
-              <span className="text-gray-600 dark:text-gray-400">Currently processing data</span>
+              <span className="text-[rgb(var(--muted-foreground-rgb))]">Currently processing data</span>
             </div>
             <div className="flex items-center gap-2">
               <span className={`px-3 py-1 rounded-full font-semibold border-2 ${getStatusColor('FAILED')}`}>FAILED</span>
-              <span className="text-gray-600 dark:text-gray-400">Encountered an error (auto-recovery on next startup)</span>
+              <span className="text-[rgb(var(--muted-foreground-rgb))]">Encountered an error (auto-recovery on next startup)</span>
             </div>
           </div>
         </div>
 
-        <div className="mt-6 text-center text-sm text-gray-500">
+        <div className="mt-6 text-center text-sm text-[rgb(var(--muted-foreground-rgb))]">
           <p>Data source: GLEIF Golden Copy Files • Updated every 5 seconds when auto-refresh is enabled</p>
         </div>
       </div>

@@ -1,0 +1,106 @@
+// @vitest-environment jsdom
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { act, renderHook } from '@testing-library/react'
+import { resetPreferencesCache, useUserPreference } from './useUserPreference'
+
+describe('resetPreferencesCache', () => {
+  it('is a callable function that does not throw', () => {
+    expect(() => resetPreferencesCache()).not.toThrow()
+  })
+
+  it('resets cache so subsequent mounts re-read localStorage', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => [] }))
+    localStorage.clear()
+    localStorage.setItem('axiom_pref::mypage::mykey', 'previous-value')
+
+    const { result: firstResult } = renderHook(() =>
+      useUserPreference('mypage', 'mykey', 'default-val'),
+    )
+    await act(async () => {})
+    const [firstValue] = firstResult.current
+    expect(firstValue).toBe('previous-value')
+
+    localStorage.setItem('axiom_pref::mypage::mykey', 'next-value')
+
+    resetPreferencesCache()
+
+    const { result: secondResult } = renderHook(() =>
+      useUserPreference('mypage', 'mykey', 'default-val'),
+    )
+    await act(async () => {})
+    const [secondValue, , loadingAfterReset] = secondResult.current
+    expect(secondValue).toBe('next-value')
+    expect(typeof loadingAfterReset).toBe('boolean')
+
+    // Calling again should not throw.
+    expect(() => resetPreferencesCache()).not.toThrow()
+  })
+})
+
+describe('useUserPreference', () => {
+  beforeEach(() => {
+    resetPreferencesCache()
+    localStorage.clear()
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: async () => [] }),
+    )
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    localStorage.clear()
+    resetPreferencesCache()
+  })
+
+  it('returns the defaultValue before any preferences load', () => {
+    const { result } = renderHook(() =>
+      useUserPreference('testpage', 'mykey', 'default-val'),
+    )
+
+    const [value] = result.current
+    expect(value).toBe('default-val')
+  })
+
+  it('returns the value stored in localStorage when no API token is present', async () => {
+    // No auth token — hook reads from localStorage only.
+    // The key format used internally is `axiom_pref::<pageKey>::<prefKey>`.
+    localStorage.setItem('axiom_pref::testpage::localkey', 'stored-local')
+
+    const { result } = renderHook(() =>
+      useUserPreference('testpage', 'localkey', 'fallback'),
+    )
+
+    // Allow microtasks / effects to settle.
+    await act(async () => {})
+
+    const [value] = result.current
+    // When there is no auth token the hook returns the localStorage value.
+    expect(value).toBe('stored-local')
+    // API fetch should not have been called without a token.
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
+  it('allows updating the preference value', async () => {
+    const { result } = renderHook(() =>
+      useUserPreference('testpage', 'updkey', 'initial'),
+    )
+
+    await act(async () => {
+      const [, setValue] = result.current
+      setValue('updated')
+    })
+
+    const [value] = result.current
+    expect(value).toBe('updated')
+  })
+
+  it('returns a loading boolean as the third element', () => {
+    const { result } = renderHook(() =>
+      useUserPreference('testpage', 'loadkey', 'default'),
+    )
+
+    const [, , loading] = result.current
+    expect(typeof loading).toBe('boolean')
+  })
+})

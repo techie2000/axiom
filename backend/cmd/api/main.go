@@ -90,6 +90,19 @@ func main() {
 		logger.Warn().Err(err).Msg("Failed to load master data, continuing anyway...")
 	}
 
+	// Seed the Playwright end-to-end test user when running in dev/main environments.
+	// Controlled by PLAYWRIGHT_SEED_USER=true in the environment file.
+	// Never enable this in UAT or production.
+	if cfg.Testing.PlaywrightSeedUser {
+		logger.Info().Msg("PLAYWRIGHT_SEED_USER is enabled: ensuring Playwright test user exists...")
+		if err := services.Auth.EnsurePlaywrightTestUser(
+			cfg.Testing.PlaywrightUserEmail,
+			cfg.Testing.PlaywrightUserPassword,
+		); err != nil {
+			logger.Warn().Err(err).Msg("Failed to seed Playwright test user, continuing anyway...")
+		}
+	}
+
 	// Initialize scheduler service for LEI data acquisition and master data sync (with config for schedules)
 	// Uses the GLEIF-aware constructor so reference code lists are synced before each LEI ingest.
 	schedulerService := service.NewSchedulerServiceWithGLEIF(
@@ -295,6 +308,7 @@ func setupRouter(cfg *config.Config, h *handler.Handlers) *gin.Engine {
 
 		// Public LEI data routes (read-only, no auth required)
 		v1.GET("/lei", h.LEI.ListLEI)
+		v1.GET("/lei/count", h.LEI.GetLEICount)
 		v1.GET("/lei/import-failures", h.LEI.GetImportProcessingFailures)
 		v1.GET("/lei/level2/failures", h.LEI.GetLevel2ProcessingFailures)
 		v1.GET("/lei/names", h.LEI.GetLegalNamesByLEICodes)

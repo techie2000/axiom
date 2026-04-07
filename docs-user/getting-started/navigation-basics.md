@@ -63,15 +63,45 @@ On list pages (for example, LEI Records or Countries):
    table view.
 2. Your preferred width is saved automatically.
 
-## Searching and filtering
+## Searching this documentation
 
-Most list pages provide a search bar and filter controls:
+The documentation site has a built-in full-text search you can open from anywhere using a keyboard shortcut.
+
+| Platform | Shortcut |
+| --- | --- |
+| macOS | **⌘ K** (Command + K) |
+| Windows / Linux | **Ctrl + K** |
+
+Pressing the shortcut opens a search modal. Type your query and the results update instantly across all
+documentation pages. Use the **↑** and **↓** arrow keys to move between results, press **Enter** to open a result,
+and press **Escape** to close the search modal without navigating away.
+
+You can also open the search modal by clicking the **Search** button that appears in the top navigation bar of the
+documentation site.
+
+## Searching and filtering application data
+
+Most list pages in the Axiom application provide a search bar and filter controls:
 
 - **Search** — type to filter records by name or code.
 - **Filters** — use dropdowns to narrow results by status, country, or other attributes.
 - **Clear Filters** — reset all active filters at once.
 
 Results update automatically as you type or change filters.
+
+## Keyboard shortcuts
+
+Axiom provides keyboard shortcuts to speed up navigation and data entry.
+The shortcuts are consistent across all pages that support the corresponding feature.
+
+| Shortcut | Action | Pages |
+| --- | --- | --- |
+| **Ctrl+F** / **⌘F** | Focus the search input | Code Mappings, Countries, Currencies, Languages, LEI Records, Admin → Translations |
+| **Esc** | Close the top-most open panel or dropdown | All pages with overlays |
+
+> **Note:** Pressing **Ctrl+F** / **⌘F** on a page that has a search bar will focus that bar and
+> select any existing text, so you can start typing immediately. The browser's built-in
+> find-in-page dialog is suppressed on these pages.
 
 ## Expected result
 

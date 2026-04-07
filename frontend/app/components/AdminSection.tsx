@@ -30,8 +30,8 @@ export default function AdminSection() {
       <div className="flex items-center mb-6">
         <span className="text-2xl mr-3">⚙️</span>
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Administration</h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <h2 className="text-2xl font-bold">Administration</h2>
+          <p className="text-sm theme-text-muted">
             System configuration and user management • Admin access required
           </p>
         </div>

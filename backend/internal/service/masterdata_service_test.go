@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -104,5 +105,122 @@ func TestCheckForUpdates_MissingFileReturnsError(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "failed to read currencies.json") {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestResolveLanguageCode_UsesJSONCodeWhenPresent(t *testing.T) {
+	code := resolveLanguageCode("en", languageEntry{Code: " fr "})
+
+	if code != "fr" {
+		t.Fatalf("code = %q, want %q", code, "fr")
+	}
+}
+
+func TestResolveLanguageCode_FallsBackToMapKey(t *testing.T) {
+	code := resolveLanguageCode(" es ", languageEntry{Code: ""})
+
+	if code != "es" {
+		t.Fatalf("code = %q, want %q", code, "es")
+	}
+}
+
+func TestResolveLanguageCode_ReturnsEmptyWhenNoCodeAvailable(t *testing.T) {
+	code := resolveLanguageCode("   ", languageEntry{Code: ""})
+
+	if code != "" {
+		t.Fatalf("code = %q, want empty string", code)
+	}
+}
+
+func TestNormalizeContinentEntry_Valid(t *testing.T) {
+	code, name, ok := normalizeContinentEntry(" EU ", " Europe ")
+	if !ok {
+		t.Fatal("expected continent entry to be valid")
+	}
+	if code != "EU" || name != "Europe" {
+		t.Fatalf("got (%q, %q), want (%q, %q)", code, name, "EU", "Europe")
+	}
+}
+
+func TestNormalizeContinentEntry_InvalidWhenEmpty(t *testing.T) {
+	_, _, ok := normalizeContinentEntry(" ", "Europe")
+	if ok {
+		t.Fatal("expected continent entry with empty code to be invalid")
+	}
+}
+
+func TestNormalizeCodeMappingEntry_Valid(t *testing.T) {
+	m, ok := normalizeCodeMappingEntry(CodeMappingData{
+		FromSystem:   " ALERT ",
+		ToSystem:     " ISO ",
+		FromCodeType: " ALERT_DIRECT_COUNTRY_CODE ",
+		ToCodeType:   " ISO_3166_ALPHA2 ",
+		FromCode:     " US ",
+		ToCode:       " US ",
+		Description:  " United States ",
+	})
+	if !ok {
+		t.Fatal("expected code mapping entry to be valid")
+	}
+	if m.FromSystem != "ALERT" || m.ToSystem != "ISO" || m.FromCode != "US" || m.Description != "United States" {
+		t.Fatalf("unexpected normalized mapping: %+v", m)
+	}
+}
+
+func TestNormalizeCodeMappingEntry_InvalidWhenRequiredFieldMissing(t *testing.T) {
+	_, ok := normalizeCodeMappingEntry(CodeMappingData{
+		FromSystem:   "ALERT",
+		ToSystem:     "ISO",
+		FromCodeType: "ALERT_DIRECT_COUNTRY_CODE",
+		ToCodeType:   "ISO_3166_ALPHA2",
+		FromCode:     "",
+		ToCode:       "US",
+	})
+	if ok {
+		t.Fatal("expected code mapping with empty from_code to be invalid")
+	}
+}
+
+func TestAddChange_OnlyAddsWhenDifferent(t *testing.T) {
+	changes := make(map[string]map[string]interface{})
+	addChange(changes, "name", "alpha", "alpha")
+	if len(changes) != 0 {
+		t.Fatalf("expected no changes when values match, got %d", len(changes))
+	}
+
+	addChange(changes, "name", "alpha", "beta")
+	if len(changes) != 1 {
+		t.Fatalf("expected one change, got %d", len(changes))
+	}
+}
+
+func TestToChangedFieldsJSON_EmptyReturnsObject(t *testing.T) {
+	if got := toChangedFieldsJSON(map[string]map[string]interface{}{}); got != "{}" {
+		t.Fatalf("empty changed fields = %q, want {}", got)
+	}
+}
+
+func TestToChangedFieldsJSON_SerializesChanges(t *testing.T) {
+	changes := map[string]map[string]interface{}{
+		"name": {"old": "alpha", "new": "beta"},
+	}
+	raw := toChangedFieldsJSON(changes)
+
+	var parsed map[string]map[string]interface{}
+	if err := json.Unmarshal([]byte(raw), &parsed); err != nil {
+		t.Fatalf("changed fields should be valid JSON: %v", err)
+	}
+
+	if parsed["name"]["old"] != "alpha" || parsed["name"]["new"] != "beta" {
+		t.Fatalf("unexpected parsed changed fields: %+v", parsed)
+	}
+}
+
+func TestCodeMappingKey_CreatesStableCompositeKey(t *testing.T) {
+	key := codeMappingKey("ALERT", "ISO", "ALERT_DIRECT_COUNTRY_CODE", "ISO_3166_ALPHA2", "US")
+	want := "ALERT|ISO|ALERT_DIRECT_COUNTRY_CODE|ISO_3166_ALPHA2|US"
+
+	if key != want {
+		t.Fatalf("code mapping key = %q, want %q", key, want)
 	}
 }

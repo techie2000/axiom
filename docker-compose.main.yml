@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:17-alpine
+    image: public.ecr.aws/docker/library/postgres:17-alpine
     container_name: ${COMPOSE_PROJECT_NAME}-postgres
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
@@ -22,11 +22,12 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    stop_grace_period: 2m
     networks:
       - axiom-main
 
   rabbitmq:
-    image: rabbitmq:4.2-management-alpine
+    image: public.ecr.aws/docker/library/rabbitmq:4.2-management-alpine
     container_name: ${COMPOSE_PROJECT_NAME}-rabbitmq
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
@@ -42,6 +43,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    stop_grace_period: 1m
     networks:
       - axiom-main
 
@@ -85,6 +87,7 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+    stop_grace_period: 45s
     restart: unless-stopped
     networks:
       - axiom-main
@@ -109,6 +112,7 @@ services:
     command: npm run dev
     depends_on:
       - backend
+    stop_grace_period: 45s
     restart: unless-stopped
     networks:
       - axiom-main

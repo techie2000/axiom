@@ -51,6 +51,15 @@ This page defines the key fields used across Axiom's data entities.
 | ALERT CLS Allowed | Eligible for Continuous Linked Settlement | `Allowed` / `—` |
 | OFAC Sanctioned | Associated with OFAC-sanctioned jurisdiction | `Sanctioned` / `—` |
 
+## Language fields
+
+| Field | Description | Example |
+| --- | --- | --- |
+| Code | ISO 639-1 two-letter language code | `en` |
+| Name | Official English name of the language | `English` |
+| Native Name | Language name written in that language | `English` |
+| Direction | Writing direction: left-to-right or right-to-left | `LTR` / `RTL` |
+
 ## Entity fields
 
 | Field | Description | Example |

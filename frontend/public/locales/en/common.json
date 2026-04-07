@@ -86,8 +86,27 @@
     "buttonEmojiMode": {
       "both": "Both",
       "text": "Text",
-      "emoji": "Emoji"
-    }
+      "emoji": "Emoji",
+      "${mode}": "preferences.buttonEmojiMode.${mode}"
+    },
+    "changeTheme": "Change theme",
+    "themes": {
+      "default": "Default",
+      "defaultDescription": "Axiom classic blue-slate palette",
+      "modernMinimal": "Modern Minimal",
+      "modernMinimalDescription": "Clean neutral palette, both light and dark",
+      "supabase": "Supabase",
+      "supabaseDescription": "Forest green accent inspired by Supabase",
+      "perpetuity": "Perpetuity",
+      "perpetuityDescription": "Cyan-teal terminal look for focused sessions",
+      "twitter": "Twitter",
+      "twitterDescription": "Classic Twitter blue accent"
+    },
+    "switchToLight": "Switch to light mode",
+    "switchToDark": "Switch to dark mode",
+    "saveDarkModeDefault": "Save as your default mode?",
+    "mapProvider": "Map provider",
+    "mapProviderDescription": "Default map service used when clicking \"View on Map\"."
   },
   "common": {
     "loading": "Loading…",
@@ -434,6 +453,7 @@
       "currentPage": "Current Page",
       "currentPageFiltered": "{{page}} (filtered)",
       "currentPageOf": "{{page}} of {{total}}",
+      "currentPageOnly": "{{page}}",
       "showing": "Showing"
     },
     "infoAlert": {
@@ -544,7 +564,7 @@
       "legalAddress": "Legal Address",
       "hqAddress": "Headquarters Address",
       "sameAsLegal": "Same as Legal Address",
-      "viewOnMap": "🗺️ View on Map",
+      "viewOnMap": "View on Map",
       "registrationInformation": "Registration Information",
       "associatedEntities": "Associated Entities",
       "predecessorLei": "Predecessor LEI",
@@ -565,6 +585,54 @@
     "saveColumnPrompt": "Save column selection as your default?",
     "saveWidthPrompt": "$t(referenceLayout.savePageWidthDefault)",
     "saveDisplayPrompt": "$t(referenceLayout.saveDisplayModeDefault)"
+  },
+  "leiAudit": {
+    "title": "📋 Audit / Change History",
+    "loading": "Loading audit history…",
+    "noHistory": "No audit records found for this LEI.",
+    "noColumnsSelected": "No columns selected. Use the ⚙️ Columns button to choose fields.",
+    "timeline": "Timeline",
+    "latest": "Latest",
+    "oldest": "← Oldest",
+    "newest": "Newest →",
+    "viewingVersion": "Viewing version {{current}} of {{total}}",
+    "action": "Action",
+    "date": "Date",
+    "changedBy": "Changed by",
+    "changedFieldsCount": "Fields changed",
+    "changedFields": "Changed Fields",
+    "field": "Field",
+    "value": "Value",
+    "oldValue": "Old value",
+    "newValue": "New value",
+    "recordState": "Record state at this point in time",
+    "fieldsChanged_one": "{{count}} field changed",
+    "fieldsChanged_other": "{{count}} fields changed",
+    "fieldsChanged": "{{count}} field(s) changed",
+    "showChangedOnly": "🚩 Changed fields only",
+    "showChangedOnlyTitle": "Show only fields that changed in this audit entry",
+    "compareMode": "🔀 Compare",
+    "compareModeTitle": "Show this version side-by-side with the previous version",
+    "olderVersion": "older version",
+    "noPreviousVersion": "No previous version to compare.",
+    "pinHint": "In compare mode, click 📌 on any timeline entry to compare any two versions.",
+    "pinForCompare": "Pin this version as comparison target",
+    "unpin": "Unpin this version",
+    "pinned": "📌 Pinned",
+    "displayToggleNames": "🏷️ Display: Names",
+    "displayToggleNamesTitle": "Switch to display country names instead of codes",
+    "displayToggleCodes": "🏷️ Display: Codes",
+    "displayToggleCodesTitle": "Switch to display country codes instead of names",
+    "columns": "Columns",
+    "selectColumns": "Select columns to display",
+    "timelineSlider": "Navigate audit history timeline",
+    "viewAuditHistory": "📋 View Audit History",
+    "viewDetails": "📄 View Details",
+    "contextMenuLabel": "Row actions",
+    "historyButton": "📋 History",
+    "errors": {
+      "fetchFailed": "Failed to load audit history. Please try again."
+    }
   },
   "footer": {
     "copyright": "Axiom – Financial Services Static Data"
@@ -724,5 +792,18 @@
     "normalWidth": "Normal Width",
     "saveDisplayModeDefault": "Save display mode as your default?",
     "savePageWidthDefault": "Save page width as your default?"
+  },
+  "mapProvider": {
+    "setDefaultPrompt": "Use {{provider}} as your default map?",
+    "viewOnMapTitle": "View on {{provider}}",
+    "chooseProvider": "Choose map provider",
+    "openWith": "Open with…",
+    "default": "default",
+    "providers": {
+      "openstreetmap": "OpenStreetMap",
+      "google": "Google Maps",
+      "bing": "Bing Maps",
+      "apple": "Apple Maps"
+    }
   }
 }
