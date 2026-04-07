@@ -82,12 +82,11 @@ BEGIN
             WHERE a.id = to_fix.id
             RETURNING a.id
         )
-        SELECT COUNT(*)
-        INTO _rows_done
+        SELECT
+            COUNT(*),
+            COALESCE((ARRAY_AGG(id ORDER BY id DESC))[1], _last_id)
+        INTO _rows_done, _last_id
         FROM updated;
-
-        SELECT COALESCE((SELECT id FROM updated ORDER BY id DESC LIMIT 1), _last_id)
-        INTO _last_id;
         _total := _total + _rows_done;
         EXIT WHEN _rows_done = 0;
     END LOOP;
@@ -118,12 +117,11 @@ BEGIN
             WHERE lei_raw.lei_records_audit.id = to_delete.id
             RETURNING lei_raw.lei_records_audit.id
         )
-        SELECT COUNT(*)
-        INTO _rows_done
+        SELECT
+            COUNT(*),
+            COALESCE((ARRAY_AGG(id ORDER BY id DESC))[1], _last_id)
+        INTO _rows_done, _last_id
         FROM deleted;
-
-        SELECT COALESCE((SELECT id FROM deleted ORDER BY id DESC LIMIT 1), _last_id)
-        INTO _last_id;
         _total := _total + _rows_done;
         EXIT WHEN _rows_done = 0;
     END LOOP;
