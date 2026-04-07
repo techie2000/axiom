@@ -312,7 +312,7 @@ function SnapshotTable({ snapshot, columns, changedFields, labelMap, showCodes =
                         : 'theme-text-muted'
                     }`}
                   >
-                    {isChanged && <span className="mr-1" aria-hidden="true">⚑</span>}
+                    {isChanged && <span className="mr-1" aria-hidden="true">🚩</span>}
                     {label}
                   </td>
                   <td className="px-3 py-2 break-words">
@@ -427,7 +427,7 @@ function CompareTable({
                       isChanged ? 'text-amber-700 dark:text-amber-400' : 'theme-text-muted'
                     }`}
                   >
-                    {isChanged && <span className="mr-1" aria-hidden="true">⚑</span>}
+                    {isChanged && <span className="mr-1" aria-hidden="true">🚩</span>}
                     {label}
                   </td>
                   {/* Older (previous) value — red */}

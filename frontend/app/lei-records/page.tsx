@@ -2357,7 +2357,7 @@ export default function LEIRecordsPage() {
         <div
           ref={contextMenuRef}
           role="menu"
-          aria-label={t('leiAudit.contextMenuLabel') ?? 'Row actions'}
+          aria-label={t('leiAudit.contextMenuLabel')}
           className="fixed z-[60] min-w-48 theme-dropdown rounded-lg shadow-xl border border-[rgb(var(--border-rgb))] overflow-hidden"
           style={{ top: contextMenu.y, left: contextMenu.x }}
           onClick={(e) => e.stopPropagation()}
