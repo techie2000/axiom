@@ -211,11 +211,13 @@ func (s *masterDataService) LoadContinents() error {
 		changes := map[string]map[string]interface{}{
 			"source_presence": {"old": true, "new": false},
 		}
-		s.createContinentAudit("DELETE", continent, changes)
 
-		if err := s.db.Where("code = ?", continent.Code).Delete(&domain.Continent{}).Error; err != nil {
+		if err := s.db.Where("code = ?", continent.Code).Delete(&continent).Error; err != nil {
 			log.Warn().Err(err).Str("code", continent.Code).Msg("Failed to delete stale continent")
+			continue
 		}
+
+		s.createContinentAudit("DELETE", continent, changes)
 	}
 
 	log.Info().Int("count", len(continentsData)).Msg("Continents loaded successfully")
@@ -462,15 +464,16 @@ func (s *masterDataService) LoadCurrencies() error {
 			"source_presence": {"old": true, "new": false},
 		}
 
-		currency.Active = false
-		s.createCurrencyAudit("DELETE", currency, changes)
-
 		if err := s.db.Model(&domain.Currency{}).Where("code = ?", currency.Code).Updates(map[string]interface{}{
 			"active":     false,
 			"updated_at": gorm.Expr("NOW()"),
 		}).Error; err != nil {
 			log.Warn().Err(err).Str("code", currency.Code).Msg("Failed to deactivate stale currency")
+			continue
 		}
+
+		currency.Active = false
+		s.createCurrencyAudit("DELETE", currency, changes)
 	}
 
 	log.Info().Int("count", len(currenciesData)).Msg("Currencies loaded successfully")
@@ -603,15 +606,16 @@ func (s *masterDataService) LoadCountries() error {
 			"source_presence": {"old": true, "new": false},
 		}
 
-		country.Active = false
-		s.createCountryAudit("DELETE", country, changes)
-
 		if err := s.db.Model(&domain.Country{}).Where("code = ?", country.Code).Updates(map[string]interface{}{
 			"active":     false,
 			"updated_at": gorm.Expr("NOW()"),
 		}).Error; err != nil {
 			log.Warn().Err(err).Str("code", country.Code).Msg("Failed to deactivate stale country")
+			continue
 		}
+
+		country.Active = false
+		s.createCountryAudit("DELETE", country, changes)
 	}
 
 	log.Info().Int("count", len(countriesData)).Msg("Countries loaded successfully")
@@ -647,6 +651,18 @@ func (s *masterDataService) LoadCodeMappings() error {
 
 	sourceKeys := make(map[string]struct{}, len(mappingsData))
 
+	// Batch-load existing mappings into a keyed map to avoid N+1 per-row queries
+	var existingMappingsList []domain.CodeMapping
+	if err := s.db.Where("from_system = ? AND from_code_type = ? AND deleted_at IS NULL", "ALERT", "ALERT_DIRECT_COUNTRY_CODE").Find(&existingMappingsList).Error; err != nil {
+		return fmt.Errorf("failed to preload code mappings for sync: %w", err)
+	}
+
+	existingMappingsMap := make(map[string]*domain.CodeMapping, len(existingMappingsList))
+	for i := range existingMappingsList {
+		key := codeMappingKey(existingMappingsList[i].FromSystem, existingMappingsList[i].ToSystem, existingMappingsList[i].FromCodeType, existingMappingsList[i].ToCodeType, existingMappingsList[i].FromCode)
+		existingMappingsMap[key] = &existingMappingsList[i]
+	}
+
 	// Insert into database
 	for _, m := range mappingsData {
 		m, ok := normalizeCodeMappingEntry(m)
@@ -656,37 +672,29 @@ func (s *masterDataService) LoadCodeMappings() error {
 		}
 		sourceKeys[codeMappingKey(m.FromSystem, m.ToSystem, m.FromCodeType, m.ToCodeType, m.FromCode)] = struct{}{}
 
-		var existing domain.CodeMapping
-		err := s.db.Where("from_system = ? AND to_system = ? AND from_code_type = ? AND to_code_type = ? AND from_code = ? AND deleted_at IS NULL",
-			m.FromSystem, m.ToSystem, m.FromCodeType, m.ToCodeType, m.FromCode).First(&existing).Error
-		if err != nil {
-			if err == gorm.ErrRecordNotFound {
-				mapping := &domain.CodeMapping{
-					FromSystem:   m.FromSystem,
-					ToSystem:     m.ToSystem,
-					FromCodeType: m.FromCodeType,
-					ToCodeType:   m.ToCodeType,
-					FromCode:     m.FromCode,
-					ToCode:       m.ToCode,
-					Description:  m.Description,
-					Active:       true,
-					CreatedBy:    "system",
-				}
-				if createErr := s.db.Create(mapping).Error; createErr != nil {
-					log.Warn().Err(createErr).
-						Str("from_code", m.FromCode).
-						Str("to_code", m.ToCode).
-						Msg("Failed to insert code mapping, skipping")
-					continue
-				}
-				s.createCodeMappingAudit("CREATE", *mapping, map[string]map[string]interface{}{})
+		key := codeMappingKey(m.FromSystem, m.ToSystem, m.FromCodeType, m.ToCodeType, m.FromCode)
+		existing, found := existingMappingsMap[key]
+		if !found {
+			// New mapping not in DB, create it
+			mapping := &domain.CodeMapping{
+				FromSystem:   m.FromSystem,
+				ToSystem:     m.ToSystem,
+				FromCodeType: m.FromCodeType,
+				ToCodeType:   m.ToCodeType,
+				FromCode:     m.FromCode,
+				ToCode:       m.ToCode,
+				Description:  m.Description,
+				Active:       true,
+				CreatedBy:    "system",
+			}
+			if createErr := s.db.Create(mapping).Error; createErr != nil {
+				log.Warn().Err(createErr).
+					Str("from_code", m.FromCode).
+					Str("to_code", m.ToCode).
+					Msg("Failed to insert code mapping, skipping")
 				continue
 			}
-
-			log.Warn().Err(err).
-				Str("from_code", m.FromCode).
-				Str("to_code", m.ToCode).
-				Msg("Failed to lookup code mapping, skipping")
+			s.createCodeMappingAudit("CREATE", *mapping, map[string]map[string]interface{}{})
 			continue
 		}
 
@@ -717,7 +725,7 @@ func (s *masterDataService) LoadCodeMappings() error {
 			continue
 		}
 
-		s.createCodeMappingAudit("UPDATE", existing, changes)
+		s.createCodeMappingAudit("UPDATE", *existing, changes)
 	}
 
 	var existingMappings []domain.CodeMapping
@@ -736,15 +744,16 @@ func (s *masterDataService) LoadCodeMappings() error {
 			"source_presence": {"old": true, "new": false},
 		}
 
-		mapping.Active = false
-		s.createCodeMappingAudit("DELETE", mapping, changes)
-
 		if err := s.db.Model(&domain.CodeMapping{}).Where("id = ?", mapping.ID).Updates(map[string]interface{}{
 			"active":     false,
 			"updated_at": gorm.Expr("NOW()"),
 		}).Error; err != nil {
 			log.Warn().Err(err).Str("from_code", mapping.FromCode).Msg("Failed to deactivate stale code mapping")
+			continue
 		}
+
+		mapping.Active = false
+		s.createCodeMappingAudit("DELETE", mapping, changes)
 	}
 
 	log.Info().Int("count", len(mappingsData)).Msg("ALERT Direct country code mappings loaded successfully")
