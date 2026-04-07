@@ -485,6 +485,36 @@ func (CurrencyAudit) TableName() string {
 	return "currencies_audit"
 }
 
+// ContinentAudit represents the complete audit history of continent changes
+type ContinentAudit struct {
+	ID             uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	ContinentCode  string    `gorm:"size:2;not null;index" json:"continent_code"`
+	Action         string    `gorm:"size:20;not null" json:"action"` // CREATE, UPDATE, DELETE
+	RecordSnapshot string    `gorm:"type:jsonb;not null" json:"record_snapshot"`
+	ChangedFields  string    `gorm:"type:jsonb" json:"changed_fields"`
+	ChangedBy      string    `gorm:"size:100;not null;default:'system'" json:"changed_by"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+func (ContinentAudit) TableName() string {
+	return "continents_audit"
+}
+
+// LanguageAudit represents the complete audit history of language changes
+type LanguageAudit struct {
+	ID             uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	LanguageCode   string    `gorm:"size:2;not null;index" json:"language_code"`
+	Action         string    `gorm:"size:20;not null" json:"action"` // CREATE, UPDATE, DELETE
+	RecordSnapshot string    `gorm:"type:jsonb;not null" json:"record_snapshot"`
+	ChangedFields  string    `gorm:"type:jsonb" json:"changed_fields"`
+	ChangedBy      string    `gorm:"size:100;not null;default:'system'" json:"changed_by"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+func (LanguageAudit) TableName() string {
+	return "languages_audit"
+}
+
 // AddressAudit represents the complete audit history of address changes
 type AddressAudit struct {
 	ID             uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
