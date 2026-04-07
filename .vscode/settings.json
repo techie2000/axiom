@@ -120,6 +120,7 @@
     "Dockerfiles",
     "dumpall",
     "easyjson",
+    "elif",
     "Errorf",
     "ERRORLEVEL",
     "esac",
