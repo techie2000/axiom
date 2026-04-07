@@ -610,7 +610,7 @@
     "fieldsChanged": "{{count}} field(s) changed",
     "showChangedOnly": "🚩 Changed fields only",
     "showChangedOnlyTitle": "Show only fields that changed in this audit entry",
-    "compareMode": "↔️ Compare",
+    "compareMode": "🔀 Compare",
     "compareModeTitle": "Show this version side-by-side with the previous version",
     "olderVersion": "older version",
     "noPreviousVersion": "No previous version to compare.",
