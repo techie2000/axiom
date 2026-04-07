@@ -56,6 +56,9 @@ type schedulerService struct {
 	// perspective, eliminating the TOCTOU race between handler validation
 	// and the scheduler-service safety net.
 	triggerMu sync.Mutex
+	// gleifSyncMu serialises all GLEIF reference sync executions across
+	// scheduler pre-sync and manual trigger paths.
+	gleifSyncMu sync.Mutex
 	// Parsed schedule configuration
 	deltaSyncInterval time.Duration
 	fullSyncDay       time.Weekday
@@ -1741,6 +1744,9 @@ func (s *schedulerService) runGLEIFReferenceSyncIfConfigured(context string) err
 	if s.gleifReferenceService == nil {
 		return nil
 	}
+	s.gleifSyncMu.Lock()
+	defer s.gleifSyncMu.Unlock()
+
 	log.Info().Str("context", context).Msg("Running GLEIF reference sync before LEI ingest")
 	if err := s.gleifReferenceService.SyncAll(); err != nil {
 		return fmt.Errorf("GLEIF reference sync failed before %s: %w", context, err)
@@ -1753,10 +1759,12 @@ func (s *schedulerService) runGLEIFReferenceSyncIfConfigured(context string) err
 // Returns an error if the GLEIF reference service is not configured, so callers invoked
 // directly (e.g. via the manual-trigger API) receive a clear diagnostic.
 func (s *schedulerService) RunGLEIFReferenceSync() error {
+	s.gleifSyncMu.Lock()
+	defer s.gleifSyncMu.Unlock()
+
 	if s.gleifReferenceService == nil {
 		return fmt.Errorf("GLEIF reference service not configured")
 	}
-
 	log.Info().Msg("Starting GLEIF reference code-list sync")
 
 	status, err := s.leiService.GetProcessingStatus("GLEIF_REFERENCE_SYNC")

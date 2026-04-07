@@ -10,11 +10,14 @@ flowchart TD
     Start([Backend Startup]) --> Init[Initialize Scheduler Service]
     Init --> CheckDB{Database<br/>Empty?}
 
-    CheckDB -->|Yes - First Run| FullSync[Trigger Full Sync Job]
-    CheckDB -->|No - Has Data| DeltaSync[Trigger Delta Sync Job]
+    CheckDB -->|Yes - First Run| InitialFull[Run Initial Full Sync Job]
+    CheckDB -->|No - Has Data| WaitSchedule[Wait for scheduled full sync]
 
-    FullSync --> GLEIFRefSyncFull[Pre-step: Sync GLEIF Reference Code Lists<br/>Registration Authorities<br/>Entity Legal Forms<br/>Organizational Roles<br/>Legal Jurisdictions]
-    DeltaSync --> GLEIFRefSyncDelta[Pre-step: Sync GLEIF Reference Code Lists]
+    WaitSchedule --> DailyFull[Daily Full Sync Job<br/>Configured day/time]
+    InitialFull --> GLEIFRefSyncFull[Pre-step inside job: Sync GLEIF Reference Code Lists<br/>Registration Authorities<br/>Entity Legal Forms<br/>Organizational Roles<br/>Legal Jurisdictions]
+    DailyFull --> GLEIFRefSyncFull
+
+    ManualDelta[Manual API trigger only<br/>Delta loop is disabled] --> GLEIFRefSyncDelta[Pre-step inside job: Sync GLEIF Reference Code Lists]
 
     GLEIFRefSyncFull -->|Success| DownloadFull[Download Full File<br/>~900MB, 3.2M records]
     GLEIFRefSyncFull -->|Failure| AbortFull([Abort: mark FAILED])

@@ -108,7 +108,7 @@ CREATE TABLE lei_raw.gleif_registration_authorities (
 );
 ```
 
-See migration `backend/migrations/000048_add_gleif_reference_tables.up.sql`
+See migration `backend/migrations/000050_add_gleif_reference_tables.up.sql`
 for the complete DDL for all four tables.
 
 ## UI Enrichment
@@ -141,10 +141,9 @@ The LEI Records UI page (`frontend/app/lei-records/page.tsx`) displays the resol
 name alongside the raw code, falling back gracefully when the reference table has
 not yet been seeded.
 
-> **Note**: The `gleif_legal_jurisdictions` reference table is available for future
-> jurisdiction resolution. The raw `LegalJurisdiction` field in GLEIF data is not
-> currently stored in `lei_raw.lei_records` — a separate enrichment layer will be
-> introduced if jurisdiction name resolution is required.
+> **Note**: The `gleif_legal_jurisdictions` reference table is currently used to
+> keep accepted jurisdiction codes and names available for LEI enrichment and
+> downstream API/UI use.
 
 ## Manual Trigger
 
@@ -160,7 +159,10 @@ Progress can be observed in the application logs.
 
 ## Error Handling and Observability
 
-- Each list is synced independently; a failure in one does not block the others.
+- Each list is attempted independently so a single list failure does not skip
+  remaining lists in the same run.
+- If any list fails, `SyncAll()` returns an error and the scheduler blocks
+  downstream LEI ingest for that run.
 - Errors are logged with `zerolog` at `ERROR` level with `list` and `err` fields.
 - Successful syncs log the record count at `INFO` level.
 - Malformed CSV rows are skipped with a `WARN` log entry per row.
