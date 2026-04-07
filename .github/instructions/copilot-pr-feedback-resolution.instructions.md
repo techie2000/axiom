@@ -7,11 +7,15 @@ applyTo: '**'
 
 ## Overview
 
-When Copilot provides review feedback on a pull request, implement fixes and automatically manage feedback resolution without requiring explicit user prompts for each step. This instruction describes the complete automated workflow from identifying feedback to posting resolution summaries.
+When Copilot provides review feedback on a pull request, implement fixes and
+automatically manage feedback resolution without requiring explicit user prompts
+for each step. This instruction describes the complete automated workflow from
+identifying feedback to posting resolution summaries.
 
 ## Workflow Trigger
 
 This workflow activates automatically when:
+
 - Copilot has left review comments on a PR (either inline code comments or general review feedback)
 - You have implemented code changes to address that feedback
 - You are about to push commits to the PR branch
@@ -25,6 +29,7 @@ gh api repos/{owner}/{repo}/pulls/{pr_number}/comments --jq '.[] | select(.user.
 ```
 
 **Categorize feedback into types:**
+
 - 🔴 **Transaction/Consistency Safety Issues** - Data integrity concerns
 - 🟡 **Performance Issues** - N+1 queries, inefficient patterns, unnecessary operations
 - 🟢 **Test Coverage Issues** - Missing or insufficient test coverage
@@ -39,7 +44,8 @@ For each Copilot comment:
 2. **Implement in code** - Apply the fix to the relevant source file(s)
 3. **Test locally** - Verify the fix works and doesn't break existing functionality
 4. **Commit with clarity** - Use commit message that references the Copilot feedback:
-   ```
+
+  ```text
    fix: address Copilot review feedback on [category]
    
    - [Specific change 1]
@@ -211,6 +217,7 @@ If pushing to the PR fails or CI checks fail:
 4. **Update summary comment** to reflect any changes
 
 If you cannot locate a Copilot comment ID:
+
 - Use `gh api repos/{owner}/{repo}/pulls/{pr}/comments` to list all comments
 - Filter by `.user.login == "Copilot"`
 - Extract the `.id` for the reply-to target
@@ -218,20 +225,24 @@ If you cannot locate a Copilot comment ID:
 ## Best Practices
 
 ### Timing
+
 - Post individual resolutions **immediately after pushing each fix**
 - Post comprehensive summary **after all fixes are pushed and CI has started**
 
 ### Clarity
+
 - Reference specific line numbers or commit SHAs in comments
 - Explain the "why" not just the "what"
 - Link related issues or ADRs if applicable
 
 ### Consistency
+
 - Use same terminology/phrasing as Copilot's feedback when summarizing
 - Group related fixes in summary (e.g., all transaction safety issues together)
 - Keep resolution comments concise (1-3 bullet points per issue)
 
 ### Validation
+
 - Always verify fixes locally before posting resolution comments
 - Run relevant test suites: `go test ./... -cover`, `npm test`, etc.
 - Wait for initial CI checks to complete before posting comprehensive summary
@@ -244,7 +255,8 @@ If you cannot locate a Copilot comment ID:
 > "Audit write before UPDATE causes inconsistency if UPDATE fails"
 
 **Resolution Comment Posted:**
-```
+
+```text
 ✅ **RESOLVED**: Transaction safety - Audit after UPDATE
 
 **Change**: Reordered audit write to occur after successful UPDATE
@@ -261,7 +273,8 @@ If you cannot locate a Copilot comment ID:
 > "N+1 query pattern: per-row SELECT lookups double database round-trips"
 
 **Resolution Comment Posted:**
-```
+
+```text
 ✅ **RESOLVED**: Performance - Eliminated N+1 queries
 
 **Change**: Batch-load existing records into in-memory map

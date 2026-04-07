@@ -120,6 +120,7 @@ const API_BASE_URL = typeof window !== 'undefined'
   ```
 
 ### Theme Palette Consistency Standard (Required)
+
 - New pages must follow the established app palette in both light and dark modes.
 - Do not use page-local bright/legacy blue backgrounds for dark-mode page shells, cards, table containers, or filter bars.
 - Prefer neutral dark surfaces consistent with existing pages, for example:
@@ -127,7 +128,8 @@ const API_BASE_URL = typeof window !== 'undefined'
   - card/surface: `dark:bg-slate-900/60` with `dark:border-slate-700/50`
   - row hover: `dark:hover:bg-white/5` (or approved equivalent)
 - Reserve blue for intent emphasis (primary actions, links, focus rings), not dominant dark-mode background surfaces.
-- Before merge, compare new pages against reference pages (`lei-records`, `countries`, `currencies`, `languages`) in both themes.
+- Before merge, compare new pages against reference pages (`lei-records`,
+  `countries`, `currencies`, `languages`) in both themes.
 
 ### UI Element Visibility Checklist
 
@@ -437,6 +439,7 @@ step-by-step guide and integration checklist.
 - Include `transition-colors` on interactive table rows for consistent visual feedback.
 
 ### Sortable Header Standard (Required)
+
 - Interactive review/list tables where users compare values must support sorting on data columns.
 - Sortable headers must always show a visual affordance and display clear direction arrows for active sort state.
 - Use shared `SortableHeaderCell` for consistency; avoid page-local sortable header implementations.

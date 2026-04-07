@@ -7,7 +7,10 @@ applyTo: '**'
 
 ## Overview
 
-When resolving multiple Copilot comments on a PR, tracking comment IDs and their resolution status prevents duplicate efforts and ensures no feedback is missed. This file provides structured patterns for identifying, organizing, and tracking comment threads.
+When resolving multiple Copilot comments on a PR, tracking comment IDs and their
+resolution status prevents duplicate efforts and ensures no feedback is missed.
+This file provides structured patterns for identifying, organizing, and tracking
+comment threads.
 
 ## Quick Reference: How to Get Comment IDs
 
@@ -136,7 +139,7 @@ gh api repos/techie2000/axiom/pulls/261/comments \
 
 ### Pattern 1: By Category + File
 
-```
+```text
 TRANSACTION SAFETY (3 comments)
 ├─ masterdata_service.go (3)
 │  ├─ Comment 3045230708 - Line 473
@@ -159,7 +162,7 @@ MARKDOWN LINT (3 comments) - N/A
 
 ### Pattern 2: By Status
 
-```
+```text
 ✅ RESOLVED (4)
 ├─ 3045230708 - Transaction Safety - currencies.go
 ├─ 3045230751 - Transaction Safety - continents.go
@@ -175,7 +178,7 @@ MARKDOWN LINT (3 comments) - N/A
 
 ### Pattern 3: By Reply Status
 
-```
+```text
 REPLIED (4)
 ├─ 3045230708 ✓ replied at 14:32
 ├─ 3045230751 ✓ replied at 14:35
@@ -261,6 +264,7 @@ gh api repos/techie2000/axiom/pulls/261/comments \
 ### Mistake 1: Forgetting a Comment ID
 
 **Prevention:**
+
 ```bash
 # Save original count
 ORIGINAL_COUNT=$(gh api repos/techie2000/axiom/pulls/261/comments \
@@ -281,6 +285,7 @@ fi
 ### Mistake 2: Replying to Wrong Comment ID
 
 **Prevention:**
+
 ```bash
 # Always verify comment ID before posting
 COMMENT_ID="3045230708"
@@ -294,6 +299,7 @@ gh pr comment 261 --reply-to $COMMENT_ID --body "[Your reply]"
 ### Mistake 3: Missing Comments in Pagination
 
 **Prevention:**
+
 ```bash
 # GitHub API paginates at 30 items by default
 # Use --paginate to get all
@@ -366,6 +372,7 @@ jq -s '.[] | "\(.id),\(.path),\(.line)"' copilot_comments.json | column -t -s','
 ```
 
 Usage:
+
 ```bash
 chmod +x track-copilot-comments.sh
 ./track-copilot-comments.sh 261
@@ -402,5 +409,6 @@ gh api repos/techie2000/axiom/pulls/261/comments/3045230708/replies \
 
 ## See Also
 
-- [copilot-pr-feedback-resolution.instructions.md](copilot-pr-feedback-resolution.instructions.md) - Main feedback resolution workflow
+- [copilot-pr-feedback-resolution.instructions.md](copilot-pr-feedback-resolution.instructions.md)
+  - Main feedback resolution workflow
 - [github-comment-formatting.instructions.md](github-comment-formatting.instructions.md) - Comment reply formatting
