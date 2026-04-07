@@ -78,6 +78,50 @@ function parseJSON<T>(value: unknown, fallback: T): T {
   return fallback
 }
 
+function maybeParseJSONLikeString(value: unknown): unknown {
+  if (typeof value !== 'string') {
+    return value
+  }
+
+  const trimmed = value.trim()
+  if (
+    !((trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+      (trimmed.startsWith('[') && trimmed.endsWith(']')))
+  ) {
+    return value
+  }
+
+  try {
+    return JSON.parse(trimmed)
+  } catch {
+    return value
+  }
+}
+
+function canonicalizeForSemanticCompare(value: unknown): unknown {
+  const parsedValue = maybeParseJSONLikeString(value)
+
+  if (Array.isArray(parsedValue)) {
+    return parsedValue.map((item) => canonicalizeForSemanticCompare(item))
+  }
+
+  if (parsedValue && typeof parsedValue === 'object') {
+    const sortedEntries = Object.entries(parsedValue as Record<string, unknown>)
+      .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey))
+      .map(([key, nestedValue]) => [key, canonicalizeForSemanticCompare(nestedValue)] as const)
+
+    return Object.fromEntries(sortedEntries)
+  }
+
+  return parsedValue
+}
+
+export function valuesDifferSemantically(left: unknown, right: unknown): boolean {
+  const leftCanonical = canonicalizeForSemanticCompare(left)
+  const rightCanonical = canonicalizeForSemanticCompare(right)
+  return JSON.stringify(leftCanonical) !== JSON.stringify(rightCanonical)
+}
+
 function formatTimestamp(dateStr: string): string {
   if (!dateStr || dateStr.startsWith('0001-')) return '—'
   try {
@@ -219,7 +263,7 @@ function SnapshotValue({ fieldKey, value, showCodes = true, countryByCode, onLei
 }
 
 /** Compute changed fields by diffing two snapshots — used for arbitrary version pairs. */
-function computeChangedFields(
+export function computeChangedFields(
   olderSnapshot: ParsedSnapshot,
   newerSnapshot: ParsedSnapshot
 ): ParsedChangedFields {
@@ -228,7 +272,7 @@ function computeChangedFields(
   for (const key of allKeys) {
     const oldVal = olderSnapshot[key]
     const newVal = newerSnapshot[key]
-    if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
+    if (valuesDifferSemantically(oldVal, newVal)) {
       changes[key] = { old_value: oldVal, new_value: newVal, field_name: key }
     }
   }
