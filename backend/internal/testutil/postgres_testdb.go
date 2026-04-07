@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -30,6 +31,10 @@ func OpenMasterDataPostgresDB(t *testing.T) *gorm.DB {
 	if err != nil {
 		t.Fatalf("open admin postgres connection: %v", err)
 	}
+	adminSQLDB, err := adminDB.DB()
+	if err != nil {
+		t.Fatalf("open admin sql handle: %v", err)
+	}
 
 	schemaName := randomSchemaName()
 
@@ -49,13 +54,25 @@ func OpenMasterDataPostgresDB(t *testing.T) *gorm.DB {
 	if err != nil {
 		t.Fatalf("open isolated postgres connection: %v", err)
 	}
+	testSQLDB, err := testDB.DB()
+	if err != nil {
+		t.Fatalf("open isolated sql handle: %v", err)
+	}
 
 	if err := migrateMasterDataTables(testDB); err != nil {
 		t.Fatalf("migrate master data tables: %v", err)
 	}
 
 	t.Cleanup(func() {
-		_ = adminDB.Exec(fmt.Sprintf("DROP SCHEMA IF EXISTS \"%s\" CASCADE", schemaName)).Error
+		if err := adminDB.Exec(fmt.Sprintf("DROP SCHEMA IF EXISTS \"%s\" CASCADE", schemaName)).Error; err != nil {
+			t.Errorf("drop isolated schema %s: %v", schemaName, err)
+		}
+		if err := testSQLDB.Close(); err != nil {
+			t.Errorf("close isolated sql handle: %v", err)
+		}
+		if err := adminSQLDB.Close(); err != nil {
+			t.Errorf("close admin sql handle: %v", err)
+		}
 	})
 
 	return testDB
@@ -82,13 +99,27 @@ func randomSchemaName() string {
 }
 
 func withSearchPath(dsn, searchPath string) (string, error) {
-	parsed, err := url.Parse(dsn)
-	if err != nil {
-		return "", fmt.Errorf("parse dsn: %w", err)
+	dsn = strings.TrimSpace(dsn)
+	if dsn == "" {
+		return "", fmt.Errorf("dsn is empty")
 	}
 
-	query := parsed.Query()
-	query.Set("search_path", searchPath)
-	parsed.RawQuery = query.Encode()
-	return parsed.String(), nil
+	if strings.HasPrefix(dsn, "postgres://") || strings.HasPrefix(dsn, "postgresql://") {
+		parsed, err := url.Parse(dsn)
+		if err != nil {
+			return "", fmt.Errorf("parse url dsn: %w", err)
+		}
+
+		query := parsed.Query()
+		query.Set("search_path", searchPath)
+		parsed.RawQuery = query.Encode()
+		return parsed.String(), nil
+	}
+
+	searchPathPattern := regexp.MustCompile(`(?i)\bsearch_path\s*=\s*[^\s]+`)
+	if searchPathPattern.MatchString(dsn) {
+		return strings.TrimSpace(searchPathPattern.ReplaceAllString(dsn, "search_path="+searchPath)), nil
+	}
+
+	return strings.TrimSpace(dsn + " search_path=" + searchPath), nil
 }
