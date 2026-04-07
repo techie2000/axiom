@@ -106,7 +106,7 @@ Overall status of scheduled jobs.
 
 Key fields:
 
-- `job_type`: MASTER_DATA_SYNC, DAILY_FULL, DAILY_DELTA, LEVEL2_RR, or LEVEL2_REPEX
+- `job_type`: MASTER_DATA_SYNC, GLEIF_REFERENCE_SYNC, DAILY_FULL, DAILY_DELTA, LEVEL2_RR, or LEVEL2_REPEX
 - `job_label`: Human-readable label persisted with the job code
 - `status`: IDLE, RUNNING, or FAILED (COMPLETED is transient and immediately becomes IDLE)
 - `depends_on_job_type`: Upstream job code in chained flows
@@ -194,7 +194,8 @@ Deprecation behavior:
 Manual sync endpoints return:
 
 - `202 Accepted` when the trigger is queued successfully.
-- `409 Conflict` when the job (or a required dependency) is currently `RUNNING`.
+- `409 Conflict` when the job cannot start due to dependency preconditions
+  (for example dependency currently `RUNNING` or prerequisite success missing).
 
 #### `POST /api/v1/lei/sync/full`
 
@@ -203,7 +204,9 @@ Manually trigger a full synchronization.
 Conflict conditions:
 
 - `MASTER_DATA_SYNC` is `RUNNING`
+- `GLEIF_REFERENCE_SYNC` is `RUNNING`
 - `DAILY_FULL` is `RUNNING`
+- `GLEIF_REFERENCE_SYNC` has not completed successfully at least once
 
 Response:
 
@@ -243,6 +246,23 @@ Response:
 ```json
 {
   "message": "Master data sync triggered"
+}
+```
+
+#### `POST /api/v1/lei/sync/gleif-reference`
+
+Manually trigger GLEIF reference code-list synchronization.
+
+Conflict conditions:
+
+- `MASTER_DATA_SYNC` is `RUNNING`
+- `GLEIF_REFERENCE_SYNC` is `RUNNING`
+
+Response:
+
+```json
+{
+  "message": "GLEIF reference sync triggered"
 }
 ```
 
@@ -307,7 +327,8 @@ Get processing status for a job type.
 
 Path parameters:
 
-- `jobType`: Either `DAILY_FULL` or `DAILY_DELTA`
+- `jobType`: One of `MASTER_DATA_SYNC`, `GLEIF_REFERENCE_SYNC`, `DAILY_FULL`, `DAILY_DELTA`,
+  `LEVEL2_RR`, `LEVEL2_REPEX`
 
 Response: Job status including last run time, next scheduled run, and current file being processed
 

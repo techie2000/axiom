@@ -32,6 +32,22 @@ interface ProcessingStatus {
   progress_message: string
 }
 
+interface GleifListStats {
+  records?: number
+  files_saved?: number
+  bytes_saved?: number
+  source_type?: string
+  source_url?: string
+}
+
+interface GleifSyncStats {
+  run_at_utc?: string
+  total_records?: number
+  files_saved?: number
+  bytes_saved?: number
+  lists?: Record<string, GleifListStats>
+}
+
 interface MasterDataCounts {
   countries: number
   currencies: number
@@ -58,6 +74,7 @@ type ImportJobType = 'DAILY_FULL' | 'DAILY_DELTA' | 'LEVEL2_RR' | 'LEVEL2_REPEX'
 
 export default function LEIStatusPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [gleifReferenceStatus, setGleifReferenceStatus] = useState<ProcessingStatus | null>(null)
   const [masterDataStatus, setMasterDataStatus] = useState<ProcessingStatus | null>(null)
   const [fullStatus, setFullStatus] = useState<ProcessingStatus | null>(null)
   const [deltaStatus, setDeltaStatus] = useState<ProcessingStatus | null>(null)
@@ -91,6 +108,7 @@ export default function LEIStatusPage() {
   const fetchStatus = useCallback(async () => {
     try {
       const [
+        gleifReferenceResponse,
         mdResponse,
         fullResponse,
         deltaResponse,
@@ -100,6 +118,7 @@ export default function LEIStatusPage() {
         currenciesResponse,
         languagesResponse,
       ] = await Promise.all([
+        fetch(`${API_BASE_URL}/api/v1/lei/status/GLEIF_REFERENCE_SYNC`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
         fetch(`${API_BASE_URL}/api/v1/lei/status/MASTER_DATA_SYNC`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
         fetch(`${API_BASE_URL}/api/v1/lei/status/DAILY_FULL`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
         fetch(`${API_BASE_URL}/api/v1/lei/status/DAILY_DELTA`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
@@ -110,6 +129,7 @@ export default function LEIStatusPage() {
         fetch(`${API_BASE_URL}/api/v1/languages?limit=5000&offset=0`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
       ])
 
+      if (gleifReferenceResponse?.ok) setGleifReferenceStatus(await gleifReferenceResponse.json())
       if (mdResponse?.ok) setMasterDataStatus(await mdResponse.json())
       if (fullResponse?.ok) setFullStatus(await fullResponse.json())
       if (deltaResponse?.ok) setDeltaStatus(await deltaResponse.json())
@@ -351,6 +371,8 @@ export default function LEIStatusPage() {
 
   const getJobDisplayName = (jobType: string): string => {
     switch (jobType) {
+      case 'GLEIF_REFERENCE_SYNC':
+        return 'GLEIF Reference Code Lists (GLEIF_REFERENCE_SYNC)'
       case 'MASTER_DATA_SYNC':
         return 'Reference Data (MASTER_DATA_SYNC)'
       case 'DAILY_FULL':
@@ -378,6 +400,7 @@ export default function LEIStatusPage() {
 
   const getFrequencyLabel = (status: ProcessingStatus | null): string => {
     if (!status) return ''
+    if (status.job_type === 'GLEIF_REFERENCE_SYNC') return 'On-demand / pre-step'
     if (status.job_type === 'MASTER_DATA_SYNC') return 'Daily (01:00)'
     if (status.job_type === 'DAILY_FULL') return 'Daily / chained'
     if (status.job_type === 'DAILY_DELTA') return 'Hourly'
@@ -398,6 +421,7 @@ export default function LEIStatusPage() {
     if (!dep || dep === 'NONE') return { nextRun: null, ultimateParent: null }
 
     const statusByType: Record<string, ProcessingStatus | null> = {
+      GLEIF_REFERENCE_SYNC: gleifReferenceStatus,
       MASTER_DATA_SYNC: masterDataStatus,
       DAILY_FULL: fullStatus,
       DAILY_DELTA: deltaStatus,
@@ -429,14 +453,19 @@ export default function LEIStatusPage() {
     return { nextRun: null, ultimateParent: dep }
   }
 
+  const isGleifReferenceRunning = gleifReferenceStatus?.status === 'RUNNING'
   const isMasterDataRunning = masterDataStatus?.status === 'RUNNING'
   const isFullSyncRunning = fullStatus?.status === 'RUNNING'
   const isDeltaRunning = deltaStatus?.status === 'RUNNING'
   const isRrRunning = rrStatus?.status === 'RUNNING'
   const isRepexRunning = repexStatus?.status === 'RUNNING'
+  const hasGleifReferenceSuccess = Boolean(
+    gleifReferenceStatus?.last_success_at && !gleifReferenceStatus.last_success_at.startsWith('0001-'),
+  )
 
+  const canTriggerGleifReference = !isGleifReferenceRunning && !isMasterDataRunning
   const canTriggerMasterData = !isMasterDataRunning
-  const canTriggerFull = !isFullSyncRunning && !isMasterDataRunning
+  const canTriggerFull = !isFullSyncRunning && !isMasterDataRunning && !isGleifReferenceRunning && hasGleifReferenceSuccess
   const canTriggerDelta = !isDeltaRunning && !isFullSyncRunning
   const canTriggerRr = !isRrRunning && !isFullSyncRunning
   const canTriggerRepex = !isRepexRunning && !isRrRunning && !isFullSyncRunning
@@ -487,13 +516,23 @@ export default function LEIStatusPage() {
     const isImportJob = jobKey === 'DAILY_FULL' || jobKey === 'DAILY_DELTA' || jobKey === 'LEVEL2_RR' || jobKey === 'LEVEL2_REPEX'
     const isMasterDataJob = jobKey === 'MASTER_DATA_SYNC'
     const progressMessage = status.progress_message?.trim() || ''
+    let gleifStats: GleifSyncStats | null = null
+    if (jobKey === 'GLEIF_REFERENCE_SYNC' && progressMessage.startsWith('{')) {
+      try {
+        gleifStats = JSON.parse(progressMessage) as GleifSyncStats
+      } catch {
+        gleifStats = null
+      }
+    }
     const fallbackTotalRecords = isMasterDataJob ? (masterDataCounts?.total ?? 0) : 0
-    const totalRecords = file ? file.total_records : fallbackTotalRecords
+    const totalRecords = file ? file.total_records : (gleifStats?.total_records ?? fallbackTotalRecords)
     const successfulProcessed = file
       ? Math.max(file.processed_records - file.failed_records, 0)
-      : fallbackTotalRecords
+      : (gleifStats?.total_records ?? fallbackTotalRecords)
     const failedRecords = file ? file.failed_records : 0
-    const currentFileLabel = file?.file_name || (isMasterDataJob ? 'Master datasets (countries, currencies, languages)' : '-')
+    const currentFileLabel = file?.file_name || (isMasterDataJob
+      ? 'Master datasets (countries, currencies, languages)'
+      : (jobKey === 'GLEIF_REFERENCE_SYNC' ? 'Persisted under data/main/lei/gleif-reference' : '-'))
     const frequency = getFrequencyLabel(status)
     const dependency = status.depends_on_job_type && status.depends_on_job_type !== 'NONE'
       ? getJobDisplayName(status.depends_on_job_type)
@@ -636,6 +675,22 @@ export default function LEIStatusPage() {
                     )}
                   </div>
                 </div>
+                {jobKey === 'GLEIF_REFERENCE_SYNC' && gleifStats && (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-[rgb(var(--muted-foreground-rgb))]">Files Saved:</span>
+                      <span className="font-medium text-[rgb(var(--foreground-rgb))]">
+                        {typeof gleifStats.files_saved === 'number' ? gleifStats.files_saved.toLocaleString() : '-'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[rgb(var(--muted-foreground-rgb))]">Bytes Saved:</span>
+                      <span className="font-medium text-[rgb(var(--foreground-rgb))]">
+                        {typeof gleifStats.bytes_saved === 'number' ? gleifStats.bytes_saved.toLocaleString() : '-'}
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -720,9 +775,19 @@ export default function LEIStatusPage() {
                 <p><span className="font-medium text-[rgb(var(--muted-foreground-rgb))]">Total Records:</span> {totalRecords > 0 ? totalRecords.toLocaleString() : '-'}</p>
                 <p><span className="font-medium text-[rgb(var(--muted-foreground-rgb))]">Processed:</span> {totalRecords > 0 ? `${successfulProcessed.toLocaleString()} records` : '-'}</p>
                 <p className="truncate"><span className="font-medium text-[rgb(var(--muted-foreground-rgb))]">Last LEI:</span> {file?.last_processed_lei || '-'}</p>
+                {jobKey === 'GLEIF_REFERENCE_SYNC' && gleifStats?.run_at_utc && (
+                  <p><span className="font-medium text-[rgb(var(--muted-foreground-rgb))]">Snapshot Run:</span> {formatDate(gleifStats.run_at_utc)}</p>
+                )}
                 {status.status === 'RUNNING' && progressMessage && (
                   <p className="text-[rgb(var(--primary-rgb))] dark:text-[rgb(var(--primary-rgb))]">
                     <span className="font-medium">Progress:</span> {progressMessage}
+                  </p>
+                )}
+                {jobKey === 'GLEIF_REFERENCE_SYNC' && gleifStats?.lists && (
+                  <p className="text-xs text-[rgb(var(--muted-foreground-rgb))] mt-2 break-words">
+                    {Object.entries(gleifStats.lists)
+                      .map(([name, stats]) => `${name}: ${typeof stats.records === 'number' ? stats.records : 0}`)
+                      .join(' | ')}
                   </p>
                 )}
                 {isMasterDataJob && masterDataCounts && (
@@ -923,6 +988,28 @@ export default function LEIStatusPage() {
               </div>
             </div>
 
+            {/* GLEIF reference code-list sync — depends on MASTER_DATA_SYNC */}
+            <div className="flex items-center gap-3 py-3 pl-4 border-b border-[rgb(var(--border-rgb))]">
+              {renderControlSpacer()}
+              <div className="flex-1 flex items-center gap-2 flex-wrap">
+                <a href={`#${getCardId('GLEIF_REFERENCE_SYNC')}`} className="font-semibold text-sm theme-link hover:underline">{getJobDisplayName('GLEIF_REFERENCE_SYNC')}</a>
+                {gleifReferenceStatus && (
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${getStatusColor(gleifReferenceStatus.status)}`}>
+                    {gleifReferenceStatus.status}
+                  </span>
+                )}
+                <span className="text-xs text-[rgb(var(--muted-foreground-rgb))]">depends on: MASTER_DATA_SYNC · must succeed before ingest</span>
+                {renderRowTimestamps(gleifReferenceStatus, 'w-full mt-1')}
+              </div>
+              <div className="shrink-0 flex items-center gap-3">
+                {renderRowActionButton(
+                  () => triggerJob('/api/v1/lei/sync/gleif-reference', 'GLEIF reference sync triggered'),
+                  !canTriggerGleifReference,
+                  !canTriggerGleifReference ? 'Blocked while MASTER_DATA_SYNC or GLEIF_REFERENCE_SYNC is running' : 'Trigger GLEIF reference code-list sync',
+                )}
+              </div>
+            </div>
+
             {/* Level 1 Full Sync — depends on MASTER_DATA_SYNC */}
             <div className="flex items-center gap-3 py-3 pl-4 border-b border-[rgb(var(--border-rgb))]">
               {renderDisclosureButton(
@@ -937,7 +1024,7 @@ export default function LEIStatusPage() {
                     {fullStatus.status}
                   </span>
                 )}
-                <span className="text-xs text-[rgb(var(--muted-foreground-rgb))]">depends on: MASTER_DATA_SYNC</span>
+                <span className="text-xs text-[rgb(var(--muted-foreground-rgb))]">depends on: GLEIF_REFERENCE_SYNC</span>
                 {!showFullChildren && (
                   <span className="text-xs text-[rgb(var(--muted-foreground-rgb))]">• 2 child jobs hidden</span>
                 )}
@@ -947,7 +1034,9 @@ export default function LEIStatusPage() {
                 {renderRowActionButton(
                   () => triggerJob('/api/v1/lei/sync/full', 'Level 1 LEI Records sync triggered (DAILY_FULL)'),
                   !canTriggerFull,
-                  !canTriggerFull ? 'Blocked while MASTER_DATA_SYNC or DAILY_FULL is running' : 'Trigger Level 1 LEI Records sync (DAILY_FULL)',
+                  !canTriggerFull
+                    ? 'Blocked until GLEIF_REFERENCE_SYNC has completed successfully and no blocking jobs are running'
+                    : 'Trigger Level 1 LEI Records sync (DAILY_FULL)',
                 )}
               </div>
             </div>
@@ -1019,6 +1108,7 @@ export default function LEIStatusPage() {
         {/* Detailed Status Cards */}
         <div className="space-y-6 mb-6">
           {renderStatusCard(getJobDisplayName('MASTER_DATA_SYNC'), masterDataStatus, false, getCardId('MASTER_DATA_SYNC'), 'MASTER_DATA_SYNC')}
+          {renderStatusCard(getJobDisplayName('GLEIF_REFERENCE_SYNC'), gleifReferenceStatus, false, getCardId('GLEIF_REFERENCE_SYNC'), 'GLEIF_REFERENCE_SYNC')}
           {renderStatusCard(getJobDisplayName('DAILY_FULL'), fullStatus, false, getCardId('DAILY_FULL'), 'DAILY_FULL')}
           {renderStatusCard(getJobDisplayName('LEVEL2_RR'), rrStatus, false, getCardId('LEVEL2_RR'), 'LEVEL2_RR')}
           {renderStatusCard(getJobDisplayName('LEVEL2_REPEX'), repexStatus, false, getCardId('LEVEL2_REPEX'), 'LEVEL2_REPEX')}

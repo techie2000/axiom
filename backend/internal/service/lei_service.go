@@ -1365,7 +1365,8 @@ func (s *leiService) CreateLEIRecord(record *domain.LEIRecord) error {
 
 // GetLEIByCode retrieves an LEI record by LEI code
 func (s *leiService) GetLEIByCode(lei string) (*domain.LEIRecord, error) {
-	record, err := s.repo.FindLEIByLEI(lei)
+	normalizedLEI := strings.ToUpper(strings.TrimSpace(lei))
+	record, err := s.repo.FindLEIByLEI(normalizedLEI)
 	if err != nil {
 		return nil, err
 	}
@@ -1572,7 +1573,9 @@ func (s *leiService) UpdateProcessingStatus(status *domain.FileProcessingStatus)
 		if status.CurrentSourceFileID == nil {
 			status.CurrentSourceFile = nil
 		}
-		if status.Status != "RUNNING" {
+		// GLEIF_REFERENCE_SYNC uses ProgressMessage as a post-completion stats summary (JSON),
+		// so preserve it regardless of status. All other jobs only need ProgressMessage while RUNNING.
+		if status.Status != "RUNNING" && status.JobType != "GLEIF_REFERENCE_SYNC" {
 			status.ProgressMessage = ""
 		}
 	}

@@ -75,6 +75,14 @@ const gleifResolvedNamesSelectFragment = "" +
 	", (SELECT elf.entity_legal_form_name FROM lei_raw.gleif_entity_legal_forms elf" +
 	"   WHERE BTRIM(elf.elf_code) = BTRIM(lei_raw.lei_records.entity_legal_form) LIMIT 1) AS entity_legal_form_name"
 
+const singleRecordResolvedNamesSelectFragment = "" +
+	", (SELECT ref.legal_name FROM lei_raw.lei_records ref WHERE ref.lei = lei_raw.lei_records.managing_lou LIMIT 1) AS managing_lou_legal_name" +
+	", (SELECT ref.legal_name FROM lei_raw.lei_records ref WHERE ref.lei = lei_raw.lei_records.successor_lei LIMIT 1) AS successor_lei_legal_name" +
+	", (SELECT ra.organization_name FROM lei_raw.gleif_registration_authorities ra" +
+	"   WHERE ra.ra_id = lei_raw.lei_records.registration_authority AND ra.active = TRUE LIMIT 1) AS registration_authority_name" +
+	", (SELECT elf.entity_legal_form_name FROM lei_raw.gleif_entity_legal_forms elf" +
+	"   WHERE elf.elf_code = lei_raw.lei_records.entity_legal_form LIMIT 1) AS entity_legal_form_name"
+
 // exactLEIMatchWhereClause matches a record by its primary LEI or its successor LEI.
 // The successor branch includes the partial-index predicate so PostgreSQL can use
 // idx_lei_raw_lei_records_successor_lei instead of falling back to sequential scans.
@@ -114,11 +122,8 @@ func (r *leiRepository) CreateLEIRecord(record *domain.LEIRecord) error {
 func (r *leiRepository) FindLEIByLEI(lei string) (*domain.LEIRecord, error) {
 	var record domain.LEIRecord
 	err := r.db.
-		Select("lei_raw.lei_records.*"+
-			", (SELECT ref.legal_name FROM lei_raw.lei_records ref WHERE BTRIM(ref.lei) = BTRIM(lei_raw.lei_records.managing_lou) LIMIT 1) AS managing_lou_legal_name"+
-			", (SELECT ref.legal_name FROM lei_raw.lei_records ref WHERE BTRIM(ref.lei) = BTRIM(lei_raw.lei_records.successor_lei) LIMIT 1) AS successor_lei_legal_name"+
-			gleifResolvedNamesSelectFragment).
-		Where("lei_raw.lei_records.lei = ?", lei).
+		Select("lei_raw.lei_records.*" + singleRecordResolvedNamesSelectFragment).
+		Where("lei_raw.lei_records.lei = ?", strings.TrimSpace(lei)).
 		Preload("SourceFile").
 		First(&record).Error
 	if err != nil {
@@ -131,10 +136,7 @@ func (r *leiRepository) FindLEIByLEI(lei string) (*domain.LEIRecord, error) {
 func (r *leiRepository) FindLEIByID(id string) (*domain.LEIRecord, error) {
 	var record domain.LEIRecord
 	err := r.db.
-		Select("lei_raw.lei_records.*"+
-			", (SELECT ref.legal_name FROM lei_raw.lei_records ref WHERE BTRIM(ref.lei) = BTRIM(lei_raw.lei_records.managing_lou) LIMIT 1) AS managing_lou_legal_name"+
-			", (SELECT ref.legal_name FROM lei_raw.lei_records ref WHERE BTRIM(ref.lei) = BTRIM(lei_raw.lei_records.successor_lei) LIMIT 1) AS successor_lei_legal_name"+
-			gleifResolvedNamesSelectFragment).
+		Select("lei_raw.lei_records.*" + singleRecordResolvedNamesSelectFragment).
 		Preload("SourceFile").
 		First(&record, "lei_raw.lei_records.id = ?", id).Error
 	if err != nil {
@@ -183,8 +185,14 @@ func (r *leiRepository) FindLegalNamesByLEICodes(codes []string) (map[string]str
 // FindPredecessorLEIsBySuccessor retrieves LEI records that point to the provided LEI as successor.
 func (r *leiRepository) FindPredecessorLEIsBySuccessor(lei string) ([]*domain.LEIRecord, error) {
 	var records []*domain.LEIRecord
+	normalizedLEI := strings.ToUpper(strings.TrimSpace(lei))
+	if normalizedLEI == "" {
+		return records, nil
+	}
+
 	if err := r.db.
-		Where("successor_lei = ?", strings.TrimSpace(lei)).
+		Select("id, lei, legal_name, successor_lei, updated_at").
+		Where("successor_lei = ? AND successor_lei IS NOT NULL AND BTRIM(successor_lei) <> ''", normalizedLEI).
 		Order("updated_at desc").
 		Find(&records).Error; err != nil {
 		return nil, err

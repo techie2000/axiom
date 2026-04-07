@@ -193,6 +193,44 @@ func TestSetProgressMessage_NonRunningStatusClearsMessage(t *testing.T) {
 	}
 }
 
+func TestUpdateProcessingStatus_GLEIFReferenceSyncPreservesMessageWhenCompleted(t *testing.T) {
+	stub := &progressMsgRepoStub{}
+	svc := newProgressMsgService(stub)
+
+	status := &domain.FileProcessingStatus{
+		ID:              uuid.New(),
+		JobType:         "GLEIF_REFERENCE_SYNC",
+		Status:          "COMPLETED",
+		ProgressMessage: `{"total_records":7121,"files_saved":2}`,
+	}
+
+	if err := svc.UpdateProcessingStatus(status); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if stub.capturedMessage != `{"total_records":7121,"files_saved":2}` {
+		t.Errorf("GLEIF_REFERENCE_SYNC COMPLETED: want stats JSON preserved, got %q", stub.capturedMessage)
+	}
+}
+
+func TestUpdateProcessingStatus_NonGLEIFJobClearsMessageWhenCompleted(t *testing.T) {
+	stub := &progressMsgRepoStub{}
+	svc := newProgressMsgService(stub)
+
+	status := &domain.FileProcessingStatus{
+		ID:              uuid.New(),
+		JobType:         "DAILY_FULL",
+		Status:          "COMPLETED",
+		ProgressMessage: "some progress text",
+	}
+
+	if err := svc.UpdateProcessingStatus(status); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if stub.capturedMessage != "" {
+		t.Errorf("DAILY_FULL COMPLETED: want empty progress message, got %q", stub.capturedMessage)
+	}
+}
+
 // ---------------------------------------------------------------------------
 // SourceFileExists
 // ---------------------------------------------------------------------------

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -358,7 +359,7 @@ func (s *schedulerService) Stop() {
 func (s *schedulerService) cleanupStuckJobStatuses() {
 	log.Info().Msg("Checking for stuck job statuses from previous sessions")
 
-	jobTypes := []string{"MASTER_DATA_SYNC", "DAILY_FULL", "DAILY_DELTA", "LEVEL2_RR", "LEVEL2_REPEX"}
+	jobTypes := []string{"MASTER_DATA_SYNC", "GLEIF_REFERENCE_SYNC", "DAILY_FULL", "DAILY_DELTA", "LEVEL2_RR", "LEVEL2_REPEX"}
 	for _, jobType := range jobTypes {
 		st, err := s.leiService.GetProcessingStatus(jobType)
 		if err == nil && st.Status == "RUNNING" {
@@ -457,6 +458,38 @@ func (s *schedulerService) initializeNextRunTimes() {
 		}
 	}
 
+	// Ensure GLEIF_REFERENCE_SYNC exists and is chained after MASTER_DATA_SYNC.
+	if gleifStatus, gleifErr := s.leiService.GetProcessingStatus("GLEIF_REFERENCE_SYNC"); gleifErr != nil {
+		now := time.Now()
+		newGLEIF := &domain.FileProcessingStatus{
+			JobType:          "GLEIF_REFERENCE_SYNC",
+			Status:           "IDLE",
+			DependsOnJobType: "MASTER_DATA_SYNC",
+			CreatedAt:        now,
+			UpdatedAt:        now,
+		}
+		if createErr := s.leiService.UpdateProcessingStatus(newGLEIF); createErr != nil {
+			log.Error().Err(createErr).Msg("Failed to create GLEIF_REFERENCE_SYNC job status row")
+		} else {
+			log.Info().Msg("GLEIF_REFERENCE_SYNC job status row created")
+		}
+	} else if gleifStatus.DependsOnJobType != "MASTER_DATA_SYNC" {
+		gleifStatus.DependsOnJobType = "MASTER_DATA_SYNC"
+		if updateErr := s.leiService.UpdateProcessingStatus(gleifStatus); updateErr != nil {
+			log.Error().Err(updateErr).Msg("Failed to set depends_on_job_type on GLEIF_REFERENCE_SYNC")
+		}
+	}
+
+	// Ensure DAILY_FULL is chained after GLEIF_REFERENCE_SYNC.
+	if fullStatus, fullErr := s.leiService.GetProcessingStatus("DAILY_FULL"); fullErr == nil {
+		if fullStatus.DependsOnJobType != "GLEIF_REFERENCE_SYNC" {
+			fullStatus.DependsOnJobType = "GLEIF_REFERENCE_SYNC"
+			if updateErr := s.leiService.UpdateProcessingStatus(fullStatus); updateErr != nil {
+				log.Error().Err(updateErr).Msg("Failed to set depends_on_job_type on DAILY_FULL")
+			}
+		}
+	}
+
 	// Ensure LEVEL2_RR and LEVEL2_REPEX rows exist with the correct dependency metadata.
 	// Migration 000026 seeds these rows, but this guard handles cases where the migration
 	// has not yet been applied (e.g. local dev without running migrations first).
@@ -484,8 +517,8 @@ func (s *schedulerService) initializeNextRunTimes() {
 			} else {
 				log.Info().Str("job_type", def.jobType).Str("depends_on", def.dependsOnJobType).Msg("Level 2 job status row created")
 			}
-		} else if st.DependsOnJobType == "" {
-			// Row exists but dependency column was not yet set (pre-migration 000026).
+		} else if st.DependsOnJobType != def.dependsOnJobType {
+			// Row exists but dependency column is missing or stale.
 			st.DependsOnJobType = def.dependsOnJobType
 			if updateErr := s.leiService.UpdateProcessingStatus(st); updateErr != nil {
 				log.Error().Err(updateErr).Str("job_type", def.jobType).Msg("Failed to set depends_on_job_type on Level 2 job row")
@@ -1549,8 +1582,8 @@ func (s *schedulerService) doREPEXWork(repexStatus *domain.FileProcessingStatus,
 // Trigger* methods – HTTP-handler entry-points with atomic conflict detection
 // --------------------------------------------------------------------------
 
-// TriggerFullSync validates that neither MASTER_DATA_SYNC nor DAILY_FULL is currently
-// running, then spawns RunDailyFullSync in a goroutine and returns immediately.
+// TriggerFullSync validates that MASTER_DATA_SYNC, GLEIF_REFERENCE_SYNC, and DAILY_FULL
+// are not currently running, then spawns RunDailyFullSync in a goroutine and returns immediately.
 func (s *schedulerService) TriggerFullSync() error {
 	s.triggerMu.Lock()
 	defer s.triggerMu.Unlock()
@@ -1561,6 +1594,17 @@ func (s *schedulerService) TriggerFullSync() error {
 	}
 	if masterStatus.Status == "RUNNING" {
 		return fmt.Errorf("cannot start Full Sync while MASTER_DATA_SYNC is running: %w", ErrJobRunning)
+	}
+
+	gleifStatus, err := s.leiService.GetProcessingStatus("GLEIF_REFERENCE_SYNC")
+	if err != nil {
+		return fmt.Errorf("failed to validate GLEIF_REFERENCE_SYNC status: %w", err)
+	}
+	if gleifStatus.Status == "RUNNING" {
+		return fmt.Errorf("cannot start Full Sync while GLEIF_REFERENCE_SYNC is running: %w", ErrJobRunning)
+	}
+	if gleifStatus.LastSuccessAt == nil || gleifStatus.LastSuccessAt.IsZero() {
+		return fmt.Errorf("cannot start Full Sync until GLEIF_REFERENCE_SYNC has completed successfully: %w", ErrJobRunning)
 	}
 
 	fullStatus, err := s.leiService.GetProcessingStatus("DAILY_FULL")
@@ -1789,6 +1833,12 @@ func (s *schedulerService) RunGLEIFReferenceSync() error {
 	}
 
 	syncErr := s.gleifReferenceService.SyncAll()
+	stats := s.gleifReferenceService.LastSyncStats()
+	if statsJSON, marshalErr := json.Marshal(stats); marshalErr == nil {
+		status.ProgressMessage = string(statsJSON)
+	} else {
+		status.ProgressMessage = ""
+	}
 
 	if syncErr != nil {
 		status.Status = "FAILED"
@@ -1813,6 +1863,14 @@ func (s *schedulerService) RunGLEIFReferenceSync() error {
 func (s *schedulerService) TriggerGLEIFReferenceSync() error {
 	s.triggerMu.Lock()
 	defer s.triggerMu.Unlock()
+
+	masterStatus, err := s.leiService.GetProcessingStatus("MASTER_DATA_SYNC")
+	if err != nil {
+		return fmt.Errorf("failed to validate MASTER_DATA_SYNC status: %w", err)
+	}
+	if masterStatus.Status == "RUNNING" {
+		return fmt.Errorf("cannot start GLEIF_REFERENCE_SYNC while MASTER_DATA_SYNC is running: %w", ErrJobRunning)
+	}
 
 	status, err := s.leiService.GetProcessingStatus("GLEIF_REFERENCE_SYNC")
 	if err != nil {

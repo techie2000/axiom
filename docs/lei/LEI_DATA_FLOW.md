@@ -10,10 +10,15 @@ flowchart TD
     Start([Backend Startup]) --> Init[Initialize Scheduler Service]
     Init --> CheckDB{Database<br/>Empty?}
 
-    CheckDB -->|Yes - First Run| InitialFull[Run Initial Full Sync Job]
+    CheckDB -->|Yes - First Run| InitialMaster[Run Initial Master Data Sync]
     CheckDB -->|No - Has Data| WaitSchedule[Wait for scheduled full sync]
 
-    WaitSchedule --> DailyFull[Daily Full Sync Job<br/>Configured day/time]
+    InitialMaster --> InitialGLEIF[Run Initial GLEIF Reference Sync]
+    InitialGLEIF --> InitialFull[Run Initial Full Sync Job]
+
+    WaitSchedule --> MasterSchedule[Master Data Sync<br/>01:00 daily]
+    MasterSchedule --> DailyFull[Daily Full Sync Job<br/>Configured day/time]
+
     InitialFull --> GLEIFRefSyncFull[Pre-step inside job: Sync GLEIF Reference Code Lists<br/>Registration Authorities<br/>Entity Legal Forms<br/>Organizational Roles<br/>Legal Jurisdictions]
     DailyFull --> GLEIFRefSyncFull
 
@@ -247,6 +252,7 @@ All schedules are configurable via environment variables. Defaults shown below:
 |---------------------|-------------------|---------------------------|---------------|--------------|
 | File Cleanup        | Midnight daily    | `LEI_CLEANUP_TIME`        | `00:00`       | Active       |
 | Master Data Sync    | 1:00 AM daily     | N/A (hardcoded)           | `01:00`       | Active       |
+| GLEIF Reference Sync| On-demand pre-step| N/A (chained dependency)  | N/A           | Active       |
 | Full Sync           | 2:00 AM daily     | `LEI_FULL_SYNC_TIME`      | `02:00`       | Active       |
 | Delta Sync          | N/A (disabled)    | `LEI_DELTA_SYNC_INTERVAL` | `1h`          | **Disabled** |
 | Retain Full Files   | Last 2 files      | `LEI_KEEP_FULL_FILES`     | `2`           | Active       |
@@ -256,7 +262,8 @@ All schedules are configurable via environment variables. Defaults shown below:
 
 - **Delta sync is currently disabled** - Using full sync daily strategy for reliability
 - File cleanup runs at midnight (before all syncs) to prevent interference with long-running LEI syncs
-- Master data sync runs at 1:00 AM to ensure countries/currencies exist before LEI sync
+- Master data sync runs at 1:00 AM and is an upstream dependency for GLEIF reference sync
+- GLEIF reference sync is a dependency for Level 1 ingest and runs before each full/delta ingest path
 - Full sync runs daily at 2:00 AM (changed from weekly to ensure fresh data)
 - Invalid values fall back to defaults
 

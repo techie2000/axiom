@@ -206,6 +206,40 @@ func TestTriggerFullSync_ConflictPaths(t *testing.T) {
 			t.Fatalf("expected DAILY_FULL conflict message, got %s", resp.Body.String())
 		}
 	})
+
+	t.Run("conflict when gleif reference sync is running", func(t *testing.T) {
+		stub := &schedulerServiceStub{
+			triggerErrs: map[string]error{
+				"TriggerFullSync": fmt.Errorf("cannot start Full Sync while GLEIF_REFERENCE_SYNC is running: %w", service.ErrJobRunning),
+			},
+		}
+		h := NewLEIHandler(&leiServiceStub{}, stub)
+
+		resp := executePOST("/sync/full", h.TriggerFullSync)
+		if resp.Code != http.StatusConflict {
+			t.Fatalf("expected status %d, got %d", http.StatusConflict, resp.Code)
+		}
+		if !strings.Contains(resp.Body.String(), "GLEIF_REFERENCE_SYNC") {
+			t.Fatalf("expected GLEIF_REFERENCE_SYNC conflict message, got %s", resp.Body.String())
+		}
+	})
+
+	t.Run("conflict when gleif reference has no successful run yet", func(t *testing.T) {
+		stub := &schedulerServiceStub{
+			triggerErrs: map[string]error{
+				"TriggerFullSync": fmt.Errorf("cannot start Full Sync until GLEIF_REFERENCE_SYNC has completed successfully: %w", service.ErrJobRunning),
+			},
+		}
+		h := NewLEIHandler(&leiServiceStub{}, stub)
+
+		resp := executePOST("/sync/full", h.TriggerFullSync)
+		if resp.Code != http.StatusConflict {
+			t.Fatalf("expected status %d, got %d", http.StatusConflict, resp.Code)
+		}
+		if !strings.Contains(resp.Body.String(), "GLEIF_REFERENCE_SYNC") {
+			t.Fatalf("expected GLEIF_REFERENCE_SYNC precondition message, got %s", resp.Body.String())
+		}
+	})
 }
 
 func TestTriggerMasterDataSync_ConflictPaths(t *testing.T) {
@@ -786,6 +820,23 @@ func TestTriggerManualSync_ErrorPaths(t *testing.T) {
 		}
 		if !strings.Contains(resp.Body.String(), "GLEIF_REFERENCE_SYNC") {
 			t.Fatalf("expected GLEIF_REFERENCE_SYNC conflict message, got %s", resp.Body.String())
+		}
+	})
+
+	t.Run("gleif reference returns 409 when master data is running", func(t *testing.T) {
+		stub := &schedulerServiceStub{
+			triggerErrs: map[string]error{
+				"TriggerGLEIFReferenceSync": fmt.Errorf("cannot start GLEIF_REFERENCE_SYNC while MASTER_DATA_SYNC is running: %w", service.ErrJobRunning),
+			},
+		}
+		h := NewLEIHandler(&leiServiceStub{}, stub)
+
+		resp := executePOST("/sync/gleif-reference", h.TriggerGLEIFReferenceSync)
+		if resp.Code != http.StatusConflict {
+			t.Fatalf("expected status %d, got %d", http.StatusConflict, resp.Code)
+		}
+		if !strings.Contains(resp.Body.String(), "MASTER_DATA_SYNC") {
+			t.Fatalf("expected MASTER_DATA_SYNC conflict message, got %s", resp.Body.String())
 		}
 	})
 }

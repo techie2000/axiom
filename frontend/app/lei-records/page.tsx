@@ -16,6 +16,7 @@ import { useDeferredBooleanPreference } from '../lib/useDeferredBooleanPreferenc
 import { buildDocsUrl } from '../lib/docsLinks'
 import { useButtonEmojiMode } from '../lib/useButtonEmojiMode'
 import { useEnglishTooltips } from '../lib/useEnglishTooltips'
+import { useCachedLeiCount } from '../lib/useCachedLeiCount'
 import { useUserPreference } from '../lib/useUserPreference'
 import { useSearchFocusShortcut } from '../lib/useSearchFocusShortcut'
 import MapLink from '../components/MapLink'
@@ -180,7 +181,6 @@ export default function LEIRecordsPage() {
   const [countrySearch, setCountrySearch] = useState('')
   const [showCountryDropdown, setShowCountryDropdown] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
-  const [totalRecords, setTotalRecords] = useState(0)
   const [countryOptions, setCountryOptions] = useState<Country[]>([])
   const [languagesByCode, setLanguagesByCode] = useState<Map<string, LanguageOption>>(new Map())
   const [regionNameByCode, setRegionNameByCode] = useState<Map<string, string>>(new Map())
@@ -289,6 +289,7 @@ export default function LEIRecordsPage() {
   const [stickyColumnWidths, setStickyColumnWidths] = useState<number[]>([])
   const [dateDisplayMode, setDateDisplayMode] = useState<'relative' | 'absolute'>('relative')
   const recordsRequestControllerRef = useRef<AbortController | null>(null)
+  const detailRequestControllerRef = useRef<AbortController | null>(null)
 
   // Context menu state (right-click on table row)
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; record: LEIRecord } | null>(null)
@@ -302,6 +303,8 @@ export default function LEIRecordsPage() {
   const API_BASE_URL = typeof window !== 'undefined' 
     ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080')
     : 'http://backend:8080'
+  const { count: totalRecordsCount } = useCachedLeiCount(API_BASE_URL, { pollMs: 30000 })
+  const totalRecords = totalRecordsCount ?? 0
 
   const normalizeLeiCode = useCallback((value: string | null | undefined): string => {
     return String(value || '').trim().toUpperCase()
@@ -407,49 +410,6 @@ export default function LEIRecordsPage() {
     }
 
     fetchLanguages()
-  }, [API_BASE_URL])
-
-  // Fetch total records count from API.
-  // Primary source: /api/v1/lei/status/DAILY_FULL (fast, reflects last completed sync).
-  // Fallback: /api/v1/lei/count (actual DB COUNT, used when no DAILY_FULL sync has completed yet).
-  useEffect(() => {
-    const fetchTotalRecords = async () => {
-      try {
-        const statusResp = await fetch(`${API_BASE_URL}/api/v1/lei/status/DAILY_FULL`, {
-          method: 'GET',
-          cache: 'no-store',
-          next: { revalidate: 0 }
-        })
-        if (statusResp.ok) {
-          const statusData = await statusResp.json()
-          const syncTotal: number = statusData.current_source_file?.total_records ?? 0
-          if (syncTotal > 0) {
-            setTotalRecords(syncTotal)
-            return
-          }
-        }
-      } catch (err) {
-        console.warn('Status endpoint unavailable, falling back to DB count:', err)
-      }
-      // Fallback: no completed DAILY_FULL sync — query the database directly
-      try {
-        const countResp = await fetch(`${API_BASE_URL}/api/v1/lei/count`, {
-          method: 'GET',
-          cache: 'no-store',
-          next: { revalidate: 0 }
-        })
-        if (countResp.ok) {
-          const countData = await countResp.json()
-          setTotalRecords(countData.count ?? 0)
-        }
-      } catch (err) {
-        console.error('Failed to fetch total records:', err)
-      }
-    }
-    fetchTotalRecords()
-    // Refresh every 30 seconds to get live updates during sync
-    const interval = setInterval(fetchTotalRecords, 30000)
-    return () => clearInterval(interval)
   }, [API_BASE_URL])
 
   // Close country dropdown when clicking outside
@@ -682,24 +642,66 @@ export default function LEIRecordsPage() {
     return { days: diffDays, relative }
   }
 
+  // Shared helper: batch-fetch legal names for a set of LEI codes using a single HTTP request.
+  // Returns a map of LEI code -> legal name for codes found in the database.
+  const fetchLegalNamesBatch = useCallback(async (codes: string[]): Promise<Map<string, string>> => {
+    if (codes.length === 0) return new Map()
+    const params = new URLSearchParams({ codes: codes.join(',') })
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/lei/names?${params}`)
+      if (!response.ok) return new Map()
+      const data: Record<string, string> = await response.json()
+      return new Map(Object.entries(data))
+    } catch {
+      return new Map()
+    }
+  }, [API_BASE_URL])
+
+  const fetchLeiDetailRecord = useCallback(async (leiCode: string): Promise<LEIRecord | null> => {
+    const normalizedLeiCode = normalizeLeiCode(leiCode)
+    if (!normalizedLeiCode) {
+      return null
+    }
+
+    if (detailRequestControllerRef.current) {
+      detailRequestControllerRef.current.abort()
+    }
+
+    const controller = new AbortController()
+    detailRequestControllerRef.current = controller
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/lei/${normalizedLeiCode}`, {
+        signal: controller.signal,
+      })
+      if (!response.ok) {
+        return null
+      }
+
+      const fullRecord = await response.json()
+      return normalizeRecordNullLikeValues(fullRecord)
+    } catch (err) {
+      if (controller.signal.aborted) {
+        return null
+      }
+      console.error('Error fetching complete record:', err)
+      return null
+    } finally {
+      if (detailRequestControllerRef.current === controller) {
+        detailRequestControllerRef.current = null
+      }
+    }
+  }, [API_BASE_URL, normalizeLeiCode])
+
   // Handler to fetch complete record for detail view
   const handleRecordClick = async (partialRecord: LEIRecord) => {
-    try {
-      // Fetch complete record from API (not limited by columns parameter)
-      const response = await fetch(`${API_BASE_URL}/api/v1/lei/${partialRecord.lei}`)
-      if (response.ok) {
-        const fullRecord = await response.json()
-        setSelectedRecord(normalizeRecordNullLikeValues(fullRecord))
-      } else {
-        // Fallback to partial record if fetch fails
-        console.warn('Failed to fetch complete record, using partial data')
-        setSelectedRecord(normalizeRecordNullLikeValues(partialRecord))
-      }
-    } catch (err) {
-      console.error('Error fetching complete record:', err)
-      // Fallback to partial record if fetch fails
-      setSelectedRecord(normalizeRecordNullLikeValues(partialRecord))
+    const fullRecord = await fetchLeiDetailRecord(partialRecord.lei)
+    if (fullRecord) {
+      setSelectedRecord(fullRecord)
+      return
     }
+
+    setSelectedRecord(normalizeRecordNullLikeValues(partialRecord))
   }
 
   // Right-click context menu handler
@@ -734,22 +736,22 @@ export default function LEIRecordsPage() {
     }
   }, [contextMenu])
 
+  useEffect(() => {
+    return () => {
+      if (detailRequestControllerRef.current) {
+        detailRequestControllerRef.current.abort()
+      }
+    }
+  }, [])
+
   const handleLinkedLeiClick = async (event: ReactMouseEvent, leiCode: string) => {
     event.stopPropagation()
-    const normalizedLeiCode = (leiCode || '').trim()
-    if (!normalizedLeiCode) {
+    const fullRecord = await fetchLeiDetailRecord(leiCode)
+    if (!fullRecord) {
       return
     }
 
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/lei/${normalizedLeiCode}`)
-      if (response.ok) {
-        const fullRecord = await response.json()
-        setSelectedRecord(normalizeRecordNullLikeValues(fullRecord))
-      }
-    } catch {
-      // Best-effort navigation to related LEI detail.
-    }
+    setSelectedRecord(fullRecord)
   }
 
   /** Called from LEIAuditHistoryModal when the user clicks a LEI link (managing_lou / successor_lei). */
@@ -758,11 +760,14 @@ export default function LEIRecordsPage() {
     if (!normalizedLeiCode) return
     // Close the audit modal then open the detail modal for the clicked LEI
     setAuditRecord(null)
-    void fetch(`${API_BASE_URL}/api/v1/lei/${normalizedLeiCode}`)
-      .then((r) => r.ok ? r.json() : Promise.reject(new Error('not found')))
-      .then((record) => setSelectedRecord(normalizeRecordNullLikeValues(record as LEIRecord)))
+    void fetchLeiDetailRecord(normalizedLeiCode)
+      .then((record) => {
+        if (record) {
+          setSelectedRecord(record)
+        }
+      })
       .catch(() => { /* best-effort: user may retry manually */ })
-  }, [API_BASE_URL])
+  }, [fetchLeiDetailRecord])
 
   // Fetch managing LOU name when modal opens
   useEffect(() => {
@@ -777,13 +782,8 @@ export default function LEIRecordsPage() {
       setManagingLouName(null)
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/v1/lei/${selectedRecord.managing_lou}`)
-        if (response.ok) {
-          const data = await response.json()
-          setManagingLouName(data.legal_name || null)
-        } else {
-          setManagingLouName(null)
-        }
+        const names = await fetchLegalNamesBatch([selectedRecord.managing_lou])
+        setManagingLouName(names.get(selectedRecord.managing_lou) || null)
       } catch (err) {
         console.error('Failed to fetch managing LOU name:', err)
         setManagingLouName(null)
@@ -793,7 +793,7 @@ export default function LEIRecordsPage() {
     }
 
     fetchManagingLouName()
-  }, [selectedRecord, API_BASE_URL])
+  }, [fetchLegalNamesBatch, selectedRecord])
 
   // Fetch successor LEI name when modal opens
   useEffect(() => {
@@ -808,13 +808,8 @@ export default function LEIRecordsPage() {
       setSuccessorLeiName(null)
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/v1/lei/${selectedRecord.successor_lei}`)
-        if (response.ok) {
-          const data = await response.json()
-          setSuccessorLeiName(data.legal_name || null)
-        } else {
-          setSuccessorLeiName(null)
-        }
+        const names = await fetchLegalNamesBatch([selectedRecord.successor_lei])
+        setSuccessorLeiName(names.get(selectedRecord.successor_lei) || null)
       } catch {
         setSuccessorLeiName(null)
       } finally {
@@ -823,7 +818,7 @@ export default function LEIRecordsPage() {
     }
 
     fetchSuccessorLeiName()
-  }, [selectedRecord, API_BASE_URL])
+  }, [fetchLegalNamesBatch, selectedRecord])
 
   // Fetch predecessor LEI references that point to the selected LEI as successor.
   useEffect(() => {
@@ -884,21 +879,6 @@ export default function LEIRecordsPage() {
 
     fetchPredecessorLeiReferences()
   }, [selectedRecord?.lei, API_BASE_URL, predecessorLeiCache])
-
-  // Shared helper: batch-fetch legal names for a set of LEI codes using a single HTTP request.
-  // Returns a map of LEI code → legal name for codes found in the database.
-  const fetchLegalNamesBatch = useCallback(async (codes: string[]): Promise<Map<string, string>> => {
-    if (codes.length === 0) return new Map()
-    const params = new URLSearchParams({ codes: codes.join(',') })
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/lei/names?${params}`)
-      if (!response.ok) return new Map()
-      const data: Record<string, string> = await response.json()
-      return new Map(Object.entries(data))
-    } catch {
-      return new Map()
-    }
-  }, [API_BASE_URL])
 
   const mergeNameCacheWithMisses = useCallback(
     (

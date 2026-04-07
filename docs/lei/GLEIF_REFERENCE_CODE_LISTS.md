@@ -10,14 +10,22 @@ form code, legal jurisdiction code, organizational role code) that must be resol
 to human-readable names for display in the UI. The reference code lists are sourced
 daily from GLEIF CSV endpoints and stored in the `lei_raw` schema.
 
-The pipeline enforces **reference-data-first** ordering: all four code lists are
-fully upserted before any LEI Level 1/2 ingest begins.
+The pipeline enforces **reference-data-first** ordering with explicit dependencies:
+
+1. `MASTER_DATA_SYNC` (countries/currencies/languages)
+2. `GLEIF_REFERENCE_SYNC` (all four GLEIF code lists)
+3. LEI Level 1 (`DAILY_FULL` / `DAILY_DELTA`)
+4. LEI Level 2 (`LEVEL2_RR` then `LEVEL2_REPEX`)
+
+This ensures country codes required by GLEIF tables are seeded before GLEIF upserts,
+and GLEIF reference values are available before LEI ingest begins.
 
 ## Processing Flow
 
 ```mermaid
 flowchart TD
-    Scheduler([Daily Scheduler<br/>02:00 UTC]) --> GLEIFSync[Run GLEIF Reference Sync]
+    Scheduler([Daily Scheduler]) --> MasterData[Run Master Data Sync<br/>Countries/Currencies/Languages]
+    MasterData --> GLEIFSync[Run GLEIF Reference Sync]
 
     GLEIFSync --> RA[Sync Registration Authorities<br/>issue #212]
     GLEIFSync --> ELF[Sync Entity Legal Forms ISO 20275<br/>issue #213]
@@ -57,7 +65,7 @@ flowchart TD
 - **Key column**: `ra_id` (e.g. `RA000001`)
 - **Resolves**: `lei_raw.lei_records.registration_authority`
 - **Update strategy**: Full replace — `DeactivateAll()` then upsert all rows
-- **URL**: `https://www.gleif.org/content/2-about-lei/6-code-lists/2-gleif-registration-authorities-list/`
+- **Landing page**: `https://www.gleif.org/en/lei-data/code-lists/gleif-registration-authorities-list`
 
 ### 2. Entity Legal Forms — ISO 20275 (issue #213)
 
@@ -67,7 +75,7 @@ flowchart TD
 - **Resolves**: `lei_raw.lei_records.entity_legal_form`
 - **Update strategy**: Full replace — `DeactivateAll()` then upsert all rows (sets status to `DECOMMISSIONED`
   for removed rows)
-- **URL**: `https://www.gleif.org/content/2-about-lei/6-code-lists/1-iso-20275-entity-legal-forms/`
+- **Landing page**: `https://www.gleif.org/en/lei-data/code-lists/iso-20275-entity-legal-forms-code-list`
 
 ### 3. Official Organizational Roles — ISO 5009 (issue #214)
 
@@ -76,7 +84,7 @@ flowchart TD
 - **Key column**: `role_code` (e.g. `GENERAL_PARTNER`)
 - **Resolves**: Relationship role codes in LEI Level 2 data
 - **Update strategy**: Full replace — `DeactivateAll()` then upsert all rows
-- **URL**: `https://www.gleif.org/content/2-about-lei/6-code-lists/4-iso-5009-official-organizational-roles/`
+- **Landing page**: `https://www.gleif.org/en/lei-data/code-lists/iso-5009-official-organizational-roles-code-list`
 
 ### 4. Accepted Legal Jurisdictions (issue #215)
 
@@ -84,7 +92,7 @@ flowchart TD
 - **Table**: `lei_raw.gleif_legal_jurisdictions`
 - **Key column**: `jurisdiction_code` (e.g. `US-CA`, `DE`)
 - **Update strategy**: Full replace — `DeactivateAll()` then upsert all rows
-- **URL**: `https://www.gleif.org/content/2-about-lei/6-code-lists/3-gleif-accepted-legal-jurisdictions/`
+- **Landing page**: `https://www.gleif.org/en/lei-data/code-lists/gleif-accepted-legal-jurisdictions-code-list`
 
 ## Database Schema
 
@@ -161,6 +169,9 @@ Progress can be observed in the application logs.
 
 - Each list is attempted independently so a single list failure does not skip
   remaining lists in the same run.
+- Downloads first try configured direct CSV URLs. If GLEIF rotates versioned file names
+  and a direct URL returns `404`, the service discovers the current CSV link from the
+  corresponding code-list landing page and retries automatically.
 - If any list fails, `SyncAll()` returns an error and the scheduler blocks
   downstream LEI ingest for that run.
 - Errors are logged with `zerolog` at `ERROR` level with `list` and `err` fields.
