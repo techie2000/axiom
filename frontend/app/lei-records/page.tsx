@@ -20,6 +20,7 @@ import { useUserPreference } from '../lib/useUserPreference'
 import { useSearchFocusShortcut } from '../lib/useSearchFocusShortcut'
 import MapLink from '../components/MapLink'
 import { formatEnumDisplayValue, formatLEICellValue, getStatusBadgePresentation, normalizeRecordNullLikeValues } from './null-utils'
+import { computeShowingEnd, formatCurrentPageStatValue } from './stats-format'
 import { useTranslation } from 'react-i18next'
 import LEIAuditHistoryModal from '../components/LEIAuditHistoryModal'
 
@@ -406,18 +407,38 @@ export default function LEIRecordsPage() {
     fetchLanguages()
   }, [API_BASE_URL])
 
-  // Fetch total records count from API
+  // Fetch total records count from API.
+  // Primary source: /api/v1/lei/status/DAILY_FULL (fast, reflects last completed sync).
+  // Fallback: /api/v1/lei/count (actual DB COUNT, used when no DAILY_FULL sync has completed yet).
   useEffect(() => {
     const fetchTotalRecords = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/v1/lei/status/DAILY_FULL`, { 
+        const statusResp = await fetch(`${API_BASE_URL}/api/v1/lei/status/DAILY_FULL`, {
           method: 'GET',
           cache: 'no-store',
           next: { revalidate: 0 }
         })
-        if (response.ok) {
-          const data = await response.json()
-          setTotalRecords(data.current_source_file?.total_records || 0)
+        if (statusResp.ok) {
+          const statusData = await statusResp.json()
+          const syncTotal: number = statusData.current_source_file?.total_records ?? 0
+          if (syncTotal > 0) {
+            setTotalRecords(syncTotal)
+            return
+          }
+        }
+      } catch (err) {
+        console.warn('Status endpoint unavailable, falling back to DB count:', err)
+      }
+      // Fallback: no completed DAILY_FULL sync — query the database directly
+      try {
+        const countResp = await fetch(`${API_BASE_URL}/api/v1/lei/count`, {
+          method: 'GET',
+          cache: 'no-store',
+          next: { revalidate: 0 }
+        })
+        if (countResp.ok) {
+          const countData = await countResp.json()
+          setTotalRecords(countData.count ?? 0)
         }
       } catch (err) {
         console.error('Failed to fetch total records:', err)
@@ -1205,7 +1226,7 @@ export default function LEIRecordsPage() {
   }
 
   return (
-    <div className="min-h-screen p-8 theme-page">
+    <div className="min-h-screen p-8 pb-14 theme-page">
       <div className={`${effectiveExpandedWidth ? 'max-w-full' : 'max-w-7xl'} mx-auto transition-all duration-300`}>
         <PageHeader
           title={t('leiRecords.title')}
@@ -1334,16 +1355,21 @@ export default function LEIRecordsPage() {
         )}
 
         <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <StatCard title={t('leiRecords.stats.totalRecords')} titleTooltip={getEnglishTooltip('leiRecords.stats.totalRecords')} value={totalRecords.toLocaleString()} />
+          <StatCard title={t('leiRecords.stats.totalRecords')} titleTooltip={getEnglishTooltip('leiRecords.stats.totalRecords')} value={totalRecords > 0 ? totalRecords.toLocaleString() : '—'} />
           <StatCard
             title={t('leiRecords.stats.currentPage')}
             titleTooltip={getEnglishTooltip('leiRecords.stats.currentPage')}
-            value={`${currentPage} ${hasActiveFilters ? t('leiRecords.stats.currentPageFiltered', { page: currentPage }) : t('leiRecords.stats.currentPageOf', { page: currentPage, total: totalPages.toLocaleString() })}`}
+            value={formatCurrentPageStatValue({
+              hasActiveFilters: Boolean(hasActiveFilters),
+              currentPage,
+              totalPages,
+              t,
+            })}
           />
           <StatCard
             title={t('leiRecords.stats.showing')}
             titleTooltip={getEnglishTooltip('leiRecords.stats.showing')}
-            value={`${((currentPage - 1) * itemsPerPage) + 1}-${Math.min(currentPage * itemsPerPage, totalRecords)}`}
+            value={`${((currentPage - 1) * itemsPerPage) + 1}-${computeShowingEnd(currentPage, itemsPerPage, totalRecords, records.length)}`}
           />
         </div>
 
@@ -1502,7 +1528,7 @@ export default function LEIRecordsPage() {
               {t('leiRecords.pagination.previous')}
             </button>
             <span className="theme-text-muted">
-                {hasActiveFilters
+                {hasActiveFilters || totalPages === 0
                   ? t('leiRecords.pagination.pageFiltered', { page: currentPage, count: records.length })
                   : t('leiRecords.pagination.pageOf', { page: currentPage, total: totalPages.toLocaleString() })}
             </span>
