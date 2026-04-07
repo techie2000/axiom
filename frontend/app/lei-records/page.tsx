@@ -21,6 +21,7 @@ import { useSearchFocusShortcut } from '../lib/useSearchFocusShortcut'
 import MapLink from '../components/MapLink'
 import { formatEnumDisplayValue, formatLEICellValue, getStatusBadgePresentation, normalizeRecordNullLikeValues } from './null-utils'
 import { useTranslation } from 'react-i18next'
+import LEIAuditHistoryModal from '../components/LEIAuditHistoryModal'
 
 interface LEIRecord {
   id: string
@@ -115,7 +116,6 @@ const AVAILABLE_COLUMNS: ColumnConfig[] = [
   { key: 'entity_status', labelKey: 'leiRecords.columns.labels.status', groupKey: 'leiRecords.columns.groups.core', defaultVisible: true, width: 'w-32' },
   { key: 'entity_category', labelKey: 'leiRecords.columns.labels.category', groupKey: 'leiRecords.columns.groups.core', defaultVisible: true, width: 'w-40' },
   { key: 'country_flag', labelKey: 'leiRecords.columns.labels.countryFlag', groupKey: 'leiRecords.columns.groups.core', defaultVisible: false, width: 'w-20' },
-  { key: 'legal_address_country', labelKey: 'leiRecords.columns.labels.countryName', groupKey: 'leiRecords.columns.groups.core', defaultVisible: true, width: 'w-24' },
   { key: 'last_update_date', labelKey: 'leiRecords.columns.labels.lastUpdated', groupKey: 'leiRecords.columns.groups.core', defaultVisible: true, width: 'w-32' },
   
   // Additional Entity Info
@@ -130,6 +130,7 @@ const AVAILABLE_COLUMNS: ColumnConfig[] = [
   { key: 'legal_address_line_4', labelKey: 'leiRecords.columns.labels.legalAddressLine4', groupKey: 'leiRecords.columns.groups.legalAddress', defaultVisible: false, width: 'min-w-48' },
   { key: 'legal_address_city', labelKey: 'leiRecords.columns.labels.legalCity', groupKey: 'leiRecords.columns.groups.legalAddress', defaultVisible: false, width: 'w-40' },
   { key: 'legal_address_region', labelKey: 'leiRecords.columns.labels.regionName', groupKey: 'leiRecords.columns.groups.legalAddress', defaultVisible: false, width: 'w-32' },
+  { key: 'legal_address_country', labelKey: 'leiRecords.columns.labels.countryName', groupKey: 'leiRecords.columns.groups.legalAddress', defaultVisible: true, width: 'w-24' },
   { key: 'legal_address_postal_code', labelKey: 'leiRecords.columns.labels.legalPostalCode', groupKey: 'leiRecords.columns.groups.legalAddress', defaultVisible: false, width: 'w-28' },
   
   // HQ Address (natural order: address lines, then city/region/country/postal)
@@ -285,6 +286,15 @@ export default function LEIRecordsPage() {
   const [stickyColumnWidths, setStickyColumnWidths] = useState<number[]>([])
   const [dateDisplayMode, setDateDisplayMode] = useState<'relative' | 'absolute'>('relative')
   const recordsRequestControllerRef = useRef<AbortController | null>(null)
+
+  // Context menu state (right-click on table row)
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; record: LEIRecord } | null>(null)
+  const contextMenuRef = useRef<HTMLDivElement>(null)
+  const contextMenuViewDetailsRef = useRef<HTMLButtonElement>(null)
+  const contextMenuAuditHistoryRef = useRef<HTMLButtonElement>(null)
+
+  // Audit history modal state
+  const [auditRecord, setAuditRecord] = useState<LEIRecord | null>(null)
 
   const API_BASE_URL = typeof window !== 'undefined' 
     ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080')
@@ -669,6 +679,38 @@ export default function LEIRecordsPage() {
     }
   }
 
+  // Right-click context menu handler
+  const handleRowContextMenu = useCallback((event: ReactMouseEvent, record: LEIRecord) => {
+    event.preventDefault()
+    event.stopPropagation()
+    setContextMenu({ x: event.clientX, y: event.clientY, record })
+  }, [])
+
+  const closeContextMenu = useCallback(() => setContextMenu(null), [])
+
+  // Close context menu on outside click or ESC
+  useEffect(() => {
+    const handleClick = () => closeContextMenu()
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeContextMenu()
+    }
+    if (contextMenu) {
+      document.addEventListener('click', handleClick)
+      document.addEventListener('keydown', handleKey)
+    }
+    return () => {
+      document.removeEventListener('click', handleClick)
+      document.removeEventListener('keydown', handleKey)
+    }
+  }, [contextMenu, closeContextMenu])
+
+  // Focus context menu on open
+  useEffect(() => {
+    if (contextMenu && contextMenuRef.current) {
+      contextMenuRef.current.focus()
+    }
+  }, [contextMenu])
+
   const handleLinkedLeiClick = async (event: ReactMouseEvent, leiCode: string) => {
     event.stopPropagation()
     const normalizedLeiCode = (leiCode || '').trim()
@@ -686,6 +728,18 @@ export default function LEIRecordsPage() {
       // Best-effort navigation to related LEI detail.
     }
   }
+
+  /** Called from LEIAuditHistoryModal when the user clicks a LEI link (managing_lou / successor_lei). */
+  const handleAuditLeiClick = useCallback((leiCode: string) => {
+    const normalizedLeiCode = (leiCode || '').trim()
+    if (!normalizedLeiCode) return
+    // Close the audit modal then open the detail modal for the clicked LEI
+    setAuditRecord(null)
+    void fetch(`${API_BASE_URL}/api/v1/lei/${normalizedLeiCode}`)
+      .then((r) => r.ok ? r.json() : Promise.reject(new Error('not found')))
+      .then((record) => setSelectedRecord(normalizeRecordNullLikeValues(record as LEIRecord)))
+      .catch(() => { /* best-effort: user may retry manually */ })
+  }, [API_BASE_URL])
 
   // Fetch managing LOU name when modal opens
   useEffect(() => {
@@ -1598,6 +1652,7 @@ export default function LEIRecordsPage() {
                         data-lei={record.lei}
                         data-row-index={index}
                         onClick={() => handleRecordClick(record)}
+                        onContextMenu={(e) => handleRowContextMenu(e, record)}
                         className="group theme-table-row-hover transition-colors cursor-pointer"
                         style={{ height: 'auto', minHeight: '48px' }}
                       >
@@ -1814,12 +1869,21 @@ export default function LEIRecordsPage() {
                   <h2 className="text-2xl font-bold text-[rgb(var(--foreground-rgb))] mb-2">{t('leiRecords.modal.title')}</h2>
                   <p className="text-lg font-mono text-[rgb(var(--primary-rgb))] dark:text-[rgb(var(--primary-rgb))]">{selectedRecord.lei}</p>
                 </div>
-                <button
-                  onClick={() => setSelectedRecord(null)}
-                  className="px-4 py-2 rounded-lg bg-[rgb(var(--surface-muted-rgb))] hover:bg-[rgb(var(--surface-muted-rgb))] dark:bg-[rgb(var(--surface-muted-rgb))] dark:hover:bg-[rgb(var(--surface-muted-rgb))] transition-colors text-[rgb(var(--foreground-rgb))] font-medium"
-                >
-                  {t('leiRecords.modal.close')}
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setAuditRecord(selectedRecord)}
+                    className="px-3 py-2 rounded-lg bg-[rgb(var(--surface-muted-rgb))] hover:bg-[rgb(var(--surface-muted-rgb))] transition-colors text-[rgb(var(--foreground-rgb))] text-sm font-medium"
+                    title={t('leiAudit.viewAuditHistory')}
+                  >
+                    {formatLabel(t('leiAudit.historyButton'))}
+                  </button>
+                  <button
+                    onClick={() => setSelectedRecord(null)}
+                    className="px-4 py-2 rounded-lg bg-[rgb(var(--surface-muted-rgb))] hover:bg-[rgb(var(--surface-muted-rgb))] dark:bg-[rgb(var(--surface-muted-rgb))] dark:hover:bg-[rgb(var(--surface-muted-rgb))] transition-colors text-[rgb(var(--foreground-rgb))] font-medium"
+                  >
+                    {formatLabel(t('leiRecords.modal.close'))}
+                  </button>
+                </div>
               </div>
               {/* Date Display Mode Toggle */}
               <div className="flex items-center gap-2 text-sm">
@@ -1828,14 +1892,14 @@ export default function LEIRecordsPage() {
                   onClick={() => setDateDisplayMode(dateDisplayMode === 'relative' ? 'absolute' : 'relative')}
                   className="px-3 py-1 rounded-lg theme-filterchip transition-colors font-medium"
                 >
-                  {dateDisplayMode === 'relative' ? t('leiRecords.modal.dateRelative') : t('leiRecords.modal.dateDaysOnly')}
+                  {formatLabel(dateDisplayMode === 'relative' ? t('leiRecords.modal.dateRelative') : t('leiRecords.modal.dateDaysOnly'))}
                 </button>
                 <span className="text-[rgb(var(--muted-foreground-rgb))] ml-2">{t('leiRecords.modal.display')}</span>
                 <button
                   onClick={toggleLocationDisplayMode}
                   className="px-3 py-1 rounded-lg theme-filterchip transition-colors font-medium"
                 >
-                  {showLocationCodes ? t('leiRecords.display.codes') : t('leiRecords.display.names')}
+                  {formatLabel(showLocationCodes ? t('leiRecords.display.codes') : t('leiRecords.display.names'))}
                 </button>
               </div>
             </div>
@@ -2294,6 +2358,90 @@ export default function LEIRecordsPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Context menu (right-click on table row) */}
+      {contextMenu && (
+        <div
+          ref={contextMenuRef}
+          role="menu"
+          tabIndex={-1}
+          aria-label={t('leiAudit.contextMenuLabel') ?? 'Row actions'}
+          className="fixed z-[60] min-w-48 theme-dropdown rounded-lg shadow-xl border border-[rgb(var(--border-rgb))] overflow-hidden"
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              closeContextMenu()
+            } else if (e.key === 'ArrowDown') {
+              e.preventDefault()
+              contextMenuAuditHistoryRef.current?.focus()
+            } else if (e.key === 'ArrowUp') {
+              e.preventDefault()
+              contextMenuViewDetailsRef.current?.focus()
+            }
+          }}
+        >
+          <button
+            ref={contextMenuViewDetailsRef}
+            role="menuitem"
+            type="button"
+            className="w-full text-left px-4 py-2.5 text-sm hover:bg-[rgb(var(--surface-muted-rgb))] transition-colors focus:outline-none focus-visible:ring-inset focus-visible:ring-2 focus-visible:ring-blue-500"
+            onKeyDown={(e) => {
+              if (e.key === 'ArrowDown') {
+                e.preventDefault()
+                contextMenuAuditHistoryRef.current?.focus()
+              } else if (e.key === 'ArrowUp') {
+                e.preventDefault()
+                contextMenuRef.current?.focus()
+              } else if (e.key === 'Escape') {
+                closeContextMenu()
+              }
+            }}
+            onClick={() => {
+              closeContextMenu()
+              void handleRecordClick(contextMenu.record)
+            }}
+          >
+            {formatLabel(t('leiAudit.viewDetails'))}
+          </button>
+          <button
+            ref={contextMenuAuditHistoryRef}
+            role="menuitem"
+            type="button"
+            className="w-full text-left px-4 py-2.5 text-sm hover:bg-[rgb(var(--surface-muted-rgb))] transition-colors focus:outline-none focus-visible:ring-inset focus-visible:ring-2 focus-visible:ring-blue-500"
+            onKeyDown={(e) => {
+              if (e.key === 'ArrowDown') {
+                e.preventDefault()
+                contextMenuViewDetailsRef.current?.focus()
+              } else if (e.key === 'ArrowUp') {
+                e.preventDefault()
+                contextMenuRef.current?.focus()
+              } else if (e.key === 'Escape') {
+                closeContextMenu()
+              }
+            }}
+            onClick={() => {
+              closeContextMenu()
+              setAuditRecord(contextMenu.record)
+            }}
+          >
+            {formatLabel(t('leiAudit.viewAuditHistory'))}
+          </button>
+        </div>
+      )}
+
+      {/* Audit History Modal */}
+      {auditRecord && (
+        <LEIAuditHistoryModal
+          lei={auditRecord.lei}
+          legalName={auditRecord.legal_name}
+          onClose={() => setAuditRecord(null)}
+          apiBaseUrl={API_BASE_URL}
+          availableColumns={AVAILABLE_COLUMNS.filter((c) => c.key !== 'country_flag')}
+          visibleColumns={effectiveVisibleColumns}
+          onLeiClick={handleAuditLeiClick}
+        />
       )}
 
       {/* Unobtrusive prompts to save changed preferences */}
