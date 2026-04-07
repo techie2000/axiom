@@ -290,6 +290,8 @@ export default function LEIRecordsPage() {
   // Context menu state (right-click on table row)
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; record: LEIRecord } | null>(null)
   const contextMenuRef = useRef<HTMLDivElement>(null)
+  const contextMenuViewDetailsRef = useRef<HTMLButtonElement>(null)
+  const contextMenuAuditHistoryRef = useRef<HTMLButtonElement>(null)
 
   // Audit history modal state
   const [auditRecord, setAuditRecord] = useState<LEIRecord | null>(null)
@@ -701,6 +703,13 @@ export default function LEIRecordsPage() {
       document.removeEventListener('keydown', handleKey)
     }
   }, [contextMenu, closeContextMenu])
+
+  // Focus context menu on open
+  useEffect(() => {
+    if (contextMenu && contextMenuRef.current) {
+      contextMenuRef.current.focus()
+    }
+  }, [contextMenu])
 
   const handleLinkedLeiClick = async (event: ReactMouseEvent, leiCode: string) => {
     event.stopPropagation()
@@ -2353,20 +2362,42 @@ export default function LEIRecordsPage() {
 
       {/* Context menu (right-click on table row) */}
       {contextMenu && (
-        /* eslint-disable-next-line jsx-a11y/interactive-supports-focus -- context menu is positioned to cursor; focus is managed by the child menuitem buttons */
         <div
           ref={contextMenuRef}
           role="menu"
-          aria-label={t('leiAudit.contextMenuLabel')}
+          tabIndex={-1}
+          aria-label={t('leiAudit.contextMenuLabel') ?? 'Row actions'}
           className="fixed z-[60] min-w-48 theme-dropdown rounded-lg shadow-xl border border-[rgb(var(--border-rgb))] overflow-hidden"
           style={{ top: contextMenu.y, left: contextMenu.x }}
           onClick={(e) => e.stopPropagation()}
-          onKeyDown={(e) => { if (e.key === 'Escape') closeContextMenu() }}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              closeContextMenu()
+            } else if (e.key === 'ArrowDown') {
+              e.preventDefault()
+              contextMenuAuditHistoryRef.current?.focus()
+            } else if (e.key === 'ArrowUp') {
+              e.preventDefault()
+              contextMenuViewDetailsRef.current?.focus()
+            }
+          }}
         >
           <button
+            ref={contextMenuViewDetailsRef}
             role="menuitem"
             type="button"
             className="w-full text-left px-4 py-2.5 text-sm hover:bg-[rgb(var(--surface-muted-rgb))] transition-colors focus:outline-none focus-visible:ring-inset focus-visible:ring-2 focus-visible:ring-blue-500"
+            onKeyDown={(e) => {
+              if (e.key === 'ArrowDown') {
+                e.preventDefault()
+                contextMenuAuditHistoryRef.current?.focus()
+              } else if (e.key === 'ArrowUp') {
+                e.preventDefault()
+                contextMenuRef.current?.focus()
+              } else if (e.key === 'Escape') {
+                closeContextMenu()
+              }
+            }}
             onClick={() => {
               closeContextMenu()
               void handleRecordClick(contextMenu.record)
@@ -2375,9 +2406,21 @@ export default function LEIRecordsPage() {
             {formatLabel(t('leiAudit.viewDetails'))}
           </button>
           <button
+            ref={contextMenuAuditHistoryRef}
             role="menuitem"
             type="button"
             className="w-full text-left px-4 py-2.5 text-sm hover:bg-[rgb(var(--surface-muted-rgb))] transition-colors focus:outline-none focus-visible:ring-inset focus-visible:ring-2 focus-visible:ring-blue-500"
+            onKeyDown={(e) => {
+              if (e.key === 'ArrowDown') {
+                e.preventDefault()
+                contextMenuViewDetailsRef.current?.focus()
+              } else if (e.key === 'ArrowUp') {
+                e.preventDefault()
+                contextMenuRef.current?.focus()
+              } else if (e.key === 'Escape') {
+                closeContextMenu()
+              }
+            }}
             onClick={() => {
               closeContextMenu()
               setAuditRecord(contextMenu.record)
