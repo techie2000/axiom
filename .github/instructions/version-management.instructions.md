@@ -48,8 +48,7 @@ The project follows [Semantic Versioning 2.0.0](https://semver.org/):
 
 ### Repository Policy
 
-- `PATCH` is automatically incremented after each push to `main` unless that push already changes
-   the version files.
+- `PATCH` is a deliberate manual decision, just like `MINOR` and `MAJOR`.
 - `MINOR` remains a deliberate manual decision for capability-level progress.
 - `MAJOR` remains a deliberate manual decision for breaking changes.
 
@@ -78,8 +77,6 @@ pwsh ./scripts/bump-version.ps1 -Part patch
 pwsh ./scripts/bump-version.ps1 -Part minor
 pwsh ./scripts/bump-version.ps1 -Part major
 ```
-
-The automatic `main` workflow uses this helper for patch bumps.
 
 ### Automated Version Injection
 

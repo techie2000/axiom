@@ -14,13 +14,13 @@ entities, financial instruments, accounts, and settlement instructions.
 
 Axiom uses semantic versioning in `MAJOR.MINOR.PATCH` format.
 
-- `PATCH` increments automatically after each push to `main` unless that push already changes the version files.
+- `PATCH` increments manually when a patch release is intentionally prepared.
 - `MINOR` increments manually when a change meaningfully advances the delivered capability.
 - `MAJOR` increments manually for breaking changes.
 
-The application footer reads the backend `/version` endpoint, so each `main` merge gets a distinct UI-visible patch
-version for test tracking. Hovering the footer version exposes the build metadata tooltip with the commit SHA and build
-timestamp when that data is available.
+The application footer reads the backend `/version` endpoint and exposes build metadata in a tooltip
+(commit SHA and build timestamp when available), which is the canonical identifier for the exact code
+state under test.
 
 To perform an intentional minor or major bump, run:
 
