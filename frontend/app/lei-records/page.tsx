@@ -24,6 +24,19 @@ import { formatEnumDisplayValue, formatLEICellValue, getStatusBadgePresentation,
 import { computeShowingEnd, formatCurrentPageStatValue } from './stats-format'
 import { useTranslation } from 'react-i18next'
 import LEIAuditHistoryModal from '../components/LEIAuditHistoryModal'
+import {
+  buildRegistrationLookupOptions,
+  openRegistrationLookup,
+  RegistrationLookupOption,
+} from '../lib/ra-lookup'
+
+function buildLookupOptions(
+  raCode: string | null | undefined,
+  raTemplates: Array<{ name: string; url: string }>,
+  regNum: string | null | undefined,
+): RegistrationLookupOption[] {
+  return buildRegistrationLookupOptions(raCode, raTemplates, regNum)
+}
 
 interface LEIRecord {
   id: string
@@ -61,6 +74,9 @@ interface LEIRecord {
   // Registration
   registration_authority: string
   registration_authority_name?: string
+  registration_authority_international_name?: string
+  registration_authority_website?: string
+  registration_authority_comments?: string
   registration_authority_id: string
   registration_number: string
   
@@ -288,6 +304,7 @@ export default function LEIRecordsPage() {
   const [predecessorLeiLoading, setPredecessorLeiLoading] = useState(false)
   const [stickyColumnWidths, setStickyColumnWidths] = useState<number[]>([])
   const [dateDisplayMode, setDateDisplayMode] = useState<'relative' | 'absolute'>('relative')
+  const [raUrlTemplates, setRaUrlTemplates] = useState<Record<string, Array<{ name: string; url: string }>>>({})
   const recordsRequestControllerRef = useRef<AbortController | null>(null)
   const detailRequestControllerRef = useRef<AbortController | null>(null)
 
@@ -296,6 +313,10 @@ export default function LEIRecordsPage() {
   const contextMenuRef = useRef<HTMLDivElement>(null)
   const contextMenuViewDetailsRef = useRef<HTMLButtonElement>(null)
   const contextMenuAuditHistoryRef = useRef<HTMLButtonElement>(null)
+
+  // Registration number lookup dropdown state
+  const [regNumDropdown, setRegNumDropdown] = useState<{ key: string; x: number; y: number; options: RegistrationLookupOption[] } | null>(null)
+  const regNumDropdownRef = useRef<HTMLDivElement>(null)
 
   // Audit history modal state
   const [auditRecord, setAuditRecord] = useState<LEIRecord | null>(null)
@@ -412,11 +433,36 @@ export default function LEIRecordsPage() {
     fetchLanguages()
   }, [API_BASE_URL])
 
+  // Fetch RA URL templates from public JSON file
+  useEffect(() => {
+    fetch('/data/ra-urls.json')
+      .then(r => r.json())
+      .then((data: Record<string, unknown>) => {
+        const parsed: Record<string, Array<{ name: string; url: string }>> = {}
+        for (const [key, value] of Object.entries(data)) {
+          if (key !== '_comment' && Array.isArray(value)) {
+            const validated = value.filter(
+              (item): item is { name: string; url: string } =>
+                typeof item === 'object' && item !== null &&
+                typeof (item as Record<string, unknown>).name === 'string' &&
+                typeof (item as Record<string, unknown>).url === 'string',
+            )
+            if (validated.length > 0) parsed[key] = validated
+          }
+        }
+        setRaUrlTemplates(parsed)
+      })
+      .catch((err) => { console.error('[ra-urls] Failed to load RA URL templates:', err) })
+  }, [])
+
   // Close country dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (countryDropdownRef.current && !countryDropdownRef.current.contains(event.target as Node)) {
         setShowCountryDropdown(false)
+      }
+      if (regNumDropdownRef.current && !regNumDropdownRef.current.contains(event.target as Node)) {
+        setRegNumDropdown(null)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -427,11 +473,13 @@ export default function LEIRecordsPage() {
   useEffect(() => {
     const handleEscapeKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        // Close in priority order: modal -> column selector -> country dropdown
+        // Close in priority order: modal -> column selector -> regNumDropdown -> country dropdown
         if (selectedRecord) {
           setSelectedRecord(null)
         } else if (showColumnSelector) {
           setShowColumnSelector(false)
+        } else if (regNumDropdown) {
+          setRegNumDropdown(null)
         } else if (showCountryDropdown) {
           setShowCountryDropdown(false)
         }
@@ -439,7 +487,7 @@ export default function LEIRecordsPage() {
     }
     document.addEventListener('keydown', handleEscapeKey)
     return () => document.removeEventListener('keydown', handleEscapeKey)
-  }, [selectedRecord, showColumnSelector, showCountryDropdown])
+  }, [selectedRecord, showColumnSelector, regNumDropdown, showCountryDropdown])
 
   // Debounce search input (300ms delay)
   useEffect(() => {
@@ -492,6 +540,11 @@ export default function LEIRecordsPage() {
       })
       if (!columnsToFetch.includes('other_names')) {
         columnsToFetch.push('other_names')
+      }
+      // Fetch registration_number alongside registration_authority so the ▾ lookup link
+      // can resolve the registration authority URL even when the number column is hidden (#269)
+      if (columnsToFetch.includes('registration_authority') && !columnsToFetch.includes('registration_number')) {
+        columnsToFetch.push('registration_number')
       }
       const columnsParam = columnsToFetch.join(',')
       if (columnsParam) params.append('columns', columnsParam)
@@ -1672,6 +1725,8 @@ export default function LEIRecordsPage() {
                           const isLegalFormColumn = column.key === 'entity_legal_form'
                           const isManagingLou = column.key === 'managing_lou'
                           const isSuccessorLei = column.key === 'successor_lei'
+                          const isRegistrationAuthority = column.key === 'registration_authority'
+                          const isRegistrationNumber = column.key === 'registration_number'
                           const isCountryFlagColumn = column.key === 'country_flag'
                           const isRegionColumn = column.key === 'legal_address_region' || column.key === 'hq_address_region'
                           const isCountryColumn = column.key === 'legal_address_country' || column.key === 'hq_address_country'
@@ -1781,10 +1836,83 @@ export default function LEIRecordsPage() {
                               ) : isRegionColumn ? (
                                 formatRegionDisplay(String(value || ''))
                               ) : isLegalFormColumn ? (
+                                <div>
+                                  <div className="font-mono">{String(value || '-')}</div>
+                                  {!showLocationCodes && (record.entity_legal_form_name || formatLegalFormDisplay(String(value || ''))) && (
+                                    <div className="mt-1 text-xs theme-text-muted">
+                                      {record.entity_legal_form_name || formatLegalFormDisplay(String(value || ''))}
+                                    </div>
+                                  )}
+                                </div>
+                              ) : isRegistrationAuthority ? (
                                 (() => {
-                                  if (showLocationCodes) return String(value || '-')
-                                  // Prefer resolved name from DB join, fall back to local map lookup
-                                  return record.entity_legal_form_name || formatLegalFormDisplay(String(value || ''))
+                                  const raCode = String(value || '')
+                                  const raName = record.registration_authority_name
+                                  const raIntlName = record.registration_authority_international_name
+                                  const raWebsite = record.registration_authority_website
+                                  const raComments = record.registration_authority_comments
+                                  const nameLabel = raName || raCode
+                                  const showIntl = raIntlName && raIntlName !== raName
+                                  return (
+                                    <div className="group/ra" title={raComments || undefined}>
+                                      <span className="inline-flex items-center gap-1">
+                                        {raWebsite ? (
+                                          <a
+                                            href={raWebsite}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="font-mono theme-link hover:underline"
+                                            onClick={e => e.stopPropagation()}
+                                          >
+                                            {raCode}
+                                          </a>
+                                        ) : (
+                                          <span className="font-mono">{raCode || '-'}</span>
+                                        )}
+                                      </span>
+                                      {nameLabel && nameLabel !== raCode && (
+                                        <div className="mt-1 text-xs theme-text-muted">
+                                          {nameLabel}
+                                          {showIntl && <span className="ml-1 opacity-75">({raIntlName})</span>}
+                                        </div>
+                                      )}
+                                    </div>
+                                  )
+                                })()
+                              ) : isRegistrationNumber ? (
+                                (() => {
+                                  const regNum = String(value || '')
+                                  const raCode = record.registration_authority
+                                  const raTemplates = raCode ? (raUrlTemplates[raCode] ?? []) : []
+                                  const lookupOptions = buildLookupOptions(raCode, raTemplates, regNum)
+                                  if (!regNum) return <span>-</span>
+                                  return (
+                                    <div className="group/rn inline-flex items-center gap-1">
+                                      <span className="font-mono">{regNum}</span>
+                                      {lookupOptions.length > 0 && (
+                                        <button
+                                          type="button"
+                                          className="opacity-0 group-hover/rn:opacity-100 transition-opacity text-xs theme-link"
+                                          aria-label={`${t('leiRecords.modal.registrationNumber')}: ${regNum}`}
+                                          aria-haspopup="listbox"
+                                          aria-expanded={regNumDropdown?.key === record.lei}
+                                          title={`${t('leiRecords.modal.registrationNumber')}: ${regNum}`}
+                                          onClick={e => {
+                                            e.stopPropagation()
+                                            const rect = e.currentTarget.getBoundingClientRect()
+                                            setRegNumDropdown({
+                                              key: record.lei,
+                                              x: rect.left,
+                                              y: rect.bottom + 4,
+                                              options: lookupOptions,
+                                            })
+                                          }}
+                                        >
+                                          ▾
+                                        </button>
+                                      )}
+                                    </div>
+                                  )
                                 })()
                               ) : (
                                 formatCellValue(value, column.key)
@@ -1963,19 +2091,13 @@ export default function LEIRecordsPage() {
                   )}
                   {selectedRecord.entity_legal_form && (
                     <div>
-                      <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">{showLocationCodes ? 'Legal Form Code' : 'Legal Form Name'}</span>
-                      {showLocationCodes ? (
-                        <p className="text-sm font-mono text-[rgb(var(--foreground-rgb))] mt-1">{selectedRecord.entity_legal_form}</p>
-                      ) : (
-                        <>
-                          <p className="text-sm text-[rgb(var(--foreground-rgb))] mt-1">
-                            {selectedRecord.entity_legal_form_name || formatLegalFormDisplay(selectedRecord.entity_legal_form)}
-                          </p>
-                          {selectedRecord.entity_legal_form_name && (
-                            <p className="text-xs font-mono text-[rgb(var(--muted-foreground-rgb))] mt-0.5">{selectedRecord.entity_legal_form}</p>
-                          )}
-                        </>
-                      )}
+                      <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">Legal Form</span>
+                      <p className="text-sm font-mono text-[rgb(var(--foreground-rgb))] mt-1">{selectedRecord.entity_legal_form}</p>
+                      {(() => {
+                        const elfDisplayName = selectedRecord.entity_legal_form_name || formatLegalFormDisplay(selectedRecord.entity_legal_form)
+                        if (elfDisplayName === selectedRecord.entity_legal_form) return null
+                        return <p className="text-xs text-[rgb(var(--muted-foreground-rgb))] mt-0.5">{elfDisplayName}</p>
+                      })()}
                     </div>
                   )}
                 </div>
@@ -2231,15 +2353,70 @@ export default function LEIRecordsPage() {
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-[rgb(var(--surface-rgb))]">
                   <div>
-                    <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">Registration Authority</span>
-                    <p className="text-sm font-mono text-[rgb(var(--foreground-rgb))] mt-1">{selectedRecord.registration_authority || '-'}</p>
-                    {selectedRecord.registration_authority_name && (
-                      <p className="text-xs text-[rgb(var(--muted-foreground-rgb))] mt-0.5">{selectedRecord.registration_authority_name}</p>
-                    )}
+                    <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">{t('leiRecords.modal.registrationAuthority')}</span>
+                    {(() => {
+                      const raWebsite = selectedRecord.registration_authority_website
+                      const raCode = selectedRecord.registration_authority
+                      const raName = selectedRecord.registration_authority_name
+                      const raIntlName = selectedRecord.registration_authority_international_name
+                      const raComments = selectedRecord.registration_authority_comments
+                      const showIntl = raIntlName && raIntlName !== raName
+                      return (
+                        <>
+                          <p className="text-sm font-mono text-[rgb(var(--foreground-rgb))] mt-1" title={raComments || undefined}>
+                            {raWebsite ? (
+                              <a href={raWebsite} target="_blank" rel="noopener noreferrer" className="theme-link hover:underline">
+                                {raCode || '-'}
+                              </a>
+                            ) : (raCode || '-')}
+                          </p>
+                          {raName && (
+                            <p className="text-xs text-[rgb(var(--muted-foreground-rgb))] mt-0.5">
+                              {raName}
+                              {showIntl && <span className="ml-1 opacity-75">({raIntlName})</span>}
+                            </p>
+                          )}
+                        </>
+                      )
+                    })()}
                   </div>
                   <div>
-                    <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">Registration Number</span>
-                    <p className="text-sm font-mono text-[rgb(var(--foreground-rgb))] mt-1">{selectedRecord.registration_number || '-'}</p>
+                    <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">{t('leiRecords.modal.registrationNumber')}</span>
+                    {(() => {
+                      const regNum = selectedRecord.registration_number
+                      const raCode = selectedRecord.registration_authority
+                      const raTemplates = raCode ? (raUrlTemplates[raCode] ?? []) : []
+                      const lookupOptions = buildLookupOptions(raCode, raTemplates, regNum)
+                      return (
+                        <p className="text-sm font-mono text-[rgb(var(--foreground-rgb))] mt-1">
+                          <span className="group/rn-modal inline-flex items-center gap-1">
+                            <span>{regNum || '-'}</span>
+                            {lookupOptions.length > 0 && regNum && (
+                              <button
+                                type="button"
+                                className="opacity-0 group-hover/rn-modal:opacity-100 transition-opacity text-xs theme-link"
+                                aria-label={`${t('leiRecords.modal.registrationNumber')}: ${regNum}`}
+                                aria-haspopup="listbox"
+                                aria-expanded={regNumDropdown?.key === `modal-${selectedRecord.lei}`}
+                                title={`${t('leiRecords.modal.registrationNumber')}: ${regNum}`}
+                                onClick={e => {
+                                  e.stopPropagation()
+                                  const rect = e.currentTarget.getBoundingClientRect()
+                                  setRegNumDropdown({
+                                    key: `modal-${selectedRecord.lei}`,
+                                    x: rect.left,
+                                    y: rect.bottom + 4,
+                                    options: lookupOptions,
+                                  })
+                                }}
+                              >
+                                ▾
+                              </button>
+                            )}
+                          </span>
+                        </p>
+                      )
+                    })()}
                   </div>
                   <div>
                     <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">Initial Registration</span>
@@ -2383,6 +2560,34 @@ export default function LEIRecordsPage() {
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Registration number lookup dropdown */}
+      {regNumDropdown && (
+        <div
+          ref={regNumDropdownRef}
+          aria-label={t('leiRecords.modal.registrationNumber')}
+          className="fixed z-[60] min-w-56 theme-dropdown rounded-lg shadow-xl border border-[rgb(var(--border-rgb))] overflow-hidden"
+          style={{ top: regNumDropdown.y, left: regNumDropdown.x }}
+        >
+          <div className="px-3 py-2 text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] border-b border-[rgb(var(--border-rgb))]">
+            {t('leiRecords.modal.registrationNumber')}
+          </div>
+          {regNumDropdown.options.map(opt => (
+            <button
+              key={opt.key}
+              type="button"
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm theme-link hover:bg-[rgb(var(--surface-rgb))] transition-colors"
+              onClick={() => {
+                openRegistrationLookup(opt)
+                setRegNumDropdown(null)
+              }}
+            >
+              <span className="flex-1">{opt.label}</span>
+              <span className="text-xs opacity-60">↗</span>
+            </button>
+          ))}
         </div>
       )}
 

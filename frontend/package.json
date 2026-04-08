@@ -20,7 +20,8 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:report": "playwright show-report",
-    "playwright:install": "playwright install --with-deps chromium"
+    "playwright:install": "playwright install --with-deps chromium",
+    "check:ra-lookups": "node ./scripts/check-ra-lookups.mjs"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.0.2",
