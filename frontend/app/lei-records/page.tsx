@@ -302,6 +302,10 @@ export default function LEIRecordsPage() {
   const contextMenuViewDetailsRef = useRef<HTMLButtonElement>(null)
   const contextMenuAuditHistoryRef = useRef<HTMLButtonElement>(null)
 
+  // Registration number lookup dropdown state
+  const [regNumDropdown, setRegNumDropdown] = useState<{ key: string; x: number; y: number; url: string; label: string } | null>(null)
+  const regNumDropdownRef = useRef<HTMLDivElement>(null)
+
   // Audit history modal state
   const [auditRecord, setAuditRecord] = useState<LEIRecord | null>(null)
 
@@ -431,6 +435,9 @@ export default function LEIRecordsPage() {
       if (countryDropdownRef.current && !countryDropdownRef.current.contains(event.target as Node)) {
         setShowCountryDropdown(false)
       }
+      if (regNumDropdownRef.current && !regNumDropdownRef.current.contains(event.target as Node)) {
+        setRegNumDropdown(null)
+      }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
@@ -440,11 +447,13 @@ export default function LEIRecordsPage() {
   useEffect(() => {
     const handleEscapeKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        // Close in priority order: modal -> column selector -> country dropdown
+        // Close in priority order: modal -> column selector -> regNumDropdown -> country dropdown
         if (selectedRecord) {
           setSelectedRecord(null)
         } else if (showColumnSelector) {
           setShowColumnSelector(false)
+        } else if (regNumDropdown) {
+          setRegNumDropdown(null)
         } else if (showCountryDropdown) {
           setShowCountryDropdown(false)
         }
@@ -452,7 +461,7 @@ export default function LEIRecordsPage() {
     }
     document.addEventListener('keydown', handleEscapeKey)
     return () => document.removeEventListener('keydown', handleEscapeKey)
-  }, [selectedRecord, showColumnSelector, showCountryDropdown])
+  }, [selectedRecord, showColumnSelector, regNumDropdown, showCountryDropdown])
 
   // Debounce search input (300ms delay)
   useEffect(() => {
@@ -1818,10 +1827,6 @@ export default function LEIRecordsPage() {
                                   const raComments = record.registration_authority_comments
                                   const nameLabel = raName || raCode
                                   const showIntl = raIntlName && raIntlName !== raName
-                                  const regLookupUrl = buildRegistrationLookupUrl(
-                                    raCode ? raUrlTemplates[raCode] : undefined,
-                                    record.registration_number
-                                  )
                                   return (
                                     <div className="group/ra" title={raComments || undefined}>
                                       <span className="inline-flex items-center gap-1">
@@ -1837,18 +1842,6 @@ export default function LEIRecordsPage() {
                                           </a>
                                         ) : (
                                           <span className="font-mono">{raCode || '-'}</span>
-                                        )}
-                                        {regLookupUrl && (
-                                          <a
-                                            href={regLookupUrl}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="opacity-0 group-hover/ra:opacity-100 transition-opacity text-xs theme-link"
-                                            title={`Look up registration number ${record.registration_number}`}
-                                            onClick={e => e.stopPropagation()}
-                                          >
-                                            ▾
-                                          </a>
                                         )}
                                       </span>
                                       {nameLabel && nameLabel !== raCode && (
@@ -1869,20 +1862,31 @@ export default function LEIRecordsPage() {
                                     regNum
                                   )
                                   if (!regNum) return <span>-</span>
-                                  if (regLookupUrl) {
-                                    return (
-                                      <a
-                                        href={regLookupUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="font-mono theme-link hover:underline"
-                                        onClick={e => e.stopPropagation()}
-                                      >
-                                        {regNum}
-                                      </a>
-                                    )
-                                  }
-                                  return <span className="font-mono">{regNum}</span>
+                                  return (
+                                    <div className="group/rn inline-flex items-center gap-1">
+                                      <span className="font-mono">{regNum}</span>
+                                      {regLookupUrl && (
+                                        <button
+                                          type="button"
+                                          className="opacity-0 group-hover/rn:opacity-100 transition-opacity text-xs theme-link"
+                                          title={`Look up registration number ${regNum}`}
+                                          onClick={e => {
+                                            e.stopPropagation()
+                                            const rect = e.currentTarget.getBoundingClientRect()
+                                            setRegNumDropdown({
+                                              key: record.lei,
+                                              x: rect.left,
+                                              y: rect.bottom + 4,
+                                              url: regLookupUrl,
+                                              label: record.registration_authority_name || raCode || 'Registration Authority',
+                                            })
+                                          }}
+                                        >
+                                          ▾
+                                        </button>
+                                      )}
+                                    </div>
+                                  )
                                 })()
                               ) : (
                                 formatCellValue(value, column.key)
@@ -2061,19 +2065,13 @@ export default function LEIRecordsPage() {
                   )}
                   {selectedRecord.entity_legal_form && (
                     <div>
-                      <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">{showLocationCodes ? 'Legal Form Code' : 'Legal Form Name'}</span>
-                      {showLocationCodes ? (
-                        <p className="text-sm font-mono text-[rgb(var(--foreground-rgb))] mt-1">{selectedRecord.entity_legal_form}</p>
-                      ) : (
-                        <>
-                          <p className="text-sm text-[rgb(var(--foreground-rgb))] mt-1">
-                            {selectedRecord.entity_legal_form_name || formatLegalFormDisplay(selectedRecord.entity_legal_form)}
-                          </p>
-                          {selectedRecord.entity_legal_form_name && (
-                            <p className="text-xs font-mono text-[rgb(var(--muted-foreground-rgb))] mt-0.5">{selectedRecord.entity_legal_form}</p>
-                          )}
-                        </>
-                      )}
+                      <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">Legal Form</span>
+                      <p className="text-sm font-mono text-[rgb(var(--foreground-rgb))] mt-1">{selectedRecord.entity_legal_form}</p>
+                      {(() => {
+                        const elfDisplayName = selectedRecord.entity_legal_form_name || formatLegalFormDisplay(selectedRecord.entity_legal_form)
+                        if (elfDisplayName === selectedRecord.entity_legal_form) return null
+                        return <p className="text-xs text-[rgb(var(--muted-foreground-rgb))] mt-0.5">{elfDisplayName}</p>
+                      })()}
                     </div>
                   )}
                 </div>
@@ -2352,11 +2350,6 @@ export default function LEIRecordsPage() {
                               {showIntl && <span className="ml-1 opacity-75">({raIntlName})</span>}
                             </p>
                           )}
-                          {raComments && (
-                            <p className="text-xs italic text-[rgb(var(--muted-foreground-rgb))] mt-0.5 line-clamp-2" title={raComments}>
-                              {raComments}
-                            </p>
-                          )}
                         </>
                       )
                     })()}
@@ -2370,11 +2363,29 @@ export default function LEIRecordsPage() {
                       const regUrl = buildRegistrationLookupUrl(urlTemplate, regNum) ?? undefined
                       return (
                         <p className="text-sm font-mono text-[rgb(var(--foreground-rgb))] mt-1">
-                          {regUrl ? (
-                            <a href={regUrl} target="_blank" rel="noopener noreferrer" className="theme-link hover:underline">
-                              {regNum || '-'}
-                            </a>
-                          ) : (regNum || '-')}
+                          <span className="group/rn-modal inline-flex items-center gap-1">
+                            <span>{regNum || '-'}</span>
+                            {regUrl && regNum && (
+                              <button
+                                type="button"
+                                className="opacity-0 group-hover/rn-modal:opacity-100 transition-opacity text-xs theme-link"
+                                title={`Look up registration number ${regNum}`}
+                                onClick={e => {
+                                  e.stopPropagation()
+                                  const rect = e.currentTarget.getBoundingClientRect()
+                                  setRegNumDropdown({
+                                    key: `modal-${selectedRecord.lei}`,
+                                    x: rect.left,
+                                    y: rect.bottom + 4,
+                                    url: regUrl,
+                                    label: selectedRecord.registration_authority_name || raCode || 'Registration Authority',
+                                  })
+                                }}
+                              >
+                                ▾
+                              </button>
+                            )}
+                          </span>
                         </p>
                       )
                     })()}
@@ -2521,6 +2532,33 @@ export default function LEIRecordsPage() {
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Registration number lookup dropdown */}
+      {regNumDropdown && (
+        <div
+          ref={regNumDropdownRef}
+          role="menu"
+          tabIndex={-1}
+          className="fixed z-[60] min-w-56 theme-dropdown rounded-lg shadow-xl border border-[rgb(var(--border-rgb))] overflow-hidden"
+          style={{ top: regNumDropdown.y, left: regNumDropdown.x }}
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => { if (e.key === 'Escape') setRegNumDropdown(null) }}
+        >
+          <div className="px-3 py-2 text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] border-b border-[rgb(var(--border-rgb))]">
+            Look up registration number
+          </div>
+          <a
+            href={regNumDropdown.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 px-3 py-2 text-sm theme-link hover:bg-[rgb(var(--surface-rgb))] transition-colors"
+            onClick={() => setRegNumDropdown(null)}
+          >
+            <span className="flex-1">{regNumDropdown.label}</span>
+            <span className="text-xs opacity-60">↗</span>
+          </a>
         </div>
       )}
 
