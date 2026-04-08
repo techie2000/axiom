@@ -1,4 +1,13 @@
 {
-  "_comment": "Maps Registration Authority (RA) codes to URL templates for registration number lookup. Use {registration_number} as a placeholder. Only add entries that have been explicitly verified - do not guess.",
-  "RA000585": "https://find-and-update.company-information.service.gov.uk/company/{registration_number}"
+  "_comment": "Maps Registration Authority (RA) codes to arrays of lookup URL templates. Each entry has a 'name' (shown in dropdown) and 'url' (with {registration_number} placeholder). Only add entries that have been explicitly verified - do not guess.",
+  "RA000585": [
+    { "name": "UK Companies House", "url": "https://find-and-update.company-information.service.gov.uk/company/{registration_number}" },
+    { "name": "OpenCorporates (GB)", "url": "https://opencorporates.com/companies/gb/{registration_number}" }
+  ],
+  "RA000602": [
+    { "name": "OpenCorporates (US-DE)", "url": "https://opencorporates.com/companies/us_de/{registration_number}" }
+  ],
+  "RA000628": [
+    { "name": "OpenCorporates (US-NY)", "url": "https://opencorporates.com/companies/us_ny/{registration_number}" }
+  ]
 }

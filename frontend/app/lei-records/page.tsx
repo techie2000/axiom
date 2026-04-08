@@ -292,7 +292,7 @@ export default function LEIRecordsPage() {
   const [predecessorLeiLoading, setPredecessorLeiLoading] = useState(false)
   const [stickyColumnWidths, setStickyColumnWidths] = useState<number[]>([])
   const [dateDisplayMode, setDateDisplayMode] = useState<'relative' | 'absolute'>('relative')
-  const [raUrlTemplates, setRaUrlTemplates] = useState<Record<string, string>>({})
+  const [raUrlTemplates, setRaUrlTemplates] = useState<Record<string, Array<{ name: string; url: string }>>>({})
   const recordsRequestControllerRef = useRef<AbortController | null>(null)
   const detailRequestControllerRef = useRef<AbortController | null>(null)
 
@@ -303,7 +303,7 @@ export default function LEIRecordsPage() {
   const contextMenuAuditHistoryRef = useRef<HTMLButtonElement>(null)
 
   // Registration number lookup dropdown state
-  const [regNumDropdown, setRegNumDropdown] = useState<{ key: string; x: number; y: number; url: string; label: string } | null>(null)
+  const [regNumDropdown, setRegNumDropdown] = useState<{ key: string; x: number; y: number; options: Array<{ url: string; label: string }> } | null>(null)
   const regNumDropdownRef = useRef<HTMLDivElement>(null)
 
   // Audit history modal state
@@ -425,7 +425,15 @@ export default function LEIRecordsPage() {
   useEffect(() => {
     fetch('/data/ra-urls.json')
       .then(r => r.json())
-      .then((data: Record<string, string>) => setRaUrlTemplates(data))
+      .then((data: Record<string, unknown>) => {
+        const parsed: Record<string, Array<{ name: string; url: string }>> = {}
+        for (const [key, value] of Object.entries(data)) {
+          if (key !== '_comment' && Array.isArray(value)) {
+            parsed[key] = value as Array<{ name: string; url: string }>
+          }
+        }
+        setRaUrlTemplates(parsed)
+      })
       .catch((err) => { console.error('[ra-urls] Failed to load RA URL templates:', err) })
   }, [])
 
@@ -1857,15 +1865,15 @@ export default function LEIRecordsPage() {
                                 (() => {
                                   const regNum = String(value || '')
                                   const raCode = record.registration_authority
-                                  const regLookupUrl = buildRegistrationLookupUrl(
-                                    raCode ? raUrlTemplates[raCode] : undefined,
-                                    regNum
-                                  )
+                                  const raTemplates = raCode ? (raUrlTemplates[raCode] ?? []) : []
+                                  const lookupOptions = raTemplates
+                                    .map(t => ({ url: buildRegistrationLookupUrl(t.url, regNum), label: t.name }))
+                                    .filter((opt): opt is { url: string; label: string } => opt.url !== null)
                                   if (!regNum) return <span>-</span>
                                   return (
                                     <div className="group/rn inline-flex items-center gap-1">
                                       <span className="font-mono">{regNum}</span>
-                                      {regLookupUrl && (
+                                      {lookupOptions.length > 0 && (
                                         <button
                                           type="button"
                                           className="opacity-0 group-hover/rn:opacity-100 transition-opacity text-xs theme-link"
@@ -1877,8 +1885,7 @@ export default function LEIRecordsPage() {
                                               key: record.lei,
                                               x: rect.left,
                                               y: rect.bottom + 4,
-                                              url: regLookupUrl,
-                                              label: record.registration_authority_name || raCode || 'Registration Authority',
+                                              options: lookupOptions,
                                             })
                                           }}
                                         >
@@ -2359,13 +2366,15 @@ export default function LEIRecordsPage() {
                     {(() => {
                       const regNum = selectedRecord.registration_number
                       const raCode = selectedRecord.registration_authority
-                      const urlTemplate = raCode ? raUrlTemplates[raCode] : undefined
-                      const regUrl = buildRegistrationLookupUrl(urlTemplate, regNum) ?? undefined
+                      const raTemplates = raCode ? (raUrlTemplates[raCode] ?? []) : []
+                      const lookupOptions = raTemplates
+                        .map(t => ({ url: buildRegistrationLookupUrl(t.url, regNum), label: t.name }))
+                        .filter((opt): opt is { url: string; label: string } => opt.url !== null)
                       return (
                         <p className="text-sm font-mono text-[rgb(var(--foreground-rgb))] mt-1">
                           <span className="group/rn-modal inline-flex items-center gap-1">
                             <span>{regNum || '-'}</span>
-                            {regUrl && regNum && (
+                            {lookupOptions.length > 0 && regNum && (
                               <button
                                 type="button"
                                 className="opacity-0 group-hover/rn-modal:opacity-100 transition-opacity text-xs theme-link"
@@ -2377,8 +2386,7 @@ export default function LEIRecordsPage() {
                                     key: `modal-${selectedRecord.lei}`,
                                     x: rect.left,
                                     y: rect.bottom + 4,
-                                    url: regUrl,
-                                    label: selectedRecord.registration_authority_name || raCode || 'Registration Authority',
+                                    options: lookupOptions,
                                   })
                                 }}
                               >
@@ -2549,16 +2557,19 @@ export default function LEIRecordsPage() {
           <div className="px-3 py-2 text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] border-b border-[rgb(var(--border-rgb))]">
             Look up registration number
           </div>
-          <a
-            href={regNumDropdown.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 px-3 py-2 text-sm theme-link hover:bg-[rgb(var(--surface-rgb))] transition-colors"
-            onClick={() => setRegNumDropdown(null)}
-          >
-            <span className="flex-1">{regNumDropdown.label}</span>
-            <span className="text-xs opacity-60">↗</span>
-          </a>
+          {regNumDropdown.options.map(opt => (
+            <a
+              key={opt.url}
+              href={opt.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-3 py-2 text-sm theme-link hover:bg-[rgb(var(--surface-rgb))] transition-colors"
+              onClick={() => setRegNumDropdown(null)}
+            >
+              <span className="flex-1">{opt.label}</span>
+              <span className="text-xs opacity-60">↗</span>
+            </a>
+          ))}
         </div>
       )}
 
