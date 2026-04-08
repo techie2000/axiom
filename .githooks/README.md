@@ -12,7 +12,7 @@ Hooks run automatically once installed — no manual steps required per commit.
 
 ### pre-commit
 
-Runs two checks on every commit attempt:
+Runs three checks on every commit attempt:
 
 #### 1. VS Code settings sort (when `pwsh` is available)
 
@@ -38,9 +38,19 @@ Runs `npx --yes markdownlint-cli2` against every staged `.md` file using the pro
 The hook **fails fast** if `npx` is not available. This is intentional — markdown non-compliance
 is caught before review, not during it.
 
+#### 3. RA URL key sort (when `pwsh` is available)
+
+If `frontend/public/data/ra-urls.json` exists and PowerShell 7+ (`pwsh`) is on your `PATH`,
+the hook runs `scripts/sort-ra-urls.ps1` to keep `RA*` keys alphabetically sorted.
+If the sorter modifies the file it is automatically staged.
+
+If `pwsh` is not available the sort step is skipped with a warning — the commit is **not**
+blocked.
+
 ### pre-push
 
-Validates that `.vscode/settings.json` is sorted before code reaches the remote.
+Validates that `.vscode/settings.json` and `frontend/public/data/ra-urls.json` are sorted
+before code reaches the remote.
 
 If `pwsh` is not available the push is **blocked** — install PowerShell 7+ or sort the file
 from a machine where `pwsh` is available before pushing.
@@ -48,8 +58,10 @@ from a machine where `pwsh` is available before pushing.
 **What it checks:**
 
 - Runs `scripts/sort-vscode-settings.ps1 -CheckOnly` and blocks the push if the file is unsorted.
+- Runs `scripts/sort-ra-urls.ps1 -CheckOnly` and blocks the push if `RA*` keys are unsorted.
 
-To fix a blocked push, run `make settings-sort` and commit the result before pushing again.
+To fix a blocked push, run `make settings-sort` and `make ra-urls-sort`, then commit
+the results before pushing again.
 
 ## Installation
 
@@ -144,4 +156,4 @@ git config --unset core.hooksPath
 | Tool | Purpose | Install |
 | ---- | ------- | ------- |
 | `npx` with `markdownlint-cli2` | Markdown linting (pre-commit) | Install Node.js/npm, then run `npx --yes markdownlint-cli2 --version` |
-| `pwsh` (PowerShell 7+) | VS Code settings sort (pre-commit, pre-push) | [Install PowerShell](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell) |
+| `pwsh` (PowerShell 7+) | VS Code settings + RA URL sorting (pre-commit, pre-push) | [Install PowerShell](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell) |

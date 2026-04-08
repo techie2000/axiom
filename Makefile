@@ -352,6 +352,12 @@ settings-sort: ## Sort .vscode/settings.json keys alphabetically
 settings-sort-check: ## Check .vscode/settings.json key order (non-zero if unsorted)
 	@pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/sort-vscode-settings.ps1 -CheckOnly
 
+ra-urls-sort: ## Sort frontend/public/data/ra-urls.json RA keys alphabetically
+	@pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/sort-ra-urls.ps1
+
+ra-urls-sort-check: ## Check frontend/public/data/ra-urls.json RA key order (non-zero if unsorted)
+	@pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/sort-ra-urls.ps1 -CheckOnly
+
 smoke-api: ## Run API smoke checks (usage: make smoke-api [env=dev|uat|prod|all] [check_login=1] [startup_wait=90])
 	@pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/smoke-api.ps1 -Environment $${env:-all} -StartupWaitSec $${startup_wait:-90} $$( [ "$${check_login:-0}" = "1" ] && echo "-CheckLogin" )
 

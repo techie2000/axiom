@@ -21,4 +21,14 @@ if ! pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/sort-vscode-setting
     exit 1
 fi
 
+if [ -f "frontend/public/data/ra-urls.json" ]; then
+    if ! pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/sort-ra-urls.ps1 -CheckOnly; then
+        echo ""
+        echo "❌ Push blocked: frontend/public/data/ra-urls.json is not sorted."
+        echo "   Run: make ra-urls-sort"
+        echo ""
+        exit 1
+    fi
+fi
+
 exit 0

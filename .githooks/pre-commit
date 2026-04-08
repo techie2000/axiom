@@ -20,6 +20,24 @@ if [ -f ".vscode/settings.json" ]; then
     fi
 fi
 
+if [ -f "frontend/public/data/ra-urls.json" ]; then
+    if command -v pwsh > /dev/null 2>&1; then
+        echo "Sorting frontend/public/data/ra-urls.json..."
+        if ! pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/sort-ra-urls.ps1; then
+            echo "❌ Failed to sort frontend/public/data/ra-urls.json"
+            exit 1
+        fi
+
+        # Keep index in sync if the sorter changed the file.
+        if ! git diff --quiet -- frontend/public/data/ra-urls.json; then
+            git add frontend/public/data/ra-urls.json
+            echo "✅ Sorted and staged frontend/public/data/ra-urls.json"
+        fi
+    else
+        echo "⚠️  pwsh not found; skipping RA URL sort"
+    fi
+fi
+
 echo "Running markdown linting..."
 
 # Check if npx is available for markdownlint-cli2
