@@ -1,5 +1,11 @@
-import { describe, it, expect } from 'vitest'
-import { buildRegistrationLookupUrl } from './ra-lookup'
+// @vitest-environment jsdom
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  buildRegistrationLookupOptions,
+  buildRegistrationLookupUrl,
+  openRegistrationLookup,
+  RegistrationLookupOption,
+} from './ra-lookup'
 
 describe('buildRegistrationLookupUrl', () => {
   it('substitutes the registration number into the template', () => {
@@ -56,5 +62,91 @@ describe('buildRegistrationLookupUrl', () => {
     )
     // replaceAll replaces every occurrence for safety
     expect(result).toBe('https://example.com/q=99&id=99')
+  })
+})
+
+describe('buildRegistrationLookupOptions', () => {
+  it('builds standard URL options for non-Sunbiz authorities', () => {
+    const options = buildRegistrationLookupOptions(
+      'RA000585',
+      [{ name: 'UK Companies House', url: 'https://example.com/company/{registration_number}' }],
+      '12345'
+    )
+
+    expect(options).toEqual([
+      {
+        key: 'UK Companies House:https://example.com/company/12345',
+        label: 'UK Companies House',
+        type: 'url',
+        url: 'https://example.com/company/12345',
+      },
+    ])
+  })
+
+  it('builds Sunbiz post option for RA000603', () => {
+    const options = buildRegistrationLookupOptions(
+      'RA000603',
+      [{ name: 'Sunbiz (FL) By Document Number', url: 'https://search.sunbiz.org/Inquiry/CorporationSearch/ByDocumentNumber?DocumentNumber={registration_number}' }],
+      'L24000116074'
+    )
+
+    expect(options).toEqual([
+      {
+        key: 'Sunbiz (FL) By Document Number:L24000116074:sunbiz-post',
+        label: 'Sunbiz (FL) By Document Number',
+        type: 'sunbiz-document-number-post',
+        formAction: 'https://search.sunbiz.org/Inquiry/CorporationSearch/ByDocumentNumber',
+        documentNumber: 'L24000116074',
+      },
+    ])
+  })
+})
+
+describe('openRegistrationLookup', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('opens standard URL lookups in a new tab', () => {
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
+    const option: RegistrationLookupOption = {
+      key: 'standard',
+      label: 'Standard',
+      type: 'url',
+      url: 'https://example.com/item/1',
+    }
+
+    openRegistrationLookup(option)
+
+    expect(openSpy).toHaveBeenCalledWith('https://example.com/item/1', '_blank', 'noopener,noreferrer')
+  })
+
+  it('opens a blank tab first for Sunbiz post lookups', () => {
+    const submitSpy = vi.spyOn(HTMLFormElement.prototype, 'submit').mockImplementation(() => {})
+    const popupDocument = document.implementation.createHTMLDocument('popup')
+    const popupStub = { document: popupDocument } as unknown as Window
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => popupStub)
+
+    const option: RegistrationLookupOption = {
+      key: 'sunbiz',
+      label: 'Sunbiz',
+      type: 'sunbiz-document-number-post',
+      formAction: 'https://search.sunbiz.org/Inquiry/CorporationSearch/ByDocumentNumber',
+      documentNumber: 'L24000116074',
+    }
+
+    openRegistrationLookup(option)
+
+    expect(openSpy).toHaveBeenCalledWith('about:blank', '_blank')
+    expect(submitSpy).toHaveBeenCalledTimes(1)
+
+    const submittedForm = popupDocument.querySelector('form')
+    expect(submittedForm?.getAttribute('method')).toBe('POST')
+    expect(submittedForm?.getAttribute('action')).toBe(
+      'https://search.sunbiz.org/Inquiry/CorporationSearch/ByDocumentNumber'
+    )
+    expect((popupDocument.querySelector('input[name="SearchTerm"]') as HTMLInputElement | null)?.value).toBe('L24000116074')
+    expect((popupDocument.querySelector('input[name="InquiryType"]') as HTMLInputElement | null)?.value).toBe('DocumentNumber')
+    expect((popupDocument.querySelector('input[name="SearchNameOrder"]') as HTMLInputElement | null)?.value).toBe('')
   })
 })

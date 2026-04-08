@@ -24,15 +24,18 @@ import { formatEnumDisplayValue, formatLEICellValue, getStatusBadgePresentation,
 import { computeShowingEnd, formatCurrentPageStatValue } from './stats-format'
 import { useTranslation } from 'react-i18next'
 import LEIAuditHistoryModal from '../components/LEIAuditHistoryModal'
-import { buildRegistrationLookupUrl } from '../lib/ra-lookup'
+import {
+  buildRegistrationLookupOptions,
+  openRegistrationLookup,
+  RegistrationLookupOption,
+} from '../lib/ra-lookup'
 
 function buildLookupOptions(
+  raCode: string | null | undefined,
   raTemplates: Array<{ name: string; url: string }>,
   regNum: string | null | undefined,
-): Array<{ url: string; label: string }> {
-  return raTemplates
-    .map(t => ({ url: buildRegistrationLookupUrl(t.url, regNum), label: t.name }))
-    .filter((opt): opt is { url: string; label: string } => opt.url !== null)
+): RegistrationLookupOption[] {
+  return buildRegistrationLookupOptions(raCode, raTemplates, regNum)
 }
 
 interface LEIRecord {
@@ -312,7 +315,7 @@ export default function LEIRecordsPage() {
   const contextMenuAuditHistoryRef = useRef<HTMLButtonElement>(null)
 
   // Registration number lookup dropdown state
-  const [regNumDropdown, setRegNumDropdown] = useState<{ key: string; x: number; y: number; options: Array<{ url: string; label: string }> } | null>(null)
+  const [regNumDropdown, setRegNumDropdown] = useState<{ key: string; x: number; y: number; options: RegistrationLookupOption[] } | null>(null)
   const regNumDropdownRef = useRef<HTMLDivElement>(null)
 
   // Audit history modal state
@@ -1881,7 +1884,7 @@ export default function LEIRecordsPage() {
                                   const regNum = String(value || '')
                                   const raCode = record.registration_authority
                                   const raTemplates = raCode ? (raUrlTemplates[raCode] ?? []) : []
-                                  const lookupOptions = buildLookupOptions(raTemplates, regNum)
+                                  const lookupOptions = buildLookupOptions(raCode, raTemplates, regNum)
                                   if (!regNum) return <span>-</span>
                                   return (
                                     <div className="group/rn inline-flex items-center gap-1">
@@ -2380,7 +2383,7 @@ export default function LEIRecordsPage() {
                       const regNum = selectedRecord.registration_number
                       const raCode = selectedRecord.registration_authority
                       const raTemplates = raCode ? (raUrlTemplates[raCode] ?? []) : []
-                      const lookupOptions = buildLookupOptions(raTemplates, regNum)
+                      const lookupOptions = buildLookupOptions(raCode, raTemplates, regNum)
                       return (
                         <p className="text-sm font-mono text-[rgb(var(--foreground-rgb))] mt-1">
                           <span className="group/rn-modal inline-flex items-center gap-1">
@@ -2569,17 +2572,18 @@ export default function LEIRecordsPage() {
             Look up registration number
           </div>
           {regNumDropdown.options.map(opt => (
-            <a
-              key={opt.url}
-              href={opt.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 px-3 py-2 text-sm theme-link hover:bg-[rgb(var(--surface-rgb))] transition-colors"
-              onClick={() => setRegNumDropdown(null)}
+            <button
+              key={opt.key}
+              type="button"
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm theme-link hover:bg-[rgb(var(--surface-rgb))] transition-colors"
+              onClick={() => {
+                openRegistrationLookup(opt)
+                setRegNumDropdown(null)
+              }}
             >
               <span className="flex-1">{opt.label}</span>
               <span className="text-xs opacity-60">↗</span>
-            </a>
+            </button>
           ))}
         </div>
       )}
