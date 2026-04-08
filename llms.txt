@@ -146,9 +146,6 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
   opens a promotion PR from dev → uat every Monday
 - [Monthly Promotion Workflow](.github/workflows/promote-uat-to-prod.yml): Scheduled workflow that
   opens a promotion PR from uat → prod on the 1st of each month
-- [Main Patch Version Bump Workflow](.github/workflows/bump-main-version.yml): Automatically bumps
-  the patch version after pushes to main unless the push already contains an intentional version
-  change
 
 ## Security
 
