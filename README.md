@@ -10,6 +10,30 @@ A modular monolith financial services static data management system built with G
 Axiom is a comprehensive financial services platform for managing static data including countries, currencies,
 entities, financial instruments, accounts, and settlement instructions.
 
+## Versioning
+
+Axiom uses semantic versioning in `MAJOR.MINOR.PATCH` format.
+
+- `PATCH` increments manually when a patch release is intentionally prepared.
+- `MINOR` increments manually when a change meaningfully advances the delivered capability.
+- `MAJOR` increments manually for breaking changes.
+
+The application footer reads the backend `/version` endpoint and exposes build metadata in a tooltip
+(commit SHA and build timestamp when available), which is the canonical identifier for the exact code
+state under test.
+
+To perform an intentional minor or major bump, run:
+
+```powershell
+pwsh ./scripts/bump-version.ps1 -Part minor
+pwsh ./scripts/bump-version.ps1 -Part major
+```
+
+The helper updates both version sources together:
+
+- `VERSION`
+- `backend/internal/version/version.go`
+
 ## Architecture
 
 Architecture decisions are documented as ADRs in [docs/adr](docs/adr).

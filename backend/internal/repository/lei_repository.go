@@ -91,6 +91,52 @@ const exactLEIMatchWhereClause = "(lei = ? OR (successor_lei = ? AND successor_l
 // Used as a fallback when the search_vector column is unavailable.
 const likePatternLEISearchWhereClause = "(legal_name ILIKE ? OR lei ILIKE ? OR successor_lei ILIKE ? OR COALESCE(other_names::text, '') ILIKE ?)"
 
+// leiValidSortFields is the allowlist of actual lei_raw.lei_records database columns that may
+// be used as ORDER BY targets. Only columns physically present in the table are listed; virtual
+// or computed columns (e.g. country_flag, registration_authority_name) must NOT appear here.
+// This prevents SQL-injection via the sort_by query parameter (#268).
+var leiValidSortFields = map[string]bool{
+	// Identity
+	"lei":                       true,
+	"legal_name":                true,
+	"transliterated_legal_name": true,
+	// Entity classification
+	"entity_status":       true,
+	"entity_category":     true,
+	"entity_sub_category": true,
+	"entity_legal_form":   true,
+	// Legal address
+	"legal_address_line_1":      true,
+	"legal_address_line_2":      true,
+	"legal_address_line_3":      true,
+	"legal_address_line_4":      true,
+	"legal_address_city":        true,
+	"legal_address_region":      true,
+	"legal_address_country":     true,
+	"legal_address_postal_code": true,
+	// HQ address
+	"hq_address_line_1":      true,
+	"hq_address_line_2":      true,
+	"hq_address_line_3":      true,
+	"hq_address_line_4":      true,
+	"hq_address_city":        true,
+	"hq_address_region":      true,
+	"hq_address_country":     true,
+	"hq_address_postal_code": true,
+	// Registration
+	"registration_authority":    true,
+	"registration_number":       true,
+	"initial_registration_date": true,
+	"next_renewal_date":         true,
+	// Relationships
+	"managing_lou":         true,
+	"successor_lei":        true,
+	"validation_authority": true,
+	// Timestamps
+	"last_update_date": true,
+	"updated_at":       true,
+}
+
 func isNotSetStatusFilter(status string) bool {
 	normalized := strings.ToUpper(strings.ReplaceAll(strings.TrimSpace(status), " ", "_"))
 	return normalized == "NULL" || normalized == "NOT_SET"
@@ -595,18 +641,8 @@ func (r *leiRepository) FindAllLEIWithFilters(limit, offset int, search, status,
 			}
 		}
 
-		// Validate sortBy field to prevent SQL injection
-		validSortFields := map[string]bool{
-			"lei":                   true,
-			"legal_name":            true,
-			"entity_status":         true,
-			"entity_category":       true,
-			"legal_address_country": true,
-			"last_update_date":      true,
-			"updated_at":            true,
-		}
-
-		if validSortFields[resolvedSortBy] {
+		// Validate sortBy field to prevent SQL injection; see leiValidSortFields (#268).
+		if leiValidSortFields[resolvedSortBy] {
 			query = query.Order(clause.OrderByColumn{
 				Column: clause.Column{Name: resolvedSortBy},
 				Desc:   resolvedSortOrder == "desc",

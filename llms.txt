@@ -171,6 +171,8 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
 - [Branding Assets Guide](docs/assets/branding/README.md): Canonical source logos and generated runtime favicon/logo
   outputs for active and alternate themes
 - [Makefile](Makefile): Build automation, testing, linting, and development commands
+- [Version Bump Script](scripts/bump-version.ps1): Updates VERSION and backend version constant for
+  patch, minor, or major semantic version changes
 - [API Smoke Script](scripts/smoke-api.ps1): Environment-aware API smoke tests for health/auth checks
   with startup readiness wait
 - [SSI Smoke Script](scripts/smoke-ssi.ps1): Verifies `/api/v1/ssis` contract fields, optional temporary seed rows,

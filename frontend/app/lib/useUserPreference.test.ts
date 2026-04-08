@@ -3,6 +3,37 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
 import { resetPreferencesCache, useUserPreference } from './useUserPreference'
 
+function deferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res
+    reject = rej
+  })
+  return { promise, resolve, reject }
+}
+
+function createLocalStorageMock() {
+  const store = new Map<string, string>()
+
+  return {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      store.set(key, value)
+    },
+    removeItem: (key: string) => {
+      store.delete(key)
+    },
+    clear: () => {
+      store.clear()
+    },
+  }
+}
+
+beforeEach(() => {
+  vi.stubGlobal('localStorage', createLocalStorageMock())
+})
+
 describe('resetPreferencesCache', () => {
   it('is a callable function that does not throw', () => {
     expect(() => resetPreferencesCache()).not.toThrow()
@@ -102,5 +133,38 @@ describe('useUserPreference', () => {
 
     const [, , loading] = result.current
     expect(typeof loading).toBe('boolean')
+  })
+
+  it('dedupes concurrent bootstrap requests when multiple preferences mount together', async () => {
+    localStorage.setItem('axiom_token', 'Bearer test-token')
+
+    const response = deferred<{ ok: boolean; json: () => Promise<Array<{ page_key: string; preference_key: string; preference_value: string }>> }>()
+    const fetchMock = vi.fn().mockImplementation(() => response.promise)
+    vi.stubGlobal('fetch', fetchMock)
+
+    const first = renderHook(() => useUserPreference('global', 'theme', 'default'))
+    const second = renderHook(() => useUserPreference('global', 'dark_mode', 'dark'))
+
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      response.resolve({
+        ok: true,
+        json: async () => [
+          { page_key: 'global', preference_key: 'theme', preference_value: 'supabase' },
+          { page_key: 'global', preference_key: 'dark_mode', preference_value: 'light' },
+        ],
+      })
+      await response.promise
+    })
+
+    expect(first.result.current[0]).toBe('supabase')
+    expect(second.result.current[0]).toBe('light')
+    expect(first.result.current[2]).toBe(false)
+    expect(second.result.current[2]).toBe(false)
   })
 })
