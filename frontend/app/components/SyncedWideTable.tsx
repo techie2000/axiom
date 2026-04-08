@@ -157,7 +157,8 @@ export default function SyncedWideTable({
           onScroll={handleTopScrollbarScroll}
           className={`${topScrollbarClassName} theme-scrollbar`}
         >
-          <div style={{ width: `${tableScrollWidth}px`, height: '1px' }} />
+          {/* height ensures the scrollbar track is reachable on macOS overlay-scrollbar mode (#266) */}
+          <div style={{ width: `${tableScrollWidth}px`, height: '12px' }} />
         </div>
       )}
 

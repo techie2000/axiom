@@ -268,3 +268,55 @@ func TestApplyLinkedLEINames_PopulatesLinkedLegalNameFields(t *testing.T) {
 		t.Fatalf("expected SuccessorLEILegalName to be populated, got %q", records[0].SuccessorLEILegalName)
 	}
 }
+
+// TestLeiValidSortFields_AllowsExpectedColumns verifies that every non-virtual column exposed
+// by the LEI records page UI is accepted by the sort allowlist, and that columns that should
+// NOT be sortable (virtual/computed or SQL-injection attempts) are rejected (#268).
+func TestLeiValidSortFields_AllowsExpectedColumns(t *testing.T) {
+t.Helper()
+
+expected := []string{
+// Identity
+"lei", "legal_name", "transliterated_legal_name",
+// Entity classification
+"entity_status", "entity_category", "entity_sub_category", "entity_legal_form",
+// Legal address
+"legal_address_line_1", "legal_address_line_2", "legal_address_line_3", "legal_address_line_4",
+"legal_address_city", "legal_address_region", "legal_address_country", "legal_address_postal_code",
+// HQ address
+"hq_address_line_1", "hq_address_line_2", "hq_address_line_3", "hq_address_line_4",
+"hq_address_city", "hq_address_region", "hq_address_country", "hq_address_postal_code",
+// Registration
+"registration_authority", "registration_number", "initial_registration_date", "next_renewal_date",
+// Relationships
+"managing_lou", "successor_lei", "validation_authority",
+// Timestamps
+"last_update_date", "updated_at",
+}
+
+for _, col := range expected {
+if !leiValidSortFields[col] {
+t.Errorf("expected column %q to be in leiValidSortFields but it was not", col)
+}
+}
+}
+
+// TestLeiValidSortFields_RejectsVirtualAndInjectionAttempts verifies that virtual columns and
+// SQL-injection strings are rejected by the sort allowlist (#268).
+func TestLeiValidSortFields_RejectsVirtualAndInjectionAttempts(t *testing.T) {
+t.Helper()
+
+rejected := []string{
+"country_flag",               // virtual/UI-only column
+"registration_authority_name", // computed JOIN column (gorm:"->;")
+"1; DROP TABLE lei_raw.lei_records; --", // SQL injection attempt
+"",                           // empty string
+"unknown_column",
+}
+
+for _, col := range rejected {
+if leiValidSortFields[col] {
+t.Errorf("expected column %q to be rejected by leiValidSortFields but it was accepted", col)
+}
+}
+}
