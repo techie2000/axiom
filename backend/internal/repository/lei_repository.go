@@ -66,15 +66,6 @@ type leiRepository struct {
 const notSetEntityStatusWhereClause = "entity_status IS NULL OR TRIM(entity_status) = '' OR UPPER(TRIM(entity_status)) = 'NULL'"
 const normalizedEntityCategoryMatchWhereClause = "UPPER(BTRIM(entity_category)) = UPPER(BTRIM(?))"
 
-// gleifResolvedNamesSelectFragment is the correlated-subquery SQL fragment appended to SELECT
-// clauses to resolve GLEIF reference codes to human-readable names. It is used in all three
-// single-record and list query paths to keep the resolution logic in one place.
-const gleifResolvedNamesSelectFragment = "" +
-	", (SELECT ra.organization_name FROM lei_raw.gleif_registration_authorities ra" +
-	"   WHERE BTRIM(ra.ra_id) = BTRIM(lei_raw.lei_records.registration_authority) AND ra.active = TRUE LIMIT 1) AS registration_authority_name" +
-	", (SELECT elf.entity_legal_form_name FROM lei_raw.gleif_entity_legal_forms elf" +
-	"   WHERE BTRIM(elf.elf_code) = BTRIM(lei_raw.lei_records.entity_legal_form) LIMIT 1) AS entity_legal_form_name"
-
 const singleRecordResolvedNamesSelectFragment = "" +
 	", (SELECT ref.legal_name FROM lei_raw.lei_records ref WHERE ref.lei = lei_raw.lei_records.managing_lou LIMIT 1) AS managing_lou_legal_name" +
 	", (SELECT ref.legal_name FROM lei_raw.lei_records ref WHERE ref.lei = lei_raw.lei_records.successor_lei LIMIT 1) AS successor_lei_legal_name" +
@@ -122,7 +113,7 @@ func (r *leiRepository) CreateLEIRecord(record *domain.LEIRecord) error {
 func (r *leiRepository) FindLEIByLEI(lei string) (*domain.LEIRecord, error) {
 	var record domain.LEIRecord
 	err := r.db.
-		Select("lei_raw.lei_records.*" + singleRecordResolvedNamesSelectFragment).
+		Select("lei_raw.lei_records.*"+singleRecordResolvedNamesSelectFragment).
 		Where("lei_raw.lei_records.lei = ?", strings.TrimSpace(lei)).
 		Preload("SourceFile").
 		First(&record).Error
@@ -136,7 +127,7 @@ func (r *leiRepository) FindLEIByLEI(lei string) (*domain.LEIRecord, error) {
 func (r *leiRepository) FindLEIByID(id string) (*domain.LEIRecord, error) {
 	var record domain.LEIRecord
 	err := r.db.
-		Select("lei_raw.lei_records.*" + singleRecordResolvedNamesSelectFragment).
+		Select("lei_raw.lei_records.*"+singleRecordResolvedNamesSelectFragment).
 		Preload("SourceFile").
 		First(&record, "lei_raw.lei_records.id = ?", id).Error
 	if err != nil {
