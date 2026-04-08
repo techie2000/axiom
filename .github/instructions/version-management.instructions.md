@@ -46,6 +46,12 @@ The project follows [Semantic Versioning 2.0.0](https://semver.org/):
 - Performance improvements (minor)
 - Dependency updates
 
+### Repository Policy
+
+- `PATCH` is a deliberate manual decision, just like `MINOR` and `MAJOR`.
+- `MINOR` remains a deliberate manual decision for capability-level progress.
+- `MAJOR` remains a deliberate manual decision for breaking changes.
+
 ## Version Update Workflow
 
 ### Files That MUST Be Updated Together
@@ -61,6 +67,16 @@ The project follows [Semantic Versioning 2.0.0](https://semver.org/):
    ```go
    const Version = "0.1.0"
    ```
+
+### Supported Helper Command
+
+Use the repository helper to update both version files in one step:
+
+```powershell
+pwsh ./scripts/bump-version.ps1 -Part patch
+pwsh ./scripts/bump-version.ps1 -Part minor
+pwsh ./scripts/bump-version.ps1 -Part major
+```
 
 ### Automated Version Injection
 
@@ -94,7 +110,7 @@ When incrementing the version for a release:
 
 2. **Update Version Files**
    - [ ] Update `VERSION` file with new version number
-   - [ ] Update `internal/version/version.go` constant to match
+   - [ ] Update `backend/internal/version/version.go` constant to match
    - [ ] Commit these changes with message: `chore: bump version to X.Y.Z`
 
 3. **Create Git Tag with Comprehensive Message**

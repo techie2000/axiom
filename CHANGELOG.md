@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Replaced automatic patch bumping on `main` with manual semantic-version bumps, using footer build
+  metadata (commit SHA + build timestamp) as the canonical test-state identifier.
+- Added `scripts/bump-version.ps1` to keep `VERSION` and
+  `backend/internal/version/version.go` in sync for manual patch, minor, and major semantic
+  version changes.
+
 ## [0.3.0] - 2026-03-09
 
 ### Added
