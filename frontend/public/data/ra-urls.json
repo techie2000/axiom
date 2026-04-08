@@ -1,0 +1,21 @@
+{
+  "_comment": "Maps Registration Authority (RA) codes to URL templates for registration number lookup. Use {registration_number} as a placeholder.",
+  "RA000001": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={registration_number}&type=&dateb=&owner=include&count=40",
+  "RA000003": "https://www.gleif.org/en/lei/search?q={registration_number}",
+  "RA000030": "https://www.bundesanzeiger.de/pub/en/start?0-0.-top~navbar~navitem-search&fts_search_list.searchfield={registration_number}",
+  "RA000034": "https://www.kap.org.tr/eng/kurumsal/sirketSayfasi.aspx?companyId={registration_number}",
+  "RA000077": "https://www.zefix.admin.ch/en/search/entity/list?name={registration_number}",
+  "RA000200": "https://efts.sec.gov/LATEST/search-index?q=%22{registration_number}%22&dateRange=custom&startdt=2001-01-01&forms=10-K",
+  "RA000252": "https://www.companieshouse.gov.uk/company/{registration_number}",
+  "RA000261": "https://opencorporates.com/companies/fr/{registration_number}",
+  "RA000302": "https://www.afm.nl/en/registers/register-investment-firms?q={registration_number}",
+  "RA000394": "https://www.bafin.de/SharedDocs/Veroeffentlichungen/EN/Veroeffentlichung/en_bafin_institutes.html",
+  "RA000405": "https://www.acpr.banque-france.fr/en/ci/prestataires/prestataires-habilites/etablissements-credit",
+  "RA000462": "https://www.ciro.ca/office-of-the-investor/tools-resources/firm-registration-lookup/{registration_number}",
+  "RA000585": "https://find-and-update.company-information.service.gov.uk/company/{registration_number}",
+  "RA000602": "https://www.kvk.nl/zoeken/?q={registration_number}&handelsnaam=&kvknummer={registration_number}&straat=&postcode=&huisnummer=&plaats=&hoofdvestiging=1&rechtspersoon=1&samenwerkingsverband=1&Anders=1&zoekmethode=1&action=zoek",
+  "RA000697": "https://www.bolagsverket.se/foretag/foretagsregistret.html",
+  "RA000743": "https://www.fca.org.uk/register/firmsearch?q={registration_number}",
+  "RA000860": "https://opencorporates.com/companies/gb/{registration_number}",
+  "RA001143": "https://www.fsma.be/fr/search-firm?q={registration_number}"
+}

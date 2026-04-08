@@ -71,6 +71,12 @@ const singleRecordResolvedNamesSelectFragment = "" +
 	", (SELECT ref.legal_name FROM lei_raw.lei_records ref WHERE ref.lei = lei_raw.lei_records.successor_lei LIMIT 1) AS successor_lei_legal_name" +
 	", (SELECT ra.organization_name FROM lei_raw.gleif_registration_authorities ra" +
 	"   WHERE ra.ra_id = lei_raw.lei_records.registration_authority AND ra.active = TRUE LIMIT 1) AS registration_authority_name" +
+	", (SELECT ra.international_name FROM lei_raw.gleif_registration_authorities ra" +
+	"   WHERE ra.ra_id = lei_raw.lei_records.registration_authority AND ra.active = TRUE LIMIT 1) AS registration_authority_international_name" +
+	", (SELECT ra.website FROM lei_raw.gleif_registration_authorities ra" +
+	"   WHERE ra.ra_id = lei_raw.lei_records.registration_authority AND ra.active = TRUE LIMIT 1) AS registration_authority_website" +
+	", (SELECT ra.comments FROM lei_raw.gleif_registration_authorities ra" +
+	"   WHERE ra.ra_id = lei_raw.lei_records.registration_authority AND ra.active = TRUE LIMIT 1) AS registration_authority_comments" +
 	", (SELECT elf.entity_legal_form_name FROM lei_raw.gleif_entity_legal_forms elf" +
 	"   WHERE elf.elf_code = lei_raw.lei_records.entity_legal_form LIMIT 1) AS entity_legal_form_name"
 
@@ -380,7 +386,118 @@ func (r *leiRepository) hydrateLinkedLEINames(records []*domain.LEIRecord) error
 	return nil
 }
 
-// FindAllLEIWithFilters retrieves LEI records with search and filters
+// raDetailRow is a lightweight projection used during batch RA hydration.
+type raDetailRow struct {
+	RAID              string `gorm:"column:ra_id"`
+	OrganizationName  string `gorm:"column:organization_name"`
+	InternationalName string `gorm:"column:international_name"`
+	Website           string `gorm:"column:website"`
+	Comments          string `gorm:"column:comments"`
+}
+
+// hydrateRADetails batch-fetches registration authority details (name, international
+// name, website, comments) for all distinct RA codes in records and applies them
+// in-place. A single DB round-trip replaces N correlated subqueries.
+func (r *leiRepository) hydrateRADetails(records []*domain.LEIRecord) error {
+	if len(records) == 0 {
+		return nil
+	}
+
+	codeSet := make(map[string]struct{})
+	for _, rec := range records {
+		if code := strings.TrimSpace(rec.RegistrationAuthority); code != "" {
+			codeSet[code] = struct{}{}
+		}
+	}
+	if len(codeSet) == 0 {
+		return nil
+	}
+
+	codes := make([]string, 0, len(codeSet))
+	for code := range codeSet {
+		codes = append(codes, code)
+	}
+
+	var rows []raDetailRow
+	if err := r.db.
+		Table("lei_raw.gleif_registration_authorities").
+		Select("ra_id, organization_name, international_name, website, comments").
+		Where("ra_id IN ? AND active = TRUE", codes).
+		Find(&rows).Error; err != nil {
+		return err
+	}
+
+	byCode := make(map[string]raDetailRow, len(rows))
+	for _, row := range rows {
+		byCode[row.RAID] = row
+	}
+
+	for _, rec := range records {
+		code := strings.TrimSpace(rec.RegistrationAuthority)
+		if code == "" {
+			continue
+		}
+		if row, ok := byCode[code]; ok {
+			rec.RegistrationAuthorityName = row.OrganizationName
+			rec.RegistrationAuthorityInternationalName = row.InternationalName
+			rec.RegistrationAuthorityWebsite = row.Website
+			rec.RegistrationAuthorityComments = row.Comments
+		}
+	}
+	return nil
+}
+
+// elfNameRow is a lightweight projection used during batch ELF hydration.
+type elfNameRow struct {
+	ELFCode             string `gorm:"column:elf_code"`
+	EntityLegalFormName string `gorm:"column:entity_legal_form_name"`
+}
+
+// hydrateELFNames batch-fetches entity legal form names for all distinct ELF
+// codes in records and applies them in-place.
+func (r *leiRepository) hydrateELFNames(records []*domain.LEIRecord) error {
+	if len(records) == 0 {
+		return nil
+	}
+
+	codeSet := make(map[string]struct{})
+	for _, rec := range records {
+		if code := strings.TrimSpace(rec.EntityLegalForm); code != "" {
+			codeSet[code] = struct{}{}
+		}
+	}
+	if len(codeSet) == 0 {
+		return nil
+	}
+
+	codes := make([]string, 0, len(codeSet))
+	for code := range codeSet {
+		codes = append(codes, code)
+	}
+
+	var rows []elfNameRow
+	if err := r.db.
+		Table("lei_raw.gleif_entity_legal_forms").
+		Select("elf_code, entity_legal_form_name").
+		Where("elf_code IN ?", codes).
+		Find(&rows).Error; err != nil {
+		return err
+	}
+
+	byCode := make(map[string]string, len(rows))
+	for _, row := range rows {
+		byCode[row.ELFCode] = row.EntityLegalFormName
+	}
+
+	for _, rec := range records {
+		if code := strings.TrimSpace(rec.EntityLegalForm); code != "" {
+			rec.EntityLegalFormName = byCode[code]
+		}
+	}
+	return nil
+}
+
+
 // Uses dynamic SELECT based on requested columns for performance optimization
 func (r *leiRepository) FindAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string, includeLinkedNames bool) ([]*domain.LEIRecord, error) {
 	var records []*domain.LEIRecord
@@ -519,6 +636,12 @@ func (r *leiRepository) FindAllLEIWithFilters(limit, offset int, search, status,
 					return nil, hydrateErr
 				}
 			}
+			if hydrateErr := r.hydrateRADetails(records); hydrateErr != nil {
+				return nil, hydrateErr
+			}
+			if hydrateErr := r.hydrateELFNames(records); hydrateErr != nil {
+				return nil, hydrateErr
+			}
 			return records, nil
 		}
 		return nil, err
@@ -527,6 +650,12 @@ func (r *leiRepository) FindAllLEIWithFilters(limit, offset int, search, status,
 		if hydrateErr := r.hydrateLinkedLEINames(records); hydrateErr != nil {
 			return nil, hydrateErr
 		}
+	}
+	if hydrateErr := r.hydrateRADetails(records); hydrateErr != nil {
+		return nil, hydrateErr
+	}
+	if hydrateErr := r.hydrateELFNames(records); hydrateErr != nil {
+		return nil, hydrateErr
 	}
 	return records, nil
 }

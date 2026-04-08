@@ -61,6 +61,9 @@ interface LEIRecord {
   // Registration
   registration_authority: string
   registration_authority_name?: string
+  registration_authority_international_name?: string
+  registration_authority_website?: string
+  registration_authority_comments?: string
   registration_authority_id: string
   registration_number: string
   
@@ -288,6 +291,7 @@ export default function LEIRecordsPage() {
   const [predecessorLeiLoading, setPredecessorLeiLoading] = useState(false)
   const [stickyColumnWidths, setStickyColumnWidths] = useState<number[]>([])
   const [dateDisplayMode, setDateDisplayMode] = useState<'relative' | 'absolute'>('relative')
+  const [raUrlTemplates, setRaUrlTemplates] = useState<Record<string, string>>({})
   const recordsRequestControllerRef = useRef<AbortController | null>(null)
   const detailRequestControllerRef = useRef<AbortController | null>(null)
 
@@ -411,6 +415,14 @@ export default function LEIRecordsPage() {
 
     fetchLanguages()
   }, [API_BASE_URL])
+
+  // Fetch RA URL templates from public JSON file
+  useEffect(() => {
+    fetch('/data/ra-urls.json')
+      .then(r => r.json())
+      .then((data: Record<string, string>) => setRaUrlTemplates(data))
+      .catch(() => { /* file absent – graceful degradation */ })
+  }, [])
 
   // Close country dropdown when clicking outside
   useEffect(() => {
@@ -1672,6 +1684,7 @@ export default function LEIRecordsPage() {
                           const isLegalFormColumn = column.key === 'entity_legal_form'
                           const isManagingLou = column.key === 'managing_lou'
                           const isSuccessorLei = column.key === 'successor_lei'
+                          const isRegistrationAuthority = column.key === 'registration_authority'
                           const isCountryFlagColumn = column.key === 'country_flag'
                           const isRegionColumn = column.key === 'legal_address_region' || column.key === 'hq_address_region'
                           const isCountryColumn = column.key === 'legal_address_country' || column.key === 'hq_address_country'
@@ -1781,10 +1794,46 @@ export default function LEIRecordsPage() {
                               ) : isRegionColumn ? (
                                 formatRegionDisplay(String(value || ''))
                               ) : isLegalFormColumn ? (
+                                <div>
+                                  <div className="font-mono">{String(value || '-')}</div>
+                                  {!showLocationCodes && (record.entity_legal_form_name || formatLegalFormDisplay(String(value || ''))) && (
+                                    <div className="mt-1 text-xs theme-text-muted">
+                                      {record.entity_legal_form_name || formatLegalFormDisplay(String(value || ''))}
+                                    </div>
+                                  )}
+                                </div>
+                              ) : isRegistrationAuthority ? (
                                 (() => {
-                                  if (showLocationCodes) return String(value || '-')
-                                  // Prefer resolved name from DB join, fall back to local map lookup
-                                  return record.entity_legal_form_name || formatLegalFormDisplay(String(value || ''))
+                                  const raCode = String(value || '')
+                                  const raName = record.registration_authority_name
+                                  const raIntlName = record.registration_authority_international_name
+                                  const raWebsite = record.registration_authority_website
+                                  const raComments = record.registration_authority_comments
+                                  const nameLabel = raName || raCode
+                                  const showIntl = raIntlName && raIntlName !== raName
+                                  return (
+                                    <div title={raComments || undefined}>
+                                      {raWebsite ? (
+                                        <a
+                                          href={raWebsite}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="font-mono theme-link hover:underline"
+                                          onClick={e => e.stopPropagation()}
+                                        >
+                                          {raCode}
+                                        </a>
+                                      ) : (
+                                        <span className="font-mono">{raCode || '-'}</span>
+                                      )}
+                                      {nameLabel && nameLabel !== raCode && (
+                                        <div className="mt-1 text-xs theme-text-muted">
+                                          {nameLabel}
+                                          {showIntl && <span className="ml-1 opacity-75">({raIntlName})</span>}
+                                        </div>
+                                      )}
+                                    </div>
+                                  )
                                 })()
                               ) : (
                                 formatCellValue(value, column.key)
@@ -2231,15 +2280,55 @@ export default function LEIRecordsPage() {
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-[rgb(var(--surface-rgb))]">
                   <div>
-                    <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">Registration Authority</span>
-                    <p className="text-sm font-mono text-[rgb(var(--foreground-rgb))] mt-1">{selectedRecord.registration_authority || '-'}</p>
-                    {selectedRecord.registration_authority_name && (
-                      <p className="text-xs text-[rgb(var(--muted-foreground-rgb))] mt-0.5">{selectedRecord.registration_authority_name}</p>
-                    )}
+                    <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">{t('leiRecords.modal.registrationAuthority')}</span>
+                    {(() => {
+                      const raWebsite = selectedRecord.registration_authority_website
+                      const raCode = selectedRecord.registration_authority
+                      const raName = selectedRecord.registration_authority_name
+                      const raIntlName = selectedRecord.registration_authority_international_name
+                      const raComments = selectedRecord.registration_authority_comments
+                      const showIntl = raIntlName && raIntlName !== raName
+                      return (
+                        <>
+                          <p className="text-sm font-mono text-[rgb(var(--foreground-rgb))] mt-1" title={raComments || undefined}>
+                            {raWebsite ? (
+                              <a href={raWebsite} target="_blank" rel="noopener noreferrer" className="theme-link hover:underline">
+                                {raCode || '-'}
+                              </a>
+                            ) : (raCode || '-')}
+                          </p>
+                          {raName && (
+                            <p className="text-xs text-[rgb(var(--muted-foreground-rgb))] mt-0.5">
+                              {raName}
+                              {showIntl && <span className="ml-1 opacity-75">({raIntlName})</span>}
+                            </p>
+                          )}
+                          {raComments && (
+                            <p className="text-xs italic text-[rgb(var(--muted-foreground-rgb))] mt-0.5 line-clamp-2" title={raComments}>
+                              {raComments}
+                            </p>
+                          )}
+                        </>
+                      )
+                    })()}
                   </div>
                   <div>
-                    <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">Registration Number</span>
-                    <p className="text-sm font-mono text-[rgb(var(--foreground-rgb))] mt-1">{selectedRecord.registration_number || '-'}</p>
+                    <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">{t('leiRecords.modal.registrationNumber')}</span>
+                    {(() => {
+                      const regNum = selectedRecord.registration_number
+                      const raCode = selectedRecord.registration_authority
+                      const urlTemplate = raCode ? raUrlTemplates[raCode] : undefined
+                      const regUrl = urlTemplate && regNum ? urlTemplate.replace('{registration_number}', encodeURIComponent(regNum)) : undefined
+                      return (
+                        <p className="text-sm font-mono text-[rgb(var(--foreground-rgb))] mt-1">
+                          {regUrl ? (
+                            <a href={regUrl} target="_blank" rel="noopener noreferrer" className="theme-link hover:underline">
+                              {regNum || '-'}
+                            </a>
+                          ) : (regNum || '-')}
+                        </p>
+                      )
+                    })()}
                   </div>
                   <div>
                     <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">Initial Registration</span>

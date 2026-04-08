@@ -566,6 +566,8 @@
       "sameAsLegal": "Same as Legal Address",
       "viewOnMap": "View on Map",
       "registrationInformation": "Registration Information",
+      "registrationAuthority": "Registration Authority",
+      "registrationNumber": "Registration Number",
       "associatedEntities": "Associated Entities",
       "predecessorLei": "Predecessor LEI",
       "checkingPredecessorLinks": "Checking predecessor links...",

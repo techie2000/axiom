@@ -57,8 +57,11 @@ type LEIRecord struct {
 	SuccessorLEILegalName string `gorm:"->;column:successor_lei_legal_name" json:"successor_lei_legal_name,omitempty"`
 
 	// GLEIF reference resolved names (computed via JOIN, not stored in lei_records)
-	RegistrationAuthorityName string `gorm:"->;column:registration_authority_name" json:"registration_authority_name,omitempty"`
-	EntityLegalFormName       string `gorm:"->;column:entity_legal_form_name" json:"entity_legal_form_name,omitempty"`
+	RegistrationAuthorityName              string `gorm:"->;column:registration_authority_name" json:"registration_authority_name,omitempty"`
+	RegistrationAuthorityInternationalName string `gorm:"->;column:registration_authority_international_name" json:"registration_authority_international_name,omitempty"`
+	RegistrationAuthorityWebsite           string `gorm:"->;column:registration_authority_website" json:"registration_authority_website,omitempty"`
+	RegistrationAuthorityComments          string `gorm:"->;column:registration_authority_comments" json:"registration_authority_comments,omitempty"`
+	EntityLegalFormName                    string `gorm:"->;column:entity_legal_form_name" json:"entity_legal_form_name,omitempty"`
 
 	// Dates
 	InitialRegistrationDate time.Time `json:"initial_registration_date"`
