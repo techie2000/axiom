@@ -1893,7 +1893,10 @@ export default function LEIRecordsPage() {
                                         <button
                                           type="button"
                                           className="opacity-0 group-hover/rn:opacity-100 transition-opacity text-xs theme-link"
-                                          title={`Look up registration number ${regNum}`}
+                                          aria-label={`${t('leiRecords.modal.registrationNumber')}: ${regNum}`}
+                                          aria-haspopup="listbox"
+                                          aria-expanded={regNumDropdown?.key === record.lei}
+                                          title={`${t('leiRecords.modal.registrationNumber')}: ${regNum}`}
                                           onClick={e => {
                                             e.stopPropagation()
                                             const rect = e.currentTarget.getBoundingClientRect()
@@ -2392,7 +2395,10 @@ export default function LEIRecordsPage() {
                               <button
                                 type="button"
                                 className="opacity-0 group-hover/rn-modal:opacity-100 transition-opacity text-xs theme-link"
-                                title={`Look up registration number ${regNum}`}
+                                aria-label={`${t('leiRecords.modal.registrationNumber')}: ${regNum}`}
+                                aria-haspopup="listbox"
+                                aria-expanded={regNumDropdown?.key === `modal-${selectedRecord.lei}`}
+                                title={`${t('leiRecords.modal.registrationNumber')}: ${regNum}`}
                                 onClick={e => {
                                   e.stopPropagation()
                                   const rect = e.currentTarget.getBoundingClientRect()
@@ -2561,15 +2567,13 @@ export default function LEIRecordsPage() {
       {regNumDropdown && (
         <div
           ref={regNumDropdownRef}
-          role="menu"
-          tabIndex={-1}
+          aria-label={t('leiRecords.modal.registrationNumber')}
           className="fixed z-[60] min-w-56 theme-dropdown rounded-lg shadow-xl border border-[rgb(var(--border-rgb))] overflow-hidden"
           style={{ top: regNumDropdown.y, left: regNumDropdown.x }}
           onClick={(e) => e.stopPropagation()}
-          onKeyDown={(e) => { if (e.key === 'Escape') setRegNumDropdown(null) }}
         >
           <div className="px-3 py-2 text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] border-b border-[rgb(var(--border-rgb))]">
-            Look up registration number
+            {t('leiRecords.modal.registrationNumber')}
           </div>
           {regNumDropdown.options.map(opt => (
             <button

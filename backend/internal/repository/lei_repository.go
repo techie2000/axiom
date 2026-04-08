@@ -473,6 +473,11 @@ func (r *leiRepository) hydrateRADetails(records []*domain.LEIRecord) error {
 		return err
 	}
 
+	applyRADetails(records, rows)
+	return nil
+}
+
+func applyRADetails(records []*domain.LEIRecord, rows []raDetailRow) {
 	byCode := make(map[string]raDetailRow, len(rows))
 	for _, row := range rows {
 		byCode[row.RAID] = row
@@ -490,7 +495,6 @@ func (r *leiRepository) hydrateRADetails(records []*domain.LEIRecord) error {
 			rec.RegistrationAuthorityComments = row.Comments
 		}
 	}
-	return nil
 }
 
 // elfNameRow is a lightweight projection used during batch ELF hydration.
@@ -530,6 +534,11 @@ func (r *leiRepository) hydrateELFNames(records []*domain.LEIRecord) error {
 		return err
 	}
 
+	applyELFNames(records, rows)
+	return nil
+}
+
+func applyELFNames(records []*domain.LEIRecord, rows []elfNameRow) {
 	byCode := make(map[string]string, len(rows))
 	for _, row := range rows {
 		byCode[row.ELFCode] = row.EntityLegalFormName
@@ -540,7 +549,6 @@ func (r *leiRepository) hydrateELFNames(records []*domain.LEIRecord) error {
 			rec.EntityLegalFormName = byCode[code]
 		}
 	}
-	return nil
 }
 
 

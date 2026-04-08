@@ -269,6 +269,112 @@ func TestApplyLinkedLEINames_PopulatesLinkedLegalNameFields(t *testing.T) {
 	}
 }
 
+func TestHydrateRADetails_UsesSingleInQueryForDistinctCodes(t *testing.T) {
+	t.Helper()
+
+	capture := &sqlCaptureLogger{}
+	db, err := gorm.Open(nopDialector{}, &gorm.Config{DryRun: true, Logger: capture})
+	if err != nil {
+		t.Fatalf("gorm.Open failed: %v", err)
+	}
+
+	repo := &leiRepository{db: db}
+	records := []*domain.LEIRecord{
+		{RegistrationAuthority: "RA000585"},
+		{RegistrationAuthority: " RA000602 "},
+		{RegistrationAuthority: "RA000585"},
+		{RegistrationAuthority: ""},
+	}
+
+	if err := repo.hydrateRADetails(records); err != nil {
+		t.Fatalf("hydrateRADetails returned error: %v", err)
+	}
+
+	sql := strings.ToLower(capture.last())
+	if !strings.Contains(sql, "gleif_registration_authorities") {
+		t.Fatalf("expected RA query against gleif_registration_authorities, got: %s", sql)
+	}
+	if !strings.Contains(sql, "ra_id in (?,?)") {
+		t.Fatalf("expected deduplicated IN query with 2 args, got: %s", sql)
+	}
+	if !strings.Contains(sql, "active = true") {
+		t.Fatalf("expected active filter in RA query, got: %s", sql)
+	}
+}
+
+func TestApplyRADetails_PopulatesHydratedFields(t *testing.T) {
+	t.Helper()
+
+	records := []*domain.LEIRecord{{RegistrationAuthority: "RA000585"}, {RegistrationAuthority: "RA000602"}}
+	rows := []raDetailRow{
+		{
+			RAID:              "RA000585",
+			OrganizationName:  "Companies House",
+			InternationalName: "Companies House",
+			Website:           "https://find-and-update.company-information.service.gov.uk",
+			Comments:          "Verified",
+		},
+	}
+
+	applyRADetails(records, rows)
+
+	if records[0].RegistrationAuthorityName != "Companies House" {
+		t.Fatalf("expected RegistrationAuthorityName to be populated, got %q", records[0].RegistrationAuthorityName)
+	}
+	if records[0].RegistrationAuthorityWebsite != "https://find-and-update.company-information.service.gov.uk" {
+		t.Fatalf("expected RegistrationAuthorityWebsite to be populated, got %q", records[0].RegistrationAuthorityWebsite)
+	}
+	if records[1].RegistrationAuthorityName != "" {
+		t.Fatalf("expected unmatched RA code to remain empty, got %q", records[1].RegistrationAuthorityName)
+	}
+}
+
+func TestHydrateELFNames_UsesSingleInQueryForDistinctCodes(t *testing.T) {
+	t.Helper()
+
+	capture := &sqlCaptureLogger{}
+	db, err := gorm.Open(nopDialector{}, &gorm.Config{DryRun: true, Logger: capture})
+	if err != nil {
+		t.Fatalf("gorm.Open failed: %v", err)
+	}
+
+	repo := &leiRepository{db: db}
+	records := []*domain.LEIRecord{
+		{EntityLegalForm: "ABCD"},
+		{EntityLegalForm: " EFGH "},
+		{EntityLegalForm: "ABCD"},
+		{EntityLegalForm: ""},
+	}
+
+	if err := repo.hydrateELFNames(records); err != nil {
+		t.Fatalf("hydrateELFNames returned error: %v", err)
+	}
+
+	sql := strings.ToLower(capture.last())
+	if !strings.Contains(sql, "gleif_entity_legal_forms") {
+		t.Fatalf("expected ELF query against gleif_entity_legal_forms, got: %s", sql)
+	}
+	if !strings.Contains(sql, "elf_code in (?,?)") {
+		t.Fatalf("expected deduplicated IN query with 2 args, got: %s", sql)
+	}
+}
+
+func TestApplyELFNames_PopulatesHydratedFields(t *testing.T) {
+	t.Helper()
+
+	records := []*domain.LEIRecord{{EntityLegalForm: "ABCD"}, {EntityLegalForm: "WXYZ"}}
+	rows := []elfNameRow{{ELFCode: "ABCD", EntityLegalFormName: "Limited Company"}}
+
+	applyELFNames(records, rows)
+
+	if records[0].EntityLegalFormName != "Limited Company" {
+		t.Fatalf("expected EntityLegalFormName to be populated, got %q", records[0].EntityLegalFormName)
+	}
+	if records[1].EntityLegalFormName != "" {
+		t.Fatalf("expected unmatched ELF code to remain empty, got %q", records[1].EntityLegalFormName)
+	}
+}
+
 // TestLeiValidSortFields_AllowsExpectedColumns verifies that every non-virtual column exposed
 // by the LEI records page UI is accepted by the sort allowlist (#268).
 func TestLeiValidSortFields_AllowsExpectedColumns(t *testing.T) {

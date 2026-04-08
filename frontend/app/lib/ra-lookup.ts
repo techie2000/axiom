@@ -105,6 +105,8 @@ function submitSunbizDocumentLookup(formAction: string, documentNumber: string):
   const popup = window.open('about:blank', '_blank')
   if (!popup) return
 
+  popup.opener = null
+
   const doc = popup.document
   doc.title = 'Opening registration lookup...'
 

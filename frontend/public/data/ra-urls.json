@@ -10,6 +10,54 @@
       "url": "https://opencorporates.com/companies/gb/{registration_number}"
     }
   ],
+  "RA000594": [
+    {
+      "name": "OpenCorporates (US-AK)",
+      "url": "https://opencorporates.com/companies/us_ak/{registration_number}"
+    }
+  ],
+  "RA000595": [
+    {
+      "name": "OpenCorporates (US-AL)",
+      "url": "https://opencorporates.com/companies/us_al/{registration_number}"
+    }
+  ],
+  "RA000596": [
+    {
+      "name": "OpenCorporates (US-AR)",
+      "url": "https://opencorporates.com/companies/us_ar/{registration_number}"
+    }
+  ],
+  "RA000597": [
+    {
+      "name": "OpenCorporates (US-AZ)",
+      "url": "https://opencorporates.com/companies/us_az/{registration_number}"
+    }
+  ],
+  "RA000598": [
+    {
+      "name": "OpenCorporates (US-CA)",
+      "url": "https://opencorporates.com/companies/us_ca/{registration_number}"
+    }
+  ],
+  "RA000599": [
+    {
+      "name": "OpenCorporates (US-CO)",
+      "url": "https://opencorporates.com/companies/us_co/{registration_number}"
+    }
+  ],
+  "RA000600": [
+    {
+      "name": "OpenCorporates (US-CT)",
+      "url": "https://opencorporates.com/companies/us_ct/{registration_number}"
+    }
+  ],
+  "RA000601": [
+    {
+      "name": "OpenCorporates (US-DC)",
+      "url": "https://opencorporates.com/companies/us_dc/{registration_number}"
+    }
+  ],
   "RA000602": [
     {
       "name": "OpenCorporates (US-DE)",
@@ -20,6 +68,154 @@
     {
       "name": "Sunbiz (FL) By Document Number",
       "url": "https://search.sunbiz.org/Inquiry/CorporationSearch/ByDocumentNumber?DocumentNumber={registration_number}"
+    },
+    {
+      "name": "OpenCorporates (US-FL)",
+      "url": "https://opencorporates.com/companies/us_fl/{registration_number}"
+    }
+  ],
+  "RA000604": [
+    {
+      "name": "OpenCorporates (US-GA)",
+      "url": "https://opencorporates.com/companies/us_ga/{registration_number}"
+    }
+  ],
+  "RA000605": [
+    {
+      "name": "OpenCorporates (US-HI)",
+      "url": "https://opencorporates.com/companies/us_hi/{registration_number}"
+    }
+  ],
+  "RA000606": [
+    {
+      "name": "OpenCorporates (US-IA)",
+      "url": "https://opencorporates.com/companies/us_ia/{registration_number}"
+    }
+  ],
+  "RA000607": [
+    {
+      "name": "OpenCorporates (US-ID)",
+      "url": "https://opencorporates.com/companies/us_id/{registration_number}"
+    }
+  ],
+  "RA000608": [
+    {
+      "name": "OpenCorporates (US-IL)",
+      "url": "https://opencorporates.com/companies/us_il/{registration_number}"
+    }
+  ],
+  "RA000609": [
+    {
+      "name": "OpenCorporates (US-IN)",
+      "url": "https://opencorporates.com/companies/us_in/{registration_number}"
+    }
+  ],
+  "RA000610": [
+    {
+      "name": "OpenCorporates (US-KS)",
+      "url": "https://opencorporates.com/companies/us_ks/{registration_number}"
+    }
+  ],
+  "RA000611": [
+    {
+      "name": "OpenCorporates (US-KY)",
+      "url": "https://opencorporates.com/companies/us_ky/{registration_number}"
+    }
+  ],
+  "RA000612": [
+    {
+      "name": "OpenCorporates (US-LA)",
+      "url": "https://opencorporates.com/companies/us_la/{registration_number}"
+    }
+  ],
+  "RA000613": [
+    {
+      "name": "OpenCorporates (US-MA)",
+      "url": "https://opencorporates.com/companies/us_ma/{registration_number}"
+    }
+  ],
+  "RA000614": [
+    {
+      "name": "OpenCorporates (US-MD)",
+      "url": "https://opencorporates.com/companies/us_md/{registration_number}"
+    }
+  ],
+  "RA000615": [
+    {
+      "name": "OpenCorporates (US-ME)",
+      "url": "https://opencorporates.com/companies/us_me/{registration_number}"
+    }
+  ],
+  "RA000616": [
+    {
+      "name": "OpenCorporates (US-MI)",
+      "url": "https://opencorporates.com/companies/us_mi/{registration_number}"
+    }
+  ],
+  "RA000617": [
+    {
+      "name": "OpenCorporates (US-MN)",
+      "url": "https://opencorporates.com/companies/us_mn/{registration_number}"
+    }
+  ],
+  "RA000618": [
+    {
+      "name": "OpenCorporates (US-MO)",
+      "url": "https://opencorporates.com/companies/us_mo/{registration_number}"
+    }
+  ],
+  "RA000619": [
+    {
+      "name": "OpenCorporates (US-MS)",
+      "url": "https://opencorporates.com/companies/us_ms/{registration_number}"
+    }
+  ],
+  "RA000620": [
+    {
+      "name": "OpenCorporates (US-MT)",
+      "url": "https://opencorporates.com/companies/us_mt/{registration_number}"
+    }
+  ],
+  "RA000621": [
+    {
+      "name": "OpenCorporates (US-NC)",
+      "url": "https://opencorporates.com/companies/us_nc/{registration_number}"
+    }
+  ],
+  "RA000622": [
+    {
+      "name": "OpenCorporates (US-ND)",
+      "url": "https://opencorporates.com/companies/us_nd/{registration_number}"
+    }
+  ],
+  "RA000623": [
+    {
+      "name": "OpenCorporates (US-NE)",
+      "url": "https://opencorporates.com/companies/us_ne/{registration_number}"
+    }
+  ],
+  "RA000624": [
+    {
+      "name": "OpenCorporates (US-NH)",
+      "url": "https://opencorporates.com/companies/us_nh/{registration_number}"
+    }
+  ],
+  "RA000625": [
+    {
+      "name": "OpenCorporates (US-NJ)",
+      "url": "https://opencorporates.com/companies/us_nj/{registration_number}"
+    }
+  ],
+  "RA000626": [
+    {
+      "name": "OpenCorporates (US-NM)",
+      "url": "https://opencorporates.com/companies/us_nm/{registration_number}"
+    }
+  ],
+  "RA000627": [
+    {
+      "name": "OpenCorporates (US-NV)",
+      "url": "https://opencorporates.com/companies/us_nv/{registration_number}"
     }
   ],
   "RA000628": [
@@ -28,10 +224,140 @@
       "url": "https://opencorporates.com/companies/us_ny/{registration_number}"
     }
   ],
+  "RA000629": [
+    {
+      "name": "OpenCorporates (US-OH)",
+      "url": "https://opencorporates.com/companies/us_oh/{registration_number}"
+    }
+  ],
+  "RA000630": [
+    {
+      "name": "OpenCorporates (US-OK)",
+      "url": "https://opencorporates.com/companies/us_ok/{registration_number}"
+    }
+  ],
+  "RA000631": [
+    {
+      "name": "OpenCorporates (US-OR)",
+      "url": "https://opencorporates.com/companies/us_or/{registration_number}"
+    }
+  ],
+  "RA000632": [
+    {
+      "name": "OpenCorporates (US-PA)",
+      "url": "https://opencorporates.com/companies/us_pa/{registration_number}"
+    }
+  ],
+  "RA000633": [
+    {
+      "name": "OpenCorporates (US-RI)",
+      "url": "https://opencorporates.com/companies/us_ri/{registration_number}"
+    }
+  ],
+  "RA000634": [
+    {
+      "name": "OpenCorporates (US-SC)",
+      "url": "https://opencorporates.com/companies/us_sc/{registration_number}"
+    }
+  ],
+  "RA000635": [
+    {
+      "name": "OpenCorporates (US-SD)",
+      "url": "https://opencorporates.com/companies/us_sd/{registration_number}"
+    }
+  ],
+  "RA000636": [
+    {
+      "name": "OpenCorporates (US-TN)",
+      "url": "https://opencorporates.com/companies/us_tn/{registration_number}"
+    }
+  ],
   "RA000637": [
     {
       "name": "Texas Comptroller Franchise Status",
       "url": "https://comptroller.texas.gov/data-search/franchise-tax?fileNumber={registration_number}"
+    },
+    {
+      "name": "OpenCorporates (US-TX)",
+      "url": "https://opencorporates.com/companies/us_tx/{registration_number}"
+    }
+  ],
+  "RA000638": [
+    {
+      "name": "OpenCorporates (US-UT)",
+      "url": "https://opencorporates.com/companies/us_ut/{registration_number}"
+    }
+  ],
+  "RA000639": [
+    {
+      "name": "OpenCorporates (US-VA)",
+      "url": "https://opencorporates.com/companies/us_va/{registration_number}"
+    }
+  ],
+  "RA000640": [
+    {
+      "name": "OpenCorporates (US-VT)",
+      "url": "https://opencorporates.com/companies/us_vt/{registration_number}"
+    }
+  ],
+  "RA000641": [
+    {
+      "name": "OpenCorporates (US-WA)",
+      "url": "https://opencorporates.com/companies/us_wa/{registration_number}"
+    }
+  ],
+  "RA000642": [
+    {
+      "name": "OpenCorporates (US-WI)",
+      "url": "https://opencorporates.com/companies/us_wi/{registration_number}"
+    }
+  ],
+  "RA000643": [
+    {
+      "name": "OpenCorporates (US-WV)",
+      "url": "https://opencorporates.com/companies/us_wv/{registration_number}"
+    }
+  ],
+  "RA000644": [
+    {
+      "name": "OpenCorporates (US-WY)",
+      "url": "https://opencorporates.com/companies/us_wy/{registration_number}"
+    }
+  ],
+  "RA000747": [
+    {
+      "name": "OpenCorporates (US-NY)",
+      "url": "https://opencorporates.com/companies/us_ny/{registration_number}"
+    }
+  ],
+  "RA000751": [
+    {
+      "name": "OpenCorporates (US-TX)",
+      "url": "https://opencorporates.com/companies/us_tx/{registration_number}"
+    }
+  ],
+  "RA001053": [
+    {
+      "name": "OpenCorporates (US-IL)",
+      "url": "https://opencorporates.com/companies/us_il/{registration_number}"
+    }
+  ],
+  "RA001096": [
+    {
+      "name": "OpenCorporates (US-WA)",
+      "url": "https://opencorporates.com/companies/us_wa/{registration_number}"
+    }
+  ],
+  "RA001102": [
+    {
+      "name": "OpenCorporates (US-NY)",
+      "url": "https://opencorporates.com/companies/us_ny/{registration_number}"
+    }
+  ],
+  "RA001112": [
+    {
+      "name": "OpenCorporates (US-TX)",
+      "url": "https://opencorporates.com/companies/us_tx/{registration_number}"
     }
   ]
 }

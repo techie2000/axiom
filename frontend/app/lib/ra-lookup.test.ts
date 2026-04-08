@@ -128,7 +128,7 @@ describe('openRegistrationLookup', () => {
   it('opens a blank tab first for Sunbiz post lookups', () => {
     const submitSpy = vi.spyOn(HTMLFormElement.prototype, 'submit').mockImplementation(() => {})
     const popupDocument = document.implementation.createHTMLDocument('popup')
-    const popupStub = { document: popupDocument } as unknown as Window
+    const popupStub = { document: popupDocument, opener: {} } as unknown as Window
     const openSpy = vi.spyOn(window, 'open').mockImplementation(() => popupStub)
 
     const option: RegistrationLookupOption = {
@@ -143,6 +143,7 @@ describe('openRegistrationLookup', () => {
 
     expect(openSpy).toHaveBeenCalledWith('about:blank', '_blank')
     expect(submitSpy).toHaveBeenCalledTimes(1)
+    expect(popupStub.opener).toBeNull()
 
     const submittedForm = popupDocument.querySelector('form')
     expect(submittedForm?.getAttribute('method')).toBe('POST')
