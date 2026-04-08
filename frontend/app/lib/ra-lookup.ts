@@ -11,5 +11,5 @@ export function buildRegistrationLookupUrl(
   registrationNumber: string | undefined | null
 ): string | null {
   if (!urlTemplate || !registrationNumber) return null
-  return urlTemplate.replace('{registration_number}', encodeURIComponent(registrationNumber))
+  return urlTemplate.replaceAll('{registration_number}', encodeURIComponent(registrationNumber))
 }

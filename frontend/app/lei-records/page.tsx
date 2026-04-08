@@ -422,7 +422,7 @@ export default function LEIRecordsPage() {
     fetch('/data/ra-urls.json')
       .then(r => r.json())
       .then((data: Record<string, string>) => setRaUrlTemplates(data))
-      .catch(() => { /* file absent – graceful degradation */ })
+      .catch((err) => { console.error('[ra-urls] Failed to load RA URL templates:', err) })
   }, [])
 
   // Close country dropdown when clicking outside
@@ -2367,7 +2367,7 @@ export default function LEIRecordsPage() {
                       const regNum = selectedRecord.registration_number
                       const raCode = selectedRecord.registration_authority
                       const urlTemplate = raCode ? raUrlTemplates[raCode] : undefined
-                      const regUrl = urlTemplate && regNum ? urlTemplate.replace('{registration_number}', encodeURIComponent(regNum)) : undefined
+                      const regUrl = buildRegistrationLookupUrl(urlTemplate, regNum) ?? undefined
                       return (
                         <p className="text-sm font-mono text-[rgb(var(--foreground-rgb))] mt-1">
                           {regUrl ? (

@@ -54,7 +54,7 @@ describe('buildRegistrationLookupUrl', () => {
       'https://example.com/q={registration_number}&id={registration_number}',
       '99'
     )
-    // replaces first occurrence (String.replace behaviour without regex)
-    expect(result).toBe('https://example.com/q=99&id={registration_number}')
+    // replaceAll replaces every occurrence for safety
+    expect(result).toBe('https://example.com/q=99&id=99')
   })
 })
