@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -25,6 +26,7 @@ type SchedulerService interface {
 	RunDailyDeltaSync() error
 	RunDailyCleanup() error
 	RunDailyMasterDataSync() error
+	RunGLEIFReferenceSync() error
 	RunLevel2Sync() error
 	RunLevel2RRSync() error
 	RunLevel2REPEXSync() error
@@ -37,22 +39,27 @@ type SchedulerService interface {
 	TriggerFullSync() error
 	TriggerDeltaSync() error
 	TriggerMasterDataSync() error
+	TriggerGLEIFReferenceSync() error
 	TriggerLevel2Sync() error
 	TriggerLevel2RRSync() error
 	TriggerLevel2REPEXSync() error
 }
 
 type schedulerService struct {
-	leiService        LEIService
-	leiLevel2Service  LEILevel2Service
-	masterDataService MasterDataService
-	stopChan          chan struct{}
-	running           bool
+	leiService            LEIService
+	leiLevel2Service      LEILevel2Service
+	masterDataService     MasterDataService
+	gleifReferenceService GLEIFReferenceService
+	stopChan              chan struct{}
+	running               bool
 	// triggerMu serialises concurrent manual-trigger API calls so that the
 	// status check and goroutine spawn happen atomically from the caller's
 	// perspective, eliminating the TOCTOU race between handler validation
 	// and the scheduler-service safety net.
 	triggerMu sync.Mutex
+	// gleifSyncMu serialises all GLEIF reference sync executions across
+	// scheduler pre-sync and manual trigger paths.
+	gleifSyncMu sync.Mutex
 	// Parsed schedule configuration
 	deltaSyncInterval time.Duration
 	fullSyncDay       time.Weekday
@@ -77,6 +84,27 @@ func NewSchedulerService(leiService LEIService, leiLevel2Service LEILevel2Servic
 	// Parse and validate schedule configuration
 	s.parseScheduleConfig(cfg)
 
+	return s
+}
+
+// NewSchedulerServiceWithGLEIF creates a scheduler service with GLEIF reference sync wired in.
+// The GLEIF reference sync runs before every LEI Level 1/2 ingest to keep code lists current.
+func NewSchedulerServiceWithGLEIF(
+	leiService LEIService,
+	leiLevel2Service LEILevel2Service,
+	masterDataService MasterDataService,
+	gleifReferenceService GLEIFReferenceService,
+	cfg *config.Config,
+) SchedulerService {
+	s := &schedulerService{
+		leiService:            leiService,
+		leiLevel2Service:      leiLevel2Service,
+		masterDataService:     masterDataService,
+		gleifReferenceService: gleifReferenceService,
+		stopChan:              make(chan struct{}),
+		running:               false,
+	}
+	s.parseScheduleConfig(cfg)
 	return s
 }
 
@@ -331,7 +359,7 @@ func (s *schedulerService) Stop() {
 func (s *schedulerService) cleanupStuckJobStatuses() {
 	log.Info().Msg("Checking for stuck job statuses from previous sessions")
 
-	jobTypes := []string{"MASTER_DATA_SYNC", "DAILY_FULL", "DAILY_DELTA", "LEVEL2_RR", "LEVEL2_REPEX"}
+	jobTypes := []string{"MASTER_DATA_SYNC", "GLEIF_REFERENCE_SYNC", "DAILY_FULL", "DAILY_DELTA", "LEVEL2_RR", "LEVEL2_REPEX"}
 	for _, jobType := range jobTypes {
 		st, err := s.leiService.GetProcessingStatus(jobType)
 		if err == nil && st.Status == "RUNNING" {
@@ -430,6 +458,38 @@ func (s *schedulerService) initializeNextRunTimes() {
 		}
 	}
 
+	// Ensure GLEIF_REFERENCE_SYNC exists and is chained after MASTER_DATA_SYNC.
+	if gleifStatus, gleifErr := s.leiService.GetProcessingStatus("GLEIF_REFERENCE_SYNC"); gleifErr != nil {
+		now := time.Now()
+		newGLEIF := &domain.FileProcessingStatus{
+			JobType:          "GLEIF_REFERENCE_SYNC",
+			Status:           "IDLE",
+			DependsOnJobType: "MASTER_DATA_SYNC",
+			CreatedAt:        now,
+			UpdatedAt:        now,
+		}
+		if createErr := s.leiService.UpdateProcessingStatus(newGLEIF); createErr != nil {
+			log.Error().Err(createErr).Msg("Failed to create GLEIF_REFERENCE_SYNC job status row")
+		} else {
+			log.Info().Msg("GLEIF_REFERENCE_SYNC job status row created")
+		}
+	} else if gleifStatus.DependsOnJobType != "MASTER_DATA_SYNC" {
+		gleifStatus.DependsOnJobType = "MASTER_DATA_SYNC"
+		if updateErr := s.leiService.UpdateProcessingStatus(gleifStatus); updateErr != nil {
+			log.Error().Err(updateErr).Msg("Failed to set depends_on_job_type on GLEIF_REFERENCE_SYNC")
+		}
+	}
+
+	// Ensure DAILY_FULL is chained after GLEIF_REFERENCE_SYNC.
+	if fullStatus, fullErr := s.leiService.GetProcessingStatus("DAILY_FULL"); fullErr == nil {
+		if fullStatus.DependsOnJobType != "GLEIF_REFERENCE_SYNC" {
+			fullStatus.DependsOnJobType = "GLEIF_REFERENCE_SYNC"
+			if updateErr := s.leiService.UpdateProcessingStatus(fullStatus); updateErr != nil {
+				log.Error().Err(updateErr).Msg("Failed to set depends_on_job_type on DAILY_FULL")
+			}
+		}
+	}
+
 	// Ensure LEVEL2_RR and LEVEL2_REPEX rows exist with the correct dependency metadata.
 	// Migration 000026 seeds these rows, but this guard handles cases where the migration
 	// has not yet been applied (e.g. local dev without running migrations first).
@@ -457,8 +517,8 @@ func (s *schedulerService) initializeNextRunTimes() {
 			} else {
 				log.Info().Str("job_type", def.jobType).Str("depends_on", def.dependsOnJobType).Msg("Level 2 job status row created")
 			}
-		} else if st.DependsOnJobType == "" {
-			// Row exists but dependency column was not yet set (pre-migration 000026).
+		} else if st.DependsOnJobType != def.dependsOnJobType {
+			// Row exists but dependency column is missing or stale.
 			st.DependsOnJobType = def.dependsOnJobType
 			if updateErr := s.leiService.UpdateProcessingStatus(st); updateErr != nil {
 				log.Error().Err(updateErr).Str("job_type", def.jobType).Msg("Failed to set depends_on_job_type on Level 2 job row")
@@ -920,6 +980,17 @@ func (s *schedulerService) RunDailyDeltaSync() error {
 // doDeltaSyncWork executes the download-and-process pipeline for a DAILY_DELTA job whose status
 // has already been set to RUNNING by the caller.
 func (s *schedulerService) doDeltaSyncWork(status *domain.FileProcessingStatus, now time.Time) error {
+	// Run GLEIF reference sync first to ensure all code lists are current before LEI delta ingest.
+	if err := s.runGLEIFReferenceSyncIfConfigured("delta_sync"); err != nil {
+		status.Status = "FAILED"
+		status.ErrorMessage = err.Error()
+		status.ProgressMessage = ""
+		if updateErr := s.leiService.UpdateProcessingStatus(status); updateErr != nil {
+			log.Error().Err(updateErr).Msg("Failed to update delta sync status after GLEIF pre-sync failure")
+		}
+		return err
+	}
+
 	// Download delta file
 	sourceFile, err := s.leiService.DownloadDeltaFile()
 	if err != nil {
@@ -1021,6 +1092,17 @@ func (s *schedulerService) RunDailyFullSync() error {
 // doFullSyncWork executes the download-and-process pipeline for a DAILY_FULL job whose status
 // has already been set to RUNNING by the caller.
 func (s *schedulerService) doFullSyncWork(status *domain.FileProcessingStatus, now time.Time) error {
+	// Run GLEIF reference sync first to ensure all code lists are current before LEI ingest.
+	if err := s.runGLEIFReferenceSyncIfConfigured("full_sync"); err != nil {
+		status.Status = "FAILED"
+		status.ErrorMessage = err.Error()
+		status.ProgressMessage = ""
+		if updateErr := s.leiService.UpdateProcessingStatus(status); updateErr != nil {
+			log.Error().Err(updateErr).Msg("Failed to update full sync status after GLEIF pre-sync failure")
+		}
+		return err
+	}
+
 	// Download full file
 	sourceFile, err := s.leiService.DownloadFullFile()
 	if err != nil {
@@ -1500,8 +1582,8 @@ func (s *schedulerService) doREPEXWork(repexStatus *domain.FileProcessingStatus,
 // Trigger* methods – HTTP-handler entry-points with atomic conflict detection
 // --------------------------------------------------------------------------
 
-// TriggerFullSync validates that neither MASTER_DATA_SYNC nor DAILY_FULL is currently
-// running, then spawns RunDailyFullSync in a goroutine and returns immediately.
+// TriggerFullSync validates that MASTER_DATA_SYNC, GLEIF_REFERENCE_SYNC, and DAILY_FULL
+// are not currently running, then spawns RunDailyFullSync in a goroutine and returns immediately.
 func (s *schedulerService) TriggerFullSync() error {
 	s.triggerMu.Lock()
 	defer s.triggerMu.Unlock()
@@ -1512,6 +1594,17 @@ func (s *schedulerService) TriggerFullSync() error {
 	}
 	if masterStatus.Status == "RUNNING" {
 		return fmt.Errorf("cannot start Full Sync while MASTER_DATA_SYNC is running: %w", ErrJobRunning)
+	}
+
+	gleifStatus, err := s.leiService.GetProcessingStatus("GLEIF_REFERENCE_SYNC")
+	if err != nil {
+		return fmt.Errorf("failed to validate GLEIF_REFERENCE_SYNC status: %w", err)
+	}
+	if gleifStatus.Status == "RUNNING" {
+		return fmt.Errorf("cannot start Full Sync while GLEIF_REFERENCE_SYNC is running: %w", ErrJobRunning)
+	}
+	if gleifStatus.LastSuccessAt == nil || gleifStatus.LastSuccessAt.IsZero() {
+		return fmt.Errorf("cannot start Full Sync until GLEIF_REFERENCE_SYNC has completed successfully: %w", ErrJobRunning)
 	}
 
 	fullStatus, err := s.leiService.GetProcessingStatus("DAILY_FULL")
@@ -1683,6 +1776,113 @@ func (s *schedulerService) TriggerLevel2REPEXSync() error {
 	go func() {
 		if err := s.RunLevel2REPEXSync(); err != nil {
 			log.Error().Err(err).Msg("manual LEVEL2_REPEX sync failed")
+		}
+	}()
+	return nil
+}
+
+// runGLEIFReferenceSyncIfConfigured runs GLEIF reference sync when configured.
+// It returns an error when sync fails so callers can stop LEI ingest until
+// reference lists are consistent.
+func (s *schedulerService) runGLEIFReferenceSyncIfConfigured(context string) error {
+	if s.gleifReferenceService == nil {
+		return nil
+	}
+	s.gleifSyncMu.Lock()
+	defer s.gleifSyncMu.Unlock()
+
+	log.Info().Str("context", context).Msg("Running GLEIF reference sync before LEI ingest")
+	if err := s.gleifReferenceService.SyncAll(); err != nil {
+		return fmt.Errorf("GLEIF reference sync failed before %s: %w", context, err)
+	}
+	return nil
+}
+
+// RunGLEIFReferenceSync downloads and upserts all GLEIF reference code lists.
+// It updates the GLEIF_REFERENCE_SYNC job row in file_processing_status for observability.
+// Returns an error if the GLEIF reference service is not configured, so callers invoked
+// directly (e.g. via the manual-trigger API) receive a clear diagnostic.
+func (s *schedulerService) RunGLEIFReferenceSync() error {
+	s.gleifSyncMu.Lock()
+	defer s.gleifSyncMu.Unlock()
+
+	if s.gleifReferenceService == nil {
+		return fmt.Errorf("GLEIF reference service not configured")
+	}
+	log.Info().Msg("Starting GLEIF reference code-list sync")
+
+	status, err := s.leiService.GetProcessingStatus("GLEIF_REFERENCE_SYNC")
+	if err != nil {
+		status = &domain.FileProcessingStatus{
+			JobType: "GLEIF_REFERENCE_SYNC",
+			Status:  "IDLE",
+		}
+	}
+
+	if status.Status == "RUNNING" {
+		log.Warn().Msg("GLEIF reference sync already running, skipping")
+		return nil
+	}
+
+	status.Status = "RUNNING"
+	status.ErrorMessage = ""
+	now := time.Now()
+	status.LastRunAt = &now
+	if updateErr := s.leiService.UpdateProcessingStatus(status); updateErr != nil {
+		log.Error().Err(updateErr).Msg("Failed to update GLEIF reference sync status")
+	}
+
+	syncErr := s.gleifReferenceService.SyncAll()
+	stats := s.gleifReferenceService.LastSyncStats()
+	if statsJSON, marshalErr := json.Marshal(stats); marshalErr == nil {
+		status.ProgressMessage = string(statsJSON)
+	} else {
+		status.ProgressMessage = ""
+	}
+
+	if syncErr != nil {
+		status.Status = "FAILED"
+		status.ErrorMessage = syncErr.Error()
+		log.Error().Err(syncErr).Msg("GLEIF reference sync failed")
+	} else {
+		status.Status = "COMPLETED"
+		status.ErrorMessage = ""
+		status.LastSuccessAt = &now
+		log.Info().Msg("GLEIF reference sync completed")
+	}
+
+	if updateErr := s.leiService.UpdateProcessingStatus(status); updateErr != nil {
+		log.Error().Err(updateErr).Msg("Failed to update GLEIF reference sync final status")
+	}
+
+	return syncErr
+}
+
+// TriggerGLEIFReferenceSync manually triggers a GLEIF reference sync in a goroutine.
+// Returns ErrJobRunning when the sync is already in progress.
+func (s *schedulerService) TriggerGLEIFReferenceSync() error {
+	s.triggerMu.Lock()
+	defer s.triggerMu.Unlock()
+
+	masterStatus, err := s.leiService.GetProcessingStatus("MASTER_DATA_SYNC")
+	if err != nil {
+		return fmt.Errorf("failed to validate MASTER_DATA_SYNC status: %w", err)
+	}
+	if masterStatus.Status == "RUNNING" {
+		return fmt.Errorf("cannot start GLEIF_REFERENCE_SYNC while MASTER_DATA_SYNC is running: %w", ErrJobRunning)
+	}
+
+	status, err := s.leiService.GetProcessingStatus("GLEIF_REFERENCE_SYNC")
+	if err != nil {
+		return fmt.Errorf("failed to validate GLEIF_REFERENCE_SYNC status: %w", err)
+	}
+	if status.Status == "RUNNING" {
+		return fmt.Errorf("GLEIF_REFERENCE_SYNC is already running: %w", ErrJobRunning)
+	}
+
+	go func() {
+		if err := s.RunGLEIFReferenceSync(); err != nil {
+			log.Error().Err(err).Msg("manual GLEIF reference sync failed")
 		}
 	}()
 	return nil

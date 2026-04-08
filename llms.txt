@@ -79,7 +79,7 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
 
 ## Getting Started
 
-- [LEI Quick Start](docs/LEI_QUICKSTART.md): Quick start guide for LEI data acquisition and API usage
+- [LEI Quick Start](docs/lei/LEI_QUICKSTART.md): Quick start guide for LEI data acquisition and API usage
 - [Multi-Environment Quick Start](docs/environments/multi-environment-quickstart.md): Fast setup for dev/UAT/prod
 - [Environment Setup](docs/environments/multi-environment-setup.md): Comprehensive multi-environment configuration
 - [Environment Port Reference](docs/environments/environment-port-reference.md): Port mappings for all environments
@@ -89,9 +89,11 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
 
 ## LEI Integration (Legal Entity Identifier)
 
-- [LEI Acquisition](docs/LEI_ACQUISITION.md): Complete LEI integration documentation with GLEIF API details
-- [LEI Implementation Summary](docs/LEI_IMPLEMENTATION_SUMMARY.md): Technical implementation details and features
-- [LEI Data Flow](docs/LEI_DATA_FLOW.md): Data processing flow diagrams and scheduler architecture
+- [LEI Acquisition](docs/lei/LEI_ACQUISITION.md): Complete LEI integration documentation with GLEIF API details
+- [LEI Implementation Summary](docs/lei/LEI_IMPLEMENTATION_SUMMARY.md): Technical implementation details and features
+- [LEI Data Flow](docs/lei/LEI_DATA_FLOW.md): Data processing flow diagrams and scheduler architecture
+- [GLEIF Reference Code Lists](docs/lei/GLEIF_REFERENCE_CODE_LISTS.md): Reference data ingestion for
+  registration authorities, legal forms, organizational roles, and legal jurisdictions
 
 ## Architecture Decision Records
 
@@ -176,8 +178,8 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
 - [Windows Smoke Wrapper](scripts/smoke-api.cmd): CMD entrypoint for smoke tests on machines without make
 - [Windows SSI Smoke Wrapper](scripts/smoke-ssi.cmd): CMD entrypoint for SSI contract checks with optional
   `--seed` and `--cleanup`
-- [LEI Persistence Fix](docs/LEI_PERSISTENCE_AND_RACE_CONDITION_FIX.md): Technical fix for race condition issues
-- [Delta URL Fix](docs/DELTA_URL_FIX_SUMMARY.md): Bug fix summary for GLEIF delta URL parsing
+- [LEI Persistence Fix](docs/lei/LEI_PERSISTENCE_AND_RACE_CONDITION_FIX.md): Technical fix for race condition issues
+- [Delta URL Fix](docs/lei/DELTA_URL_FIX_SUMMARY.md): Bug fix summary for GLEIF delta URL parsing
 - [Backend Config](backend/config.yaml): Application configuration reference
 - [API Main Entry](backend/cmd/api/main.go): Backend application entry point
 - [Master Data Files](backend/data/masterdata/README.md): JSON reference data files for countries, currencies,

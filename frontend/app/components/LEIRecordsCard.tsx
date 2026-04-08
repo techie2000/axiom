@@ -1,40 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import Link from 'next/link'
-
-interface LEIStatus {
-  current_source_file?: {
-    total_records?: number
-  }
-}
+import { useCachedLeiCount } from '../lib/useCachedLeiCount'
 
 export default function LEIRecordsCard() {
-  const [totalRecords, setTotalRecords] = useState<number>(0)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const fetchRecordCount = async () => {
-      try {
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
-        
-        const response = await fetch(`${API_URL}/api/v1/lei/status/DAILY_FULL`, { cache: 'no-store' })
-
-        if (response.ok) {
-          const data: LEIStatus = await response.json()
-          setTotalRecords(data.current_source_file?.total_records || 0)
-        }
-      } catch (error) {
-        console.error('Failed to fetch LEI record count:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchRecordCount()
-    const interval = setInterval(fetchRecordCount, 30000) // Update every 30 seconds
-    return () => clearInterval(interval)
-  }, [])
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+  const { count: totalRecords, loading } = useCachedLeiCount(apiUrl, { pollMs: 30000 })
 
   const formatNumber = (num: number) => {
     return num.toLocaleString()
@@ -59,7 +30,7 @@ export default function LEIRecordsCard() {
             <div className="mb-3">
               <div className="text-sm">
                 <span className="theme-text-muted">Total Records: </span>
-                <span className="font-semibold">{formatNumber(totalRecords)}</span>
+                <span className="font-semibold">{totalRecords !== null ? formatNumber(totalRecords) : '—'}</span>
               </div>
             </div>
           )}

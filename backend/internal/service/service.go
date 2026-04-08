@@ -25,6 +25,7 @@ type Services struct {
 	CodeMapping    CodeMappingService
 	UserPreference UserPreferenceService
 	UITranslation  UITranslationService
+	GLEIFReference GLEIFReferenceService
 }
 
 // NewServices creates a new services instance
@@ -44,6 +45,13 @@ func NewServices(repos *repository.Repositories, db *gorm.DB, leiDataDir string,
 		CodeMapping:    NewCodeMappingService(repos.CodeMapping),
 		UserPreference: NewUserPreferenceService(repos.UserPreference, repos.PreferenceAudit),
 		UITranslation:  NewUITranslationService(repos.UITranslation),
+		GLEIFReference: NewGLEIFReferenceService(
+			repos.GLEIFRegistrationAuthority,
+			repos.GLEIFEntityLegalForm,
+			repos.GLEIFOrganizationalRole,
+			repos.GLEIFLegalJurisdiction,
+			leiDataDir,
+		),
 	}
 }
 

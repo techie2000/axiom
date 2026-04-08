@@ -56,6 +56,10 @@ type LEIRecord struct {
 	ManagingLOULegalName  string `gorm:"->;column:managing_lou_legal_name" json:"managing_lou_legal_name,omitempty"`
 	SuccessorLEILegalName string `gorm:"->;column:successor_lei_legal_name" json:"successor_lei_legal_name,omitempty"`
 
+	// GLEIF reference resolved names (computed via JOIN, not stored in lei_records)
+	RegistrationAuthorityName string `gorm:"->;column:registration_authority_name" json:"registration_authority_name,omitempty"`
+	EntityLegalFormName       string `gorm:"->;column:entity_legal_form_name" json:"entity_legal_form_name,omitempty"`
+
 	// Dates
 	InitialRegistrationDate time.Time `json:"initial_registration_date"`
 	LastUpdateDate          time.Time `json:"last_update_date"`

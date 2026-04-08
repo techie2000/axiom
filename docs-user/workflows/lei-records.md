@@ -42,10 +42,11 @@ Multiple filters can be active at the same time. Click **Clear Filters** to rese
 
 1. Click a row in the LEI Records table.
 2. A detail panel opens showing:
-   - **Entity information** — legal name, legal form, status, and category.
+   - **Entity information** — legal name, legal form (with full name where available), status, and category.
    - **Registered address** — street, city, region, postal code, and country.
    - **Headquarters address** — if different from registered address.
-   - **Registration details** — registration authority, registration number, and initial registration date.
+   - **Registration details** — registration authority (with full organisation name where available),
+     registration number, and initial registration date.
    - **Relationship data** — managing LOU (Legal Operating Unit), relationship status, and validation status.
    - **Other names** — previous legal names or trading names if available.
 3. Click **Close** or press **Escape** to dismiss the panel.

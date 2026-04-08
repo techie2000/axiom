@@ -1,19 +1,54 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { formatStatusLabel } from '../lib/status-label'
 
 interface LEIStatus {
   status: string
   job_type: string
+  last_success_at?: string | null
   total_records?: number
   processed_records?: number
   failed_records?: number
   error_message?: string
+  progress_message?: string
   current_source_file?: {
     total_records?: number
   }
+}
+
+interface GleifSyncStats {
+  total_records?: number
+}
+
+interface LEICountCache {
+  count: number
+  lastSuccessAt: string | null
+}
+
+const COUNT_CACHE_KEY = 'lei_count_cache'
+
+function readCountCache(): LEICountCache | null {
+  try {
+    const raw = sessionStorage.getItem(COUNT_CACHE_KEY)
+    return raw ? (JSON.parse(raw) as LEICountCache) : null
+  } catch {
+    return null
+  }
+}
+
+function writeCountCache(count: number, lastSuccessAt: string | null) {
+  try {
+    sessionStorage.setItem(COUNT_CACHE_KEY, JSON.stringify({ count, lastSuccessAt }))
+  } catch {
+    // sessionStorage unavailable
+  }
+}
+
+const resolveStatusTotal = (status: LEIStatus | null): number => {
+  if (!status) return 0
+  return status.current_source_file?.total_records ?? status.total_records ?? 0
 }
 
 export default function LEIStatusCard() {
@@ -22,26 +57,78 @@ export default function LEIStatusCard() {
   const [deltaStatus, setDeltaStatus] = useState<LEIStatus | null>(null)
   const [rrStatus, setRrStatus] = useState<LEIStatus | null>(null)
   const [repexStatus, setRepexStatus] = useState<LEIStatus | null>(null)
+  const [gleifStatus, setGleifStatus] = useState<LEIStatus | null>(null)
+  const [leiEntityCount, setLeiEntityCount] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
+  // Track which last_success_at we last fetched the count for
+  const countFetchedForRef = useRef<string | null | undefined>(undefined)
+
+  // Fetch count only when the full sync has a new completion timestamp
+  const fetchCountIfStale = async (lastSuccessAt: string | null | undefined) => {
+    // undefined means we haven't checked yet; skip if already fetched for this timestamp
+    if (lastSuccessAt === undefined) return
+    if (countFetchedForRef.current === lastSuccessAt) return
+
+    const cached = readCountCache()
+    if (cached && cached.lastSuccessAt === lastSuccessAt) {
+      setLeiEntityCount(cached.count)
+      countFetchedForRef.current = lastSuccessAt
+      return
+    }
+
+    try {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+      const res = await fetch(`${API_URL}/api/v1/lei/count`, { cache: 'no-store' })
+      if (res.ok) {
+        const { count } = (await res.json()) as { count: number }
+        setLeiEntityCount(count)
+        writeCountCache(count, lastSuccessAt)
+        countFetchedForRef.current = lastSuccessAt
+      }
+    } catch {
+      // If fetch fails, surface any cached value so the card isn't blank
+      if (cached) {
+        setLeiEntityCount(cached.count)
+        countFetchedForRef.current = cached.lastSuccessAt
+      }
+    }
+  }
 
   useEffect(() => {
+    // Seed from sessionStorage immediately so the card isn't blank on first paint
+    const cached = readCountCache()
+    if (cached) {
+      setLeiEntityCount(cached.count)
+      countFetchedForRef.current = cached.lastSuccessAt
+    }
+
     const fetchStatus = async () => {
       try {
         const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
-        
-        const [mdRes, fullRes, deltaRes, rrRes, repexRes] = await Promise.all([
+
+        const [mdRes, fullRes, deltaRes, rrRes, repexRes, gleifRes] = await Promise.all([
           fetch(`${API_URL}/api/v1/lei/status/MASTER_DATA_SYNC`, { cache: 'no-store' }),
           fetch(`${API_URL}/api/v1/lei/status/DAILY_FULL`, { cache: 'no-store' }),
           fetch(`${API_URL}/api/v1/lei/status/DAILY_DELTA`, { cache: 'no-store' }),
           fetch(`${API_URL}/api/v1/lei/status/LEVEL2_RR`, { cache: 'no-store' }),
           fetch(`${API_URL}/api/v1/lei/status/LEVEL2_REPEX`, { cache: 'no-store' }),
+          fetch(`${API_URL}/api/v1/lei/status/GLEIF_REFERENCE_SYNC`, { cache: 'no-store' }),
         ])
 
         if (mdRes.ok) setMasterDataStatus(await mdRes.json())
-        if (fullRes.ok) setFullStatus(await fullRes.json())
+        if (fullRes.ok) {
+          const fullData: LEIStatus = await fullRes.json()
+          setFullStatus(fullData)
+          // Trigger a count fetch only when last_success_at has advanced
+          await fetchCountIfStale(fullData.last_success_at ?? null)
+        } else {
+          // No full status yet — still try to load the count once
+          await fetchCountIfStale(null)
+        }
         if (deltaRes.ok) setDeltaStatus(await deltaRes.json())
         if (rrRes.ok) setRrStatus(await rrRes.json())
         if (repexRes.ok) setRepexStatus(await repexRes.json())
+        if (gleifRes.ok) setGleifStatus(await gleifRes.json())
       } catch (error) {
         console.error('Failed to fetch LEI status:', error)
       } finally {
@@ -53,6 +140,7 @@ export default function LEIStatusCard() {
     const interval = setInterval(fetchStatus, 5000)
 
     return () => clearInterval(interval)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const getHealthIndicator = (status: LEIStatus | null) => {
@@ -111,7 +199,19 @@ export default function LEIStatusCard() {
   const rrHealth = getHealthIndicator(rrStatus)
   const repexHealth = getHealthIndicator(repexStatus)
   const masterDataHealth = getHealthIndicator(masterDataStatus)
-  const totalRecords = fullStatus?.current_source_file?.total_records || 0
+  let gleifStats: GleifSyncStats | null = null
+  const gleifProgressMessage = gleifStatus?.progress_message?.trim() || ''
+  if (gleifProgressMessage.startsWith('{')) {
+    try {
+      gleifStats = JSON.parse(gleifProgressMessage) as GleifSyncStats
+    } catch {
+      gleifStats = null
+    }
+  }
+  const gleifTotalRecords = gleifStats?.total_records ?? resolveStatusTotal(gleifStatus)
+  const l2RrRecords = resolveStatusTotal(rrStatus)
+  const l2RepexRecords = resolveStatusTotal(repexStatus)
+  const l2AssociatedRecords = l2RrRecords + l2RepexRecords
 
   return (
     <Link href="/lei" className="group theme-panel theme-card-hover border-2 backdrop-blur-sm rounded-lg shadow-lg hover:shadow-xl transition-all p-6 min-h-[240px] flex flex-col">
@@ -158,8 +258,22 @@ export default function LEIStatusCard() {
           ) : (
             <div className="space-y-2 mb-3">
               <div className="text-sm">
-                <span className="theme-text-muted">Total Records: </span>
-                <span className="font-semibold">{formatNumber(totalRecords)}</span>
+                <span className="theme-text-muted">LEI Records: </span>
+                <span className="font-semibold">{leiEntityCount !== null ? formatNumber(leiEntityCount) : '—'}</span>
+              </div>
+              <div className="text-sm">
+                <span className="theme-text-muted">Associated Records (L2): </span>
+                <span className="font-semibold">{formatNumber(l2AssociatedRecords)}</span>
+              </div>
+              <div className="text-sm">
+                <span className="theme-text-muted">GLEIF Reference Records: </span>
+                <span className="font-semibold">{formatNumber(gleifTotalRecords)}</span>
+              </div>
+              <div className="text-xs theme-text-muted">
+                L2 breakdown: RR {formatNumber(l2RrRecords)} | REPEX {formatNumber(l2RepexRecords)}
+              </div>
+              <div className="text-xs theme-text-muted break-all">
+                Last Snapshot Folder: data/main/lei/gleif-reference
               </div>
               
               {fullStatus?.status === 'RUNNING' && fullStatus.total_records && (

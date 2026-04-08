@@ -66,6 +66,14 @@ type leiRepository struct {
 const notSetEntityStatusWhereClause = "entity_status IS NULL OR TRIM(entity_status) = '' OR UPPER(TRIM(entity_status)) = 'NULL'"
 const normalizedEntityCategoryMatchWhereClause = "UPPER(BTRIM(entity_category)) = UPPER(BTRIM(?))"
 
+const singleRecordResolvedNamesSelectFragment = "" +
+	", (SELECT ref.legal_name FROM lei_raw.lei_records ref WHERE ref.lei = lei_raw.lei_records.managing_lou LIMIT 1) AS managing_lou_legal_name" +
+	", (SELECT ref.legal_name FROM lei_raw.lei_records ref WHERE ref.lei = lei_raw.lei_records.successor_lei LIMIT 1) AS successor_lei_legal_name" +
+	", (SELECT ra.organization_name FROM lei_raw.gleif_registration_authorities ra" +
+	"   WHERE ra.ra_id = lei_raw.lei_records.registration_authority AND ra.active = TRUE LIMIT 1) AS registration_authority_name" +
+	", (SELECT elf.entity_legal_form_name FROM lei_raw.gleif_entity_legal_forms elf" +
+	"   WHERE elf.elf_code = lei_raw.lei_records.entity_legal_form LIMIT 1) AS entity_legal_form_name"
+
 // exactLEIMatchWhereClause matches a record by its primary LEI or its successor LEI.
 // The successor branch includes the partial-index predicate so PostgreSQL can use
 // idx_lei_raw_lei_records_successor_lei instead of falling back to sequential scans.
@@ -104,7 +112,12 @@ func (r *leiRepository) CreateLEIRecord(record *domain.LEIRecord) error {
 // FindLEIByLEI finds an LEI record by LEI code
 func (r *leiRepository) FindLEIByLEI(lei string) (*domain.LEIRecord, error) {
 	var record domain.LEIRecord
-	if err := r.db.Where("lei = ?", lei).Preload("SourceFile").First(&record).Error; err != nil {
+	err := r.db.
+		Select("lei_raw.lei_records.*"+singleRecordResolvedNamesSelectFragment).
+		Where("lei_raw.lei_records.lei = ?", strings.TrimSpace(lei)).
+		Preload("SourceFile").
+		First(&record).Error
+	if err != nil {
 		return nil, err
 	}
 	return &record, nil
@@ -113,7 +126,11 @@ func (r *leiRepository) FindLEIByLEI(lei string) (*domain.LEIRecord, error) {
 // FindLEIByID finds an LEI record by ID
 func (r *leiRepository) FindLEIByID(id string) (*domain.LEIRecord, error) {
 	var record domain.LEIRecord
-	if err := r.db.Preload("SourceFile").First(&record, "id = ?", id).Error; err != nil {
+	err := r.db.
+		Select("lei_raw.lei_records.*"+singleRecordResolvedNamesSelectFragment).
+		Preload("SourceFile").
+		First(&record, "lei_raw.lei_records.id = ?", id).Error
+	if err != nil {
 		return nil, err
 	}
 	return &record, nil
@@ -159,8 +176,14 @@ func (r *leiRepository) FindLegalNamesByLEICodes(codes []string) (map[string]str
 // FindPredecessorLEIsBySuccessor retrieves LEI records that point to the provided LEI as successor.
 func (r *leiRepository) FindPredecessorLEIsBySuccessor(lei string) ([]*domain.LEIRecord, error) {
 	var records []*domain.LEIRecord
+	normalizedLEI := strings.ToUpper(strings.TrimSpace(lei))
+	if normalizedLEI == "" {
+		return records, nil
+	}
+
 	if err := r.db.
-		Where("successor_lei = ?", strings.TrimSpace(lei)).
+		Select("id, lei, legal_name, successor_lei, updated_at").
+		Where("successor_lei = ? AND successor_lei IS NOT NULL AND BTRIM(successor_lei) <> ''", normalizedLEI).
 		Order("updated_at desc").
 		Find(&records).Error; err != nil {
 		return nil, err
@@ -775,7 +798,7 @@ func (r *leiRepository) BatchUpsertLEIRecords(records []*domain.LEIRecord) (int,
 
 		// Build SQL with RETURNING to get affected record IDs
 		valueStrings := make([]string, 0, len(batch))
-		valueArgs := make([]interface{}, 0, len(batch)*41)
+		valueArgs := make([]interface{}, 0, len(batch)*42)
 
 		// Generate all values in Go, use placeholders for everything
 		now := time.Now()
