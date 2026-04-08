@@ -2570,7 +2570,6 @@ export default function LEIRecordsPage() {
           aria-label={t('leiRecords.modal.registrationNumber')}
           className="fixed z-[60] min-w-56 theme-dropdown rounded-lg shadow-xl border border-[rgb(var(--border-rgb))] overflow-hidden"
           style={{ top: regNumDropdown.y, left: regNumDropdown.x }}
-          onClick={(e) => e.stopPropagation()}
         >
           <div className="px-3 py-2 text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] border-b border-[rgb(var(--border-rgb))]">
             {t('leiRecords.modal.registrationNumber')}
