@@ -24,6 +24,7 @@ import { formatEnumDisplayValue, formatLEICellValue, getStatusBadgePresentation,
 import { computeShowingEnd, formatCurrentPageStatValue } from './stats-format'
 import { useTranslation } from 'react-i18next'
 import LEIAuditHistoryModal from '../components/LEIAuditHistoryModal'
+import { buildRegistrationLookupUrl } from '../lib/ra-lookup'
 
 interface LEIRecord {
   id: string
@@ -504,6 +505,11 @@ export default function LEIRecordsPage() {
       })
       if (!columnsToFetch.includes('other_names')) {
         columnsToFetch.push('other_names')
+      }
+      // Fetch registration_number alongside registration_authority so the ▾ lookup link
+      // can resolve the registration authority URL even when the number column is hidden (#269)
+      if (columnsToFetch.includes('registration_authority') && !columnsToFetch.includes('registration_number')) {
+        columnsToFetch.push('registration_number')
       }
       const columnsParam = columnsToFetch.join(',')
       if (columnsParam) params.append('columns', columnsParam)
@@ -1685,6 +1691,7 @@ export default function LEIRecordsPage() {
                           const isManagingLou = column.key === 'managing_lou'
                           const isSuccessorLei = column.key === 'successor_lei'
                           const isRegistrationAuthority = column.key === 'registration_authority'
+                          const isRegistrationNumber = column.key === 'registration_number'
                           const isCountryFlagColumn = column.key === 'country_flag'
                           const isRegionColumn = column.key === 'legal_address_region' || column.key === 'hq_address_region'
                           const isCountryColumn = column.key === 'legal_address_country' || column.key === 'hq_address_country'
@@ -1811,21 +1818,39 @@ export default function LEIRecordsPage() {
                                   const raComments = record.registration_authority_comments
                                   const nameLabel = raName || raCode
                                   const showIntl = raIntlName && raIntlName !== raName
+                                  const regLookupUrl = buildRegistrationLookupUrl(
+                                    raCode ? raUrlTemplates[raCode] : undefined,
+                                    record.registration_number
+                                  )
                                   return (
-                                    <div title={raComments || undefined}>
-                                      {raWebsite ? (
-                                        <a
-                                          href={raWebsite}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="font-mono theme-link hover:underline"
-                                          onClick={e => e.stopPropagation()}
-                                        >
-                                          {raCode}
-                                        </a>
-                                      ) : (
-                                        <span className="font-mono">{raCode || '-'}</span>
-                                      )}
+                                    <div className="group/ra" title={raComments || undefined}>
+                                      <span className="inline-flex items-center gap-1">
+                                        {raWebsite ? (
+                                          <a
+                                            href={raWebsite}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="font-mono theme-link hover:underline"
+                                            onClick={e => e.stopPropagation()}
+                                          >
+                                            {raCode}
+                                          </a>
+                                        ) : (
+                                          <span className="font-mono">{raCode || '-'}</span>
+                                        )}
+                                        {regLookupUrl && (
+                                          <a
+                                            href={regLookupUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="opacity-0 group-hover/ra:opacity-100 transition-opacity text-xs theme-link"
+                                            title={`Look up registration number ${record.registration_number}`}
+                                            onClick={e => e.stopPropagation()}
+                                          >
+                                            ▾
+                                          </a>
+                                        )}
+                                      </span>
                                       {nameLabel && nameLabel !== raCode && (
                                         <div className="mt-1 text-xs theme-text-muted">
                                           {nameLabel}
@@ -1834,6 +1859,30 @@ export default function LEIRecordsPage() {
                                       )}
                                     </div>
                                   )
+                                })()
+                              ) : isRegistrationNumber ? (
+                                (() => {
+                                  const regNum = String(value || '')
+                                  const raCode = record.registration_authority
+                                  const regLookupUrl = buildRegistrationLookupUrl(
+                                    raCode ? raUrlTemplates[raCode] : undefined,
+                                    regNum
+                                  )
+                                  if (!regNum) return <span>-</span>
+                                  if (regLookupUrl) {
+                                    return (
+                                      <a
+                                        href={regLookupUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="font-mono theme-link hover:underline"
+                                        onClick={e => e.stopPropagation()}
+                                      >
+                                        {regNum}
+                                      </a>
+                                    )
+                                  }
+                                  return <span className="font-mono">{regNum}</span>
                                 })()
                               ) : (
                                 formatCellValue(value, column.key)
