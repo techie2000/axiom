@@ -156,9 +156,13 @@ export default function SyncedWideTable({
           ref={topScrollbarRef}
           onScroll={handleTopScrollbarScroll}
           className={`${topScrollbarClassName} theme-scrollbar`}
+          // overflow-x:scroll forces the native scrollbar to always be visible (even on macOS).
+          // overflow-y:hidden prevents a vertical scrollbar from appearing.
+          // The spacer div is kept at 1px so the container height = 1px content + 11px scrollbar
+          // track = 12px total, making nearly the entire strip the clickable scrollbar track (#266).
+          style={{ overflowX: 'scroll', overflowY: 'hidden' }}
         >
-          {/* height ensures the scrollbar track is reachable on macOS overlay-scrollbar mode (#266) */}
-          <div style={{ width: `${tableScrollWidth}px`, height: '12px' }} />
+          <div style={{ width: `${tableScrollWidth}px`, height: '1px' }} />
         </div>
       )}
 
