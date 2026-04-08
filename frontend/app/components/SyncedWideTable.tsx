@@ -140,11 +140,16 @@ export default function SyncedWideTable({
     updateDimensions()
 
     window.addEventListener('scroll', updateDimensions)
-    document.addEventListener('scroll', updateDimensions, true)
+    // NOTE: Do NOT use document.addEventListener('scroll', ..., true) here.
+    // That capture-phase listener intercepts scroll events from ALL child elements
+    // (including topScrollbarRef). When the user drags the top scrollbar, the capture
+    // fires before handleTopScrollbarScroll, reads tableContainerRef.scrollLeft = 0
+    // (stale), and resets the top scrollbar back to 0 — causing the "ping back" (#266).
+    // Page-scroll is sufficient via window 'scroll'; element scroll sync is handled
+    // by the dedicated onScroll props on each scrollable container.
     window.addEventListener('resize', updateDimensions)
     return () => {
       window.removeEventListener('scroll', updateDimensions)
-      document.removeEventListener('scroll', updateDimensions, true)
       window.removeEventListener('resize', updateDimensions)
     }
   }, [stickyTopOffset, headerHeight, dependencyKey, onMainHeaderWidthsChange])
