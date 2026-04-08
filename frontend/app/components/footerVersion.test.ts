@@ -25,6 +25,7 @@ describe('buildFooterVersionTooltip', () => {
 
   it('returns undefined when the version is not usable', () => {
     expect(buildFooterVersionTooltip({ version: 'unknown' })).toBeUndefined()
+    expect(buildFooterVersionTooltip({ version: 'loading...' })).toBeUndefined()
     expect(buildFooterVersionTooltip({ version: '   ' })).toBeUndefined()
   })
 })

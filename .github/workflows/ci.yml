@@ -16,9 +16,6 @@ on:
       - dev
       - uat
       - prod
-    paths-ignore:
-      - VERSION
-      - backend/internal/version/version.go
 
 permissions:
   contents: read

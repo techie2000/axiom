@@ -10,7 +10,12 @@ function normalizeMetadataValue(value?: string): string | null {
   }
 
   const normalized = value.trim()
-  if (!normalized || normalized.toLowerCase() === 'unknown') {
+  if (!normalized) {
+    return null
+  }
+
+  const lowered = normalized.toLowerCase()
+  if (lowered === 'unknown' || lowered === 'loading...') {
     return null
   }
 
