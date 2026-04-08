@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Added automated patch version bumps for pushes to `main` so the UI footer exposes a distinct
+  testable build number for each mainline code state.
+- Added `scripts/bump-version.ps1` to keep `VERSION` and
+  `backend/internal/version/version.go` in sync for manual minor and major version decisions.
+
 ## [0.3.0] - 2026-03-09
 
 ### Added

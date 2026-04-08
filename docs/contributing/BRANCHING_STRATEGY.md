@@ -117,9 +117,11 @@ dev → uat
 The workflow runs at **01:00 UTC on the 1st of every month**. When `uat` is ahead of `prod`, it
 opens a pull request titled `chore: monthly promotion uat → prod (YYYY-MM-DD)`. Require **at
 least two reviews** before merging. Coordinate with the team before merging — production
-deployments should be planned and communicated in advance. Tag the merge commit with a version
-number following the conventions in [`VERSION`](../../VERSION) and the version management
-instructions.
+deployments should be planned and communicated in advance. Patch versions are auto-incremented on
+every push to `main`, so the promoted commit already carries a UI-visible build number. If the
+release warrants a manual `MINOR` or `MAJOR` bump, apply that change intentionally before the
+release merge using `pwsh ./scripts/bump-version.ps1 -Part minor` or `-Part major`, then tag the
+promoted commit with that version.
 
 You can also trigger the workflow manually from **Actions → Monthly Promote uat → prod →
 Run workflow**. A `dry_run` option is available.
