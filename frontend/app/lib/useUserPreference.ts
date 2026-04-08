@@ -29,6 +29,7 @@ export interface UserPreference {
 // In-memory cache so all hooks in the same session share state.
 let cache: Record<string, Record<string, string>> = {}
 let cacheLoaded = false
+let inFlightPreferencesRequest: Promise<void> | null = null
 
 function getCacheKey(pageKey: string, prefKey: string) {
   return `${pageKey}::${prefKey}`
@@ -64,6 +65,39 @@ async function fetchAllPreferences(): Promise<UserPreference[]> {
   })
   if (!res.ok) return []
   return res.json()
+}
+
+async function ensurePreferencesLoaded(): Promise<void> {
+  if (cacheLoaded) {
+    return
+  }
+
+  const token = getToken()
+  if (!token) {
+    cacheLoaded = true
+    return
+  }
+
+  if (inFlightPreferencesRequest) {
+    return inFlightPreferencesRequest
+  }
+
+  inFlightPreferencesRequest = fetchAllPreferences()
+    .then((prefs) => {
+      prefs.forEach((p) => {
+        writeToCache(p.page_key, p.preference_key, p.preference_value)
+        if (typeof window !== 'undefined') {
+          const lk = `axiom_pref::${getCacheKey(p.page_key, p.preference_key)}`
+          localStorage.setItem(lk, p.preference_value)
+        }
+      })
+      cacheLoaded = true
+    })
+    .finally(() => {
+      inFlightPreferencesRequest = null
+    })
+
+  return inFlightPreferencesRequest
 }
 
 async function savePreferenceToServer(
@@ -130,25 +164,21 @@ export function useUserPreference(
       return
     }
 
-    const token = getToken()
-    if (!token) {
-      cacheLoaded = true
-      setLoading(false)
-      return
-    }
+    let cancelled = false
 
-    fetchAllPreferences().then((prefs) => {
-      prefs.forEach((p) => {
-        writeToCache(p.page_key, p.preference_key, p.preference_value)
-        // Mirror to localStorage for offline fallback.
-        const lk = `axiom_pref::${getCacheKey(p.page_key, p.preference_key)}`
-        localStorage.setItem(lk, p.preference_value)
-      })
-      cacheLoaded = true
+    ensurePreferencesLoaded().then(() => {
+      if (cancelled) {
+        return
+      }
+
       const serverValue = readFromCache(pageKey, prefKey)
       if (serverValue !== undefined) setValue(serverValue)
       setLoading(false)
     })
+
+    return () => {
+      cancelled = true
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -238,4 +268,5 @@ export function useUserPreference(
 export function resetPreferencesCache() {
   cache = {}
   cacheLoaded = false
+  inFlightPreferencesRequest = null
 }
