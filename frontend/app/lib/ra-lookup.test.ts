@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   buildRegistrationLookupOptions,
   buildRegistrationLookupUrl,
@@ -107,6 +107,10 @@ describe('openRegistrationLookup', () => {
     vi.restoreAllMocks()
   })
 
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
   it('opens standard URL lookups in a new tab', () => {
     const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
     const option: RegistrationLookupOption = {
@@ -148,5 +152,77 @@ describe('openRegistrationLookup', () => {
     expect((popupDocument.querySelector('input[name="SearchTerm"]') as HTMLInputElement | null)?.value).toBe('L24000116074')
     expect((popupDocument.querySelector('input[name="InquiryType"]') as HTMLInputElement | null)?.value).toBe('DocumentNumber')
     expect((popupDocument.querySelector('input[name="SearchNameOrder"]') as HTMLInputElement | null)?.value).toBe('')
+  })
+
+  it('builds Texas taxpayer lookup option for RA000637', () => {
+    const options = buildRegistrationLookupOptions(
+      'RA000637',
+      [{ name: 'Texas Comptroller Franchise Status', url: 'https://comptroller.texas.gov/data-search/franchise-tax?fileNumber={registration_number}' }],
+      '0702886022'
+    )
+
+    expect(options).toEqual([
+      {
+        key: 'Texas Comptroller Franchise Status:0702886022:texas-fetch',
+        label: 'Texas Comptroller Franchise Status',
+        type: 'texas-franchise-file-number-fetch',
+        searchApiUrl: 'https://comptroller.texas.gov/data-search/franchise-tax?fileNumber=0702886022',
+        fallbackUrl: 'https://comptroller.texas.gov/taxes/franchise/account-status/search',
+      },
+    ])
+  })
+
+  it('resolves Texas taxpayer number and opens the detail URL', async () => {
+    const popupStub = { location: { href: '' } } as unknown as Window
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => popupStub)
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        data: [{ taxpayerId: '12329555804' }],
+        count: 1,
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const option: RegistrationLookupOption = {
+      key: 'texas',
+      label: 'Texas Comptroller Franchise Status',
+      type: 'texas-franchise-file-number-fetch',
+      searchApiUrl: 'https://comptroller.texas.gov/data-search/franchise-tax?fileNumber=0702886022',
+      fallbackUrl: 'https://comptroller.texas.gov/taxes/franchise/account-status/search',
+    }
+
+    openRegistrationLookup(option)
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(openSpy).toHaveBeenCalledWith('about:blank', '_blank')
+    expect(fetchMock).toHaveBeenCalledWith('https://comptroller.texas.gov/data-search/franchise-tax?fileNumber=0702886022')
+    expect(popupStub.location.href).toBe('https://comptroller.texas.gov/taxes/franchise/account-status/search/12329555804')
+  })
+
+  it('falls back to the Texas search page when the taxpayer number is missing', async () => {
+    const popupStub = { location: { href: '' } } as unknown as Window
+    vi.spyOn(window, 'open').mockImplementation(() => popupStub)
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, data: [], count: 0 }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const option: RegistrationLookupOption = {
+      key: 'texas-fallback',
+      label: 'Texas Comptroller Franchise Status',
+      type: 'texas-franchise-file-number-fetch',
+      searchApiUrl: 'https://comptroller.texas.gov/data-search/franchise-tax?fileNumber=0702886022',
+      fallbackUrl: 'https://comptroller.texas.gov/taxes/franchise/account-status/search',
+    }
+
+    openRegistrationLookup(option)
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(popupStub.location.href).toBe('https://comptroller.texas.gov/taxes/franchise/account-status/search')
   })
 })

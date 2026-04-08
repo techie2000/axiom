@@ -15,5 +15,11 @@
       "name": "Sunbiz (FL) By Document Number",
       "url": "https://search.sunbiz.org/Inquiry/CorporationSearch/ByDocumentNumber?DocumentNumber={registration_number}"
     }
+  ],
+  "RA000637": [
+    {
+      "name": "Texas Comptroller Franchise Status",
+      "url": "https://comptroller.texas.gov/data-search/franchise-tax?fileNumber={registration_number}"
+    }
   ]
 }
