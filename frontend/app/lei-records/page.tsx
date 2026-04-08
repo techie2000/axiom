@@ -26,6 +26,15 @@ import { useTranslation } from 'react-i18next'
 import LEIAuditHistoryModal from '../components/LEIAuditHistoryModal'
 import { buildRegistrationLookupUrl } from '../lib/ra-lookup'
 
+function buildLookupOptions(
+  raTemplates: Array<{ name: string; url: string }>,
+  regNum: string | null | undefined,
+): Array<{ url: string; label: string }> {
+  return raTemplates
+    .map(t => ({ url: buildRegistrationLookupUrl(t.url, regNum), label: t.name }))
+    .filter((opt): opt is { url: string; label: string } => opt.url !== null)
+}
+
 interface LEIRecord {
   id: string
   lei: string
@@ -429,7 +438,13 @@ export default function LEIRecordsPage() {
         const parsed: Record<string, Array<{ name: string; url: string }>> = {}
         for (const [key, value] of Object.entries(data)) {
           if (key !== '_comment' && Array.isArray(value)) {
-            parsed[key] = value as Array<{ name: string; url: string }>
+            const validated = value.filter(
+              (item): item is { name: string; url: string } =>
+                typeof item === 'object' && item !== null &&
+                typeof (item as Record<string, unknown>).name === 'string' &&
+                typeof (item as Record<string, unknown>).url === 'string',
+            )
+            if (validated.length > 0) parsed[key] = validated
           }
         }
         setRaUrlTemplates(parsed)
@@ -1866,9 +1881,7 @@ export default function LEIRecordsPage() {
                                   const regNum = String(value || '')
                                   const raCode = record.registration_authority
                                   const raTemplates = raCode ? (raUrlTemplates[raCode] ?? []) : []
-                                  const lookupOptions = raTemplates
-                                    .map(t => ({ url: buildRegistrationLookupUrl(t.url, regNum), label: t.name }))
-                                    .filter((opt): opt is { url: string; label: string } => opt.url !== null)
+                                  const lookupOptions = buildLookupOptions(raTemplates, regNum)
                                   if (!regNum) return <span>-</span>
                                   return (
                                     <div className="group/rn inline-flex items-center gap-1">
@@ -2367,9 +2380,7 @@ export default function LEIRecordsPage() {
                       const regNum = selectedRecord.registration_number
                       const raCode = selectedRecord.registration_authority
                       const raTemplates = raCode ? (raUrlTemplates[raCode] ?? []) : []
-                      const lookupOptions = raTemplates
-                        .map(t => ({ url: buildRegistrationLookupUrl(t.url, regNum), label: t.name }))
-                        .filter((opt): opt is { url: string; label: string } => opt.url !== null)
+                      const lookupOptions = buildLookupOptions(raTemplates, regNum)
                       return (
                         <p className="text-sm font-mono text-[rgb(var(--foreground-rgb))] mt-1">
                           <span className="group/rn-modal inline-flex items-center gap-1">
