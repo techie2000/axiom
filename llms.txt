@@ -146,6 +146,9 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
   opens a promotion PR from dev → uat every Monday
 - [Monthly Promotion Workflow](.github/workflows/promote-uat-to-prod.yml): Scheduled workflow that
   opens a promotion PR from uat → prod on the 1st of each month
+- [Main Patch Version Bump Workflow](.github/workflows/bump-main-version.yml): Automatically bumps
+  the patch version after pushes to main unless the push already contains an intentional version
+  change
 
 ## Security
 
@@ -171,6 +174,8 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
 - [Branding Assets Guide](docs/assets/branding/README.md): Canonical source logos and generated runtime favicon/logo
   outputs for active and alternate themes
 - [Makefile](Makefile): Build automation, testing, linting, and development commands
+- [Version Bump Script](scripts/bump-version.ps1): Updates VERSION and backend version constant for
+  patch, minor, or major semantic version changes
 - [API Smoke Script](scripts/smoke-api.ps1): Environment-aware API smoke tests for health/auth checks
   with startup readiness wait
 - [SSI Smoke Script](scripts/smoke-ssi.ps1): Verifies `/api/v1/ssis` contract fields, optional temporary seed rows,

@@ -7,12 +7,18 @@ on:
       - dev
       - uat
       - prod
+    paths-ignore:
+      - VERSION
+      - backend/internal/version/version.go
   pull_request:
     branches:
       - main
       - dev
       - uat
       - prod
+    paths-ignore:
+      - VERSION
+      - backend/internal/version/version.go
 
 permissions:
   contents: read
