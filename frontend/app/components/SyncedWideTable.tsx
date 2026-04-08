@@ -140,11 +140,16 @@ export default function SyncedWideTable({
     updateDimensions()
 
     window.addEventListener('scroll', updateDimensions)
-    document.addEventListener('scroll', updateDimensions, true)
+    // NOTE: Do NOT use document.addEventListener('scroll', ..., true) here.
+    // That capture-phase listener intercepts scroll events from ALL child elements
+    // (including topScrollbarRef). When the user drags the top scrollbar, the capture
+    // fires before handleTopScrollbarScroll, reads tableContainerRef.scrollLeft = 0
+    // (stale), and resets the top scrollbar back to 0 — causing the "ping back" (#266).
+    // Page-scroll is sufficient via window 'scroll'; element scroll sync is handled
+    // by the dedicated onScroll props on each scrollable container.
     window.addEventListener('resize', updateDimensions)
     return () => {
       window.removeEventListener('scroll', updateDimensions)
-      document.removeEventListener('scroll', updateDimensions, true)
       window.removeEventListener('resize', updateDimensions)
     }
   }, [stickyTopOffset, headerHeight, dependencyKey, onMainHeaderWidthsChange])
@@ -156,6 +161,11 @@ export default function SyncedWideTable({
           ref={topScrollbarRef}
           onScroll={handleTopScrollbarScroll}
           className={`${topScrollbarClassName} theme-scrollbar`}
+          // overflow-x:scroll forces the native scrollbar to always be visible (even on macOS).
+          // overflow-y:hidden prevents a vertical scrollbar from appearing.
+          // The spacer div is kept at 1px so the container height = 1px content + 11px scrollbar
+          // track = 12px total, making nearly the entire strip the clickable scrollbar track (#266).
+          style={{ overflowX: 'scroll', overflowY: 'hidden' }}
         >
           <div style={{ width: `${tableScrollWidth}px`, height: '1px' }} />
         </div>

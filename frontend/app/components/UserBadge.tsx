@@ -11,6 +11,7 @@ import { useEnglishTooltips } from '../lib/useEnglishTooltips'
 import { useButtonEmojiMode, EmojiMode } from '../lib/useButtonEmojiMode'
 import { getMapProvider, MAP_PROVIDERS, MapProviderId } from '../lib/map-providers'
 import { useUserPreference } from '../lib/useUserPreference'
+import { applyTheme, applyDarkMode } from '../lib/theme'
 import MapProviderIcon from './MapProviderIcon'
 import ThemeSelector from './ThemeSelector'
 import ThemeToggle from './ThemeToggle'
@@ -30,6 +31,23 @@ export default function UserBadge() {
     'openstreetmap',
   )
   const normalizedMapProviderId = getMapProvider(storedMapProvider).id
+
+  // Eagerly apply theme and dark-mode preferences from the server as soon as
+  // they are loaded into the cache (#267).  ThemeSelector / ThemeToggle are
+  // rendered only when the menu is open, so without these effects the colour
+  // palette and light/dark state were stale (localStorage values) until the
+  // user opened the menu for the first time.
+  const [themeValue] = useUserPreference('global', 'theme', 'default')
+  const [darkModeValue] = useUserPreference('global', 'dark_mode', 'dark')
+
+  useEffect(() => {
+    applyTheme(themeValue || 'default')
+  }, [themeValue])
+
+  useEffect(() => {
+    applyDarkMode(darkModeValue !== 'light')
+  }, [darkModeValue])
+
   const emojiModeLabels: Record<EmojiMode, string> = {
     both: t('preferences.buttonEmojiMode.both'),
     text: t('preferences.buttonEmojiMode.text'),
