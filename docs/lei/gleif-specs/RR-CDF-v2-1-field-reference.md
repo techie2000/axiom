@@ -47,6 +47,7 @@ Each node has an element `NodeID` containing the LEI (20 alphanumeric characters
 `StartNode` is the *child / subsidiary*; `EndNode` is the *parent / direct or ultimate owner*.
 
 **Axiom columns:**
+
 - `lei_relationship_records.relationship_start_node` (StartNode LEI)
 - `lei_relationship_records.relationship_end_node` (EndNode LEI)
 
@@ -55,7 +56,7 @@ Each node has an element `NodeID` containing the LEI (20 alphanumeric characters
 The nature of the hierarchical ownership or control link:
 
 | Value | Level | Meaning |
-|-------|-------|---------|
+| ------- | ------- | --------- |
 | `IS_DIRECTLY_CONSOLIDATED_BY` | Direct (L2) | StartNode is consolidated by EndNode at accounting year-end |
 | `IS_ULTIMATELY_CONSOLIDATED_BY` | Ultimate (L2) | StartNode is ultimately consolidated by EndNode |
 | `IS_INTERNATIONAL_BRANCH_OF` | — | StartNode is a foreign branch of EndNode |
@@ -70,7 +71,7 @@ The nature of the hierarchical ownership or control link:
 Indicates whether the relationship is currently active:
 
 | Value | DB value | Meaning |
-|-------|----------|---------|
+| ------- | ---------- | --------- |
 | `ACTIVE` | `'ACTIVE'` | The relationship is currently in force |
 | `INACTIVE` | `'INACTIVE'` | The relationship has ended |
 | `NULL` | `'NULL'` | Status not determinable (v2.0 addition) |
@@ -87,7 +88,7 @@ A repeating set of date ranges describing different aspects of the relationship 
 discriminator:
 
 | PeriodType | Meaning |
-|-----------|---------|
+| ----------- | --------- |
 | `ACCOUNTING_PERIOD` | Fiscal year for which the consolidation is reported |
 | `DOCUMENT_FILING_PERIOD` | Period of the filing that documents the relationship |
 
@@ -100,7 +101,7 @@ Elements within each period: `StartDate`, `EndDate` (both ISO 8601).
 Additional descriptive annotations on the relationship:
 
 | QualifierDimension | QualifierCategory | Meaning |
-|-------------------|-------------------|---------|
+| ------------------- | ------------------- | --------- |
 | `ACCOUNTING_STANDARD` | `IFRS` | Consolidated under International Financial Reporting Standards |
 | `ACCOUNTING_STANDARD` | `US_GAAP` | Consolidated under US GAAP |
 | `ACCOUNTING_STANDARD` | `OTHER_GAAP` | Consolidated under another GAAP |
@@ -150,7 +151,7 @@ LEI assignment. They measure different events.
 Lifecycle state of the relationship registration (11 possible values):
 
 | Value | Meaning |
-|-------|---------|
+| ------- | --------- |
 | `PENDING_VALIDATION` | Submitted, not yet validated |
 | `PUBLISHED` | Validated and active |
 | `DUPLICATE` | A duplicate record |
@@ -183,7 +184,7 @@ The LEI of the LOU responsible for administering this relationship record.
 Level of corroboration for the relationship information:
 
 | Value | Meaning |
-|-------|---------|
+| ------- | --------- |
 | `PENDING` | Validation has not yet occurred |
 | `ENTITY_SUPPLIED_ONLY` | Based on information from the filing entity only |
 | `PARTIALLY_CORROBORATED` | Partially confirmed against independent sources |
@@ -196,7 +197,7 @@ Level of corroboration for the relationship information:
 The type of document(s) used to validate the relationship:
 
 | Value | Meaning |
-|-------|---------|
+| ------- | --------- |
 | `ACCOUNTS_FILING` | Published accounts or financial statements |
 | `REGULATORY_FILING` | Regulatory submission (e.g. 13F, CRD) |
 | `SUPPORTING_DOCUMENTS` | Other supporting documentation provided by registrant |

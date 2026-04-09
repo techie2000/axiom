@@ -59,7 +59,7 @@ in the entity's constituting documents. `xml:lang` attribute carries the BCP 47 
 Alternative or historical names. Each entry has a `type` attribute:
 
 | Type | Meaning |
-|------|---------|
+| ------ | --------- |
 | `PREVIOUS_LEGAL_NAME` | Former registered name |
 | `TRADING_OR_OPERATING_NAME` | Commercial/trading name |
 | `ALTERNATIVE_LANGUAGE_LEGAL_NAME` | Same name in another official language |
@@ -71,7 +71,7 @@ Alternative or historical names. Each entry has a `type` attribute:
 ASCII transliterations of non-Latin names. Types:
 
 | Type | Meaning |
-|------|---------|
+| ------ | --------- |
 | `AUTO_ASCII_TRANSLITERATED_LEGAL_NAME` | System-generated ASCII transliteration |
 | `PREFERRED_ASCII_TRANSLITERATED_LEGAL_NAME` | LOU-preferred ASCII transliteration |
 
@@ -102,7 +102,7 @@ ISO 3166-1/3166-2 code for the jurisdiction of legal formation.
 Classification of the entity type:
 
 | Value | Meaning |
-|-------|---------|
+| ------- | --------- |
 | `BRANCH` | A branch of a foreign entity |
 | `FUND` | A collective investment vehicle |
 | `SOLE_PROPRIETOR` | A sole proprietorship |
@@ -117,7 +117,7 @@ Classification of the entity type:
 More specific sub-classification, primarily for government entities:
 
 | Value |
-|-------|
+| ------- |
 | `CENTRAL_GOVERNMENT` |
 | `STATE_GOVERNMENT` |
 | `LOCAL_GOVERNMENT` |
@@ -138,7 +138,7 @@ transition to ELF codes.
 Current operating status of the legal entity:
 
 | Value | Meaning |
-|-------|---------|
+| ------- | --------- |
 | `ACTIVE` | Entity is legally registered and operating |
 | `INACTIVE` | Entity is no longer legally registered or operating |
 | `NULL` | Status not applicable (v3.0) |
@@ -185,7 +185,7 @@ The date at which the LEI data record was most recently updated by the managing 
 Lifecycle state of the LEI registration:
 
 | Value | Meaning |
-|-------|---------|
+| ------- | --------- |
 | `PENDING_VALIDATION` | Submitted, awaiting validation |
 | `ISSUED` | Validated, published, entity is active |
 | `DUPLICATE` | Determined to be a duplicate LEI |
@@ -218,7 +218,7 @@ The LEI of the LOU responsible for managing this LEI record.
 The level of corroboration applied by the managing LOU:
 
 | Value | Meaning |
-|-------|---------|
+| ------- | --------- |
 | `PENDING` | Validation has not yet occurred |
 | `ENTITY_SUPPLIED_ONLY` | Based primarily on information supplied by the registrant |
 | `PARTIALLY_CORROBORATED` | Partially confirmed against independent sources |

@@ -58,7 +58,7 @@ If GLEIF releases a new CDF version:
 ### Level 1 vs Level 2 data
 
 | | Level 1 (LEI-CDF) | Level 2 (RR-CDF) |
-|-|-------------------|------------------|
+| - | ------------------- | ------------------ |
 | Question answered | "Who is who?" | "Who owns whom?" |
 | Main table | `lei_raw.lei_records` | `lei_raw.lei_relationship_records` |
 | Golden-copy cadence | 3× daily | 3× daily |
@@ -83,7 +83,7 @@ at the **LOU** level, not at GLEIF directly.
 Both tables have a column named `initial_registration_date` but they record **different events**:
 
 | Table | Tracks |
-|-------|--------|
+| ------- | -------- |
 | `lei_records.initial_registration_date` | When the **LEI** was first assigned and published by the managing LOU |
 | `lei_relationship_records.initial_registration_date` | When the **relationship information** (parent/fund link) was first collected by the managing LOU |
 
