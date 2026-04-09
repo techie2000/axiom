@@ -73,6 +73,22 @@ func TestDetectRRChangesDetectsJSONBFieldChange(t *testing.T) {
 	}
 }
 
+func TestDetectRRChangesIgnoresJSONKeyOrdering(t *testing.T) {
+	t.Helper()
+
+	old := &domain.LEIRelationshipRecord{
+		RelationshipPeriods: domain.JSONBString(`[{"startDate":"2020-01-01","endDate":"2021-01-01"}]`),
+	}
+	new := &domain.LEIRelationshipRecord{
+		RelationshipPeriods: domain.JSONBString(`[{"endDate":"2021-01-01","startDate":"2020-01-01"}]`),
+	}
+
+	changes := level2Repo.detectRRChanges(old, new)
+	if _, ok := changes["RelationshipPeriods"]; ok {
+		t.Fatalf("expected JSON key ordering differences to be ignored")
+	}
+}
+
 func TestDetectRRChangesAllThreeJSONBFieldsChecked(t *testing.T) {
 	t.Helper()
 
@@ -136,7 +152,7 @@ func TestDetectRRChangesBothNilTimesProducesNoChange(t *testing.T) {
 	}
 }
 
-func TestDetectRRChangesDetectsSourceFileIDChange(t *testing.T) {
+func TestDetectRRChangesIgnoresSourceFileIDChange(t *testing.T) {
 	t.Helper()
 
 	id1 := uuid.New()
@@ -146,8 +162,8 @@ func TestDetectRRChangesDetectsSourceFileIDChange(t *testing.T) {
 	new := &domain.LEIRelationshipRecord{SourceFileID: &id2}
 
 	changes := level2Repo.detectRRChanges(old, new)
-	if _, ok := changes["SourceFileID"]; !ok {
-		t.Fatalf("expected SourceFileID to be detected as changed")
+	if _, ok := changes["SourceFileID"]; ok {
+		t.Fatalf("expected SourceFileID change to be ignored")
 	}
 }
 
@@ -220,7 +236,7 @@ func TestDetectRepexChangesDetectsExceptionReferenceChange(t *testing.T) {
 	}
 }
 
-func TestDetectRepexChangesDetectsSourceFileIDChange(t *testing.T) {
+func TestDetectRepexChangesIgnoresSourceFileIDChange(t *testing.T) {
 	t.Helper()
 
 	id1 := uuid.New()
@@ -230,12 +246,12 @@ func TestDetectRepexChangesDetectsSourceFileIDChange(t *testing.T) {
 	new := &domain.LEIReportingException{SourceFileID: &id2}
 
 	changes := level2Repo.detectRepexChanges(old, new)
-	if _, ok := changes["SourceFileID"]; !ok {
-		t.Fatalf("expected SourceFileID to be detected as changed")
+	if _, ok := changes["SourceFileID"]; ok {
+		t.Fatalf("expected SourceFileID change to be ignored")
 	}
 }
 
-func TestDetectRepexChangesNilToNonNilSourceFileIDIsDetected(t *testing.T) {
+func TestDetectRepexChangesNilToNonNilSourceFileIDIsIgnored(t *testing.T) {
 	t.Helper()
 
 	id := uuid.New()
@@ -243,8 +259,8 @@ func TestDetectRepexChangesNilToNonNilSourceFileIDIsDetected(t *testing.T) {
 	new := &domain.LEIReportingException{SourceFileID: &id}
 
 	changes := level2Repo.detectRepexChanges(old, new)
-	if _, ok := changes["SourceFileID"]; !ok {
-		t.Fatalf("expected nil→non-nil SourceFileID to be detected as changed")
+	if _, ok := changes["SourceFileID"]; ok {
+		t.Fatalf("expected nil→non-nil SourceFileID to be ignored")
 	}
 }
 
@@ -263,28 +279,23 @@ func TestDetectRepexChangesBothNilSourceFileIDProducesNoChange(t *testing.T) {
 func TestDetectRepexChangesAllFieldsChecked(t *testing.T) {
 	t.Helper()
 
-	id1 := uuid.New()
-	id2 := uuid.New()
-
 	old := &domain.LEIReportingException{
 		ExceptionReason:    "NO_KNOWN_PERSON",
 		ExceptionReference: "ref1",
-		SourceFileID:       &id1,
 	}
 	new := &domain.LEIReportingException{
 		ExceptionReason:    "NATURAL_PERSONS",
 		ExceptionReference: "ref2",
-		SourceFileID:       &id2,
 	}
 
 	changes := level2Repo.detectRepexChanges(old, new)
-	for _, field := range []string{"ExceptionReason", "ExceptionReference", "SourceFileID"} {
+	for _, field := range []string{"ExceptionReason", "ExceptionReference"} {
 		if _, ok := changes[field]; !ok {
 			t.Fatalf("expected %s to be detected as changed", field)
 		}
 	}
-	if len(changes) != 3 {
-		t.Fatalf("expected exactly 3 changed fields, got %d: %v", len(changes), changes)
+	if len(changes) != 2 {
+		t.Fatalf("expected exactly 2 changed fields, got %d: %v", len(changes), changes)
 	}
 }
 

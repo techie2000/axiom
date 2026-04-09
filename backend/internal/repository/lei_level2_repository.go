@@ -786,10 +786,17 @@ func (r *leiLevel2Repository) detectRRChanges(old, new *domain.LEIRelationshipRe
 		}
 	}
 
+	checkJSONB := func(field string, oldVal, newVal domain.JSONBString) {
+		if jsonBStringsSemanticEqual(oldVal, newVal) {
+			return
+		}
+		changes[field] = level2ChangeDetection{field, oldVal, newVal}
+	}
+
 	check("RelationshipStatus", old.RelationshipStatus, new.RelationshipStatus)
-	check("RelationshipPeriods", old.RelationshipPeriods, new.RelationshipPeriods)
-	check("RelationshipQualifiers", old.RelationshipQualifiers, new.RelationshipQualifiers)
-	check("RelationshipQuantifiers", old.RelationshipQuantifiers, new.RelationshipQuantifiers)
+	checkJSONB("RelationshipPeriods", old.RelationshipPeriods, new.RelationshipPeriods)
+	checkJSONB("RelationshipQualifiers", old.RelationshipQualifiers, new.RelationshipQualifiers)
+	checkJSONB("RelationshipQuantifiers", old.RelationshipQuantifiers, new.RelationshipQuantifiers)
 	check("RegistrationStatus", old.RegistrationStatus, new.RegistrationStatus)
 	checkTime("InitialRegistrationDate", old.InitialRegistrationDate, new.InitialRegistrationDate)
 	checkTime("LastUpdateDate", old.LastUpdateDate, new.LastUpdateDate)
@@ -798,7 +805,6 @@ func (r *leiLevel2Repository) detectRRChanges(old, new *domain.LEIRelationshipRe
 	check("ValidationSources", old.ValidationSources, new.ValidationSources)
 	check("ValidationDocuments", old.ValidationDocuments, new.ValidationDocuments)
 	check("ValidationReference", old.ValidationReference, new.ValidationReference)
-	check("SourceFileID", old.SourceFileID, new.SourceFileID)
 
 	return changes
 }
@@ -815,17 +821,6 @@ func (r *leiLevel2Repository) detectRepexChanges(old, new *domain.LEIReportingEx
 
 	check("ExceptionReason", old.ExceptionReason, new.ExceptionReason)
 	check("ExceptionReference", old.ExceptionReference, new.ExceptionReference)
-
-	// Detect source file change using the same check pattern as string fields.
-	oldSrc := ""
-	if old.SourceFileID != nil {
-		oldSrc = old.SourceFileID.String()
-	}
-	newSrc := ""
-	if new.SourceFileID != nil {
-		newSrc = new.SourceFileID.String()
-	}
-	check("SourceFileID", oldSrc, newSrc)
 
 	return changes
 }
