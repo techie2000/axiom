@@ -422,6 +422,7 @@ jobs:
       - name: Report CI result
         run: |
           ENV="${{ needs.detect-environment.outputs.environment }}"
+          HAS_MIGRATION_CHANGES="${{ needs.detect-migration-changes.outputs.has_migration_changes }}"
           LINT_GO="${{ needs.lint-go.result }}"
           LINT_DOCKER="${{ needs.lint-docker.result }}"
           LINT_DOCS="${{ needs.lint-docs.result }}"
@@ -441,17 +442,27 @@ jobs:
           echo "CALM Validate   : $CALM_VALIDATE"
           echo "CALM Strict     : $CALM_VALIDATE_STRICT"
           echo "Frontend Lint   : $LINT_FRONTEND"
-          echo "Migrations      : $MIGRATIONS"
+          echo "Migrations      : $MIGRATIONS (detected changes: $HAS_MIGRATION_CHANGES)"
           echo "Build           : $BUILD"
           echo "Tests           : $TEST"
           echo "Frontend        : $BUILD_FRONTEND"
           echo "User Docs       : $BUILD_DOCS_USER"
 
+          # When no migration files changed, validate-migrations is skipped (expected)
+          # Treat skipped result as acceptable in that case
+          MIGRATIONS_CHECK="success"
+          if [ "$MIGRATIONS" = "skipped" ] && [ "$HAS_MIGRATION_CHANGES" = "false" ]; then
+            MIGRATIONS_CHECK="success"
+            echo "ℹ️  Migration validation skipped (no migration files changed)"
+          elif [ "$MIGRATIONS" != "success" ]; then
+            MIGRATIONS_CHECK="failed"
+          fi
+
           if [ "$LINT_GO" != "success" ] || \
              [ "$LINT_DOCKER" != "success" ] || \
              [ "$LINT_DOCS" != "success" ] || \
              [ "$LINT_FRONTEND" != "success" ] || \
-             [ "$MIGRATIONS" != "success" ] || \
+             [ "$MIGRATIONS_CHECK" != "success" ] || \
              [ "$BUILD" != "success" ] || \
              [ "$TEST" != "success" ] || \
              [ "$BUILD_FRONTEND" != "success" ] || \
