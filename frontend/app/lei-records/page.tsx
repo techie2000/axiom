@@ -21,6 +21,7 @@ import { useUserPreference } from '../lib/useUserPreference'
 import { useSearchFocusShortcut } from '../lib/useSearchFocusShortcut'
 import MapLink from '../components/MapLink'
 import { formatEnumDisplayValue, formatLEICellValue, getStatusBadgePresentation, normalizeRecordNullLikeValues } from './null-utils'
+import { formatStatusFilterLabel, LEI_STATUS_FILTER_OPTIONS, normalizeStatusFilterForAPI } from './statusFilter'
 import { computeShowingEnd, formatCurrentPageStatValue } from './stats-format'
 import { useTranslation } from 'react-i18next'
 import LEIAuditHistoryModal from '../components/LEIAuditHistoryModal'
@@ -331,7 +332,7 @@ export default function LEIRecordsPage() {
     return String(value || '').trim().toUpperCase()
   }, [])
 
-  const statusOptions = ['ACTIVE', 'INACTIVE', 'LAPSED', 'MERGED', 'RETIRED', 'NULL']
+  const statusOptions = LEI_STATUS_FILTER_OPTIONS
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -341,19 +342,6 @@ export default function LEIRecordsPage() {
   }, [])
 
   const backHref = isLoggedIn ? '/dashboard' : '/home'
-
-  const isNotSetStatusFilterValue = useCallback((value: string): boolean => {
-    const normalized = value.trim().replaceAll(' ', '_').toUpperCase()
-    return normalized === 'NULL' || normalized === 'NOT_SET'
-  }, [])
-
-  const formatStatusFilterLabel = useCallback((value: string): string => {
-    return isNotSetStatusFilterValue(value) ? 'Not Set' : value
-  }, [isNotSetStatusFilterValue])
-
-  const normalizeStatusFilterForAPI = useCallback((value: string): string => {
-    return isNotSetStatusFilterValue(value) ? 'NULL' : value
-  }, [isNotSetStatusFilterValue])
 
   const categoryOptions = useMemo(() => {
     const values = new Set<string>()
