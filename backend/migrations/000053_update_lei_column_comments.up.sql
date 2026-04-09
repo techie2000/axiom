@@ -39,8 +39,8 @@ the text ''NULL'' in this NOT NULL VARCHAR(50) column — it is not SQL NULL.';
 
 COMMENT ON COLUMN lei_raw.lei_relationship_records.registration_status IS
 'Registration status of this relationship record (Registration.RegistrationStatus in RR-CDF v2.1).
-Values: PENDING_VALIDATION, PUBLISHED, DUPLICATE, LAPSED, MERGED, RETIRED, ANNULLED,
-CANCELLED, TRANSFERRED, PENDING_ARCHIVAL, PENDING_TRANSFER.';
+Values: PENDING_VALIDATION, PUBLISHED, DUPLICATE, LAPSED, RETIRED, ANNULLED,
+TRANSFERRED, PENDING_TRANSFER, PENDING_ARCHIVAL.';
 
 COMMENT ON COLUMN lei_raw.lei_relationship_records.initial_registration_date IS
 'Timestamp when this relationship information was first registered with the managing LOU

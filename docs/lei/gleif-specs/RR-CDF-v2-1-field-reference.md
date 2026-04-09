@@ -19,7 +19,7 @@ Relationship Record
 │   ├── StartNode              (the child company's LEI)
 │   ├── EndNode                (the parent company's LEI)
 │   ├── RelationshipType
-│   ├── RelationShipPeriods[]
+│   ├── RelationshipPeriods[]
 │   ├── RelationshipStatus
 │   ├── RelationshipQualifiers[]
 │   └── RelationshipQuantifiers[]
@@ -48,8 +48,8 @@ Each node has an element `NodeID` containing the LEI (20 alphanumeric characters
 
 **Axiom columns:**
 
-- `lei_relationship_records.relationship_start_node` (StartNode LEI)
-- `lei_relationship_records.relationship_end_node` (EndNode LEI)
+- `lei_relationship_records.start_node_lei` (StartNode LEI)
+- `lei_relationship_records.end_node_lei` (EndNode LEI)
 
 ### RelationshipType
 
@@ -82,7 +82,7 @@ Indicates whether the relationship is currently active:
 > literal text `'NULL'` and can appear in a `NOT NULL` column without violating the constraint.
 > As of 2026-04 there are ~350 rows with this value in production data.
 
-### RelationShipPeriods (Periods)
+### RelationshipPeriods (Periods)
 
 A repeating set of date ranges describing different aspects of the relationship with a `PeriodType`
 discriminator:
@@ -104,7 +104,8 @@ Additional descriptive annotations on the relationship:
 | ------------------- | ------------------- | --------- |
 | `ACCOUNTING_STANDARD` | `IFRS` | Consolidated under International Financial Reporting Standards |
 | `ACCOUNTING_STANDARD` | `US_GAAP` | Consolidated under US GAAP |
-| `ACCOUNTING_STANDARD` | `OTHER_GAAP` | Consolidated under another GAAP |
+| `ACCOUNTING_STANDARD` | `OTHER_ACCOUNTING_STANDARD` | Consolidated under another accounting standard |
+| `ACCOUNTING_STANDARD` | `GOVERNMENT_ACCOUNTING_STANDARD` | Consolidated under a government accounting standard (IPSAS 35 or national equivalent) |
 
 **Axiom column:** `lei_relationship_records.relationship_qualifiers` (JSONB)
 
@@ -148,7 +149,7 @@ LEI assignment. They measure different events.
 
 ### RegistrationStatus
 
-Lifecycle state of the relationship registration (11 possible values):
+Lifecycle state of the relationship registration (9 possible values, per RR-CDF v2.1 XSD):
 
 | Value | Meaning |
 | ------- | --------- |
@@ -156,13 +157,11 @@ Lifecycle state of the relationship registration (11 possible values):
 | `PUBLISHED` | Validated and active |
 | `DUPLICATE` | A duplicate record |
 | `LAPSED` | Not renewed by `NextRenewalDate` |
-| `MERGED` | Two records merged into one |
 | `RETIRED` | No longer active; retained for history |
 | `ANNULLED` | Marked erroneous after publication |
-| `CANCELLED` | Cancelled before publication |
 | `TRANSFERRED` | Transferred to another LOU |
-| `PENDING_ARCHIVAL` | About to be removed from active file (deprecated name) |
-| `PENDING_ARCHIVE` | Alternate/current spelling for PENDING_ARCHIVAL |
+| `PENDING_TRANSFER` | Transfer to another LOU requested; being processed at sending LOU |
+| `PENDING_ARCHIVAL` | Transfer in final stage; record will be removed from the sending LOU's published file |
 
 **Axiom column:** `lei_relationship_records.registration_status`
 

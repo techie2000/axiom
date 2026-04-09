@@ -94,6 +94,8 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
 - [LEI Data Flow](docs/lei/LEI_DATA_FLOW.md): Data processing flow diagrams and scheduler architecture
 - [GLEIF Reference Code Lists](docs/lei/GLEIF_REFERENCE_CODE_LISTS.md): Reference data ingestion for
   registration authorities, legal forms, organizational roles, and legal jurisdictions
+- [GLEIF Spec Files](docs/lei/gleif-specs/README.md): Local copies of GLEIF CDF XSDs, field references, code-list
+  CSVs, and reporting-exceptions documentation for developer and AI tool reference
 
 ## Architecture Decision Records
 
