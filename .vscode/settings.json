@@ -1,6 +1,15 @@
 {
   "chat.tools.terminal.autoApprove": {
     ".Name": true,
+    ".vscode/settings.json": true,
+    "/^node --check frontend/scripts/extract-i18n-keys\\.mjs$/": {
+      "approve": true,
+      "matchCommandLine": true
+    },
+    "/^Set-Location backend; go test \\./internal/repository; Set-Location \\.\\.; node --check frontend/scripts/extract-i18n-keys\\.mjs$/": {
+      "approve": true,
+      "matchCommandLine": true
+    },
     "code": true,
     "ConvertFrom-Json": true,
     "ConvertTo-Json": true,
@@ -19,12 +28,14 @@
     "docker network": true,
     "docker pause": true,
     "docker ps": true,
+    "docker pull": true,
     "docker restart": true,
     "docker rm": true,
     "docker rmi": true,
     "docker run": true,
     "docker start": true,
     "docker stop": true,
+    "docker tag": true,
     "docker volume": true,
     "docker-compose": true,
     "fc": true,
@@ -44,6 +55,7 @@
     "git merge": true,
     "git push": true,
     "git remote": true,
+    "git restore": true,
     "git rev-list": true,
     "git rev-parse": true,
     "git stash": true,
@@ -58,6 +70,7 @@
     "npm --prefix frontend": true,
     "npm install": true,
     "npm run build": true,
+    "npm test": true,
     "npx --yes markdownlint-cli2": true,
     "Out-Null": true,
     "Pop-Location": true,
@@ -70,20 +83,7 @@
     "Tee-Object": true,
     "Test-Path": true,
     "Write-Error": true,
-    "wsl": true,
-    "/^node --check frontend/scripts/extract-i18n-keys\\.mjs$/": {
-      "approve": true,
-      "matchCommandLine": true
-    },
-    "git restore": true,
-    "/^Set-Location backend; go test \\./internal/repository; Set-Location \\.\\.; node --check frontend/scripts/extract-i18n-keys\\.mjs$/": {
-      "approve": true,
-      "matchCommandLine": true
-    },
-    "docker pull": true,
-    "docker tag": true,
-    ".vscode/settings.json": true,
-    "npm test": true
+    "wsl": true
   },
   "cSpell.words": [
     "ACMR",
@@ -254,6 +254,7 @@
     "toplevel",
     "trgm",
     "tsquery",
+    "tweakcn",
     "twitchyliquid",
     "UATBE",
     "UATFE",
@@ -263,6 +264,7 @@
     "Unknownland",
     "unmarshal",
     "Upserting",
+    "upserts",
     "urlesc",
     "VARCHAR",
     "vasile",
