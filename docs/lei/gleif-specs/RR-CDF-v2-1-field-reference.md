@@ -69,13 +69,17 @@ The nature of the hierarchical ownership or control link:
 
 Indicates whether the relationship is currently active:
 
-| Value | Meaning |
-|-------|---------|
-| `ACTIVE` | The relationship is currently in force |
-| `INACTIVE` | The relationship has ended |
-| `NULL` | Status not determinable (v2.0 addition) |
+| Value | DB value | Meaning |
+|-------|----------|---------|
+| `ACTIVE` | `'ACTIVE'` | The relationship is currently in force |
+| `INACTIVE` | `'INACTIVE'` | The relationship has ended |
+| `NULL` | `'NULL'` | Status not determinable (v2.0 addition) |
 
-**Axiom column:** `lei_relationship_records.relationship_status`
+**Axiom column:** `lei_relationship_records.relationship_status` — `VARCHAR(50) NOT NULL`
+
+> **Note:** `NULL` is an RR-CDF enum **string** value, not a SQL NULL. It is stored as the
+> literal text `'NULL'` and can appear in a `NOT NULL` column without violating the constraint.
+> As of 2026-04 there are ~350 rows with this value in production data.
 
 ### RelationShipPeriods (Periods)
 

@@ -34,7 +34,8 @@ Fund relationships (added v2.0): IS_FUND-MANAGED_BY, IS_SUBFUND_OF, IS_FEEDER_TO
 
 COMMENT ON COLUMN lei_raw.lei_relationship_records.relationship_status IS
 'Lifecycle status of the relationship (Relationship.RelationshipStatus in RR-CDF v2.1).
-Values: ACTIVE, INACTIVE, NULL.';
+Values: ACTIVE, INACTIVE, NULL. "NULL" is the RR-CDF v2.0 enum string literal stored as
+the text ''NULL'' in this NOT NULL VARCHAR(50) column — it is not SQL NULL.';
 
 COMMENT ON COLUMN lei_raw.lei_relationship_records.registration_status IS
 'Registration status of this relationship record (Registration.RegistrationStatus in RR-CDF v2.1).
