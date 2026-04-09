@@ -23,8 +23,17 @@ Having local copies means:
 | ---- | ---- | ------- | ---------- |
 | [`lei-cdf-v3-1.xsd`](./lei-cdf-v3-1.xsd) | Level 1 — LEI Common Data File | 3.1 | 2021-03-04 |
 | [`rr-cdf-v2-1.xsd`](./rr-cdf-v2-1.xsd) | Level 2 — Relationship Record CDF | 2.1 | 2021-03-04 |
+| [`reporting-exceptions/README.md`](./reporting-exceptions/README.md) | Level 2 — Reporting Exceptions artifact index | 2.1 | 2026-04-09 |
+| [`code-lists/README.md`](./code-lists/README.md) | GLEIF code-list artifact index | Mixed | 2026-04-09 |
 | [`LEI-CDF-v3-1-field-reference.md`](./LEI-CDF-v3-1-field-reference.md) | Level 1 — human-readable field reference | 3.1 | — |
 | [`RR-CDF-v2-1-field-reference.md`](./RR-CDF-v2-1-field-reference.md) | Level 2 — human-readable field reference | 2.1 | — |
+
+## Supporting artifact sets
+
+- [`reporting-exceptions/README.md`](./reporting-exceptions/README.md) explains the local copies of the
+   Level 2 Reporting Exceptions XSD, release notes, and state-transition rules.
+- [`code-lists/README.md`](./code-lists/README.md) explains the local snapshots for entity legal forms,
+   organizational roles, and accepted legal jurisdictions.
 
 ## Official GLEIF sources
 
