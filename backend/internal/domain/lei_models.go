@@ -49,6 +49,8 @@ type LEIRecord struct {
 	EntitySubCategory       string `gorm:"size:255" json:"entity_sub_category"`
 	EntityLegalForm         string `gorm:"size:255" json:"entity_legal_form"`
 	EntityStatus            string `gorm:"size:255" json:"entity_status"`
+	LegalJurisdiction       string `gorm:"size:20" json:"legal_jurisdiction"`
+	RegistrationStatus      string `gorm:"size:50" json:"registration_status"`
 
 	// Associated entities
 	ManagingLOU           string `gorm:"size:255" json:"managing_lou"` // Local Operating Unit
@@ -319,8 +321,8 @@ func (LEIRelationshipRecord) TableName() string {
 type LEIReportingException struct {
 	ID                 uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
 	LEI                string    `gorm:"size:20;not null;index" json:"lei"`
-	ExceptionCategory  string    `gorm:"size:100;not null" json:"exception_category"`
-	ExceptionReason    string    `gorm:"size:200;not null" json:"exception_reason"`
+	ExceptionCategory  string      `gorm:"size:100;not null" json:"exception_category"`
+	ExceptionReasons   JSONBString `gorm:"type:jsonb;not null;default:'[]'" json:"exception_reasons"`
 	ExceptionReference string    `gorm:"size:500" json:"exception_reference"`
 
 	SourceFileID *uuid.UUID `gorm:"type:uuid" json:"source_file_id"`

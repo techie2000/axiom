@@ -76,14 +76,21 @@ func TestJSONToDomainRecord_NormalizesNullLikeFields(t *testing.T) {
 	jsonRecord := &LEIJSONRecord{
 		LEI: LEIValueField{Value: " 5493001kjtiigc8y1r12 "},
 		Entity: LEIEntity{
-			LegalName:       LEILegalName{Value: "Example Entity"},
-			EntityStatus:    LEIValueField{Value: "NULL"},
-			EntityCategory:  LEIValueField{Value: "null"},
-			LegalAddress:    LEIAddress{FirstAddressLine: LEIValueField{Value: "NULL"}, City: LEIValueField{Value: "Lagos"}, Country: LEIValueField{Value: "NG"}},
-			SuccessorEntity: []LEISuccessorEntity{{SuccessorLEI: LEIValueField{Value: " 5493001kjtiigc8y1r12 "}}},
+			LegalName:         LEILegalName{Value: "Example Entity"},
+			EntityStatus:      LEIValueField{Value: "NULL"},
+			EntityCategory:    LEIValueField{Value: "null"},
+			EntitySubCategory: LEIValueField{Value: "STATE_GOVERNMENT"},
+			LegalJurisdiction: LEIValueField{Value: "NG-LA"},
+			LegalAddress:      LEIAddress{FirstAddressLine: LEIValueField{Value: "NULL"}, City: LEIValueField{Value: "Lagos"}, Country: LEIValueField{Value: "NG"}},
+			SuccessorEntity:   []LEISuccessorEntity{{SuccessorLEI: LEIValueField{Value: " 5493001kjtiigc8y1r12 "}}},
 		},
 		Registration: LEIRegistration{
-			ManagingLOU: LEIValueField{Value: "NULL"},
+			ManagingLOU:        LEIValueField{Value: "NULL"},
+			RegistrationStatus: LEIValueField{Value: "ISSUED"},
+			ValidationSources:  LEIValueField{Value: "FULLY_CORROBORATED"},
+			ValidationAuthority: LEIValidationAuthority{
+				ValidationAuthorityID: LEIValueField{Value: "RA000463"},
+			},
 		},
 	}
 
@@ -110,6 +117,21 @@ func TestJSONToDomainRecord_NormalizesNullLikeFields(t *testing.T) {
 	}
 	if record.LegalAddressCity != "Lagos" {
 		t.Fatalf("expected LegalAddressCity to remain unchanged, got %q", record.LegalAddressCity)
+	}
+	if record.EntitySubCategory != "STATE_GOVERNMENT" {
+		t.Fatalf("expected EntitySubCategory to be mapped, got %q", record.EntitySubCategory)
+	}
+	if record.LegalJurisdiction != "NG-LA" {
+		t.Fatalf("expected LegalJurisdiction to be mapped, got %q", record.LegalJurisdiction)
+	}
+	if record.RegistrationStatus != "ISSUED" {
+		t.Fatalf("expected RegistrationStatus to be mapped, got %q", record.RegistrationStatus)
+	}
+	if record.ValidationAuthority != "RA000463" {
+		t.Fatalf("expected ValidationAuthority to be mapped from ValidationAuthorityID, got %q", record.ValidationAuthority)
+	}
+	if string(record.ValidationSources) != `"FULLY_CORROBORATED"` {
+		t.Fatalf("expected ValidationSources to be stored as JSON string, got %q", string(record.ValidationSources))
 	}
 }
 

@@ -1140,6 +1140,7 @@ type LEIEntity struct {
 	RegistrationAuthority          LEIRegistrationAuthority `json:"RegistrationAuthority"`
 	LegalJurisdiction              LEIValueField            `json:"LegalJurisdiction"`
 	EntityCategory                 LEIValueField            `json:"EntityCategory"`
+	EntitySubCategory              LEIValueField            `json:"EntitySubCategory"`
 	LegalForm                      LEILegalForm             `json:"LegalForm"`
 	EntityStatus                   LEIValueField            `json:"EntityStatus"`
 	SuccessorEntity                []LEISuccessorEntity     `json:"SuccessorEntity"`
@@ -1236,12 +1237,28 @@ func normalizeLEIRecordNullLikeFields(record *domain.LEIRecord) {
 	record.EntitySubCategory = normalizeNullLikeValue(record.EntitySubCategory)
 	record.EntityLegalForm = normalizeNullLikeValue(record.EntityLegalForm)
 	record.EntityStatus = normalizeNullLikeValue(record.EntityStatus)
+	record.LegalJurisdiction = normalizeNullLikeValue(record.LegalJurisdiction)
+	record.RegistrationStatus = normalizeNullLikeValue(record.RegistrationStatus)
 	record.ManagingLOU = normalizeNullLikeValue(record.ManagingLOU)
 	record.SuccessorLEI = normalizeLEICodeValue(record.SuccessorLEI)
 	if record.SuccessorLEI != "" && !isValidLEICode(record.SuccessorLEI) {
 		record.SuccessorLEI = ""
 	}
 	record.ValidationAuthority = normalizeNullLikeValue(record.ValidationAuthority)
+}
+
+func validationSourcesToJSONB(value string) domain.JSONBString {
+	normalized := normalizeNullLikeValue(value)
+	if normalized == "" {
+		return "{}"
+	}
+
+	encoded, err := json.Marshal(normalized)
+	if err != nil {
+		return "{}"
+	}
+
+	return domain.JSONBString(encoded)
 }
 
 // jsonToDomainRecord converts a JSON record to a domain.LEIRecord
@@ -1257,13 +1274,17 @@ func (s *leiService) jsonToDomainRecord(jsonRecord *LEIJSONRecord, sourceFileID 
 		RegistrationAuthority:  jsonRecord.Entity.RegistrationAuthority.RegistrationAuthorityID.Value,
 		RegistrationNumber:     jsonRecord.Entity.RegistrationAuthority.RegistrationAuthorityEntityID.Value,
 		EntityCategory:         jsonRecord.Entity.EntityCategory.Value,
+		EntitySubCategory:      jsonRecord.Entity.EntitySubCategory.Value,
 		EntityLegalForm:        jsonRecord.Entity.LegalForm.EntityLegalFormCode.Value,
 		EntityStatus:           jsonRecord.Entity.EntityStatus.Value,
+		LegalJurisdiction:      jsonRecord.Entity.LegalJurisdiction.Value,
+		RegistrationStatus:     jsonRecord.Registration.RegistrationStatus.Value,
 		ManagingLOU:            jsonRecord.Registration.ManagingLOU.Value,
+		ValidationAuthority:    jsonRecord.Registration.ValidationAuthority.ValidationAuthorityID.Value,
 		SourceFileID:           &sourceFileID,
 		// Initialize JSONB fields with valid JSON
 		OtherNames:        "[]",
-		ValidationSources: "{}",
+		ValidationSources: validationSourcesToJSONB(jsonRecord.Registration.ValidationSources.Value),
 		ChangedFields:     "{}",
 	}
 

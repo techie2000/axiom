@@ -75,6 +75,13 @@ the work should be treated as incomplete unless the user explicitly says to skip
       add focused regression tests for the changed path
     - If the area already has a test file, extend it instead of creating a disconnected new pattern
 
+9. **Changing Backend Data Contracts Used by the Frontend**
+     - Treat added, removed, or renamed API fields as a frontend-impacting change
+     - Update frontend types/interfaces and verify both list and detail surfaces for affected domains
+     - For LEI pages, review `frontend/app/lei-records/page.tsx` table columns and detail modal sections
+     - Add or update focused frontend tests for formatting/normalization paths touched by new fields
+     - Do not merge backend field changes that are not represented or intentionally hidden in the UI
+
 ## Test File Organization
 
 ### Test Data Files (`testdata/`)

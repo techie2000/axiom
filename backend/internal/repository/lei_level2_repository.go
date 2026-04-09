@@ -401,7 +401,6 @@ func (r *leiLevel2Repository) UpsertReportingException(exc *domain.LEIReportingE
 			{Name: "exception_category"},
 		},
 		DoUpdates: clause.AssignmentColumns([]string{
-			"exception_reason",
 			"exception_reference",
 			"source_file_id",
 			"updated_at",
@@ -516,7 +515,7 @@ func (r *leiLevel2Repository) BatchUpsertReportingExceptions(exceptions []*domai
 			{Name: "exception_category"},
 		},
 		DoUpdates: clause.AssignmentColumns([]string{
-			"exception_reason",
+			"exception_reasons",
 			"exception_reference",
 			"source_file_id",
 			"updated_at",
@@ -819,7 +818,7 @@ func (r *leiLevel2Repository) detectRepexChanges(old, new *domain.LEIReportingEx
 		}
 	}
 
-	check("ExceptionReason", old.ExceptionReason, new.ExceptionReason)
+	check("ExceptionReasons", string(old.ExceptionReasons), string(new.ExceptionReasons))
 	check("ExceptionReference", old.ExceptionReference, new.ExceptionReference)
 
 	return changes
