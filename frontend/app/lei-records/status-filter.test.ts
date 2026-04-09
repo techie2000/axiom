@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatStatusFilterLabel, LEI_STATUS_FILTER_OPTIONS, normalizeStatusFilterForAPI } from './statusFilter'
+import { formatStatusFilterLabel, LEI_STATUS_FILTER_OPTIONS, normalizeStatusFilterForAPI } from './status-filter'
 
 describe('LEI status filter helpers', () => {
   it('uses the expected status filter options', () => {
