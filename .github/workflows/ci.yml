@@ -37,7 +37,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
         with:
-          fetch-depth: 0
+          fetch-depth: 2
 
       - name: Detect file changes by type
         id: filter
@@ -51,7 +51,7 @@ jobs:
             docker:
               - 'docker/Dockerfile.*'
             frontend:
-              - 'frontend/**/*.{ts,tsx,js,jsx,json}'
+              - 'frontend/**/*.{ts,tsx,js,jsx,mjs,json}'
               - 'frontend/package-lock.json'
             migrations:
               - 'backend/migrations/**/*.sql'
@@ -59,16 +59,6 @@ jobs:
               - 'docs/architecture-as-code/**'
             docs_user:
               - 'docs-user/**'
-
-  detect-migration-changes:
-    name: Detect Migration Changes
-    runs-on: ubuntu-latest
-    needs: [detect-file-changes]
-    outputs:
-      has_migration_changes: ${{ needs.detect-file-changes.outputs.has_migration_changes }}
-    steps:
-      - name: Migration change detection completed
-        run: echo "Migration changes detected: ${{ needs.detect-file-changes.outputs.has_migration_changes }}"
 
   detect-environment:
     name: Detect Target Environment
@@ -238,8 +228,8 @@ jobs:
   validate-migrations:
     name: Validate DB Migrations
     runs-on: ubuntu-latest
-    needs: [detect-migration-changes]
-    if: ${{ needs.detect-migration-changes.outputs.has_migration_changes == 'true' }}
+    needs: [detect-file-changes]
+    if: ${{ needs.detect-file-changes.outputs.has_migration_changes == 'true' }}
     services:
       postgres:
         image: postgres:17-alpine
@@ -461,7 +451,7 @@ jobs:
   ci-summary:
     name: CI Summary (${{ needs.detect-environment.outputs.environment || 'none' }})
     runs-on: ubuntu-latest
-    needs: [detect-file-changes, detect-migration-changes, detect-environment, lint-go, lint-docker, lint-docs, validate-architecture-as-code, validate-architecture-as-code-strict, lint-frontend, validate-migrations, build-go, test-go, build-frontend, build-docs-user]
+    needs: [detect-file-changes, detect-environment, lint-go, lint-docker, lint-docs, validate-architecture-as-code, validate-architecture-as-code-strict, lint-frontend, validate-migrations, build-go, test-go, build-frontend, build-docs-user]
     if: always()
     steps:
       - name: Report CI result
