@@ -25,6 +25,9 @@ WHERE t.elf_code IS NOT NULL
 DROP TRIGGER IF EXISTS trg_sync_gleif_elf_code_lookup
 ON lei_raw.gleif_entity_legal_forms;
 
+ALTER TABLE lei_raw.gleif_entity_legal_forms
+    DROP CONSTRAINT IF EXISTS fk_gleif_elf_variants_parent_code;
+
 DROP FUNCTION IF EXISTS lei_raw.sync_gleif_elf_code_lookup();
 
 DROP TRIGGER IF EXISTS update_gleif_elf_codes_updated_at

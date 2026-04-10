@@ -1,13 +1,19 @@
 -- Persist all valid multilingual/context variants from GLEIF reference lists.
 -- Previous schema enforced one row per code and collapsed valid rows.
 
--- Keep referential integrity from lei_records.entity_legal_form while allowing
--- multiple rows per elf_code in gleif_entity_legal_forms.
+-- Parent table for ELF codes. Child variants remain in
+-- lei_raw.gleif_entity_legal_forms.
 CREATE TABLE IF NOT EXISTS lei_raw.gleif_entity_legal_form_codes (
     elf_code VARCHAR(10) PRIMARY KEY,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+COMMENT ON TABLE lei_raw.gleif_entity_legal_form_codes IS
+'Parent code table for ELF values. FK target for lei_records.entity_legal_form and parent for multilingual ELF variants.';
+
+COMMENT ON COLUMN lei_raw.gleif_entity_legal_form_codes.elf_code IS
+'Canonical ELF code (ISO 20275).';
 
 INSERT INTO lei_raw.gleif_entity_legal_form_codes (elf_code)
 SELECT DISTINCT elf_code
@@ -88,6 +94,18 @@ ALTER TABLE lei_raw.lei_records
 
 ALTER TABLE lei_raw.lei_records
     VALIDATE CONSTRAINT fk_lei_records_entity_legal_form;
+
+ALTER TABLE lei_raw.gleif_entity_legal_forms
+    DROP CONSTRAINT IF EXISTS fk_gleif_elf_variants_parent_code;
+
+ALTER TABLE lei_raw.gleif_entity_legal_forms
+    ADD CONSTRAINT fk_gleif_elf_variants_parent_code
+        FOREIGN KEY (elf_code)
+        REFERENCES lei_raw.gleif_entity_legal_form_codes (elf_code)
+        NOT VALID;
+
+ALTER TABLE lei_raw.gleif_entity_legal_forms
+    VALIDATE CONSTRAINT fk_gleif_elf_variants_parent_code;
 
 -- Entity legal forms: add language and make context columns non-null for stable composite uniqueness.
 ALTER TABLE lei_raw.gleif_entity_legal_forms
