@@ -1,146 +1,151 @@
--- Migration 000052: Clean and prevent Level 2 false-positive audit rows
--- Purpose: Remove false-positive UPDATE audit rows from Level 2 audit tables where
---          changed_fields contained only SourceFileID (provenance field, not business change)
---          or semantically identical values (JSONB key-order differences).
--- Impact: ~1.41M rows from lei_relationship_records_audit, ~18.05M from lei_reporting_exceptions_audit
+-- Remove false-positive UPDATE audit rows from Level 2 LEI audit tables.
+--
+-- Scope:
+--   * lei_raw.lei_relationship_records_audit
+--   * lei_raw.lei_reporting_exceptions_audit
+--
+-- This migration removes changed_fields entries that are not semantic data changes:
+--   1) entries where new_value == old_value (JSONB semantic equality), and
+--   2) source-file provenance-only entries (SourceFileID / source_file_id).
+--
+-- After stripping these entries, UPDATE audit rows with no meaningful changes left
+-- are deleted.
+--
+-- Like 000048, work is done in batches to reduce per-statement runtime and WAL spikes.
 
 DO $$
 DECLARE
-  v_batch_size CONSTANT INT := 10000;
-  v_updated_count INT;
-  v_deleted_count INT;
-  v_total_updated_rr INT := 0;
-  v_total_deleted_rr INT := 0;
-  v_total_updated_repex INT := 0;
-  v_total_deleted_repex INT := 0;
+    _batch_size CONSTANT INTEGER := 10000;
+    _rows_done INTEGER;
+    _total INTEGER;
+    _batch_no INTEGER;
+    _last_id UUID;
+    _next_last_id UUID;
+    _table_name TEXT;
 BEGIN
-  -- ***** STEP 1: lei_relationship_records_audit *****
-  RAISE NOTICE '=== Processing lei_raw.lei_relationship_records_audit ===';
-  
-  LOOP
-    WITH to_fix AS (
-      SELECT id FROM lei_raw.lei_relationship_records_audit
-      WHERE action = 'UPDATE'
-      AND changed_fields IS NOT NULL
-      AND (
-        EXISTS (
-          SELECT 1 FROM jsonb_each(changed_fields) fld
-          WHERE LOWER(fld.key) IN ('sourcefileid', 'source_file_id')
-        )
-        OR EXISTS (
-          SELECT 1 FROM jsonb_each(changed_fields) fld
-          WHERE (fld.value ->> 'new_value') IS NOT DISTINCT FROM (fld.value ->> 'old_value')
-        )
-      )
-      ORDER BY id LIMIT v_batch_size
-    ),
-    updated AS (
-      UPDATE lei_raw.lei_relationship_records_audit a
-      SET changed_fields = (
-        SELECT jsonb_object_agg(fld.key, fld.value)
-        FROM jsonb_each(a.changed_fields) fld
-        WHERE LOWER(fld.key) NOT IN ('sourcefileid', 'source_file_id')
-        AND (fld.value ->> 'new_value') IS DISTINCT FROM (fld.value ->> 'old_value')
-      )
-      FROM to_fix
-      WHERE a.id = to_fix.id
-      RETURNING a.id
-    )
-    SELECT COUNT(*) INTO v_updated_count FROM updated;
-    
-    EXIT WHEN v_updated_count = 0;
-    v_total_updated_rr := v_total_updated_rr + v_updated_count;
-    RAISE NOTICE 'RR Step 1 Batch: Updated % rows (cumulative: %)', v_updated_count, v_total_updated_rr;
-  END LOOP;
+    FOREACH _table_name IN ARRAY ARRAY[
+        'lei_raw.lei_relationship_records_audit',
+        'lei_raw.lei_reporting_exceptions_audit'
+    ]
+    LOOP
+        -- Step 1: remove false-positive/non-semantic entries from changed_fields.
+        _total := 0;
+        _batch_no := 0;
+        _last_id := '00000000-0000-0000-0000-000000000000';
 
-  LOOP
-    WITH to_delete AS (
-      SELECT id FROM lei_raw.lei_relationship_records_audit
-      WHERE action = 'UPDATE'
-      AND changed_fields IS NOT NULL
-      AND NOT EXISTS (SELECT 1 FROM jsonb_each(changed_fields))
-      ORDER BY id LIMIT v_batch_size
-    ),
-    deleted AS (
-      DELETE FROM lei_raw.lei_relationship_records_audit a
-      USING to_delete
-      WHERE a.id = to_delete.id
-      RETURNING a.id
-    )
-    SELECT COUNT(*) INTO v_deleted_count FROM deleted;
-    
-    EXIT WHEN v_deleted_count = 0;
-    v_total_deleted_rr := v_total_deleted_rr + v_deleted_count;
-    RAISE NOTICE 'RR Step 2 Batch: Deleted % rows (cumulative: %)', v_deleted_count, v_total_deleted_rr;
-  END LOOP;
-  
-  RAISE NOTICE 'Completed RR: Updated % rows, Deleted % rows', v_total_updated_rr, v_total_deleted_rr;
+        LOOP
+            EXECUTE format(
+                $SQL$
+                WITH to_fix AS (
+                    SELECT id
+                    FROM %s
+                    WHERE "action" = 'UPDATE'
+                    AND id > $1
+                    AND changed_fields IS NOT NULL
+                    AND changed_fields::TEXT <> '{}'
+                    AND EXISTS (
+                        SELECT 1
+                        FROM JSONB_EACH(changed_fields) AS fld (field_key, field_val)
+                        WHERE LOWER(fld.field_key) IN ('sourcefileid', 'source_file_id')
+                        OR (fld.field_val -> 'new_value') IS NOT DISTINCT FROM (fld.field_val -> 'old_value')
+                    )
+                    ORDER BY id
+                    LIMIT $2
+                ),
+                updated AS (
+                    UPDATE %s AS a
+                    SET changed_fields = (
+                        SELECT JSONB_OBJECT_AGG(fld.field_key, fld.field_val)
+                        FROM JSONB_EACH(a.changed_fields) AS fld (field_key, field_val)
+                        WHERE LOWER(fld.field_key) NOT IN ('sourcefileid', 'source_file_id')
+                        AND (fld.field_val -> 'new_value') IS DISTINCT FROM (fld.field_val -> 'old_value')
+                    )
+                    FROM to_fix
+                    WHERE a.id = to_fix.id
+                    RETURNING a.id
+                )
+                SELECT
+                    COUNT(*),
+                    COALESCE((ARRAY_AGG(id ORDER BY id DESC))[1], $1)
+                FROM updated
+                $SQL$,
+                _table_name,
+                _table_name
+            )
+            INTO _rows_done, _next_last_id
+            USING _last_id, _batch_size;
 
-  -- ***** STEP 2: lei_reporting_exceptions_audit *****
-  RAISE NOTICE '=== Processing lei_raw.lei_reporting_exceptions_audit ===';
-  
-  LOOP
-    WITH to_fix AS (
-      SELECT id FROM lei_raw.lei_reporting_exceptions_audit
-      WHERE action = 'UPDATE'
-      AND changed_fields IS NOT NULL
-      AND (
-        EXISTS (
-          SELECT 1 FROM jsonb_each(changed_fields) fld
-          WHERE LOWER(fld.key) IN ('sourcefileid', 'source_file_id')
-        )
-        OR EXISTS (
-          SELECT 1 FROM jsonb_each(changed_fields) fld
-          WHERE (fld.value ->> 'new_value') IS NOT DISTINCT FROM (fld.value ->> 'old_value')
-        )
-      )
-      ORDER BY id LIMIT v_batch_size
-    ),
-    updated AS (
-      UPDATE lei_raw.lei_reporting_exceptions_audit a
-      SET changed_fields = (
-        SELECT jsonb_object_agg(fld.key, fld.value)
-        FROM jsonb_each(a.changed_fields) fld
-        WHERE LOWER(fld.key) NOT IN ('sourcefileid', 'source_file_id')
-        AND (fld.value ->> 'new_value') IS DISTINCT FROM (fld.value ->> 'old_value')
-      )
-      FROM to_fix
-      WHERE a.id = to_fix.id
-      RETURNING a.id
-    )
-    SELECT COUNT(*) INTO v_updated_count FROM updated;
-    
-    EXIT WHEN v_updated_count = 0;
-    v_total_updated_repex := v_total_updated_repex + v_updated_count;
-    RAISE NOTICE 'REPEX Step 1 Batch: Updated % rows (cumulative: %)', v_updated_count, v_total_updated_repex;
-  END LOOP;
+            _total := _total + _rows_done;
+            _last_id := _next_last_id;
 
-  LOOP
-    WITH to_delete AS (
-      SELECT id FROM lei_raw.lei_reporting_exceptions_audit
-      WHERE action = 'UPDATE'
-      AND changed_fields IS NOT NULL
-      AND NOT EXISTS (SELECT 1 FROM jsonb_each(changed_fields))
-      ORDER BY id LIMIT v_batch_size
-    ),
-    deleted AS (
-      DELETE FROM lei_raw.lei_reporting_exceptions_audit a
-      USING to_delete
-      WHERE a.id = to_delete.id
-      RETURNING a.id
-    )
-    SELECT COUNT(*) INTO v_deleted_count FROM deleted;
-    
-    EXIT WHEN v_deleted_count = 0;
-    v_total_deleted_repex := v_total_deleted_repex + v_deleted_count;
-    RAISE NOTICE 'REPEX Step 2 Batch: Deleted % rows (cumulative: %)', v_deleted_count, v_total_deleted_repex;
-  END LOOP;
-  
-  RAISE NOTICE 'Completed REPEX: Updated % rows, Deleted % rows', v_total_updated_repex, v_total_deleted_repex;
+            EXIT WHEN _rows_done = 0;
 
-  -- Summary
-  RAISE NOTICE '=== Migration 000052 Complete ===';
-  RAISE NOTICE 'lei_relationship_records_audit: Updated % rows, Deleted % rows', v_total_updated_rr, v_total_deleted_rr;
-  RAISE NOTICE 'lei_reporting_exceptions_audit: Updated % rows, Deleted % rows', v_total_updated_repex, v_total_deleted_repex;
-  RAISE NOTICE 'TOTAL: Updated % rows, Deleted % rows', v_total_updated_rr + v_total_updated_repex, v_total_deleted_rr + v_total_deleted_repex;
+            _batch_no := _batch_no + 1;
+            RAISE NOTICE 'Level 2 Step 1 batch % for %: % rows updated (running total: %, last_id: %)',
+                _batch_no,
+                _table_name,
+                _rows_done,
+                _total,
+                _last_id;
+        END LOOP;
+
+        RAISE NOTICE 'Level 2 Step 1 complete for %: % rows updated', _table_name, _total;
+
+        -- Step 2: remove UPDATE rows that have no meaningful changed_fields entries.
+        _total := 0;
+        _batch_no := 0;
+        _last_id := '00000000-0000-0000-0000-000000000000';
+
+        LOOP
+            EXECUTE format(
+                $SQL$
+                WITH to_delete AS (
+                    SELECT a.id
+                    FROM %s AS a
+                    WHERE a."action" = 'UPDATE'
+                    AND a.id > $1
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM JSONB_EACH(a.changed_fields) AS fld (field_key, field_val)
+                        WHERE LOWER(fld.field_key) NOT IN ('sourcefileid', 'source_file_id')
+                        AND (fld.field_val -> 'new_value') IS DISTINCT FROM (fld.field_val -> 'old_value')
+                    )
+                    ORDER BY a.id
+                    LIMIT $2
+                ),
+                deleted AS (
+                    DELETE FROM %s
+                    USING to_delete
+                    WHERE %s.id = to_delete.id
+                    RETURNING %s.id
+                )
+                SELECT
+                    COUNT(*),
+                    COALESCE((ARRAY_AGG(id ORDER BY id DESC))[1], $1)
+                FROM deleted
+                $SQL$,
+                _table_name,
+                _table_name,
+                _table_name,
+                _table_name
+            )
+            INTO _rows_done, _next_last_id
+            USING _last_id, _batch_size;
+
+            _total := _total + _rows_done;
+            _last_id := _next_last_id;
+
+            EXIT WHEN _rows_done = 0;
+
+            _batch_no := _batch_no + 1;
+            RAISE NOTICE 'Level 2 Step 2 batch % for %: % rows deleted (running total: %, last_id: %)',
+                _batch_no,
+                _table_name,
+                _rows_done,
+                _total,
+                _last_id;
+        END LOOP;
+
+        RAISE NOTICE 'Level 2 Step 2 complete for %: % rows deleted', _table_name, _total;
+    END LOOP;
 END $$;

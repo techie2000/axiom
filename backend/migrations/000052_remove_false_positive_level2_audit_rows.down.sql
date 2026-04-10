@@ -1,12 +1,3 @@
--- Migration 000052 DOWN: Irrevocable marker
--- 
--- This migration deletes audit records that cannot be restored.
--- No rollback is possible; deleted rows are permanently gone.
--- This DOWN migration is a statement-only marker.
---
--- If you need to revert the effects of 000052, you must:
--- 1. Restore from a backup taken before migration 000052 was applied
--- 2. Re-apply all migrations from 000052 onward
---
--- For safety, this file is empty. Rolling back from 000052 requires 
--- system-level recovery, not a simple SQL undo.
+-- No undo: deleted audit rows cannot be recreated.
+-- This migration permanently removes false-positive UPDATE audit rows from Level 2 tables.
+SELECT 1;
