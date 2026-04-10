@@ -80,7 +80,7 @@ type LEIConfig struct {
 	DataDir           string // Directory to store LEI files
 	DeltaSyncInterval string // How often to run delta sync (e.g., "1h", "2h")
 	FullSyncDay       string // Day of week for full sync (e.g., "Sunday")
-	FullSyncTime      string // Time for full sync (HH:MM format, e.g., "02:00")
+	FullSyncTime      string // Time for full sync (HH:MM format, e.g., "12:00")
 	CleanupTime       string // Time for daily cleanup (HH:MM format, e.g., "00:00" for midnight)
 	KeepFullFiles     int    // Number of full files to retain
 	KeepDeltaFiles    int    // Number of delta files to retain
@@ -156,7 +156,7 @@ func setDefaults() {
 	viper.SetDefault("lei.datadir", "./data/lei")
 	viper.SetDefault("lei.deltasyncinterval", "1h") // Every hour
 	viper.SetDefault("lei.fullsyncday", "Sunday")   // Weekly on Sunday
-	viper.SetDefault("lei.fullsynctime", "02:00")   // 2 AM
+	viper.SetDefault("lei.fullsynctime", "12:00")   // 12:00 UTC
 	viper.SetDefault("lei.cleanuptime", "00:00")    // Midnight - runs BEFORE all syncs
 	viper.SetDefault("lei.keepfullfiles", 2)        // Keep 2 full files (~1.8GB)
 	viper.SetDefault("lei.keepdeltafiles", 5)       // Keep 5 delta files (~65MB)

@@ -602,7 +602,7 @@ lei:
   datadir: ./data/lei
   deltasyncinterval: 1h      # How often to sync delta files
   fullsyncday: Sunday         # Day for full sync
-  fullsynctime: "02:00"       # Time for full sync (HH:MM)
+  fullsynctime: "12:00"       # Time for full sync (HH:MM, UTC)
   cleanuptime: "03:00"        # Time for file cleanup (HH:MM)
   keepfullfiles: 2            # Retain last N full files (~1.8GB)
   keepdeltafiles: 5           # Retain last N delta files (~65MB)

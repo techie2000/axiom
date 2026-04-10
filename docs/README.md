@@ -154,7 +154,7 @@ Located in [performance/](./performance/):
 ✅ **Production Ready**
 
 - Full data acquisition (3.2M+ records)
-- Daily full sync at 2 AM (delta disabled for reliability)
+- Daily full sync at 12:00 UTC (delta disabled for reliability)
 - Search performance < 60ms
 - 99.9% uptime target
 

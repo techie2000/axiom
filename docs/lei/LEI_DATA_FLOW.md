@@ -66,7 +66,7 @@ flowchart TD
     ParseLoop -->|All Records Processed| Complete[Mark SourceFile<br/>Status: COMPLETED]
     Complete --> Schedule{Scheduler}
 
-    Schedule -->|Daily: 2 AM| FullSync
+    Schedule -->|Daily: 12:00 UTC| FullSync
 ```
 
 ## Detailed Component Interaction
@@ -253,7 +253,7 @@ All schedules are configurable via environment variables. Defaults shown below:
 | File Cleanup        | Midnight daily    | `LEI_CLEANUP_TIME`        | `00:00`       | Active       |
 | Master Data Sync    | 1:00 AM daily     | N/A (hardcoded)           | `01:00`       | Active       |
 | GLEIF Reference Sync| On-demand pre-step| N/A (chained dependency)  | N/A           | Active       |
-| Full Sync           | 2:00 AM daily     | `LEI_FULL_SYNC_TIME`      | `02:00`       | Active       |
+| Full Sync           | 12:00 UTC daily   | `LEI_FULL_SYNC_TIME`      | `12:00`       | Active       |
 | Delta Sync          | N/A (disabled)    | `LEI_DELTA_SYNC_INTERVAL` | `1h`          | **Disabled** |
 | Retain Full Files   | Last 2 files      | `LEI_KEEP_FULL_FILES`     | `2`           | Active       |
 | Retain Delta Files  | Last 5 files      | `LEI_KEEP_DELTA_FILES`    | `5`           | Active       |
@@ -264,7 +264,7 @@ All schedules are configurable via environment variables. Defaults shown below:
 - File cleanup runs at midnight (before all syncs) to prevent interference with long-running LEI syncs
 - Master data sync runs at 1:00 AM and is an upstream dependency for GLEIF reference sync
 - GLEIF reference sync is a dependency for Level 1 ingest and runs before each full/delta ingest path
-- Full sync runs daily at 2:00 AM (changed from weekly to ensure fresh data)
+- Full sync runs daily at 12:00 UTC (changed from weekly to ensure fresh data)
 - Invalid values fall back to defaults
 
 See [LEI_ACQUISITION.md](LEI_ACQUISITION.md#environment-variables) for detailed format specifications.

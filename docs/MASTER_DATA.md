@@ -196,9 +196,9 @@ Example startup log:
 
 The scheduler service runs daily syncs in the following order to prevent conflicts:
 
-1. **12:00 AM (Midnight)** - File cleanup removes old LEI files
-2. **1:00 AM** - Master data sync checks for updates
-3. **2:00 AM** - LEI full sync downloads and processes data
+1. **00:00 UTC (Midnight)** - File cleanup removes old LEI files
+2. **01:00 UTC** - Master data sync checks for updates
+3. **12:00 UTC** - LEI full sync downloads and processes data
 
 **Schedule rationale:**
 
@@ -210,7 +210,7 @@ The scheduler checks for updates by comparing file timestamps or checksums, relo
 
 The sync is designed to be:
 
-- **Non-disruptive**: Runs during low-traffic hours (midnight to 2 AM)
+- **Non-disruptive**: Runs after prerequisite jobs complete (cleanup and master data)
 - **Properly ordered**: File cleanup → Master data → LEI sync ensures no conflicts
 - **Safe**: Cleanup completes before any sync starts, preventing file deletion during processing
 - **Idempotent**: Safe to run multiple times
