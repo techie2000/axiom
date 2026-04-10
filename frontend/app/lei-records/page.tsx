@@ -594,7 +594,6 @@ export default function LEIRecordsPage() {
     debouncedSearch,
     effectiveVisibleColumns,
     itemsPerPage,
-    normalizeStatusFilterForAPI,
     sortDirection,
     sortField,
     statusFilter,
