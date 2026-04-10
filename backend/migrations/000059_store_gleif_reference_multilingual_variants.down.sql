@@ -50,6 +50,22 @@ ALTER TABLE lei_raw.lei_records
 ALTER TABLE lei_raw.lei_records
     VALIDATE CONSTRAINT fk_lei_records_entity_legal_form;
 
+-- Collapse role variants back to one row per code before restoring
+-- UNIQUE (role_code).
+WITH keep_role AS (
+        SELECT DISTINCT ON (role_code) id
+        FROM lei_raw.gleif_organizational_roles
+        WHERE role_code IS NOT NULL AND BTRIM(role_code) <> ''
+        ORDER BY role_code,
+                         CASE WHEN COALESCE(language_code, '') = 'en' THEN 0 ELSE 1 END,
+                         updated_at DESC,
+                         created_at DESC
+)
+DELETE FROM lei_raw.gleif_organizational_roles t
+WHERE t.role_code IS NOT NULL
+    AND BTRIM(t.role_code) <> ''
+    AND NOT EXISTS (SELECT 1 FROM keep_role k WHERE k.id = t.id);
+
 ALTER TABLE lei_raw.gleif_organizational_roles
     DROP CONSTRAINT IF EXISTS gleif_organizational_roles_role_code_key;
 

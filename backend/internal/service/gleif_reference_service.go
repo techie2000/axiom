@@ -418,22 +418,29 @@ func parseOrganizationalRolesCSV(r io.ReadCloser) ([]*domain.GLEIFOrganizational
 			continue
 		}
 
-		languageCode := strings.ToLower(strings.TrimSpace(safeCol(row, 9)))
 		description := safeCol(row, 2)
+		languageCode := ""
+		elfCode := ""
+		countryOfFormation := ""
+		countrySubdivisionOfFormation := ""
 		if len(row) >= 19 {
+			languageCode = strings.ToLower(strings.TrimSpace(safeCol(row, 9)))
+			elfCode = strings.ToUpper(strings.TrimSpace(safeCol(row, 6)))
+			countryOfFormation = strings.ToUpper(strings.TrimSpace(safeCol(row, 2)))
+			countrySubdivisionOfFormation = strings.ToUpper(strings.TrimSpace(safeCol(row, 4)))
 			description = firstNonEmpty(safeCol(row, 18), safeCol(row, 17))
 		}
 
 		records = append(records, &domain.GLEIFOrganizationalRole{
-			RoleCode:               truncateString(strings.ToUpper(roleCode), 50),
-			RoleName:               truncateString(firstNonEmpty(safeCol(row, 10), safeCol(row, 7), safeCol(row, 1)), 500),
-			Description:            description,
-			LanguageCode:           truncateString(languageCode, 10),
-			ELFCode:                truncateString(strings.ToUpper(strings.TrimSpace(safeCol(row, 6))), 10),
-			CountryCode:            truncateString(strings.ToUpper(strings.TrimSpace(safeCol(row, 2))), 2),
-			CountrySubdivisionCode: truncateString(strings.ToUpper(strings.TrimSpace(safeCol(row, 4))), 10),
-			Active:                 true,
-			UpdatedBy:              "gleif_sync",
+			RoleCode:                      truncateString(strings.ToUpper(roleCode), 50),
+			RoleName:                      truncateString(firstNonEmpty(safeCol(row, 10), safeCol(row, 7), safeCol(row, 1)), 500),
+			Description:                   description,
+			LanguageCode:                  truncateString(languageCode, 10),
+			ELFCode:                       truncateString(elfCode, 10),
+			CountryOfFormation:            truncateString(countryOfFormation, 2),
+			CountrySubdivisionOfFormation: truncateString(countrySubdivisionOfFormation, 10),
+			Active:                        true,
+			UpdatedBy:                     "gleif_sync",
 		})
 	}
 	return records, nil
@@ -1106,8 +1113,8 @@ func dedupeOrganizationalRoles(records []*domain.GLEIFOrganizationalRole) ([]*do
 		key := strings.Join([]string{
 			strings.TrimSpace(record.RoleCode),
 			strings.ToLower(strings.TrimSpace(record.LanguageCode)),
-			strings.ToUpper(strings.TrimSpace(record.CountryCode)),
-			strings.ToUpper(strings.TrimSpace(record.CountrySubdivisionCode)),
+			strings.ToUpper(strings.TrimSpace(record.CountryOfFormation)),
+			strings.ToUpper(strings.TrimSpace(record.CountrySubdivisionOfFormation)),
 			strings.ToUpper(strings.TrimSpace(record.ELFCode)),
 			strings.TrimSpace(record.RoleName),
 			strings.TrimSpace(record.Description),

@@ -57,19 +57,19 @@ func (GLEIFEntityLegalForm) TableName() string {
 // Source: GLEIF organizational roles code list (CSV).
 // Resolves role codes in LEI Level 2 data to human-readable role names.
 type GLEIFOrganizationalRole struct {
-	ID                     uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
-	RoleCode               string    `gorm:"column:role_code;size:50;not null" json:"role_code"`
-	RoleName               string    `gorm:"size:500;not null" json:"role_name"`
-	Description            string    `gorm:"type:text" json:"description"`
-	LanguageCode           string    `gorm:"size:10;not null;default:''" json:"language_code"`
-	ELFCode                string    `gorm:"column:elf_code;size:10;not null;default:''" json:"elf_code"`
-	CountryCode            string    `gorm:"column:country_of_formation;size:2;not null;default:''" json:"country_of_formation"`
-	CountrySubdivisionCode string    `gorm:"column:country_subdivision_of_formation;size:10;not null;default:''" json:"country_subdivision_of_formation"`
-	Active                 bool      `gorm:"default:true" json:"active"`
-	CreatedBy              string    `gorm:"size:100;not null;default:'system'" json:"created_by"`
-	UpdatedBy              string    `gorm:"size:100;not null;default:'system'" json:"updated_by"`
-	CreatedAt              time.Time `json:"created_at"`
-	UpdatedAt              time.Time `json:"updated_at"`
+	ID                            uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	RoleCode                      string    `gorm:"column:role_code;size:50;not null" json:"role_code"`
+	RoleName                      string    `gorm:"size:500;not null" json:"role_name"`
+	Description                   string    `gorm:"type:text" json:"description"`
+	LanguageCode                  string    `gorm:"size:10;not null;default:''" json:"language_code"`
+	ELFCode                       string    `gorm:"column:elf_code;size:10;not null;default:''" json:"elf_code"`
+	CountryOfFormation            string    `gorm:"column:country_of_formation;size:2;not null;default:''" json:"country_of_formation"`
+	CountrySubdivisionOfFormation string    `gorm:"column:country_subdivision_of_formation;size:10;not null;default:''" json:"country_subdivision_of_formation"`
+	Active                        bool      `gorm:"default:true" json:"active"`
+	CreatedBy                     string    `gorm:"size:100;not null;default:'system'" json:"created_by"`
+	UpdatedBy                     string    `gorm:"size:100;not null;default:'system'" json:"updated_by"`
+	CreatedAt                     time.Time `json:"created_at"`
+	UpdatedAt                     time.Time `json:"updated_at"`
 }
 
 // TableName sets the GORM table name.

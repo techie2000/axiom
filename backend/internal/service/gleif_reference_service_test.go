@@ -246,6 +246,32 @@ func TestParseEntityLegalFormsCSV_TruncatesLongAbbreviations(t *testing.T) {
 	}
 }
 
+func TestDedupeEntityLegalForms_PreservesVariantsAndDropsExactDuplicates(t *testing.T) {
+	forms := []*domain.GLEIFEntityLegalForm{
+		{ELFCode: "106J", LanguageCode: "be", CountryOfFormation: "BY", EntityLegalFormName: "Belarusian Name", Status: "ACTIVE"},
+		{ELFCode: "106J", LanguageCode: "ru", CountryOfFormation: "BY", EntityLegalFormName: "Russian Name", Status: "ACTIVE"},
+		{ELFCode: "106J", LanguageCode: "ru", CountryOfFormation: "BY", EntityLegalFormName: "Russian Name", Status: "ACTIVE"},
+		{ELFCode: "ABCD", LanguageCode: "en", CountryOfFormation: "GB", EntityLegalFormName: "Limited", Status: "ACTIVE"},
+	}
+
+	deduped, dropped, dupCodes := dedupeEntityLegalForms(forms)
+	if dropped != 1 {
+		t.Fatalf("expected 1 dropped duplicate, got %d", dropped)
+	}
+	if len(deduped) != 3 {
+		t.Fatalf("expected 3 records after dedupe, got %d", len(deduped))
+	}
+	if deduped[0].ELFCode != "106J" || deduped[0].LanguageCode != "be" {
+		t.Fatalf("expected first variant preserved, got %+v", deduped[0])
+	}
+	if deduped[1].ELFCode != "106J" || deduped[1].LanguageCode != "ru" {
+		t.Fatalf("expected second variant preserved, got %+v", deduped[1])
+	}
+	if len(dupCodes) != 1 || dupCodes[0] != "106J" {
+		t.Fatalf("expected dupCodes=[106J], got %v", dupCodes)
+	}
+}
+
 func TestParseOrganizationalRolesCSV(t *testing.T) {
 	// Tab-separated: Role Code | Role Name | Description
 	csvData := "Role Code\tRole Name\tDescription\n" +
@@ -264,6 +290,9 @@ func TestParseOrganizationalRolesCSV(t *testing.T) {
 	}
 	if records[1].RoleName != "Chief Executive Officer" {
 		t.Errorf("unexpected role name: %s", records[1].RoleName)
+	}
+	if records[0].CountryOfFormation != "" || records[0].CountrySubdivisionOfFormation != "" || records[0].ELFCode != "" {
+		t.Fatalf("expected legacy TSV context fields to remain empty, got %+v", records[0])
 	}
 }
 
@@ -290,8 +319,8 @@ func TestParseOrganizationalRolesCSV_CommaFormatUsesTransliteratedNameAndLegisla
 	if records[0].LanguageCode != "fr" {
 		t.Fatalf("expected language code fr, got %s", records[0].LanguageCode)
 	}
-	if records[0].CountryCode != "FR" {
-		t.Fatalf("expected country code FR, got %s", records[0].CountryCode)
+	if records[0].CountryOfFormation != "FR" {
+		t.Fatalf("expected country code FR, got %s", records[0].CountryOfFormation)
 	}
 }
 
@@ -360,9 +389,9 @@ func TestParseLegalJurisdictionsCSV_CommaFormat(t *testing.T) {
 
 func TestDedupeOrganizationalRoles(t *testing.T) {
 	roles := []*domain.GLEIFOrganizationalRole{
-		{RoleCode: "CEO", RoleName: "Directeur general", LanguageCode: "fr", CountryCode: "FR"},
-		{RoleCode: "CEO", RoleName: "Chief Executive Officer", LanguageCode: "en", CountryCode: "FR"},
-		{RoleCode: "CEO", RoleName: "Chief Executive Officer", LanguageCode: "en", CountryCode: "FR"},
+		{RoleCode: "CEO", RoleName: "Directeur general", LanguageCode: "fr", CountryOfFormation: "FR"},
+		{RoleCode: "CEO", RoleName: "Chief Executive Officer", LanguageCode: "en", CountryOfFormation: "FR"},
+		{RoleCode: "CEO", RoleName: "Chief Executive Officer", LanguageCode: "en", CountryOfFormation: "FR"},
 		{RoleCode: "CFO", RoleName: "Chief Financial Officer"},
 	}
 
