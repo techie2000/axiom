@@ -1091,12 +1091,6 @@ export default function LEIRecordsPage() {
   }
 
   const getColumnLabel = (column: ColumnConfig): string => {
-    if (column.key === 'legal_jurisdiction') {
-      return 'Legal Jurisdiction'
-    }
-    if (column.key === 'registration_status') {
-      return 'Registration Status'
-    }
     if (column.key === 'entity_legal_form') {
       return showLocationCodes ? t('leiRecords.columns.labels.legalFormCode') : t('leiRecords.columns.labels.legalFormName')
     }
@@ -2089,12 +2083,12 @@ export default function LEIRecordsPage() {
                   </div>
                   {selectedRecord.entity_sub_category && (
                     <div>
-                      <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">Sub Category</span>
+                      <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">{t('leiRecords.columns.labels.subCategory')}</span>
                       <p className="text-sm text-[rgb(var(--foreground-rgb))] mt-1">{selectedRecord.entity_sub_category}</p>
                     </div>
                   )}
                   <div>
-                    <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">Legal Jurisdiction</span>
+                    <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">{t('leiRecords.columns.labels.legalJurisdiction')}</span>
                     <p className="text-sm text-[rgb(var(--foreground-rgb))] mt-1">{selectedRecord.legal_jurisdiction || '-'}</p>
                   </div>
                   {selectedRecord.entity_legal_form && (
@@ -2453,7 +2447,7 @@ export default function LEIRecordsPage() {
                     </p>
                   </div>
                   <div>
-                    <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">Registration Status</span>
+                    <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">{t('leiRecords.columns.labels.registrationStatus')}</span>
                     <p className="text-sm text-[rgb(var(--foreground-rgb))] mt-1">{formatEnumDisplayValue(selectedRecord.registration_status)}</p>
                   </div>
                   <div>
