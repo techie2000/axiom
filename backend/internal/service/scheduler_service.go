@@ -897,8 +897,8 @@ func (s *schedulerService) dailyDeltaSyncLoop() {
 func (s *schedulerService) dailyFullSyncLoop() {
 	for {
 		// Calculate next run at configured time today or tomorrow
-		now := time.Now()
-		nextRun := time.Date(now.Year(), now.Month(), now.Day(), s.fullSyncHour, s.fullSyncMinute, 0, 0, now.Location())
+		now := time.Now().UTC()
+		nextRun := time.Date(now.Year(), now.Month(), now.Day(), s.fullSyncHour, s.fullSyncMinute, 0, 0, time.UTC)
 
 		// If we've already passed today's scheduled time, schedule for tomorrow
 		if nextRun.Before(now) || nextRun.Equal(now) {
@@ -1177,8 +1177,8 @@ func calculateNextRun(interval time.Duration) *time.Time {
 
 // calculateNextDailyFullRun calculates next run at configured daily time (default 12:00 UTC)
 func (s *schedulerService) calculateNextDailyFullRun() *time.Time {
-	now := time.Now()
-	nextRun := time.Date(now.Year(), now.Month(), now.Day(), s.fullSyncHour, s.fullSyncMinute, 0, 0, now.Location())
+	now := time.Now().UTC()
+	nextRun := time.Date(now.Year(), now.Month(), now.Day(), s.fullSyncHour, s.fullSyncMinute, 0, 0, time.UTC)
 
 	// If we've already passed today's scheduled time, schedule for tomorrow
 	if nextRun.Before(now) || nextRun.Equal(now) {
@@ -1214,8 +1214,8 @@ func calculateNextWeeklyRun() *time.Time {
 func (s *schedulerService) dailyCleanupLoop() {
 	for {
 		// Calculate next run at configured time
-		now := time.Now()
-		nextRun := time.Date(now.Year(), now.Month(), now.Day(), s.cleanupHour, s.cleanupMinute, 0, 0, now.Location())
+		now := time.Now().UTC()
+		nextRun := time.Date(now.Year(), now.Month(), now.Day(), s.cleanupHour, s.cleanupMinute, 0, 0, time.UTC)
 
 		// If we've passed the configured time today, schedule for tomorrow
 		if nextRun.Before(now) {
@@ -1259,9 +1259,9 @@ func (s *schedulerService) dailyMasterDataSyncLoop() {
 	masterDataSyncMinute := 0
 
 	for {
-		// Calculate next run time (daily at 1:00 AM)
-		now := time.Now()
-		nextRun := time.Date(now.Year(), now.Month(), now.Day(), masterDataSyncHour, masterDataSyncMinute, 0, 0, now.Location())
+		// Calculate next run time (daily at 01:00 UTC)
+		now := time.Now().UTC()
+		nextRun := time.Date(now.Year(), now.Month(), now.Day(), masterDataSyncHour, masterDataSyncMinute, 0, 0, time.UTC)
 		if nextRun.Before(now) {
 			nextRun = nextRun.AddDate(0, 0, 1)
 		}
@@ -1406,8 +1406,8 @@ func (s *schedulerService) RunLevel2REPEXSync() error {
 }
 
 func (s *schedulerService) calculateNextMasterDataRun() *time.Time {
-	now := time.Now()
-	next := time.Date(now.Year(), now.Month(), now.Day(), 1, 0, 0, 0, now.Location())
+	now := time.Now().UTC()
+	next := time.Date(now.Year(), now.Month(), now.Day(), 1, 0, 0, 0, time.UTC)
 	if !next.After(now) {
 		next = next.AddDate(0, 0, 1)
 	}
