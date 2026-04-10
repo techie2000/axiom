@@ -72,8 +72,8 @@ clicked or the repository setting is enabled).
 [`promote-main-to-dev` workflow](../../.github/workflows/promote-main-to-dev.yml).
 
 The workflow runs at **01:00 UTC daily** — deliberately scheduled one hour *before* the GLEIF
-LEI full-sync job (02:00 UTC) so that if new code on `main` introduces any issues, they are
-caught immediately when the importer runs against the freshly promoted `dev` environment. The
+LEI full-sync job window (default: 12:00 UTC) so that if new code on `main` introduces any issues, they are
+caught before the importer runs against the freshly promoted `dev` environment. The
 00:00 slot (LEI cleanup default) and 03:00 slot (`LEI_CLEANUP_TIME` override) are already taken
 by application scheduler jobs. When `main` is ahead of `dev`, it opens a pull request titled
 `chore: nightly promotion main → dev (YYYY-MM-DD)`. Review the diff, confirm CI passes,

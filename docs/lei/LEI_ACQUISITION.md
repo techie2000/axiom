@@ -12,7 +12,7 @@ processes Legal Entity Identifier (LEI) data from GLEIF (Global Legal Entity Ide
 - **Full Audit Trail**: Complete history of all changes with pre/post state tracking
 - **Resume Capability**: Can resume processing mid-file if interrupted
 - **Source Provenance**: Tracks which source file each record came from
-- **Scheduled Jobs**: Automatic daily full sync at 2 AM (delta sync strategy disabled due to reliability issues)
+- **Scheduled Jobs**: Automatic daily full sync at 12:00 UTC (delta sync strategy disabled due to reliability issues)
 
 ## Architecture
 
@@ -37,11 +37,12 @@ processes Legal Entity Identifier (LEI) data from GLEIF (Global Legal Entity Ide
    - Resume-from-LEI functionality
 
 4. **Scheduler** (`internal/service/scheduler_service.go`)
-   - Daily full file synchronization (runs at 2 AM daily)
-   - Delta sync disabled (caused reliability issues, minimal benefit for daily full sync)
-   - Automatic retry on failure
 
-5. **HTTP Handlers** (`internal/handler/lei_handler.go`)
+- Daily full file synchronization (runs at 12:00 UTC daily)
+- Delta sync disabled (caused reliability issues, minimal benefit for daily full sync)
+- Automatic retry on failure
+
+1. **HTTP Handlers** (`internal/handler/lei_handler.go`)
    - REST API endpoints for LEI data access
    - Manual trigger endpoints for sync jobs
    - Processing status monitoring
@@ -360,7 +361,7 @@ Response:
 
 ### Full Sync
 
-- **Frequency**: **Daily at 2:00 AM** (changed from weekly)
+- **Frequency**: **Daily at 12:00 UTC** (changed from weekly)
 - **Source**: GLEIF Level 1 Full files (JSON format)
 - **Purpose**: Complete refresh of all data
 - **First run**: On startup if database is empty, otherwise next scheduled time
@@ -453,9 +454,9 @@ The following environment variables configure LEI data acquisition and schedulin
   - Short forms accepted: `Sun`, `Mon`, `Tue`, `Wed`, `Thu`, `Fri`, `Sat`
   - **Note**: This setting is present but not used; full sync runs **daily** at configured time
 
-- `LEI_FULL_SYNC_TIME` - Time of day for full sync (default: `02:00`)
+- `LEI_FULL_SYNC_TIME` - Time of day for full sync (default: `12:00`)
   - Format: `HH:MM` in 24-hour format
-  - Example: `LEI_FULL_SYNC_TIME=01:30` for 1:30 AM
+  - Example: `LEI_FULL_SYNC_TIME=12:30` for 12:30 UTC
   - **Note**: Full sync now runs **daily** at this time (not weekly)
 
 - `LEI_CLEANUP_TIME` - Time of day for daily file cleanup (default: `00:00`)

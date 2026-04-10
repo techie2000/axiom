@@ -360,20 +360,22 @@ func TestRepexToJSONProducesValidJSON(t *testing.T) {
 
 type nopDialector struct{}
 
-func (nopDialector) Name() string                                         { return "nop" }
+func (nopDialector) Name() string { return "nop" }
 func (nopDialector) Initialize(db *gorm.DB) error {
 	// Register default GORM callbacks so that Find, Count, Create, and Update
 	// build SQL statements even in DryRun mode.
 	callbacks.RegisterDefaultCallbacks(db, &callbacks.Config{})
 	return nil
 }
-func (nopDialector) Migrator(_ *gorm.DB) gorm.Migrator                  { return nil }
-func (nopDialector) DataTypeOf(_ *schema.Field) string                   { return "" }
-func (nopDialector) DefaultValueOf(_ *schema.Field) clause.Expression    { return clause.Expr{SQL: "NULL"} }
+func (nopDialector) Migrator(_ *gorm.DB) gorm.Migrator { return nil }
+func (nopDialector) DataTypeOf(_ *schema.Field) string { return "" }
+func (nopDialector) DefaultValueOf(_ *schema.Field) clause.Expression {
+	return clause.Expr{SQL: "NULL"}
+}
 func (nopDialector) BindVarTo(w clause.Writer, _ *gorm.Statement, _ interface{}) {
 	_, _ = w.WriteString("?")
 }
-func (nopDialector) QuoteTo(w clause.Writer, str string) { _, _ = w.WriteString(str) }
+func (nopDialector) QuoteTo(w clause.Writer, str string)         { _, _ = w.WriteString(str) }
 func (nopDialector) Explain(sql string, _ ...interface{}) string { return sql }
 
 // sqlCaptureLogger records every SQL statement that GORM logs via its
@@ -383,7 +385,7 @@ type sqlCaptureLogger struct {
 	queries []string
 }
 
-func (l *sqlCaptureLogger) LogMode(gorm_logger.LogLevel) gorm_logger.Interface { return l }
+func (l *sqlCaptureLogger) LogMode(gorm_logger.LogLevel) gorm_logger.Interface  { return l }
 func (l *sqlCaptureLogger) Info(_ context.Context, _ string, _ ...interface{})  {}
 func (l *sqlCaptureLogger) Warn(_ context.Context, _ string, _ ...interface{})  {}
 func (l *sqlCaptureLogger) Error(_ context.Context, _ string, _ ...interface{}) {}

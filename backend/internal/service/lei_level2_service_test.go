@@ -11,6 +11,146 @@ import (
 	"github.com/techie2000/axiom/internal/repository"
 )
 
+func TestFlushREPEXBatch_DeferredWhenLEIMissing(t *testing.T) {
+	sourceFileID := uuid.New()
+	leiLookup := &level2LEILookupStub{namesByLEI: map[string]string{
+		"VALIDLEI00000000000001": "Valid Entity",
+	}}
+
+	repoStubREPEX := &level2REPEXFlushRepoStub{batchCreated: 1}
+	svc := &leiLevel2Service{repo: repoStubREPEX, leiRepo: leiLookup}
+
+	batch := []*domain.LEIReportingException{
+		{
+			LEI:               "VALIDLEI00000000000001",
+			ExceptionCategory: "NO_KNOWN_PERSON",
+			SourceFileID:      &sourceFileID,
+		},
+		{
+			LEI:               "MISSINGLEI0000000002",
+			ExceptionCategory: "NO_KNOWN_PERSON",
+			SourceFileID:      &sourceFileID,
+		},
+	}
+
+	processed, failed, err := svc.flushREPEXBatch(batch)
+	if err != nil {
+		t.Fatalf("flushREPEXBatch returned error: %v", err)
+	}
+	if processed != 1 {
+		t.Fatalf("expected processed=1, got %d", processed)
+	}
+	if failed != 1 {
+		t.Fatalf("expected failed=1, got %d", failed)
+	}
+	if repoStubREPEX.batchUpsertCalls != 1 {
+		t.Fatalf("expected 1 batch upsert call, got %d", repoStubREPEX.batchUpsertCalls)
+	}
+	if len(repoStubREPEX.batchInput) != 1 {
+		t.Fatalf("expected batch input len 1, got %d", len(repoStubREPEX.batchInput))
+	}
+	if repoStubREPEX.batchInput[0].LEI != "VALIDLEI00000000000001" {
+		t.Fatalf("unexpected upserted LEI: %s", repoStubREPEX.batchInput[0].LEI)
+	}
+	if len(repoStubREPEX.failures) != 1 {
+		t.Fatalf("expected 1 processing failure row, got %d", len(repoStubREPEX.failures))
+	}
+	if repoStubREPEX.failures[0].FailureStage != "FK_PREREQ" {
+		t.Fatalf("expected failure stage FK_PREREQ, got %s", repoStubREPEX.failures[0].FailureStage)
+	}
+}
+
+func TestFlushREPEXBatch_AllDeferredWhenNoLEIsExist(t *testing.T) {
+	sourceFileID := uuid.New()
+	repoStub := &level2REPEXFlushRepoStub{}
+	leiLookup := &level2LEILookupStub{namesByLEI: map[string]string{}}
+	svc := &leiLevel2Service{repo: repoStub, leiRepo: leiLookup}
+
+	batch := []*domain.LEIReportingException{
+		{LEI: "MISSINGLEI1000000001", ExceptionCategory: "NO_KNOWN_PERSON", SourceFileID: &sourceFileID},
+		{LEI: "MISSINGLEI2000000002", ExceptionCategory: "NO_KNOWN_PERSON", SourceFileID: &sourceFileID},
+	}
+
+	processed, failed, err := svc.flushREPEXBatch(batch)
+	if err != nil {
+		t.Fatalf("flushREPEXBatch returned error: %v", err)
+	}
+	if processed != 0 {
+		t.Fatalf("expected processed=0, got %d", processed)
+	}
+	if failed != 2 {
+		t.Fatalf("expected failed=2, got %d", failed)
+	}
+	if repoStub.batchUpsertCalls != 0 {
+		t.Fatalf("expected no batch upsert calls, got %d", repoStub.batchUpsertCalls)
+	}
+	if len(repoStub.failures) != 2 {
+		t.Fatalf("expected 2 processing failures, got %d", len(repoStub.failures))
+	}
+}
+
+func TestParseGLEIFTime_MillisecondVariants(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		wantY int
+		wantM int
+		wantD int
+		wantH int
+	}{
+		{"whole-second Z", "2026-04-09T10:21:26Z", 2026, 4, 9, 10},
+		{"millisecond .360Z", "2026-04-09T10:21:26.360Z", 2026, 4, 9, 10},
+		{"millisecond .000Z", "2026-04-09T00:00:00.000Z", 2026, 4, 9, 0},
+		{"date-only", "2026-04-09", 2026, 4, 9, 0},
+		{"no-Z whole-second", "2026-04-09T10:21:26", 2026, 4, 9, 10},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := parseGLEIFTime(tt.input)
+			if got == nil {
+				t.Fatalf("parseGLEIFTime(%q) returned nil", tt.input)
+			}
+			if got.Year() != tt.wantY || int(got.Month()) != tt.wantM || got.Day() != tt.wantD || got.Hour() != tt.wantH {
+				t.Fatalf("parseGLEIFTime(%q) = %v, want %04d-%02d-%02d %02d:xx", tt.input, got, tt.wantY, tt.wantM, tt.wantD, tt.wantH)
+			}
+		})
+	}
+}
+
+type level2REPEXFlushRepoStub struct {
+	repository.LEILevel2Repository
+	batchUpsertCalls int
+	batchInput       []*domain.LEIReportingException
+	batchCreated     int
+	batchUpdated     int
+	batchErr         error
+	failures         []*domain.LEILevel2ProcessingFailure
+}
+
+func (r *level2REPEXFlushRepoStub) BatchUpsertReportingExceptions(records []*domain.LEIReportingException) (int, int, error) {
+	r.batchUpsertCalls++
+	r.batchInput = append([]*domain.LEIReportingException(nil), records...)
+	return r.batchCreated, r.batchUpdated, r.batchErr
+}
+
+func (r *level2REPEXFlushRepoStub) UpsertReportingException(exc *domain.LEIReportingException) error {
+	return nil
+}
+
+func (r *level2REPEXFlushRepoStub) CreateProcessingFailure(failure *domain.LEILevel2ProcessingFailure) error {
+	copy := *failure
+	r.failures = append(r.failures, &copy)
+	return nil
+}
+
+func (r *level2REPEXFlushRepoStub) BatchResolveOpenProcessingFailures(string, []string, *uuid.UUID, string) error {
+	return nil
+}
+
+func (r *level2REPEXFlushRepoStub) ResolveOpenProcessingFailures(string, string, *uuid.UUID, string) error {
+	return nil
+}
+
 func TestShouldSkipDuplicateHash(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -623,5 +763,154 @@ func TestPersistLevel2Progress(t *testing.T) {
 				t.Fatal("expected repository to receive updated source file")
 			}
 		})
+	}
+}
+
+type level2RRFlushRepoStub struct {
+	repository.LEILevel2Repository
+	batchUpsertCalls int
+	batchInput       []*domain.LEIRelationshipRecord
+	batchCreated     int
+	batchUpdated     int
+	batchErr         error
+	upsertCalls      int
+	failures         []*domain.LEILevel2ProcessingFailure
+}
+
+func (r *level2RRFlushRepoStub) BatchUpsertRelationshipRecords(records []*domain.LEIRelationshipRecord) (int, int, error) {
+	r.batchUpsertCalls++
+	r.batchInput = append([]*domain.LEIRelationshipRecord(nil), records...)
+	return r.batchCreated, r.batchUpdated, r.batchErr
+}
+
+func (r *level2RRFlushRepoStub) UpsertRelationshipRecord(record *domain.LEIRelationshipRecord) error {
+	r.upsertCalls++
+	return nil
+}
+
+func (r *level2RRFlushRepoStub) CreateProcessingFailure(failure *domain.LEILevel2ProcessingFailure) error {
+	copy := *failure
+	r.failures = append(r.failures, &copy)
+	return nil
+}
+
+func (r *level2RRFlushRepoStub) BatchResolveOpenProcessingFailures(string, []string, *uuid.UUID, string) error {
+	return nil
+}
+
+func (r *level2RRFlushRepoStub) ResolveOpenProcessingFailures(string, string, *uuid.UUID, string) error {
+	return nil
+}
+
+type level2LEILookupStub struct {
+	repository.LEIRepository
+	namesByLEI map[string]string
+	err        error
+	lookups    [][]string
+}
+
+func (r *level2LEILookupStub) FindLegalNamesByLEICodes(codes []string) (map[string]string, error) {
+	lookupCopy := append([]string(nil), codes...)
+	r.lookups = append(r.lookups, lookupCopy)
+	if r.err != nil {
+		return nil, r.err
+	}
+	result := make(map[string]string, len(r.namesByLEI))
+	for k, v := range r.namesByLEI {
+		result[k] = v
+	}
+	return result, nil
+}
+
+func TestFlushRRBatch_DeferredWhenParentLEIMissing(t *testing.T) {
+	sourceFileID := uuid.New()
+	repoStub := &level2RRFlushRepoStub{batchCreated: 1}
+	leiLookup := &level2LEILookupStub{namesByLEI: map[string]string{
+		"VALIDSTART00000000001": "Valid Start",
+		"VALIDEND0000000000002": "Valid End",
+	}}
+	svc := &leiLevel2Service{repo: repoStub, leiRepo: leiLookup}
+
+	batch := []*domain.LEIRelationshipRecord{
+		{
+			StartNodeLEI:     "VALIDSTART00000000001",
+			EndNodeLEI:       "VALIDEND0000000000002",
+			RelationshipType: "IS_DIRECTLY_CONSOLIDATED_BY",
+			SourceFileID:     &sourceFileID,
+		},
+		{
+			StartNodeLEI:     "MISSINGSTART000000001",
+			EndNodeLEI:       "VALIDEND0000000000002",
+			RelationshipType: "IS_ULTIMATELY_CONSOLIDATED_BY",
+			SourceFileID:     &sourceFileID,
+		},
+	}
+
+	processed, failed, err := svc.flushRRBatch(batch)
+	if err != nil {
+		t.Fatalf("flushRRBatch returned error: %v", err)
+	}
+	if processed != 1 {
+		t.Fatalf("expected processed=1, got %d", processed)
+	}
+	if failed != 1 {
+		t.Fatalf("expected failed=1, got %d", failed)
+	}
+	if repoStub.batchUpsertCalls != 1 {
+		t.Fatalf("expected 1 batch upsert call, got %d", repoStub.batchUpsertCalls)
+	}
+	if len(repoStub.batchInput) != 1 {
+		t.Fatalf("expected batch input len 1, got %d", len(repoStub.batchInput))
+	}
+	if repoStub.batchInput[0].StartNodeLEI != "VALIDSTART00000000001" {
+		t.Fatalf("unexpected upserted start LEI: %s", repoStub.batchInput[0].StartNodeLEI)
+	}
+	if len(repoStub.failures) != 1 {
+		t.Fatalf("expected 1 processing failure row, got %d", len(repoStub.failures))
+	}
+	if repoStub.failures[0].FailureStage != "FK_PREREQ" {
+		t.Fatalf("expected failure stage FK_PREREQ, got %s", repoStub.failures[0].FailureStage)
+	}
+}
+
+func TestFlushRRBatch_AllDeferredWhenNoParentLEIsExist(t *testing.T) {
+	sourceFileID := uuid.New()
+	repoStub := &level2RRFlushRepoStub{}
+	leiLookup := &level2LEILookupStub{namesByLEI: map[string]string{}}
+	svc := &leiLevel2Service{repo: repoStub, leiRepo: leiLookup}
+
+	batch := []*domain.LEIRelationshipRecord{
+		{
+			StartNodeLEI:     "MISSINGSTART000000001",
+			EndNodeLEI:       "MISSINGEND00000000002",
+			RelationshipType: "IS_DIRECTLY_CONSOLIDATED_BY",
+			SourceFileID:     &sourceFileID,
+		},
+		{
+			StartNodeLEI:     "MISSINGSTART000000003",
+			EndNodeLEI:       "MISSINGEND00000000004",
+			RelationshipType: "IS_ULTIMATELY_CONSOLIDATED_BY",
+			SourceFileID:     &sourceFileID,
+		},
+	}
+
+	processed, failed, err := svc.flushRRBatch(batch)
+	if err != nil {
+		t.Fatalf("flushRRBatch returned error: %v", err)
+	}
+	if processed != 0 {
+		t.Fatalf("expected processed=0, got %d", processed)
+	}
+	if failed != 2 {
+		t.Fatalf("expected failed=2, got %d", failed)
+	}
+	if repoStub.batchUpsertCalls != 0 {
+		t.Fatalf("expected no batch upsert calls, got %d", repoStub.batchUpsertCalls)
+	}
+	if repoStub.upsertCalls != 0 {
+		t.Fatalf("expected no row-by-row upsert calls, got %d", repoStub.upsertCalls)
+	}
+	if len(repoStub.failures) != 2 {
+		t.Fatalf("expected 2 processing failures, got %d", len(repoStub.failures))
 	}
 }

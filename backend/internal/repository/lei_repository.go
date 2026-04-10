@@ -915,7 +915,7 @@ func (r *leiRepository) UpsertLEIRecord(record *domain.LEIRecord) (bool, error) 
 // BatchUpsertLEIRecords performs batch upsert of LEI records with full audit trail
 // Returns (created_count, updated_count, error)
 // CRITICAL: Every record operation is audited for data provenance compliance
-func (r *leiRepository) BatchUpsertLEIRecords(records []*domain.LEIRecord) (int, int, error) {
+func (r *leiRepository) BatchUpsertLEIRecords(records []*domain.LEIRecord) (createdCount int, updatedCount int, err error) {
 	if len(records) == 0 {
 		return 0, 0, nil
 	}
@@ -943,13 +943,11 @@ func (r *leiRepository) BatchUpsertLEIRecords(records []*domain.LEIRecord) (int,
 		return 0, 0, tx.Error
 	}
 	defer func() {
-		if r := recover(); r != nil {
+		if recovered := recover(); recovered != nil {
 			tx.Rollback()
+			err = fmt.Errorf("panic during BatchUpsertLEIRecords: %v", recovered)
 		}
 	}()
-
-	createdCount := 0
-	updatedCount := 0
 
 	// Process in batches of 100 for optimal performance
 	batchSize := 100
@@ -982,6 +980,7 @@ func (r *leiRepository) BatchUpsertLEIRecords(records []*domain.LEIRecord) (int,
 		// Build SQL with RETURNING to get affected record IDs
 		valueStrings := make([]string, 0, len(batch))
 		valueArgs := make([]interface{}, 0, len(batch)*44)
+		batchInsertedIDs := make([]uuid.UUID, 0, len(batch))
 
 		// Generate all values in Go, use placeholders for everything
 		now := time.Now()
@@ -993,6 +992,7 @@ func (r *leiRepository) BatchUpsertLEIRecords(records []*domain.LEIRecord) (int,
 
 			// Generate ID and timestamps in Go
 			newID := uuid.New()
+			batchInsertedIDs = append(batchInsertedIDs, newID)
 
 			valueArgs = append(valueArgs,
 				newID,                                      // id
@@ -1189,20 +1189,17 @@ func (r *leiRepository) BatchUpsertLEIRecords(records []*domain.LEIRecord) (int,
 				Int("batch_start", i).
 				Int("batch_end", end).
 				Int("value_args_count", len(valueArgs)).
-				Int("expected_per_record", 41).
+				Int("expected_per_record", len(valueArgs)/len(batch)).
 				Int("records_in_batch", len(batch)).
 				Str("stmt_preview", stmtPreview).
 				Msg("CRITICAL: Batch upsert failed")
 			return 0, 0, fmt.Errorf("failed to batch upsert records %d-%d: %w", i, end, result.Error)
 		}
 
-		// Get IDs from valueArgs we just inserted (first value of each record)
-		leiToID := make(map[string]uuid.UUID)
+		// Map generated IDs to LEIs explicitly to avoid brittle positional assumptions.
+		leiToID := make(map[string]uuid.UUID, len(batch))
 		for idx, record := range batch {
-			// ID is at position: idx * 41 (since we have 41 values per record)
-			idPos := idx * 41
-			insertedID := valueArgs[idPos].(uuid.UUID)
-			leiToID[record.LEI] = insertedID
+			leiToID[record.LEI] = batchInsertedIDs[idx]
 		}
 
 		// Build audit records for this batch

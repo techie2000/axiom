@@ -790,23 +790,54 @@ func (s *leiLevel2Service) flushRRBatch(batch []*domain.LEIRelationshipRecord) (
 		return 0, 0, nil
 	}
 
-	if created, updated, batchErr := s.repo.BatchUpsertRelationshipRecords(batch); batchErr == nil {
-		naturalKeys := make([]string, 0, len(batch))
+	upsertBatch := batch
+	if s.leiRepo != nil {
+		knownLEIs, lookupErr := s.lookupExistingLEIsFromRRBatch(batch)
+		if lookupErr != nil {
+			log.Warn().Err(lookupErr).Int("batch_size", len(batch)).Msg("RR LEI existence pre-check failed, proceeding with DB upsert path")
+		} else {
+			upsertBatch = upsertBatch[:0]
+			for _, record := range batch {
+				missingRefs := rrMissingNodeRefs(record, knownLEIs)
+				if len(missingRefs) == 0 {
+					upsertBatch = append(upsertBatch, record)
+					continue
+				}
+
+				s.recordProcessingFailure(
+					"LEVEL2_RR",
+					record.SourceFileID,
+					"FK_PREREQ",
+					rrNaturalKey(record.StartNodeLEI, record.EndNodeLEI, record.RelationshipType),
+					record,
+					fmt.Errorf("deferred RR upsert: missing LEI parent record(s): %s", strings.Join(missingRefs, ", ")),
+				)
+				failed++
+			}
+		}
+	}
+
+	if len(upsertBatch) == 0 {
+		return 0, failed, nil
+	}
+
+	if created, updated, batchErr := s.repo.BatchUpsertRelationshipRecords(upsertBatch); batchErr == nil {
+		naturalKeys := make([]string, 0, len(upsertBatch))
 		// All records in a batch are sourced from the same file; use the first non-nil ID.
 		var sourceFileID *uuid.UUID
-		for _, record := range batch {
+		for _, record := range upsertBatch {
 			naturalKeys = append(naturalKeys, rrNaturalKey(record.StartNodeLEI, record.EndNodeLEI, record.RelationshipType))
 			if sourceFileID == nil {
 				sourceFileID = record.SourceFileID
 			}
 		}
 		s.batchResolveOpenProcessingFailures("LEVEL2_RR", naturalKeys, sourceFileID)
-		return created + updated, 0, nil
+		return created + updated, failed, nil
 	} else {
-		log.Warn().Err(batchErr).Int("batch_size", len(batch)).Msg("RR batch upsert failed, falling back to row-by-row")
+		log.Warn().Err(batchErr).Int("batch_size", len(upsertBatch)).Msg("RR batch upsert failed, falling back to row-by-row")
 	}
 
-	for _, record := range batch {
+	for _, record := range upsertBatch {
 		if upsertErr := s.repo.UpsertRelationshipRecord(record); upsertErr != nil {
 			log.Warn().
 				Err(upsertErr).
@@ -822,6 +853,68 @@ func (s *leiLevel2Service) flushRRBatch(batch []*domain.LEIRelationshipRecord) (
 	}
 
 	return processed, failed, nil
+}
+
+func (s *leiLevel2Service) lookupExistingLEIsFromRRBatch(batch []*domain.LEIRelationshipRecord) (map[string]struct{}, error) {
+	if len(batch) == 0 {
+		return map[string]struct{}{}, nil
+	}
+
+	seen := make(map[string]struct{}, len(batch)*2)
+	leiCodes := make([]string, 0, len(batch)*2)
+	for _, record := range batch {
+		start := strings.TrimSpace(record.StartNodeLEI)
+		if start != "" {
+			if _, exists := seen[start]; !exists {
+				seen[start] = struct{}{}
+				leiCodes = append(leiCodes, start)
+			}
+		}
+
+		end := strings.TrimSpace(record.EndNodeLEI)
+		if end != "" {
+			if _, exists := seen[end]; !exists {
+				seen[end] = struct{}{}
+				leiCodes = append(leiCodes, end)
+			}
+		}
+	}
+
+	if len(leiCodes) == 0 {
+		return map[string]struct{}{}, nil
+	}
+
+	namesByLEI, err := s.leiRepo.FindLegalNamesByLEICodes(leiCodes)
+	if err != nil {
+		return nil, err
+	}
+
+	existing := make(map[string]struct{}, len(namesByLEI))
+	for lei := range namesByLEI {
+		existing[strings.TrimSpace(lei)] = struct{}{}
+	}
+
+	return existing, nil
+}
+
+func rrMissingNodeRefs(record *domain.LEIRelationshipRecord, existing map[string]struct{}) []string {
+	missing := make([]string, 0, 2)
+
+	start := strings.TrimSpace(record.StartNodeLEI)
+	if start != "" {
+		if _, ok := existing[start]; !ok {
+			missing = append(missing, "start_node_lei="+start)
+		}
+	}
+
+	end := strings.TrimSpace(record.EndNodeLEI)
+	if end != "" {
+		if _, ok := existing[end]; !ok {
+			missing = append(missing, "end_node_lei="+end)
+		}
+	}
+
+	return missing
 }
 
 // --- Reporting Exceptions (REPEX) processing ---
@@ -1195,23 +1288,54 @@ func (s *leiLevel2Service) flushREPEXBatch(batch []*domain.LEIReportingException
 		return 0, 0, nil
 	}
 
-	if created, updated, batchErr := s.repo.BatchUpsertReportingExceptions(batch); batchErr == nil {
-		naturalKeys := make([]string, 0, len(batch))
+	upsertBatch := batch
+	if s.leiRepo != nil {
+		knownLEIs, lookupErr := s.lookupExistingLEIsFromREPEXBatch(batch)
+		if lookupErr != nil {
+			log.Warn().Err(lookupErr).Int("batch_size", len(batch)).Msg("REPEX LEI existence pre-check failed, proceeding with DB upsert path")
+		} else {
+			upsertBatch = upsertBatch[:0]
+			for _, exc := range batch {
+				lei := strings.TrimSpace(exc.LEI)
+				if _, ok := knownLEIs[lei]; ok || lei == "" {
+					upsertBatch = append(upsertBatch, exc)
+					continue
+				}
+
+				s.recordProcessingFailure(
+					"LEVEL2_REPEX",
+					exc.SourceFileID,
+					"FK_PREREQ",
+					repexNaturalKey(exc.LEI, exc.ExceptionCategory),
+					exc,
+					fmt.Errorf("deferred REPEX upsert: missing LEI parent record: %s", lei),
+				)
+				failed++
+			}
+		}
+	}
+
+	if len(upsertBatch) == 0 {
+		return 0, failed, nil
+	}
+
+	if created, updated, batchErr := s.repo.BatchUpsertReportingExceptions(upsertBatch); batchErr == nil {
+		naturalKeys := make([]string, 0, len(upsertBatch))
 		// All exceptions in a batch are sourced from the same file; use the first non-nil ID.
 		var sourceFileID *uuid.UUID
-		for _, exc := range batch {
+		for _, exc := range upsertBatch {
 			naturalKeys = append(naturalKeys, repexNaturalKey(exc.LEI, exc.ExceptionCategory))
 			if sourceFileID == nil {
 				sourceFileID = exc.SourceFileID
 			}
 		}
 		s.batchResolveOpenProcessingFailures("LEVEL2_REPEX", naturalKeys, sourceFileID)
-		return created + updated, 0, nil
+		return created + updated, failed, nil
 	} else {
-		log.Warn().Err(batchErr).Int("batch_size", len(batch)).Msg("REPEX batch upsert failed, falling back to row-by-row")
+		log.Warn().Err(batchErr).Int("batch_size", len(upsertBatch)).Msg("REPEX batch upsert failed, falling back to row-by-row")
 	}
 
-	for _, exc := range batch {
+	for _, exc := range upsertBatch {
 		if upsertErr := s.repo.UpsertReportingException(exc); upsertErr != nil {
 			log.Warn().
 				Err(upsertErr).
@@ -1226,6 +1350,40 @@ func (s *leiLevel2Service) flushREPEXBatch(batch []*domain.LEIReportingException
 	}
 
 	return processed, failed, nil
+}
+
+func (s *leiLevel2Service) lookupExistingLEIsFromREPEXBatch(batch []*domain.LEIReportingException) (map[string]struct{}, error) {
+	if len(batch) == 0 {
+		return map[string]struct{}{}, nil
+	}
+
+	seen := make(map[string]struct{}, len(batch))
+	leiCodes := make([]string, 0, len(batch))
+	for _, exc := range batch {
+		lei := strings.TrimSpace(exc.LEI)
+		if lei != "" {
+			if _, exists := seen[lei]; !exists {
+				seen[lei] = struct{}{}
+				leiCodes = append(leiCodes, lei)
+			}
+		}
+	}
+
+	if len(leiCodes) == 0 {
+		return map[string]struct{}{}, nil
+	}
+
+	namesByLEI, err := s.leiRepo.FindLegalNamesByLEICodes(leiCodes)
+	if err != nil {
+		return nil, err
+	}
+
+	existing := make(map[string]struct{}, len(namesByLEI))
+	for lei := range namesByLEI {
+		existing[strings.TrimSpace(lei)] = struct{}{}
+	}
+
+	return existing, nil
 }
 
 // --- Counts ---
@@ -1250,12 +1408,14 @@ func (s *leiLevel2Service) GetProcessingFailures(jobType string, openOnly bool, 
 	return failures, total, nil
 }
 
-// parseGLEIFTime parses common GLEIF timestamp formats.
+// parseGLEIFTime parses common GLEIF timestamp formats, including sub-second variants
+// such as "2026-04-09T10:21:26.360Z" that appear on newly-issued LEI records.
 func parseGLEIFTime(value string) *time.Time {
 	if value == "" {
 		return nil
 	}
 	for _, layout := range []string{
+		time.RFC3339Nano, // handles .360Z, .000Z, etc.
 		"2006-01-02T15:04:05Z",
 		"2006-01-02T15:04:05",
 		"2006-01-02 15:04:05",

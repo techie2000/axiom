@@ -140,15 +140,15 @@ func (s *schedulerService) parseScheduleConfig(cfg *config.Config) {
 			Msg("Full sync day configured")
 	}
 
-	// Parse full sync time (e.g., "02:00")
+	// Parse full sync time (e.g., "12:00")
 	hour, minute, err := parseTimeOfDay(cfg.LEI.FullSyncTime)
 	if err != nil {
 		log.Warn().
 			Str("value", cfg.LEI.FullSyncTime).
-			Str("default", "02:00").
+			Str("default", "12:00").
 			Err(err).
 			Msg("Invalid full sync time, using default")
-		s.fullSyncHour = 2
+		s.fullSyncHour = 12
 		s.fullSyncMinute = 0
 	} else {
 		s.fullSyncHour = hour
@@ -893,7 +893,7 @@ func (s *schedulerService) dailyDeltaSyncLoop() {
 }
 */
 
-// dailyFullSyncLoop runs full sync every day at configured time (default 2:00 AM)
+// dailyFullSyncLoop runs full sync every day at configured time (default 12:00 UTC)
 func (s *schedulerService) dailyFullSyncLoop() {
 	for {
 		// Calculate next run at configured time today or tomorrow
@@ -1175,7 +1175,7 @@ func calculateNextRun(interval time.Duration) *time.Time {
 	return &next
 }
 
-// calculateNextDailyFullRun calculates next run at configured daily time (default 2 AM)
+// calculateNextDailyFullRun calculates next run at configured daily time (default 12:00 UTC)
 func (s *schedulerService) calculateNextDailyFullRun() *time.Time {
 	now := time.Now()
 	nextRun := time.Date(now.Year(), now.Month(), now.Day(), s.fullSyncHour, s.fullSyncMinute, 0, 0, now.Location())
@@ -1188,7 +1188,7 @@ func (s *schedulerService) calculateNextDailyFullRun() *time.Time {
 	return &nextRun
 }
 
-// DEPRECATED: calculateNextWeeklyRun calculates next Sunday at 2 AM
+// DEPRECATED: calculateNextWeeklyRun calculates next Sunday at 12:00 UTC
 // This function is no longer used - use calculateNextDailyFullRun() instead for daily scheduling
 // Kept for reference only
 /*
@@ -1253,7 +1253,7 @@ func (s *schedulerService) RunDailyCleanup() error {
 	return nil
 }
 
-// dailyMasterDataSyncLoop runs master data sync at 1 AM daily (before LEI sync at 2 AM)
+// dailyMasterDataSyncLoop runs master data sync at 1 AM daily (before default LEI sync at 12:00 UTC)
 func (s *schedulerService) dailyMasterDataSyncLoop() {
 	masterDataSyncHour := 1 // 1 AM - runs BEFORE LEI sync to ensure countries/currencies exist first
 	masterDataSyncMinute := 0
