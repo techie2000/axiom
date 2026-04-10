@@ -37,12 +37,11 @@ processes Legal Entity Identifier (LEI) data from GLEIF (Global Legal Entity Ide
    - Resume-from-LEI functionality
 
 4. **Scheduler** (`internal/service/scheduler_service.go`)
+   - Daily full file synchronization (runs at 12:00 UTC daily)
+   - Delta sync disabled (caused reliability issues, minimal benefit for daily full sync)
+   - Automatic retry on failure
 
-- Daily full file synchronization (runs at 12:00 UTC daily)
-- Delta sync disabled (caused reliability issues, minimal benefit for daily full sync)
-- Automatic retry on failure
-
-1. **HTTP Handlers** (`internal/handler/lei_handler.go`)
+5. **HTTP Handlers** (`internal/handler/lei_handler.go`)
    - REST API endpoints for LEI data access
    - Manual trigger endpoints for sync jobs
    - Processing status monitoring
