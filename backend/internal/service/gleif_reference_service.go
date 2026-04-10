@@ -348,6 +348,7 @@ func parseEntityLegalFormsCSV(r io.ReadCloser) ([]*domain.GLEIFEntityLegalForm, 
 			continue
 		}
 		status := strings.TrimSpace(safeCol(row, 12))
+		languageCode := strings.ToLower(strings.TrimSpace(safeCol(row, 7)))
 		countryOfFormation := safeCol(row, 1)
 		countrySubdivision := safeCol(row, 2)
 		name := safeCol(row, 3)
@@ -356,8 +357,8 @@ func parseEntityLegalFormsCSV(r io.ReadCloser) ([]*domain.GLEIFEntityLegalForm, 
 		if len(row) >= 13 {
 			countryOfFormation = firstNonEmpty(safeCol(row, 2), safeCol(row, 1))
 			countrySubdivision = firstNonEmpty(safeCol(row, 4), safeCol(row, 2))
-			name = firstNonEmpty(safeCol(row, 5), safeCol(row, 8), safeCol(row, 3))
-			abbrev = firstNonEmpty(safeCol(row, 9), safeCol(row, 10), safeCol(row, 4))
+			name = firstNonEmpty(safeCol(row, 8), safeCol(row, 5), safeCol(row, 3))
+			abbrev = firstNonEmpty(safeCol(row, 10), safeCol(row, 9), safeCol(row, 4))
 		}
 
 		if len(row) < 13 {
@@ -376,6 +377,7 @@ func parseEntityLegalFormsCSV(r io.ReadCloser) ([]*domain.GLEIFEntityLegalForm, 
 			ELFCode:                       truncateString(strings.ToUpper(elfCode), 10),
 			EntityLegalFormName:           truncateString(name, 500),
 			Abbreviations:                 truncateString(abbrev, 100),
+			LanguageCode:                  truncateString(languageCode, 10),
 			CountryOfFormation:            truncateString(strings.ToUpper(countryOfFormation), 2),
 			CountrySubdivisionOfFormation: truncateString(strings.ToUpper(countrySubdivision), 10),
 			Status:                        truncateString(strings.ToUpper(status), 20),
@@ -415,12 +417,23 @@ func parseOrganizationalRolesCSV(r io.ReadCloser) ([]*domain.GLEIFOrganizational
 		if roleCode == "" {
 			continue
 		}
+
+		languageCode := strings.ToLower(strings.TrimSpace(safeCol(row, 9)))
+		description := safeCol(row, 2)
+		if len(row) >= 19 {
+			description = firstNonEmpty(safeCol(row, 18), safeCol(row, 17))
+		}
+
 		records = append(records, &domain.GLEIFOrganizationalRole{
-			RoleCode:    truncateString(strings.ToUpper(roleCode), 50),
-			RoleName:    truncateString(firstNonEmpty(safeCol(row, 7), safeCol(row, 1)), 500),
-			Description: firstNonEmpty(safeCol(row, 18), safeCol(row, 2)),
-			Active:      true,
-			UpdatedBy:   "gleif_sync",
+			RoleCode:               truncateString(strings.ToUpper(roleCode), 50),
+			RoleName:               truncateString(firstNonEmpty(safeCol(row, 10), safeCol(row, 7), safeCol(row, 1)), 500),
+			Description:            description,
+			LanguageCode:           truncateString(languageCode, 10),
+			ELFCode:                truncateString(strings.ToUpper(strings.TrimSpace(safeCol(row, 6))), 10),
+			CountryCode:            truncateString(strings.ToUpper(strings.TrimSpace(safeCol(row, 2))), 2),
+			CountrySubdivisionCode: truncateString(strings.ToUpper(strings.TrimSpace(safeCol(row, 4))), 10),
+			Active:                 true,
+			UpdatedBy:              "gleif_sync",
 		})
 	}
 	return records, nil
@@ -596,7 +609,7 @@ func (s *gleifReferenceService) SyncEntityLegalForms() error {
 	}
 	records, dropped, dupCodes := dedupeEntityLegalForms(records)
 	if dropped > 0 {
-		log.Warn().Int("dropped_duplicates", dropped).Strs("duplicate_codes", dupCodes).Msg("Dropped duplicate entity legal form codes before upsert")
+		log.Info().Int("collapsed_rows", dropped).Int("affected_codes", len(dupCodes)).Strs("sample_codes", sampleKeys(dupCodes, 25)).Msg("Collapsed exact duplicate entity legal form rows before upsert")
 	}
 
 	if err := s.elfRepo.DeactivateAll(); err != nil {
@@ -646,7 +659,7 @@ func (s *gleifReferenceService) SyncOrganizationalRoles() error {
 	}
 	records, dropped, dupCodes := dedupeOrganizationalRoles(records)
 	if dropped > 0 {
-		log.Warn().Int("dropped_duplicates", dropped).Strs("duplicate_codes", dupCodes).Msg("Dropped duplicate organizational role codes before upsert")
+		log.Info().Int("collapsed_rows", dropped).Int("affected_codes", len(dupCodes)).Strs("sample_codes", sampleKeys(dupCodes, 25)).Msg("Collapsed exact duplicate organizational role rows before upsert")
 	}
 
 	if err := s.roleRepo.DeactivateAll(); err != nil {
@@ -1055,13 +1068,20 @@ func dedupeEntityLegalForms(records []*domain.GLEIFEntityLegalForm) ([]*domain.G
 		if record == nil {
 			continue
 		}
-		key := strings.TrimSpace(record.ELFCode)
+		key := strings.Join([]string{
+			strings.TrimSpace(record.ELFCode),
+			strings.ToLower(strings.TrimSpace(record.LanguageCode)),
+			strings.ToUpper(strings.TrimSpace(record.CountryOfFormation)),
+			strings.ToUpper(strings.TrimSpace(record.CountrySubdivisionOfFormation)),
+			strings.TrimSpace(record.EntityLegalFormName),
+			strings.TrimSpace(record.Abbreviations),
+			strings.ToUpper(strings.TrimSpace(record.Status)),
+		}, "|")
 		if key == "" {
 			continue
 		}
-		if idx, ok := seen[key]; ok {
-			result[idx] = record
-			duplicateKeys[key] = struct{}{}
+		if _, ok := seen[key]; ok {
+			duplicateKeys[strings.TrimSpace(record.ELFCode)] = struct{}{}
 			dropped++
 			continue
 		}
@@ -1083,13 +1103,20 @@ func dedupeOrganizationalRoles(records []*domain.GLEIFOrganizationalRole) ([]*do
 		if record == nil {
 			continue
 		}
-		key := strings.TrimSpace(record.RoleCode)
+		key := strings.Join([]string{
+			strings.TrimSpace(record.RoleCode),
+			strings.ToLower(strings.TrimSpace(record.LanguageCode)),
+			strings.ToUpper(strings.TrimSpace(record.CountryCode)),
+			strings.ToUpper(strings.TrimSpace(record.CountrySubdivisionCode)),
+			strings.ToUpper(strings.TrimSpace(record.ELFCode)),
+			strings.TrimSpace(record.RoleName),
+			strings.TrimSpace(record.Description),
+		}, "|")
 		if key == "" {
 			continue
 		}
-		if idx, ok := seen[key]; ok {
-			result[idx] = record
-			duplicateKeys[key] = struct{}{}
+		if _, ok := seen[key]; ok {
+			duplicateKeys[strings.TrimSpace(record.RoleCode)] = struct{}{}
 			dropped++
 			continue
 		}
@@ -1135,6 +1162,13 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
+}
+
+func sampleKeys(keys []string, max int) []string {
+	if max <= 0 || len(keys) <= max {
+		return keys
+	}
+	return keys[:max]
 }
 
 // sortedKeys returns a sorted slice of the keys from a string set.

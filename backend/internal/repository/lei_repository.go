@@ -78,7 +78,8 @@ const singleRecordResolvedNamesSelectFragment = "" +
 	", (SELECT ra.comments FROM lei_raw.gleif_registration_authorities ra" +
 	"   WHERE ra.ra_id = lei_raw.lei_records.registration_authority AND ra.active = TRUE LIMIT 1) AS registration_authority_comments" +
 	", (SELECT elf.entity_legal_form_name FROM lei_raw.gleif_entity_legal_forms elf" +
-	"   WHERE elf.elf_code = lei_raw.lei_records.entity_legal_form LIMIT 1) AS entity_legal_form_name"
+	"   WHERE elf.elf_code = lei_raw.lei_records.entity_legal_form" +
+	"   ORDER BY CASE WHEN COALESCE(elf.language_code, '') = 'en' THEN 0 ELSE 1 END, elf.updated_at DESC LIMIT 1) AS entity_legal_form_name"
 
 // exactLEIMatchWhereClause matches a record by its primary LEI or its successor LEI.
 // The successor branch includes the partial-index predicate so PostgreSQL can use
@@ -539,8 +540,9 @@ func (r *leiRepository) hydrateELFNames(records []*domain.LEIRecord) error {
 	var rows []elfNameRow
 	if err := r.db.
 		Table("lei_raw.gleif_entity_legal_forms").
-		Select("elf_code, entity_legal_form_name").
+		Select("DISTINCT ON (elf_code) elf_code, entity_legal_form_name").
 		Where("elf_code IN ?", codes).
+		Order("elf_code, CASE WHEN COALESCE(language_code, '') = 'en' THEN 0 ELSE 1 END, updated_at DESC").
 		Find(&rows).Error; err != nil {
 		return err
 	}

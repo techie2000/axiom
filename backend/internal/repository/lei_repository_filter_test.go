@@ -357,6 +357,9 @@ func TestHydrateELFNames_UsesSingleInQueryForDistinctCodes(t *testing.T) {
 	if !strings.Contains(sql, "elf_code in (?,?)") {
 		t.Fatalf("expected deduplicated IN query with 2 args, got: %s", sql)
 	}
+	if !strings.Contains(sql, "distinct on (elf_code)") {
+		t.Fatalf("expected deterministic DISTINCT ON selection for duplicate ELF variants, got: %s", sql)
+	}
 }
 
 func TestApplyELFNames_PopulatesHydratedFields(t *testing.T) {

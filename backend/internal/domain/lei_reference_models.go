@@ -10,19 +10,19 @@ import (
 // Source: GLEIF Registration Authorities List (CSV).
 // Resolves registration_authority codes in LEI records to human-readable names.
 type GLEIFRegistrationAuthority struct {
-	ID                  uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
-	RAID                string    `gorm:"column:ra_id;uniqueIndex;size:50;not null" json:"ra_id"`
-	OrganizationName    string    `gorm:"size:500;not null" json:"organization_name"`
-	Jurisdiction        string    `gorm:"size:100" json:"jurisdiction"`
-	InternationalName   string    `gorm:"size:500" json:"international_name"`
-	LanguagesUsed       string    `gorm:"size:100" json:"languages_used"`
-	Website             string    `gorm:"size:500" json:"website"`
-	Comments            string    `gorm:"type:text" json:"comments"`
-	Active              bool      `gorm:"default:true" json:"active"`
-	CreatedBy           string    `gorm:"size:100;not null;default:'system'" json:"created_by"`
-	UpdatedBy           string    `gorm:"size:100;not null;default:'system'" json:"updated_by"`
-	CreatedAt           time.Time `json:"created_at"`
-	UpdatedAt           time.Time `json:"updated_at"`
+	ID                uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	RAID              string    `gorm:"column:ra_id;uniqueIndex;size:50;not null" json:"ra_id"`
+	OrganizationName  string    `gorm:"size:500;not null" json:"organization_name"`
+	Jurisdiction      string    `gorm:"size:100" json:"jurisdiction"`
+	InternationalName string    `gorm:"size:500" json:"international_name"`
+	LanguagesUsed     string    `gorm:"size:100" json:"languages_used"`
+	Website           string    `gorm:"size:500" json:"website"`
+	Comments          string    `gorm:"type:text" json:"comments"`
+	Active            bool      `gorm:"default:true" json:"active"`
+	CreatedBy         string    `gorm:"size:100;not null;default:'system'" json:"created_by"`
+	UpdatedBy         string    `gorm:"size:100;not null;default:'system'" json:"updated_by"`
+	CreatedAt         time.Time `json:"created_at"`
+	UpdatedAt         time.Time `json:"updated_at"`
 }
 
 // TableName sets the GORM table name.
@@ -34,17 +34,18 @@ func (GLEIFRegistrationAuthority) TableName() string {
 // Source: GLEIF ELF code list (CSV).
 // Resolves entity_legal_form codes in LEI records to human-readable names.
 type GLEIFEntityLegalForm struct {
-	ID                               uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
-	ELFCode                          string    `gorm:"column:elf_code;uniqueIndex;size:10;not null" json:"elf_code"`
-	EntityLegalFormName              string    `gorm:"size:500;not null" json:"entity_legal_form_name"`
-	Abbreviations                    string    `gorm:"size:100" json:"abbreviations"`
-	CountryOfFormation               string    `gorm:"size:2" json:"country_of_formation"`
-	CountrySubdivisionOfFormation    string    `gorm:"size:10" json:"country_subdivision_of_formation"`
-	Status                           string    `gorm:"size:20;not null;default:'ACTIVE'" json:"status"`
-	CreatedBy                        string    `gorm:"size:100;not null;default:'system'" json:"created_by"`
-	UpdatedBy                        string    `gorm:"size:100;not null;default:'system'" json:"updated_by"`
-	CreatedAt                        time.Time `json:"created_at"`
-	UpdatedAt                        time.Time `json:"updated_at"`
+	ID                            uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	ELFCode                       string    `gorm:"column:elf_code;size:10;not null" json:"elf_code"`
+	EntityLegalFormName           string    `gorm:"size:500;not null" json:"entity_legal_form_name"`
+	Abbreviations                 string    `gorm:"size:100" json:"abbreviations"`
+	LanguageCode                  string    `gorm:"size:10;not null;default:''" json:"language_code"`
+	CountryOfFormation            string    `gorm:"size:2;not null;default:''" json:"country_of_formation"`
+	CountrySubdivisionOfFormation string    `gorm:"size:10;not null;default:''" json:"country_subdivision_of_formation"`
+	Status                        string    `gorm:"size:20;not null;default:'ACTIVE'" json:"status"`
+	CreatedBy                     string    `gorm:"size:100;not null;default:'system'" json:"created_by"`
+	UpdatedBy                     string    `gorm:"size:100;not null;default:'system'" json:"updated_by"`
+	CreatedAt                     time.Time `json:"created_at"`
+	UpdatedAt                     time.Time `json:"updated_at"`
 }
 
 // TableName sets the GORM table name.
@@ -56,15 +57,19 @@ func (GLEIFEntityLegalForm) TableName() string {
 // Source: GLEIF organizational roles code list (CSV).
 // Resolves role codes in LEI Level 2 data to human-readable role names.
 type GLEIFOrganizationalRole struct {
-	ID          uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
-	RoleCode    string    `gorm:"column:role_code;uniqueIndex;size:50;not null" json:"role_code"`
-	RoleName    string    `gorm:"size:500;not null" json:"role_name"`
-	Description string    `gorm:"type:text" json:"description"`
-	Active      bool      `gorm:"default:true" json:"active"`
-	CreatedBy   string    `gorm:"size:100;not null;default:'system'" json:"created_by"`
-	UpdatedBy   string    `gorm:"size:100;not null;default:'system'" json:"updated_by"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID                     uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	RoleCode               string    `gorm:"column:role_code;size:50;not null" json:"role_code"`
+	RoleName               string    `gorm:"size:500;not null" json:"role_name"`
+	Description            string    `gorm:"type:text" json:"description"`
+	LanguageCode           string    `gorm:"size:10;not null;default:''" json:"language_code"`
+	ELFCode                string    `gorm:"column:elf_code;size:10;not null;default:''" json:"elf_code"`
+	CountryCode            string    `gorm:"column:country_of_formation;size:2;not null;default:''" json:"country_of_formation"`
+	CountrySubdivisionCode string    `gorm:"column:country_subdivision_of_formation;size:10;not null;default:''" json:"country_subdivision_of_formation"`
+	Active                 bool      `gorm:"default:true" json:"active"`
+	CreatedBy              string    `gorm:"size:100;not null;default:'system'" json:"created_by"`
+	UpdatedBy              string    `gorm:"size:100;not null;default:'system'" json:"updated_by"`
+	CreatedAt              time.Time `json:"created_at"`
+	UpdatedAt              time.Time `json:"updated_at"`
 }
 
 // TableName sets the GORM table name.

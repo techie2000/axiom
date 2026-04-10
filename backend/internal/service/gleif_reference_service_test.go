@@ -267,6 +267,34 @@ func TestParseOrganizationalRolesCSV(t *testing.T) {
 	}
 }
 
+func TestParseOrganizationalRolesCSV_CommaFormatUsesTransliteratedNameAndLegislation(t *testing.T) {
+	csvData := "\"OOR Code\",\"Country of formation\",\"Country Code (ISO 3166-1)\",\"Jurisdiction of formation\",\"Country sub-division code (ISO 3166-2)\",\"Entity Legal Form name Local name (ELF)\",\"ELF Code\",\"Official Organizational Role (OOR)\",\"Language\",\"Language Code (ISO 639-1)\",\"OOR Transliterated name (per ISO 01-140-10)\",\"Abbreviations OOR Local language\",\"Abbreviations OOR transliterated\",\"Date created YYYY-MM-DD (ISO 8601)\",\"OOR Status ACTV/INAC\",\"Modification\",\"Modification date YYYY-MM-DD (ISO 8601)\",\"Reason\",\"Applicable legislation / regulation\"\n" +
+		"\"03EE4V\",\"France\",\"FR\",\"\",\"\",\"\",\"\",\"séquestre-gérant\",\"French\",\"fr\",\"receiver-manager\",\"\",\"\",\"2024-01-01\",\"ACTV\",\"\",\"\",\"\",\"Commercial Code\"\n"
+
+	records, err := parseOrganizationalRolesCSV(io.NopCloser(strings.NewReader(csvData)))
+	if err != nil {
+		t.Fatalf("parseOrganizationalRolesCSV: %v", err)
+	}
+	if len(records) != 1 {
+		t.Fatalf("expected 1 record, got %d", len(records))
+	}
+	if records[0].RoleCode != "03EE4V" {
+		t.Fatalf("expected role code 03EE4V, got %s", records[0].RoleCode)
+	}
+	if records[0].RoleName != "receiver-manager" {
+		t.Fatalf("expected transliterated role name, got %s", records[0].RoleName)
+	}
+	if records[0].Description != "Commercial Code" {
+		t.Fatalf("expected legislation as description, got %s", records[0].Description)
+	}
+	if records[0].LanguageCode != "fr" {
+		t.Fatalf("expected language code fr, got %s", records[0].LanguageCode)
+	}
+	if records[0].CountryCode != "FR" {
+		t.Fatalf("expected country code FR, got %s", records[0].CountryCode)
+	}
+}
+
 func TestParseLegalJurisdictionsCSV(t *testing.T) {
 	// Tab-separated: Code | Name | Country
 	csvData := "Code\tName\tCountry\n" +
@@ -332,8 +360,9 @@ func TestParseLegalJurisdictionsCSV_CommaFormat(t *testing.T) {
 
 func TestDedupeOrganizationalRoles(t *testing.T) {
 	roles := []*domain.GLEIFOrganizationalRole{
-		{RoleCode: "CEO", RoleName: "Chief Executive Officer"},
-		{RoleCode: "CEO", RoleName: "Chief Executive Officer Updated"},
+		{RoleCode: "CEO", RoleName: "Directeur general", LanguageCode: "fr", CountryCode: "FR"},
+		{RoleCode: "CEO", RoleName: "Chief Executive Officer", LanguageCode: "en", CountryCode: "FR"},
+		{RoleCode: "CEO", RoleName: "Chief Executive Officer", LanguageCode: "en", CountryCode: "FR"},
 		{RoleCode: "CFO", RoleName: "Chief Financial Officer"},
 	}
 
@@ -341,11 +370,14 @@ func TestDedupeOrganizationalRoles(t *testing.T) {
 	if dropped != 1 {
 		t.Fatalf("expected 1 dropped duplicate, got %d", dropped)
 	}
-	if len(deduped) != 2 {
-		t.Fatalf("expected 2 deduplicated roles, got %d", len(deduped))
+	if len(deduped) != 3 {
+		t.Fatalf("expected 3 deduplicated roles, got %d", len(deduped))
 	}
-	if deduped[0].RoleCode != "CEO" || deduped[0].RoleName != "Chief Executive Officer Updated" {
-		t.Fatalf("expected last duplicate to win for CEO, got %+v", deduped[0])
+	if deduped[0].RoleCode != "CEO" || deduped[0].LanguageCode != "fr" {
+		t.Fatalf("expected first multilingual CEO variant retained, got %+v", deduped[0])
+	}
+	if deduped[1].RoleCode != "CEO" || deduped[1].LanguageCode != "en" {
+		t.Fatalf("expected second multilingual CEO variant retained, got %+v", deduped[1])
 	}
 	if len(dupCodes) != 1 || dupCodes[0] != "CEO" {
 		t.Errorf("expected duplicate_codes=[CEO], got %v", dupCodes)

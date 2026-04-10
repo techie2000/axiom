@@ -89,10 +89,16 @@ func (r *gleifEntityLegalFormRepository) Upsert(records []*domain.GLEIFEntityLeg
 		return nil
 	}
 	return r.db.Clauses(clause.OnConflict{
-		Columns: []clause.Column{{Name: "elf_code"}},
+		Columns: []clause.Column{
+			{Name: "elf_code"},
+			{Name: "language_code"},
+			{Name: "country_of_formation"},
+			{Name: "country_subdivision_of_formation"},
+			{Name: "entity_legal_form_name"},
+			{Name: "status"},
+		},
 		DoUpdates: clause.AssignmentColumns([]string{
-			"entity_legal_form_name", "abbreviations", "country_of_formation",
-			"country_subdivision_of_formation", "status", "updated_by", "updated_at",
+			"abbreviations", "updated_by", "updated_at",
 		}),
 	}).Create(records).Error
 }
@@ -149,9 +155,16 @@ func (r *gleifOrganizationalRoleRepository) Upsert(records []*domain.GLEIFOrgani
 		return nil
 	}
 	return r.db.Clauses(clause.OnConflict{
-		Columns: []clause.Column{{Name: "role_code"}},
+		Columns: []clause.Column{
+			{Name: "role_code"},
+			{Name: "language_code"},
+			{Name: "country_of_formation"},
+			{Name: "country_subdivision_of_formation"},
+			{Name: "elf_code"},
+			{Name: "role_name"},
+		},
 		DoUpdates: clause.AssignmentColumns([]string{
-			"role_name", "description", "active", "updated_by", "updated_at",
+			"description", "active", "updated_by", "updated_at",
 		}),
 	}).Create(records).Error
 }
