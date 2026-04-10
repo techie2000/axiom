@@ -6,6 +6,7 @@ description: 'Version management and release preparation instructions for Axiom 
 # Version Management Instructions
 
 ## Core Principle
+
 **Version tracking is critical for release management, git tagging, and production deployments.**
 
 ## Semantic Versioning (SemVer)
@@ -21,6 +22,7 @@ The project follows [Semantic Versioning 2.0.0](https://semver.org/):
 ### Version Increment Guidelines
 
 #### When to Bump MAJOR (X.0.0)
+
 - Breaking changes to CLI arguments or flags
 - Incompatible changes to configuration format (.env variables)
 - Breaking changes to output JSON structure
@@ -28,6 +30,7 @@ The project follows [Semantic Versioning 2.0.0](https://semver.org/):
 - Changes that require users to modify their integration
 
 #### When to Bump MINOR (0.X.0)
+
 - New features (new configuration options, output formats)
 - New command-line flags (backward compatible)
 - Performance improvements (significant)
@@ -35,12 +38,19 @@ The project follows [Semantic Versioning 2.0.0](https://semver.org/):
 - Deprecation notices (without removal)
 
 #### When to Bump PATCH (0.0.X)
+
 - Bug fixes
 - Security patches
 - Documentation updates (significant)
 - Internal refactoring (no external impact)
 - Performance improvements (minor)
 - Dependency updates
+
+### Repository Policy
+
+- `PATCH` is a deliberate manual decision, just like `MINOR` and `MAJOR`.
+- `MINOR` remains a deliberate manual decision for capability-level progress.
+- `MAJOR` remains a deliberate manual decision for breaking changes.
 
 ## Version Update Workflow
 
@@ -53,13 +63,25 @@ The project follows [Semantic Versioning 2.0.0](https://semver.org/):
 2. **`internal/version/version.go`**
    - Update the `Version` constant
    - Must match the `VERSION` file exactly
+
    ```go
    const Version = "0.1.0"
    ```
 
+### Supported Helper Command
+
+Use the repository helper to update both version files in one step:
+
+```powershell
+pwsh ./scripts/bump-version.ps1 -Part patch
+pwsh ./scripts/bump-version.ps1 -Part minor
+pwsh ./scripts/bump-version.ps1 -Part major
+```
+
 ### Automated Version Injection
 
 The following are automatically injected at build time via `-ldflags`:
+
 - `internal/version.GitCommit` - Git commit hash
 - `internal/version.BuildDate` - Build timestamp
 
@@ -88,10 +110,11 @@ When incrementing the version for a release:
 
 2. **Update Version Files**
    - [ ] Update `VERSION` file with new version number
-   - [ ] Update `internal/version/version.go` constant to match
+   - [ ] Update `backend/internal/version/version.go` constant to match
    - [ ] Commit these changes with message: `chore: bump version to X.Y.Z`
 
 3. **Create Git Tag with Comprehensive Message**
+
    ```bash
    # Create annotated tag with detailed release notes
    git tag -a vX.Y.Z -m "Release vX.Y.Z - [Brief description]
@@ -137,6 +160,7 @@ When incrementing the version for a release:
    - [ ] Check workflow notifications for any failures
 
 5. **Manual Verification (Optional)**
+
    ```bash
    # Download and verify binary
    curl -LO https://github.com/{owner}/{repo}/releases/download/vX.Y.Z/axiom-api-linux-amd64
@@ -151,6 +175,7 @@ When incrementing the version for a release:
 ## Version Checking
 
 ### During Development
+
 ```bash
 # Check version without building
 cat VERSION
@@ -160,12 +185,14 @@ grep 'const Version' internal/version/version.go
 ```
 
 ### In Built Binary
+
 ```bash
 ./axiom-api -version
 # Output: axiom-api v0.1.0 (commit: abc1234) (built: 2026-01-22T12:34:56Z)
 ```
 
 ### In Running Service
+
 - Version is logged on service startup
 - Check logs in your configured log directory
 
@@ -190,12 +217,14 @@ docker build \
 Docker images are automatically built and pushed to GitHub Container Registry when you push a version tag:
 
 **Automatic Process:**
+
 1. Push tag: `git push origin vX.Y.Z`
 2. GitHub Actions builds multi-architecture images (linux/amd64, linux/arm64)
 3. Images pushed to: `ghcr.io/{owner}/{repo}`
 4. Tagged with: `vX.Y.Z`, `X.Y`, `X`, and `latest`
 
 **Using Published Images:**
+
 ```bash
 # Pull specific version
 docker pull ghcr.io/techie2000/axiom:v0.2.0
@@ -234,6 +263,7 @@ docker run -p 8080:8080 ghcr.io/techie2000/axiom:latest
    - Reference issue/PR numbers when applicable
 
 2. **Format for CHANGELOG Entries**
+
    ```markdown
    ### Added
    - **Feature Name**: Brief description of what was added and why users care
@@ -256,6 +286,7 @@ docker run -p 8080:8080 ghcr.io/techie2000/axiom:latest
 ### At Release Time
 
 1. **Move [Unreleased] to versioned section**
+
    ```markdown
    ## [Unreleased]
 
@@ -269,6 +300,7 @@ docker run -p 8080:8080 ghcr.io/techie2000/axiom:latest
    ```
 
 2. **Update comparison links**
+
    ```markdown
    [Unreleased]: https://github.com/techie2000/axiom/compare/vX.Y.Z...HEAD
    [X.Y.Z]: https://github.com/techie2000/axiom/compare/vX.Y.Z-1...vX.Y.Z
@@ -316,7 +348,7 @@ When setting up automated releases:
 ## Quick Reference
 
 | Scenario | Example | Next Version |
-|----------|---------|--------------|
+| ---------- | --------- | -------------- |
 | Bug fix | Fix delimiter parsing | 0.1.0 → 0.1.1 |
 | New feature | Add Kafka output | 0.1.1 → 0.2.0 |
 | Breaking change | Change CLI flags | 0.2.0 → 1.0.0 |

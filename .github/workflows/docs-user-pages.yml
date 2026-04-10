@@ -1,0 +1,77 @@
+name: Publish User Docs to Pages
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "docs-user/**"
+      - ".github/workflows/docs-user-pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages-docs-user
+  cancel-in-progress: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  build:
+    name: Build docs-user site
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: docs-user/package-lock.json
+
+      - name: Install dependencies
+        working-directory: docs-user
+        run: npm ci
+
+      - name: Build VitePress docs
+        working-directory: docs-user
+        env:
+          # For GitHub Pages project sites, use /{owner}/{repo}/docs-user/ base path
+          # This matches how the artifact is structured in _site/docs-user/
+          # The site will be accessible at https://{owner}.github.io/{repo}/docs-user/
+          DOCS_BASE: /${{ github.event.repository.name }}/docs-user/
+        run: npm run docs:build
+
+      - name: Prepare artifact root
+        run: |
+          # Structure artifact so GitHub Pages publishes docs under /docs-user/ path
+          # This matches the DOCS_BASE path used in the VitePress build
+          mkdir -p _site/docs-user
+          cp -R docs-user/.vitepress/dist/* _site/docs-user/
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

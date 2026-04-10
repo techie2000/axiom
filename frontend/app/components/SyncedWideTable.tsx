@@ -26,23 +26,25 @@ export default function SyncedWideTable({
   bodyRows,
   dependencyKey,
   headerHeight = 44,
-  tableClassName = 'table-fixed w-max min-w-full divide-y divide-gray-200 dark:divide-white/10',
-  stickyHeaderClassName = 'bg-gray-50 dark:bg-gray-800',
-  mainHeaderClassName = 'bg-gray-50 dark:bg-white/5',
-  bodyClassName = 'bg-white dark:bg-white/5 divide-y divide-gray-200 dark:divide-white/10',
+  tableClassName = 'table-fixed w-max min-w-full theme-table-collapse',
+  stickyHeaderClassName = 'theme-table-header',
+  mainHeaderClassName = 'theme-table-header',
+  bodyClassName = 'theme-table-shell theme-table-divider',
   containerClassName = 'overflow-x-auto',
   containerStyle,
   tableStyle,
-  topScrollbarClassName = 'mb-1 overflow-x-auto bg-white border-b border-gray-200 dark:bg-white/5 dark:border-white/10 rounded-t-lg',
-  stickyContainerClassName = 'fixed z-30 overflow-x-auto bg-white border-b-2 border-gray-200 dark:bg-gray-800 dark:border-white/10 shadow-lg transition-all duration-200',
+  topScrollbarClassName = 'mb-1 overflow-x-auto theme-table-shell border-b [--tw-border-opacity:1] border-[rgb(var(--border-rgb)/0.75)] rounded-t-lg',
+  stickyContainerClassName = 'fixed z-30 overflow-x-auto theme-table-shell border-b-2 [--tw-border-opacity:1] border-[rgb(var(--border-rgb)/0.8)] shadow-lg transition-all duration-200',
   onMainHeaderWidthsChange,
 }: SyncedWideTableProps) {
+  const STICKY_ACTIVATION_BUFFER = 16
   const tableContainerRef = useRef<HTMLDivElement>(null)
   const tableRef = useRef<HTMLTableElement>(null)
   const stickyTableRef = useRef<HTMLTableElement>(null)
   const stickyHeaderScrollRef = useRef<HTMLDivElement>(null)
   const topScrollbarRef = useRef<HTMLDivElement>(null)
   const isSyncingHorizontalScrollRef = useRef(false)
+  const onMainHeaderWidthsChangeRef = useRef(onMainHeaderWidthsChange)
 
   const [showStickyHeader, setShowStickyHeader] = useState(false)
   const [stickyHeaderStyle, setStickyHeaderStyle] = useState<{ left: number, width: number }>({ left: 0, width: 0 })
@@ -89,10 +91,16 @@ export default function SyncedWideTable({
   }
 
   useEffect(() => {
+    onMainHeaderWidthsChangeRef.current = onMainHeaderWidthsChange
+  }, [onMainHeaderWidthsChange])
+
+  useEffect(() => {
     const updateDimensions = () => {
       if (!tableContainerRef.current || !tableRef.current) return
 
       const containerRect = tableContainerRef.current.getBoundingClientRect()
+      const mainHeaderElement = tableRef.current.querySelector('thead')
+      const headerRect = mainHeaderElement?.getBoundingClientRect()
 
       setStickyHeaderStyle({
         left: containerRect.left,
@@ -100,7 +108,9 @@ export default function SyncedWideTable({
       })
 
       setShowStickyHeader(
-        containerRect.top < stickyTopOffset && containerRect.bottom > stickyTopOffset + headerHeight
+        Boolean(headerRect) &&
+        headerRect!.top <= stickyTopOffset + STICKY_ACTIVATION_BUFFER &&
+        containerRect.bottom > stickyTopOffset + headerHeight
       )
 
       setTableClientWidth(tableContainerRef.current.clientWidth)
@@ -122,9 +132,7 @@ export default function SyncedWideTable({
         })
       }
 
-      if (onMainHeaderWidthsChange) {
-        onMainHeaderWidthsChange(widths)
-      }
+      onMainHeaderWidthsChangeRef.current?.(widths)
 
       syncHorizontalScroll('table', tableContainerRef.current.scrollLeft)
     }
@@ -132,12 +140,19 @@ export default function SyncedWideTable({
     updateDimensions()
 
     window.addEventListener('scroll', updateDimensions)
+    // NOTE: Do NOT use document.addEventListener('scroll', ..., true) here.
+    // That capture-phase listener intercepts scroll events from ALL child elements
+    // (including topScrollbarRef). When the user drags the top scrollbar, the capture
+    // fires before handleTopScrollbarScroll, reads tableContainerRef.scrollLeft = 0
+    // (stale), and resets the top scrollbar back to 0 — causing the "ping back" (#266).
+    // Page-scroll is sufficient via window 'scroll'; element scroll sync is handled
+    // by the dedicated onScroll props on each scrollable container.
     window.addEventListener('resize', updateDimensions)
     return () => {
       window.removeEventListener('scroll', updateDimensions)
       window.removeEventListener('resize', updateDimensions)
     }
-  }, [stickyTopOffset, headerHeight, dependencyKey])
+  }, [stickyTopOffset, headerHeight, dependencyKey, onMainHeaderWidthsChange])
 
   return (
     <>
@@ -145,7 +160,12 @@ export default function SyncedWideTable({
         <div
           ref={topScrollbarRef}
           onScroll={handleTopScrollbarScroll}
-          className={topScrollbarClassName}
+          className={`${topScrollbarClassName} theme-scrollbar`}
+          // overflow-x:scroll forces the native scrollbar to always be visible (even on macOS).
+          // overflow-y:hidden prevents a vertical scrollbar from appearing.
+          // The spacer div is kept at 1px so the container height = 1px content + 11px scrollbar
+          // track = 12px total, making nearly the entire strip the clickable scrollbar track (#266).
+          style={{ overflowX: 'scroll', overflowY: 'hidden' }}
         >
           <div style={{ width: `${tableScrollWidth}px`, height: '1px' }} />
         </div>
@@ -154,7 +174,7 @@ export default function SyncedWideTable({
       <div
         ref={stickyHeaderScrollRef}
         onScroll={handleStickyHeaderHorizontalScroll}
-        className={`${stickyContainerClassName} ${
+        className={`${stickyContainerClassName} theme-scrollbar ${
           showStickyHeader ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4 pointer-events-none'
         }`}
         style={{
@@ -170,7 +190,7 @@ export default function SyncedWideTable({
         </div>
       </div>
 
-      <div ref={tableContainerRef} onScroll={handleTableHorizontalScroll} className={containerClassName} style={containerStyle}>
+      <div ref={tableContainerRef} onScroll={handleTableHorizontalScroll} className={`${containerClassName} theme-scrollbar`} style={containerStyle}>
         <table ref={tableRef} className={tableClassName} style={tableStyle}>
           <thead className={mainHeaderClassName}>{headerRow}</thead>
           <tbody className={bodyClassName}>{bodyRows}</tbody>

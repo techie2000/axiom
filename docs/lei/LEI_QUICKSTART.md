@@ -75,7 +75,7 @@ You should see log messages:
 
 ```text
 INFO Starting LEI scheduler service
-INFO Scheduled next full sync next_run=2026-02-16T02:00:00Z
+INFO Scheduled next full sync next_run=2026-02-16T12:00:00Z
 INFO Starting daily delta sync
 ```
 
@@ -184,7 +184,7 @@ Planned removal target: `v0.5` (tracking issue: `#87`).
 ### Default Schedule
 
 - **Delta Sync**: Disabled (commented out in code)
-- **Full Sync**: Daily at 2:00 AM
+- **Full Sync**: Daily at 12:00 UTC
 - **Master Data Sync**: Daily at 1:00 AM (runs before LEI sync)
 - **File Cleanup**: Daily at midnight (runs before all syncs)
 

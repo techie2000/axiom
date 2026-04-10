@@ -73,6 +73,22 @@ func TestDetectRRChangesDetectsJSONBFieldChange(t *testing.T) {
 	}
 }
 
+func TestDetectRRChangesIgnoresJSONKeyOrdering(t *testing.T) {
+	t.Helper()
+
+	old := &domain.LEIRelationshipRecord{
+		RelationshipPeriods: domain.JSONBString(`[{"startDate":"2020-01-01","endDate":"2021-01-01"}]`),
+	}
+	new := &domain.LEIRelationshipRecord{
+		RelationshipPeriods: domain.JSONBString(`[{"endDate":"2021-01-01","startDate":"2020-01-01"}]`),
+	}
+
+	changes := level2Repo.detectRRChanges(old, new)
+	if _, ok := changes["RelationshipPeriods"]; ok {
+		t.Fatalf("expected JSON key ordering differences to be ignored")
+	}
+}
+
 func TestDetectRRChangesAllThreeJSONBFieldsChecked(t *testing.T) {
 	t.Helper()
 
@@ -136,7 +152,7 @@ func TestDetectRRChangesBothNilTimesProducesNoChange(t *testing.T) {
 	}
 }
 
-func TestDetectRRChangesDetectsSourceFileIDChange(t *testing.T) {
+func TestDetectRRChangesIgnoresSourceFileIDChange(t *testing.T) {
 	t.Helper()
 
 	id1 := uuid.New()
@@ -146,8 +162,8 @@ func TestDetectRRChangesDetectsSourceFileIDChange(t *testing.T) {
 	new := &domain.LEIRelationshipRecord{SourceFileID: &id2}
 
 	changes := level2Repo.detectRRChanges(old, new)
-	if _, ok := changes["SourceFileID"]; !ok {
-		t.Fatalf("expected SourceFileID to be detected as changed")
+	if _, ok := changes["SourceFileID"]; ok {
+		t.Fatalf("expected SourceFileID change to be ignored")
 	}
 }
 
@@ -184,7 +200,7 @@ func TestDetectRepexChangesReturnsEmptyWhenNothingChanged(t *testing.T) {
 	t.Helper()
 
 	exc := &domain.LEIReportingException{
-		ExceptionReason:    "NO_KNOWN_PERSON",
+		ExceptionReasons:   domain.JSONBString(`["NO_KNOWN_PERSON"]`),
 		ExceptionReference: "ref",
 	}
 	changes := level2Repo.detectRepexChanges(exc, exc)
@@ -193,18 +209,27 @@ func TestDetectRepexChangesReturnsEmptyWhenNothingChanged(t *testing.T) {
 	}
 }
 
-func TestDetectRepexChangesDetectsExceptionReasonChange(t *testing.T) {
+func TestDetectRepexChangesIgnoresSemanticEquivalentExceptionReasons(t *testing.T) {
 	t.Helper()
 
-	old := &domain.LEIReportingException{ExceptionReason: "NO_KNOWN_PERSON"}
-	new := &domain.LEIReportingException{ExceptionReason: "NATURAL_PERSONS"}
+	old := &domain.LEIReportingException{ExceptionReasons: domain.JSONBString(`["NO_KNOWN_PERSON"]`)}
+	new := &domain.LEIReportingException{ExceptionReasons: domain.JSONBString(`[ "NO_KNOWN_PERSON" ]`)}
 
 	changes := level2Repo.detectRepexChanges(old, new)
-	if _, ok := changes["ExceptionReason"]; !ok {
-		t.Fatalf("expected ExceptionReason to be detected as changed")
+	if _, ok := changes["ExceptionReasons"]; ok {
+		t.Fatalf("expected semantically equal JSONB to produce no change, got change: %v", changes["ExceptionReasons"])
 	}
-	if len(changes) != 1 {
-		t.Fatalf("expected exactly 1 changed field, got %d", len(changes))
+}
+
+func TestDetectRepexChangesDetectsExceptionReasonsArrayChange(t *testing.T) {
+	t.Helper()
+
+	old := &domain.LEIReportingException{ExceptionReasons: domain.JSONBString(`["NO_KNOWN_PERSON"]`)}
+	new := &domain.LEIReportingException{ExceptionReasons: domain.JSONBString(`["NO_KNOWN_PERSON","NATURAL_PERSONS"]`)}
+
+	changes := level2Repo.detectRepexChanges(old, new)
+	if _, ok := changes["ExceptionReasons"]; !ok {
+		t.Fatalf("expected ExceptionReasons to be detected as changed")
 	}
 }
 
@@ -220,7 +245,7 @@ func TestDetectRepexChangesDetectsExceptionReferenceChange(t *testing.T) {
 	}
 }
 
-func TestDetectRepexChangesDetectsSourceFileIDChange(t *testing.T) {
+func TestDetectRepexChangesIgnoresSourceFileIDChange(t *testing.T) {
 	t.Helper()
 
 	id1 := uuid.New()
@@ -230,12 +255,12 @@ func TestDetectRepexChangesDetectsSourceFileIDChange(t *testing.T) {
 	new := &domain.LEIReportingException{SourceFileID: &id2}
 
 	changes := level2Repo.detectRepexChanges(old, new)
-	if _, ok := changes["SourceFileID"]; !ok {
-		t.Fatalf("expected SourceFileID to be detected as changed")
+	if _, ok := changes["SourceFileID"]; ok {
+		t.Fatalf("expected SourceFileID change to be ignored")
 	}
 }
 
-func TestDetectRepexChangesNilToNonNilSourceFileIDIsDetected(t *testing.T) {
+func TestDetectRepexChangesNilToNonNilSourceFileIDIsIgnored(t *testing.T) {
 	t.Helper()
 
 	id := uuid.New()
@@ -243,8 +268,8 @@ func TestDetectRepexChangesNilToNonNilSourceFileIDIsDetected(t *testing.T) {
 	new := &domain.LEIReportingException{SourceFileID: &id}
 
 	changes := level2Repo.detectRepexChanges(old, new)
-	if _, ok := changes["SourceFileID"]; !ok {
-		t.Fatalf("expected nil→non-nil SourceFileID to be detected as changed")
+	if _, ok := changes["SourceFileID"]; ok {
+		t.Fatalf("expected nil→non-nil SourceFileID to be ignored")
 	}
 }
 
@@ -263,28 +288,23 @@ func TestDetectRepexChangesBothNilSourceFileIDProducesNoChange(t *testing.T) {
 func TestDetectRepexChangesAllFieldsChecked(t *testing.T) {
 	t.Helper()
 
-	id1 := uuid.New()
-	id2 := uuid.New()
-
 	old := &domain.LEIReportingException{
-		ExceptionReason:    "NO_KNOWN_PERSON",
+		ExceptionReasons:   domain.JSONBString(`["NO_KNOWN_PERSON"]`),
 		ExceptionReference: "ref1",
-		SourceFileID:       &id1,
 	}
 	new := &domain.LEIReportingException{
-		ExceptionReason:    "NATURAL_PERSONS",
+		ExceptionReasons:   domain.JSONBString(`["NATURAL_PERSONS"]`),
 		ExceptionReference: "ref2",
-		SourceFileID:       &id2,
 	}
 
 	changes := level2Repo.detectRepexChanges(old, new)
-	for _, field := range []string{"ExceptionReason", "ExceptionReference", "SourceFileID"} {
+	for _, field := range []string{"ExceptionReasons", "ExceptionReference"} {
 		if _, ok := changes[field]; !ok {
 			t.Fatalf("expected %s to be detected as changed", field)
 		}
 	}
-	if len(changes) != 3 {
-		t.Fatalf("expected exactly 3 changed fields, got %d: %v", len(changes), changes)
+	if len(changes) != 2 {
+		t.Fatalf("expected exactly 2 changed fields, got %d: %v", len(changes), changes)
 	}
 }
 
@@ -317,7 +337,7 @@ func TestRepexToJSONProducesValidJSON(t *testing.T) {
 	exc := &domain.LEIReportingException{
 		LEI:               "AAAAAAAAAAAAAAAAAA01",
 		ExceptionCategory: "ULTIMATE_ACCOUNTING_CONSOLIDATION_PARENT",
-		ExceptionReason:   "NO_KNOWN_PERSON",
+		ExceptionReasons:  domain.JSONBString(`["NO_KNOWN_PERSON"]`),
 	}
 
 	snapshot := level2Repo.repexToJSON(exc)
@@ -340,20 +360,22 @@ func TestRepexToJSONProducesValidJSON(t *testing.T) {
 
 type nopDialector struct{}
 
-func (nopDialector) Name() string                                         { return "nop" }
+func (nopDialector) Name() string { return "nop" }
 func (nopDialector) Initialize(db *gorm.DB) error {
 	// Register default GORM callbacks so that Find, Count, Create, and Update
 	// build SQL statements even in DryRun mode.
 	callbacks.RegisterDefaultCallbacks(db, &callbacks.Config{})
 	return nil
 }
-func (nopDialector) Migrator(_ *gorm.DB) gorm.Migrator                  { return nil }
-func (nopDialector) DataTypeOf(_ *schema.Field) string                   { return "" }
-func (nopDialector) DefaultValueOf(_ *schema.Field) clause.Expression    { return clause.Expr{SQL: "NULL"} }
+func (nopDialector) Migrator(_ *gorm.DB) gorm.Migrator { return nil }
+func (nopDialector) DataTypeOf(_ *schema.Field) string { return "" }
+func (nopDialector) DefaultValueOf(_ *schema.Field) clause.Expression {
+	return clause.Expr{SQL: "NULL"}
+}
 func (nopDialector) BindVarTo(w clause.Writer, _ *gorm.Statement, _ interface{}) {
 	_, _ = w.WriteString("?")
 }
-func (nopDialector) QuoteTo(w clause.Writer, str string) { _, _ = w.WriteString(str) }
+func (nopDialector) QuoteTo(w clause.Writer, str string)         { _, _ = w.WriteString(str) }
 func (nopDialector) Explain(sql string, _ ...interface{}) string { return sql }
 
 // sqlCaptureLogger records every SQL statement that GORM logs via its
@@ -363,7 +385,7 @@ type sqlCaptureLogger struct {
 	queries []string
 }
 
-func (l *sqlCaptureLogger) LogMode(gorm_logger.LogLevel) gorm_logger.Interface { return l }
+func (l *sqlCaptureLogger) LogMode(gorm_logger.LogLevel) gorm_logger.Interface  { return l }
 func (l *sqlCaptureLogger) Info(_ context.Context, _ string, _ ...interface{})  {}
 func (l *sqlCaptureLogger) Warn(_ context.Context, _ string, _ ...interface{})  {}
 func (l *sqlCaptureLogger) Error(_ context.Context, _ string, _ ...interface{}) {}

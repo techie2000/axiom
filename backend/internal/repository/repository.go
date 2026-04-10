@@ -1,39 +1,55 @@
 package repository
 
 import (
+	"errors"
+
 	"github.com/techie2000/axiom/internal/domain"
 	"gorm.io/gorm"
 )
 
 // Repositories holds all repository interfaces
 type Repositories struct {
-	Country     CountryRepository
-	Currency    CurrencyRepository
-	Language    LanguageRepository
-	Entity      EntityRepository
-	Instrument  InstrumentRepository
-	Account     AccountRepository
-	SSI         SSIRepository
-	LEI         LEIRepository
-	LEILevel2   LEILevel2Repository
-	CodeMapping CodeMappingRepository
-	User        UserRepository
+	Country                    CountryRepository
+	Currency                   CurrencyRepository
+	Language                   LanguageRepository
+	Entity                     EntityRepository
+	Instrument                 InstrumentRepository
+	Account                    AccountRepository
+	SSI                        SSIRepository
+	LEI                        LEIRepository
+	LEILevel2                  LEILevel2Repository
+	CodeMapping                CodeMappingRepository
+	User                       UserRepository
+	UserPreference             UserPreferenceRepository
+	PreferenceAudit            PreferenceAuditRepository
+	UITranslation              UITranslationRepository
+	GLEIFRegistrationAuthority GLEIFRegistrationAuthorityRepository
+	GLEIFEntityLegalForm       GLEIFEntityLegalFormRepository
+	GLEIFOrganizationalRole    GLEIFOrganizationalRoleRepository
+	GLEIFLegalJurisdiction     GLEIFLegalJurisdictionRepository
 }
 
 // NewRepositories creates a new repositories instance
 func NewRepositories(db *gorm.DB) *Repositories {
 	return &Repositories{
-		Country:     NewCountryRepository(db),
-		Currency:    NewCurrencyRepository(db),
-		Language:    NewLanguageRepository(db),
-		Entity:      NewEntityRepository(db),
-		Instrument:  NewInstrumentRepository(db),
-		Account:     NewAccountRepository(db),
-		SSI:         NewSSIRepository(db),
-		LEI:         NewLEIRepository(db),
-		LEILevel2:   NewLEILevel2Repository(db),
-		CodeMapping: NewCodeMappingRepository(db),
-		User:        NewUserRepository(db),
+		Country:                    NewCountryRepository(db),
+		Currency:                   NewCurrencyRepository(db),
+		Language:                   NewLanguageRepository(db),
+		Entity:                     NewEntityRepository(db),
+		Instrument:                 NewInstrumentRepository(db),
+		Account:                    NewAccountRepository(db),
+		SSI:                        NewSSIRepository(db),
+		LEI:                        NewLEIRepository(db),
+		LEILevel2:                  NewLEILevel2Repository(db),
+		CodeMapping:                NewCodeMappingRepository(db),
+		User:                       NewUserRepository(db),
+		UserPreference:             NewUserPreferenceRepository(db),
+		PreferenceAudit:            NewPreferenceAuditRepository(db),
+		UITranslation:              NewUITranslationRepository(db),
+		GLEIFRegistrationAuthority: NewGLEIFRegistrationAuthorityRepository(db),
+		GLEIFEntityLegalForm:       NewGLEIFEntityLegalFormRepository(db),
+		GLEIFOrganizationalRole:    NewGLEIFOrganizationalRoleRepository(db),
+		GLEIFLegalJurisdiction:     NewGLEIFLegalJurisdictionRepository(db),
 	}
 }
 
@@ -473,4 +489,182 @@ func (r *userRepository) CountActiveAdmins() (int64, error) {
 		Where("role = ? AND status = ?", domain.UserRoleAdmin, domain.UserStatusActive).
 		Count(&count).Error
 	return count, err
+}
+
+// UserPreferenceRepository interface
+type UserPreferenceRepository interface {
+	// GetByPage returns all preferences for a user on a given page.
+	GetByPage(userID, pageKey string) ([]*domain.UserPreference, error)
+	// GetAll returns all preferences for a user across all pages.
+	GetAll(userID string) ([]*domain.UserPreference, error)
+	// GetOne returns a single preference value or nil if it does not exist.
+	GetOne(userID, pageKey, preferenceKey string) (*domain.UserPreference, error)
+	// Upsert creates or updates a single preference.
+	Upsert(pref *domain.UserPreference) error
+	// Delete removes a preference by user, page, and preference key.
+	Delete(userID, pageKey, preferenceKey string) error
+}
+
+type userPreferenceRepository struct {
+	db *gorm.DB
+}
+
+// NewUserPreferenceRepository creates a new user preference repository.
+func NewUserPreferenceRepository(db *gorm.DB) UserPreferenceRepository {
+	return &userPreferenceRepository{db: db}
+}
+
+func (r *userPreferenceRepository) GetByPage(userID, pageKey string) ([]*domain.UserPreference, error) {
+	var prefs []*domain.UserPreference
+	if err := r.db.
+		Where("user_id = ? AND page_key = ?", userID, pageKey).
+		Find(&prefs).Error; err != nil {
+		return nil, err
+	}
+	return prefs, nil
+}
+
+func (r *userPreferenceRepository) GetAll(userID string) ([]*domain.UserPreference, error) {
+	var prefs []*domain.UserPreference
+	if err := r.db.
+		Where("user_id = ?", userID).
+		Find(&prefs).Error; err != nil {
+		return nil, err
+	}
+	return prefs, nil
+}
+
+func (r *userPreferenceRepository) GetOne(userID, pageKey, preferenceKey string) (*domain.UserPreference, error) {
+	var pref domain.UserPreference
+	err := r.db.
+		Where("user_id = ? AND page_key = ? AND preference_key = ?", userID, pageKey, preferenceKey).
+		First(&pref).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &pref, nil
+}
+
+func (r *userPreferenceRepository) Upsert(pref *domain.UserPreference) error {
+	return r.db.
+		Where(domain.UserPreference{
+			UserID:        pref.UserID,
+			PageKey:       pref.PageKey,
+			PreferenceKey: pref.PreferenceKey,
+		}).
+		Assign(domain.UserPreference{
+			PreferenceValue: pref.PreferenceValue,
+		}).
+		FirstOrCreate(pref).Error
+}
+
+func (r *userPreferenceRepository) Delete(userID, pageKey, preferenceKey string) error {
+	return r.db.
+		Where("user_id = ? AND page_key = ? AND preference_key = ?", userID, pageKey, preferenceKey).
+		Delete(&domain.UserPreference{}).Error
+}
+
+// PreferenceAuditRepository records preference change history.
+type PreferenceAuditRepository interface {
+	// Record inserts a single audit row. It is best-effort: failures are logged
+	// but do not roll back the parent preference upsert.
+	Record(entry *domain.PreferenceAudit) error
+}
+
+type preferenceAuditRepository struct {
+	db *gorm.DB
+}
+
+// NewPreferenceAuditRepository creates a new PreferenceAuditRepository.
+func NewPreferenceAuditRepository(db *gorm.DB) PreferenceAuditRepository {
+	return &preferenceAuditRepository{db: db}
+}
+
+func (r *preferenceAuditRepository) Record(entry *domain.PreferenceAudit) error {
+	return r.db.Create(entry).Error
+}
+
+// UITranslationRepository interface
+type UITranslationRepository interface {
+	// List returns translations filtered by optional language and status.
+	List(languageCode, status, search string, limit, offset int) ([]*domain.UITranslation, int64, error)
+	// FindByID returns a single translation by primary key.
+	FindByID(id string) (*domain.UITranslation, error)
+	// Upsert creates or updates a translation by (translation_key, language_code).
+	Upsert(t *domain.UITranslation) error
+	// UpdateStatus changes the review status and records the reviewer.
+	UpdateStatus(id string, status domain.TranslationStatus, reviewerID string) error
+	// Delete removes a translation by primary key.
+	Delete(id string) error
+}
+
+type uiTranslationRepository struct {
+	db *gorm.DB
+}
+
+// NewUITranslationRepository creates a new UITranslationRepository.
+func NewUITranslationRepository(db *gorm.DB) UITranslationRepository {
+	return &uiTranslationRepository{db: db}
+}
+
+func (r *uiTranslationRepository) List(languageCode, status, search string, limit, offset int) ([]*domain.UITranslation, int64, error) {
+	q := r.db.Model(&domain.UITranslation{})
+	if languageCode != "" {
+		q = q.Where("language_code = ?", languageCode)
+	}
+	if status != "" {
+		q = q.Where("status = ?", status)
+	}
+	if search != "" {
+		like := "%" + search + "%"
+		q = q.Where("translation_key ILIKE ? OR translation_value ILIKE ?", like, like)
+	}
+	var total int64
+	if err := q.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	var results []*domain.UITranslation
+	if err := q.Order("translation_key, language_code").Limit(limit).Offset(offset).Find(&results).Error; err != nil {
+		return nil, 0, err
+	}
+	return results, total, nil
+}
+
+func (r *uiTranslationRepository) FindByID(id string) (*domain.UITranslation, error) {
+	var t domain.UITranslation
+	if err := r.db.First(&t, "id = ?", id).Error; err != nil {
+		return nil, err
+	}
+	return &t, nil
+}
+
+func (r *uiTranslationRepository) Upsert(t *domain.UITranslation) error {
+	return r.db.
+		Where(domain.UITranslation{TranslationKey: t.TranslationKey, LanguageCode: t.LanguageCode}).
+		Assign(domain.UITranslation{
+			TranslationValue: t.TranslationValue,
+			Status:           t.Status,
+			Notes:            t.Notes,
+			SubmittedBy:      t.SubmittedBy,
+		}).
+		FirstOrCreate(t).Error
+}
+
+func (r *uiTranslationRepository) UpdateStatus(id string, status domain.TranslationStatus, reviewerID string) error {
+	updates := map[string]interface{}{
+		"status":      status,
+		"updated_at":  gorm.Expr("NOW()"),
+		"reviewed_at": gorm.Expr("NOW()"),
+	}
+	if reviewerID != "" {
+		updates["reviewed_by"] = reviewerID
+	}
+	return r.db.Model(&domain.UITranslation{}).Where("id = ?", id).Updates(updates).Error
+}
+
+func (r *uiTranslationRepository) Delete(id string) error {
+	return r.db.Delete(&domain.UITranslation{}, "id = ?", id).Error
 }

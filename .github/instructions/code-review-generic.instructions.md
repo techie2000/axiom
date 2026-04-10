@@ -19,18 +19,21 @@ When performing a code review, respond in **English**
 When performing a code review, prioritize issues in the following order:
 
 ### 🔴 CRITICAL (Block merge)
+
 - **Security**: Vulnerabilities, exposed secrets, authentication/authorization issues
 - **Correctness**: Logic errors, data corruption risks, race conditions
 - **Breaking Changes**: API contract changes without versioning
 - **Data Loss**: Risk of data loss or corruption
 
 ### 🟡 IMPORTANT (Requires discussion)
+
 - **Code Quality**: Severe violations of SOLID principles, excessive duplication
 - **Test Coverage**: Missing tests for critical paths or new functionality
 - **Performance**: Obvious performance bottlenecks (N+1 queries, memory leaks)
 - **Architecture**: Significant deviations from established patterns
 
 ### 🟢 SUGGESTION (Non-blocking improvements)
+
 - **Readability**: Poor naming, complex logic that could be simplified
 - **Optimization**: Performance improvements without functional impact
 - **Best Practices**: Minor deviations from conventions
@@ -53,6 +56,7 @@ When performing a code review, follow these principles:
 When performing a code review, check for:
 
 ### Clean Code
+
 - Descriptive and meaningful names for variables, functions, and classes
 - Single Responsibility Principle: each function/class does one thing well
 - DRY (Don't Repeat Yourself): no code duplication
@@ -83,6 +87,7 @@ function calculateDiscount(orderTotal, itemPrice) {
 ```
 
 ### Error Handling
+
 - Proper error handling at appropriate levels
 - Meaningful error messages
 - No silent failures or ignored exceptions
@@ -128,6 +133,7 @@ When performing a code review, check for security issues:
 - **Dependency Security**: Check for known vulnerabilities in dependencies
 
 ### Examples
+
 ```java
 // ❌ BAD: SQL injection vulnerability
 String query = "SELECT * FROM users WHERE email = '" + email + "'";
@@ -160,6 +166,7 @@ When performing a code review, verify test quality:
 - **Mock Appropriately**: Mock external dependencies, not domain logic
 
 ### Examples
+
 ```typescript
 // ❌ BAD: Vague name and assertion
 test('test1', () => {
@@ -190,6 +197,7 @@ When performing a code review, check for performance issues:
 - **Lazy Loading**: Load data only when needed
 
 ### Examples
+
 ```python
 # ❌ BAD: N+1 query problem
 users = User.query.all()
@@ -244,6 +252,7 @@ Explanation of the impact or reason for the suggestion.
 ### Example Comments
 
 #### Critical Issue
+
 ```markdown
 **🔴 CRITICAL - Security: SQL Injection Vulnerability**
 
@@ -270,6 +279,7 @@ stmt.setString(1, email);
 [OWASP SQL Injection Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html)
 
 #### Important Issue
+
 ```markdown
 **🟡 IMPORTANT - Testing: Missing test coverage for critical path**
 
@@ -297,6 +307,7 @@ test('should process full refund when order is cancelled', () => {
 [OWASP XSS Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/XSS_Prevention_Cheat_Sheet.html)
 
 #### Suggestion
+
 ```markdown
 **🟢 SUGGESTION - Readability: Simplify nested conditionals**
 
@@ -331,6 +342,7 @@ if (!user || !user.isActive || !user.hasPermission('write')) {
 When performing a code review, systematically verify:
 
 ### Code Quality
+
 - [ ] Code follows consistent style and conventions
 - [ ] Names are descriptive and follow naming conventions
 - [ ] Functions/methods are small and focused
@@ -340,6 +352,7 @@ When performing a code review, systematically verify:
 - [ ] No commented-out code or TODO without tickets
 
 ### Security
+
 - [ ] No sensitive data in code or logs
 - [ ] Input validation on all user inputs
 - [ ] No SQL injection vulnerabilities
@@ -347,6 +360,7 @@ When performing a code review, systematically verify:
 - [ ] Dependencies are up-to-date and secure
 
 ### Testing
+
 - [ ] New code has appropriate test coverage
 - [ ] Tests are well-named and focused
 - [ ] Tests cover edge cases and error scenarios
@@ -354,18 +368,21 @@ When performing a code review, systematically verify:
 - [ ] No tests that always pass or are commented out
 
 ### Performance
+
 - [ ] No obvious performance issues (N+1, memory leaks)
 - [ ] Appropriate use of caching
 - [ ] Efficient algorithms and data structures
 - [ ] Proper resource cleanup
 
 ### Architecture
+
 - [ ] Follows established patterns and conventions
 - [ ] Proper separation of concerns
 - [ ] No architectural violations
 - [ ] Dependencies flow in correct direction
 
 ### Documentation
+
 - [ ] Public APIs are documented
 - [ ] Complex logic has explanatory comments
 - [ ] README is updated if needed
@@ -376,7 +393,9 @@ When performing a code review, systematically verify:
 ### 1. Language/Framework Specific Checks
 
 #### Go Backend (Gin, GORM, Fiber, Beego)
+
 When performing a code review of Go code:
+
 - **Package Declarations**: Verify NO duplicate `package` declarations in files - each file must have exactly ONE
   package declaration at the top
 - **Package Naming**: Verify package names match directory names (e.g., files in `handler/` must have
@@ -392,7 +411,9 @@ When performing a code review of Go code:
 - **Acronym Casing**: Verify acronyms are all uppercase (e.g., `HTTPServer`, `URLParser`, `IDToken`)
 
 #### Next.js Frontend (React 19, TypeScript)
+
 When performing a code review of frontend code:
+
 - **React Hooks**: Verify hooks follow Rules of Hooks (only at top level, only in React functions)
 - **Component Structure**: Check components use Next.js 15 App Router patterns (app directory structure)
 - **TypeScript**: Verify proper type annotations, no `any` types without justification
@@ -401,7 +422,9 @@ When performing a code review of frontend code:
 - **API Routes**: Verify Next.js API routes use proper HTTP methods and status codes
 
 #### Docker Containerization
+
 When performing a code review involving Docker:
+
 - **Multi-stage Builds**: Verify Dockerfiles use multi-stage builds for smaller images
 - **Layer Caching**: Check COPY commands are ordered for optimal layer caching
 - **Security**: Verify no secrets in Dockerfiles or images, use build args or runtime secrets
@@ -411,6 +434,7 @@ When performing a code review involving Docker:
 ### 2. Build and Deployment
 
 When performing a code review involving build/deployment:
+
 - **Database Migrations**: Verify all `.up.sql` migrations have corresponding `.down.sql` for reversibility
 - **Migration Naming**: Check migrations follow pattern `XXXXXX_description.up.sql` /
   `XXXXXX_description.down.sql`
@@ -425,6 +449,7 @@ When performing a code review involving build/deployment:
 ### 3. Business Logic Rules
 
 When performing a code review involving business logic:
+
 - **CQRS Pattern**: Verify commands (writes) and queries (reads) are properly separated
 - **LEI Data Validation**: Check LEI codes match format: 20 alphanumeric characters
 - **ADR-003 Contract** (CSV/JSON Conversion):
@@ -445,11 +470,14 @@ When performing a code review involving business logic:
 ### 4. Team Conventions
 
 When performing a code review:
+
 - **Test-Driven Maintenance**: Verify EVERY code change includes corresponding test updates or new tests
   - New functions must have test functions
   - Modified functions must update existing tests
   - Changed signatures must update all test calls
   - Validation changes must add test cases
+  - Frontend behavior changes should update the nearest existing Vitest coverage when a test pattern already exists
+  - Bug fixes should add regression tests when practical
 - **Test Coverage**: Check that module test coverage remains >70% (use `go test -cover ./...`)
 - **Test Naming**: Verify tests follow pattern: `Test[FunctionName][Scenario]`
 - **Documentation Updates**: Check README.md and relevant docs are updated for user-facing changes
@@ -500,7 +528,7 @@ When performing a code review, apply these prompt engineering principles from th
 
 ### Axiom - Financial Services Static Data System
 
-- **Tech Stack**: 
+- **Tech Stack**:
   - Backend: Go 1.24, Gin/Fiber/Beego, GORM, PostgreSQL, RabbitMQ
   - Frontend: Next.js 15, React 19, TypeScript 5.3, Tailwind CSS 3.4, shadcn/ui
   - Infrastructure: Docker, Docker Compose, nginx (planned)

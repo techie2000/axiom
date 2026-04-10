@@ -34,28 +34,28 @@ export default function CountriesRecordsCard() {
   }, [])
 
   return (
-    <Link href="/countries" className="group bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm rounded-lg shadow-lg hover:shadow-xl transition-all p-6 hover:border-green-500 dark:hover:border-green-400 min-h-[240px] flex flex-col">
+    <Link href="/countries" className="group theme-panel theme-card-hover border-2 backdrop-blur-sm rounded-lg shadow-lg hover:shadow-xl transition-all p-6 min-h-[240px] flex flex-col">
       <div className="flex items-stretch justify-between flex-1">
         <div className="flex flex-col flex-1 min-w-0">
-          <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white group-hover:text-green-500 dark:group-hover:text-green-400">
+          <h3 className="text-xl font-semibold mb-2 theme-card-title">
             Countries →
           </h3>
-          <p className="text-gray-600 dark:text-gray-300 flex-1 mb-4">
+          <p className="theme-text-muted flex-1 mb-4">
             Browse ISO 3166 country codes and reference data
           </p>
 
           {loading ? (
-            <div className="text-sm text-gray-500 dark:text-gray-400 mb-3">Loading...</div>
+            <div className="text-sm theme-text-muted mb-3">Loading...</div>
           ) : (
             <div className="mb-3 text-sm">
-              <span className="text-gray-600 dark:text-gray-400">Total Records: </span>
-              <span className="font-semibold text-gray-900 dark:text-white">{totalRecords.toLocaleString()}</span>
+              <span className="theme-text-muted">Total Records: </span>
+              <span className="font-semibold">{totalRecords.toLocaleString()}</span>
             </div>
           )}
 
           <div className="flex gap-2 mt-auto">
-            <span className="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs rounded">ISO 3166</span>
-            <span className="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs rounded">Public</span>
+            <span className="px-2 py-1 theme-subtle text-xs rounded">ISO 3166</span>
+            <span className="px-2 py-1 theme-subtle text-xs rounded">Public</span>
           </div>
         </div>
         <span className="text-3xl ml-4 shrink-0">🗺️</span>

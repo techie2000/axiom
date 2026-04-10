@@ -1,0 +1,3 @@
+DROP INDEX IF EXISTS lei_raw.idx_lei_records_category_country_last_update_active;
+DROP INDEX IF EXISTS lei_raw.idx_lei_records_not_set_status_last_update;
+DROP INDEX IF EXISTS lei_raw.idx_lei_records_country_last_update_active;

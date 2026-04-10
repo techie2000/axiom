@@ -93,6 +93,7 @@ type LEIService interface {
 	// File download and management
 	DownloadFullFile() (*domain.SourceFile, error)
 	DownloadDeltaFile() (*domain.SourceFile, error)
+	SourceFileExists(sourceFileID uuid.UUID) (bool, error)
 
 	// File processing
 	ProcessSourceFile(sourceFileID uuid.UUID) error
@@ -105,14 +106,16 @@ type LEIService interface {
 	// Record management
 	CreateLEIRecord(record *domain.LEIRecord) error
 	GetLEIByCode(lei string) (*domain.LEIRecord, error)
+	GetPredecessorLEIs(lei string) ([]*domain.LEIRecord, error)
 	GetLEIByID(id string) (*domain.LEIRecord, error)
 	GetAllLEI(limit, offset int) ([]*domain.LEIRecord, error)
-	GetAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string) ([]*domain.LEIRecord, error)
+	GetAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string, includeLinkedNames bool) ([]*domain.LEIRecord, error)
 	CountLEIRecords() (int64, error)
 	GetDistinctCountries() ([]domain.Country, error)
 	GetDistinctCategories() ([]string, error)
 	GetDistinctRegions() ([]string, error)
 	GetDistinctLegalForms() ([]string, error)
+	GetLegalNamesByLEICodes(codes []string) (map[string]string, error)
 	UpdateLEIRecord(record *domain.LEIRecord) error
 
 	// Audit and history
@@ -156,6 +159,34 @@ func cloneStringSlice(values []string) []string {
 	cloned := make([]string, len(values))
 	copy(cloned, values)
 	return cloned
+}
+
+func statusJobTypeFromFileType(fileType string) string {
+	switch strings.ToUpper(strings.TrimSpace(fileType)) {
+	case "FULL":
+		return "DAILY_FULL"
+	case "DELTA":
+		return "DAILY_DELTA"
+	default:
+		return ""
+	}
+}
+
+func (s *leiService) setProgressMessage(jobType, message string) {
+	if strings.TrimSpace(jobType) == "" {
+		return
+	}
+
+	status, err := s.GetProcessingStatus(jobType)
+	if err != nil {
+		log.Warn().Err(err).Str("job_type", jobType).Msg("Unable to set progress message: status not found")
+		return
+	}
+
+	status.ProgressMessage = strings.TrimSpace(message)
+	if err := s.UpdateProcessingStatus(status); err != nil {
+		log.Warn().Err(err).Str("job_type", jobType).Msg("Unable to persist progress message")
+	}
 }
 
 // progressWriter wraps an io.Writer to log extraction progress periodically
@@ -274,6 +305,12 @@ func (s *leiService) DownloadDeltaFile() (*domain.SourceFile, error) {
 // downloadFile downloads a file from GLEIF and creates a SourceFile record
 func (s *leiService) downloadFile(url, fileType, publishedAt string, expectedRecordCount int) (*domain.SourceFile, error) {
 	log.Info().Str("url", url).Str("type", fileType).Msg("Starting file download from GLEIF")
+	jobType := statusJobTypeFromFileType(fileType)
+	remoteFileName := filepath.Base(strings.TrimSpace(url))
+	if remoteFileName == "." || remoteFileName == "" || remoteFileName == "/" {
+		remoteFileName = "latest file"
+	}
+	s.setProgressMessage(jobType, fmt.Sprintf("Downloading %s", remoteFileName))
 
 	// Create data directory if it doesn't exist
 	if err := os.MkdirAll(s.dataDir, 0755); err != nil {
@@ -328,6 +365,7 @@ func (s *leiService) downloadFile(url, fileType, publishedAt string, expectedRec
 		Int64("size", fileSize).
 		Str("hash", fileHash).
 		Msg("File downloaded successfully")
+	s.setProgressMessage(jobType, fmt.Sprintf("Downloaded %s", fileName))
 
 	// Check if we already have a completed file with this hash
 	existingFile, err := s.repo.FindSourceFileByHash(fileHash)
@@ -361,12 +399,12 @@ func (s *leiService) downloadFile(url, fileType, publishedAt string, expectedRec
 	}
 
 	// Create SourceFile record
-	jobType := domain.JobTypeFromFileType(fileType)
+	sourceFileJobType := domain.JobTypeFromFileType(fileType)
 	sourceFile := &domain.SourceFile{
 		FileName:         fileName,
 		FileType:         fileType,
-		JobType:          jobType,
-		JobLabel:         domain.JobTypeDisplayName(jobType),
+		JobType:          sourceFileJobType,
+		JobLabel:         domain.JobTypeDisplayName(sourceFileJobType),
 		FileURL:          url,
 		FileSize:         fileSize,
 		FileHash:         fileHash,
@@ -379,6 +417,8 @@ func (s *leiService) downloadFile(url, fileType, publishedAt string, expectedRec
 	if err := s.repo.CreateSourceFile(sourceFile); err != nil {
 		return nil, fmt.Errorf("failed to create source file record: %w", err)
 	}
+
+	s.setProgressMessage(jobType, fmt.Sprintf("Extracting %s", fileName))
 
 	return sourceFile, nil
 }
@@ -397,6 +437,9 @@ func (s *leiService) ProcessSourceFileWithResume(sourceFileID uuid.UUID, resumeF
 	if err != nil {
 		return fmt.Errorf("failed to find source file: %w", err)
 	}
+
+	jobType := statusJobTypeFromFileType(sourceFile.FileType)
+	s.setProgressMessage(jobType, fmt.Sprintf("Extracting %s", sourceFile.FileName))
 
 	// Update status to IN_PROGRESS and clear any historical failure data
 	sourceFile.ProcessingStatus = "IN_PROGRESS"
@@ -444,8 +487,10 @@ func (s *leiService) ProcessSourceFileWithResume(sourceFileID uuid.UUID, resumeF
 			return fmt.Errorf("failed to extract file: %w", extractErr)
 		}
 		log.Info().Str("json_path", jsonPath).Msg("File extracted successfully")
+		s.setProgressMessage(jobType, fmt.Sprintf("Processing records from %s", sourceFile.FileName))
 	} else {
 		log.Info().Str("json_path", jsonPath).Msg("Using previously extracted file")
+		s.setProgressMessage(jobType, fmt.Sprintf("Processing records from %s", sourceFile.FileName))
 	}
 	defer func() {
 		if err := os.Remove(jsonPath); err != nil {
@@ -606,6 +651,24 @@ func (s *leiService) UpdateSourceFile(file *domain.SourceFile) error {
 	return s.repo.UpdateSourceFile(file)
 }
 
+// SourceFileExists checks whether the source file record exists and its file is present on disk
+func (s *leiService) SourceFileExists(sourceFileID uuid.UUID) (bool, error) {
+	sourceFile, err := s.repo.FindSourceFileByID(sourceFileID.String())
+	if err != nil {
+		return false, err
+	}
+
+	filePath := filepath.Join(s.dataDir, sourceFile.FileName)
+	if _, err := os.Stat(filePath); err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return true, nil
+}
+
 // processJSONFile parses and processes the LEI JSON file
 // GLEIF JSON format: {"records": [ {...}, {...}, ... ]}
 func (s *leiService) processJSONFile(jsonPath string, sourceFile *domain.SourceFile, resumeFromLEI string) error {
@@ -697,6 +760,11 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 	var scannedRecords int
 	var processedRecords int
 	var failedRecords int
+	// DB write counters — derived from actual BatchUpsertLEIRecords results.
+	// totalCreated: net-new rows inserted. totalUpdated: rows whose data changed and were written.
+	// totalUnchanged: rows present in the batch whose existing DB values were identical (intentional no-op).
+	var totalCreated int
+	var totalUpdated int
 	shouldProcess := resumeFromLEI == ""
 	var lastProcessedLEI string
 
@@ -759,12 +827,19 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 				percentComplete = (float64(cumulativeProcessed) / float64(progressTotalRecords)) * 100
 			}
 
+			totalUnchanged := processedRecords - totalCreated - totalUpdated
+			if totalUnchanged < 0 {
+				totalUnchanged = 0
+			}
 			log.Info().
 				Int("total_records", progressTotalRecords).
 				Int("scanned_records", scannedRecords).
 				Int("checkpoint_processed", checkpointProcessed).
 				Int("session_processed", processedRecords).
 				Int("cumulative_processed", cumulativeProcessed).
+				Int("db_inserted", totalCreated).
+				Int("db_updated", totalUpdated).
+				Int("db_unchanged", totalUnchanged).
 				Int("failed_records", failedRecords).
 				Float64("percent_complete", percentComplete).
 				Float64("records_per_sec", rate).
@@ -827,7 +902,11 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 			}
 			s.batchResolveOpenProcessingFailures(jobType, naturalKeys, &sourceFile.ID)
 
-			// Track records processed in this session (use batch size, not DB results)
+			// Accumulate actual DB write outcomes.
+			totalCreated += created
+			totalUpdated += updated
+
+			// processedRecords counts records attempted against the DB (used for progress/ETA).
 			processedRecords += len(batch)
 
 			// Always keep LastProcessedLEI in sync so the mandatory final UpdateSourceFile
@@ -850,13 +929,20 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 				percentComplete = (float64(cumulativeProcessed) / float64(progressTotalRecords)) * 100
 			}
 
+			batchUnchanged := len(batch) - created - updated
+			if batchUnchanged < 0 {
+				batchUnchanged = 0
+			}
 			log.Info().
 				Int("total_scanned", scannedRecords).
 				Int("expected_total", progressTotalRecords).
 				Int("cumulative_processed", cumulativeProcessed).
 				Int("session_processed", processedRecords).
-				Int("created", created).
-				Int("updated", updated).
+				Int("batch_inserted", created).
+				Int("batch_updated", updated).
+				Int("batch_unchanged", batchUnchanged).
+				Int("total_inserted", totalCreated).
+				Int("total_updated", totalUpdated).
 				Int("failed", failedRecords).
 				Float64("percent_complete", percentComplete).
 				Str("last_lei", lastProcessedLEI).
@@ -953,12 +1039,30 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 		log.Error().Err(err).Msg("Failed to update final source file status")
 	}
 
+	totalUnchanged := processedRecords - totalCreated - totalUpdated
+	if totalUnchanged < 0 {
+		totalUnchanged = 0
+	}
+
+	if processedRecords > 0 && totalCreated == 0 && totalUpdated == 0 && failedRecords == 0 {
+		log.Warn().
+			Int("scanned_records", scannedRecords).
+			Int("session_processed", processedRecords).
+			Int("db_inserted", totalCreated).
+			Int("db_updated", totalUpdated).
+			Int("db_unchanged", totalUnchanged).
+			Msg("WARNING: processing reported success but zero DB writes occurred — all records may already be identical or a silent rollback may have happened")
+	}
+
 	log.Info().
 		Int("total_records", progressTotalRecords).
 		Int("scanned_records", scannedRecords).
 		Int("checkpoint_processed", checkpointProcessed).
 		Int("session_processed", processedRecords).
 		Int("cumulative_processed", cumulativeProcessed).
+		Int("db_inserted", totalCreated).
+		Int("db_updated", totalUpdated).
+		Int("db_unchanged", totalUnchanged).
 		Int("total_failed", failedRecords).
 		Msg("File processing completed")
 
@@ -1077,6 +1181,7 @@ type LEIEntity struct {
 	RegistrationAuthority          LEIRegistrationAuthority `json:"RegistrationAuthority"`
 	LegalJurisdiction              LEIValueField            `json:"LegalJurisdiction"`
 	EntityCategory                 LEIValueField            `json:"EntityCategory"`
+	EntitySubCategory              LEIValueField            `json:"EntitySubCategory"`
 	LegalForm                      LEILegalForm             `json:"LegalForm"`
 	EntityStatus                   LEIValueField            `json:"EntityStatus"`
 	SuccessorEntity                []LEISuccessorEntity     `json:"SuccessorEntity"`
@@ -1136,6 +1241,22 @@ type LEIValidationAuthority struct {
 	ValidationAuthorityEntityID LEIValueField `json:"ValidationAuthorityEntityID"`
 }
 
+// parseGLEIFTimeValue parses GLEIF timestamp strings, handling both whole-second
+// ("2026-04-09T10:21:26Z") and sub-second ("2026-04-09T10:21:26.360Z") variants.
+// Returns the zero value of time.Time if the value cannot be parsed.
+func parseGLEIFTimeValue(value string) time.Time {
+	for _, layout := range []string{
+		time.RFC3339Nano,       // "2006-01-02T15:04:05.999999999Z07:00"
+		"2006-01-02T15:04:05Z", // exact UTC, no sub-seconds
+		"2006-01-02",           // date-only
+	} {
+		if t, err := time.Parse(layout, value); err == nil {
+			return t
+		}
+	}
+	return time.Time{}
+}
+
 func normalizeNullLikeValue(value string) string {
 	if strings.EqualFold(strings.TrimSpace(value), "null") {
 		return ""
@@ -1173,12 +1294,28 @@ func normalizeLEIRecordNullLikeFields(record *domain.LEIRecord) {
 	record.EntitySubCategory = normalizeNullLikeValue(record.EntitySubCategory)
 	record.EntityLegalForm = normalizeNullLikeValue(record.EntityLegalForm)
 	record.EntityStatus = normalizeNullLikeValue(record.EntityStatus)
+	record.LegalJurisdiction = normalizeNullLikeValue(record.LegalJurisdiction)
+	record.RegistrationStatus = normalizeNullLikeValue(record.RegistrationStatus)
 	record.ManagingLOU = normalizeNullLikeValue(record.ManagingLOU)
 	record.SuccessorLEI = normalizeLEICodeValue(record.SuccessorLEI)
 	if record.SuccessorLEI != "" && !isValidLEICode(record.SuccessorLEI) {
 		record.SuccessorLEI = ""
 	}
 	record.ValidationAuthority = normalizeNullLikeValue(record.ValidationAuthority)
+}
+
+func validationSourcesToJSONB(value string) domain.JSONBString {
+	normalized := normalizeNullLikeValue(value)
+	if normalized == "" {
+		return ""
+	}
+
+	encoded, err := json.Marshal(normalized)
+	if err != nil {
+		return ""
+	}
+
+	return domain.JSONBString(encoded)
 }
 
 // jsonToDomainRecord converts a JSON record to a domain.LEIRecord
@@ -1194,13 +1331,17 @@ func (s *leiService) jsonToDomainRecord(jsonRecord *LEIJSONRecord, sourceFileID 
 		RegistrationAuthority:  jsonRecord.Entity.RegistrationAuthority.RegistrationAuthorityID.Value,
 		RegistrationNumber:     jsonRecord.Entity.RegistrationAuthority.RegistrationAuthorityEntityID.Value,
 		EntityCategory:         jsonRecord.Entity.EntityCategory.Value,
+		EntitySubCategory:      jsonRecord.Entity.EntitySubCategory.Value,
 		EntityLegalForm:        jsonRecord.Entity.LegalForm.EntityLegalFormCode.Value,
 		EntityStatus:           jsonRecord.Entity.EntityStatus.Value,
+		LegalJurisdiction:      jsonRecord.Entity.LegalJurisdiction.Value,
+		RegistrationStatus:     jsonRecord.Registration.RegistrationStatus.Value,
 		ManagingLOU:            jsonRecord.Registration.ManagingLOU.Value,
+		ValidationAuthority:    jsonRecord.Registration.ValidationAuthority.ValidationAuthorityID.Value,
 		SourceFileID:           &sourceFileID,
 		// Initialize JSONB fields with valid JSON
 		OtherNames:        "[]",
-		ValidationSources: "{}",
+		ValidationSources: validationSourcesToJSONB(jsonRecord.Registration.ValidationSources.Value),
 		ChangedFields:     "{}",
 	}
 
@@ -1268,26 +1409,13 @@ func (s *leiService) jsonToDomainRecord(jsonRecord *LEIJSONRecord, sourceFileID 
 
 	// Parse dates (ISO 8601 format)
 	if jsonRecord.Registration.InitialRegistrationDate.Value != "" {
-		if t, err := time.Parse("2006-01-02T15:04:05Z", jsonRecord.Registration.InitialRegistrationDate.Value); err == nil {
-			record.InitialRegistrationDate = t
-		} else if t, err := time.Parse("2006-01-02", jsonRecord.Registration.InitialRegistrationDate.Value); err == nil {
-			record.InitialRegistrationDate = t
-		}
+		record.InitialRegistrationDate = parseGLEIFTimeValue(jsonRecord.Registration.InitialRegistrationDate.Value)
 	}
 	if jsonRecord.Registration.LastUpdateDate.Value != "" {
-		if t, err := time.Parse("2006-01-02T15:04:05Z", jsonRecord.Registration.LastUpdateDate.Value); err == nil {
-			record.LastUpdateDate = t
-		} else if t, err := time.Parse("2006-01-02", jsonRecord.Registration.LastUpdateDate.Value); err == nil {
-			record.LastUpdateDate = t
-		}
+		record.LastUpdateDate = parseGLEIFTimeValue(jsonRecord.Registration.LastUpdateDate.Value)
 	}
 	if jsonRecord.Registration.NextRenewalDate.Value != "" {
-		if t, err := time.Parse("2006-01-02T15:04:05Z", jsonRecord.Registration.NextRenewalDate.Value); err == nil {
-			// Handle standard ISO 8601 format with time
-			record.NextRenewalDate = t
-		} else if t, err := time.Parse("2006-01-02", jsonRecord.Registration.NextRenewalDate.Value); err == nil {
-			record.NextRenewalDate = t
-		}
+		record.NextRenewalDate = parseGLEIFTimeValue(jsonRecord.Registration.NextRenewalDate.Value)
 	}
 
 	normalizeLEIRecordNullLikeFields(record)
@@ -1302,7 +1430,8 @@ func (s *leiService) CreateLEIRecord(record *domain.LEIRecord) error {
 
 // GetLEIByCode retrieves an LEI record by LEI code
 func (s *leiService) GetLEIByCode(lei string) (*domain.LEIRecord, error) {
-	record, err := s.repo.FindLEIByLEI(lei)
+	normalizedLEI := strings.ToUpper(strings.TrimSpace(lei))
+	record, err := s.repo.FindLEIByLEI(normalizedLEI)
 	if err != nil {
 		return nil, err
 	}
@@ -1310,6 +1439,20 @@ func (s *leiService) GetLEIByCode(lei string) (*domain.LEIRecord, error) {
 	normalizeLEIRecordNullLikeFields(record)
 
 	return record, nil
+}
+
+// GetPredecessorLEIs retrieves LEI records that reference the provided LEI as successor.
+func (s *leiService) GetPredecessorLEIs(lei string) ([]*domain.LEIRecord, error) {
+	records, err := s.repo.FindPredecessorLEIsBySuccessor(lei)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, record := range records {
+		normalizeLEIRecordNullLikeFields(record)
+	}
+
+	return records, nil
 }
 
 // GetLEIByID retrieves an LEI record by ID
@@ -1339,8 +1482,8 @@ func (s *leiService) GetAllLEI(limit, offset int) ([]*domain.LEIRecord, error) {
 }
 
 // GetAllLEIWithFilters retrieves LEI records with search and filters
-func (s *leiService) GetAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string) ([]*domain.LEIRecord, error) {
-	records, err := s.repo.FindAllLEIWithFilters(limit, offset, search, status, category, country, sortBy, sortOrder, columns)
+func (s *leiService) GetAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string, includeLinkedNames bool) ([]*domain.LEIRecord, error) {
+	records, err := s.repo.FindAllLEIWithFilters(limit, offset, search, status, category, country, sortBy, sortOrder, columns, includeLinkedNames)
 	if err != nil {
 		return nil, err
 	}
@@ -1355,6 +1498,12 @@ func (s *leiService) GetAllLEIWithFilters(limit, offset int, search, status, cat
 // CountLEIRecords returns the total count of LEI records
 func (s *leiService) CountLEIRecords() (int64, error) {
 	return s.repo.CountLEIRecords()
+}
+
+// GetLegalNamesByLEICodes returns a map of LEI code → legal name for a batch of codes.
+// Codes not found in the database are simply absent from the returned map.
+func (s *leiService) GetLegalNamesByLEICodes(codes []string) (map[string]string, error) {
+	return s.repo.FindLegalNamesByLEICodes(codes)
 }
 
 // GetDistinctCountries returns a sorted list of active countries from the countries reference table
@@ -1485,6 +1634,14 @@ func (s *leiService) UpdateProcessingStatus(status *domain.FileProcessingStatus)
 			status.DependsOnJobLabel = domain.JobTypeDisplayName(status.DependsOnJobType)
 		} else {
 			status.DependsOnJobLabel = ""
+		}
+		if status.CurrentSourceFileID == nil {
+			status.CurrentSourceFile = nil
+		}
+		// GLEIF_REFERENCE_SYNC uses ProgressMessage as a post-completion stats summary (JSON),
+		// so preserve it regardless of status. All other jobs only need ProgressMessage while RUNNING.
+		if status.Status != "RUNNING" && status.JobType != "GLEIF_REFERENCE_SYNC" {
+			status.ProgressMessage = ""
 		}
 	}
 	return s.repo.UpdateProcessingStatus(status)

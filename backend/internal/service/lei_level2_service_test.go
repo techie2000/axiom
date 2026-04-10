@@ -11,6 +11,146 @@ import (
 	"github.com/techie2000/axiom/internal/repository"
 )
 
+func TestFlushREPEXBatch_DeferredWhenLEIMissing(t *testing.T) {
+	sourceFileID := uuid.New()
+	leiLookup := &level2LEILookupStub{namesByLEI: map[string]string{
+		"VALIDLEI00000000000001": "Valid Entity",
+	}}
+
+	repoStubREPEX := &level2REPEXFlushRepoStub{batchCreated: 1}
+	svc := &leiLevel2Service{repo: repoStubREPEX, leiRepo: leiLookup}
+
+	batch := []*domain.LEIReportingException{
+		{
+			LEI:               "VALIDLEI00000000000001",
+			ExceptionCategory: "NO_KNOWN_PERSON",
+			SourceFileID:      &sourceFileID,
+		},
+		{
+			LEI:               "MISSINGLEI0000000002",
+			ExceptionCategory: "NO_KNOWN_PERSON",
+			SourceFileID:      &sourceFileID,
+		},
+	}
+
+	processed, failed, err := svc.flushREPEXBatch(batch)
+	if err != nil {
+		t.Fatalf("flushREPEXBatch returned error: %v", err)
+	}
+	if processed != 1 {
+		t.Fatalf("expected processed=1, got %d", processed)
+	}
+	if failed != 1 {
+		t.Fatalf("expected failed=1, got %d", failed)
+	}
+	if repoStubREPEX.batchUpsertCalls != 1 {
+		t.Fatalf("expected 1 batch upsert call, got %d", repoStubREPEX.batchUpsertCalls)
+	}
+	if len(repoStubREPEX.batchInput) != 1 {
+		t.Fatalf("expected batch input len 1, got %d", len(repoStubREPEX.batchInput))
+	}
+	if repoStubREPEX.batchInput[0].LEI != "VALIDLEI00000000000001" {
+		t.Fatalf("unexpected upserted LEI: %s", repoStubREPEX.batchInput[0].LEI)
+	}
+	if len(repoStubREPEX.failures) != 1 {
+		t.Fatalf("expected 1 processing failure row, got %d", len(repoStubREPEX.failures))
+	}
+	if repoStubREPEX.failures[0].FailureStage != "FK_PREREQ" {
+		t.Fatalf("expected failure stage FK_PREREQ, got %s", repoStubREPEX.failures[0].FailureStage)
+	}
+}
+
+func TestFlushREPEXBatch_AllDeferredWhenNoLEIsExist(t *testing.T) {
+	sourceFileID := uuid.New()
+	repoStub := &level2REPEXFlushRepoStub{}
+	leiLookup := &level2LEILookupStub{namesByLEI: map[string]string{}}
+	svc := &leiLevel2Service{repo: repoStub, leiRepo: leiLookup}
+
+	batch := []*domain.LEIReportingException{
+		{LEI: "MISSINGLEI1000000001", ExceptionCategory: "NO_KNOWN_PERSON", SourceFileID: &sourceFileID},
+		{LEI: "MISSINGLEI2000000002", ExceptionCategory: "NO_KNOWN_PERSON", SourceFileID: &sourceFileID},
+	}
+
+	processed, failed, err := svc.flushREPEXBatch(batch)
+	if err != nil {
+		t.Fatalf("flushREPEXBatch returned error: %v", err)
+	}
+	if processed != 0 {
+		t.Fatalf("expected processed=0, got %d", processed)
+	}
+	if failed != 2 {
+		t.Fatalf("expected failed=2, got %d", failed)
+	}
+	if repoStub.batchUpsertCalls != 0 {
+		t.Fatalf("expected no batch upsert calls, got %d", repoStub.batchUpsertCalls)
+	}
+	if len(repoStub.failures) != 2 {
+		t.Fatalf("expected 2 processing failures, got %d", len(repoStub.failures))
+	}
+}
+
+func TestParseGLEIFTime_MillisecondVariants(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		wantY int
+		wantM int
+		wantD int
+		wantH int
+	}{
+		{"whole-second Z", "2026-04-09T10:21:26Z", 2026, 4, 9, 10},
+		{"millisecond .360Z", "2026-04-09T10:21:26.360Z", 2026, 4, 9, 10},
+		{"millisecond .000Z", "2026-04-09T00:00:00.000Z", 2026, 4, 9, 0},
+		{"date-only", "2026-04-09", 2026, 4, 9, 0},
+		{"no-Z whole-second", "2026-04-09T10:21:26", 2026, 4, 9, 10},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := parseGLEIFTime(tt.input)
+			if got == nil {
+				t.Fatalf("parseGLEIFTime(%q) returned nil", tt.input)
+			}
+			if got.Year() != tt.wantY || int(got.Month()) != tt.wantM || got.Day() != tt.wantD || got.Hour() != tt.wantH {
+				t.Fatalf("parseGLEIFTime(%q) = %v, want %04d-%02d-%02d %02d:xx", tt.input, got, tt.wantY, tt.wantM, tt.wantD, tt.wantH)
+			}
+		})
+	}
+}
+
+type level2REPEXFlushRepoStub struct {
+	repository.LEILevel2Repository
+	batchUpsertCalls int
+	batchInput       []*domain.LEIReportingException
+	batchCreated     int
+	batchUpdated     int
+	batchErr         error
+	failures         []*domain.LEILevel2ProcessingFailure
+}
+
+func (r *level2REPEXFlushRepoStub) BatchUpsertReportingExceptions(records []*domain.LEIReportingException) (int, int, error) {
+	r.batchUpsertCalls++
+	r.batchInput = append([]*domain.LEIReportingException(nil), records...)
+	return r.batchCreated, r.batchUpdated, r.batchErr
+}
+
+func (r *level2REPEXFlushRepoStub) UpsertReportingException(exc *domain.LEIReportingException) error {
+	return nil
+}
+
+func (r *level2REPEXFlushRepoStub) CreateProcessingFailure(failure *domain.LEILevel2ProcessingFailure) error {
+	copy := *failure
+	r.failures = append(r.failures, &copy)
+	return nil
+}
+
+func (r *level2REPEXFlushRepoStub) BatchResolveOpenProcessingFailures(string, []string, *uuid.UUID, string) error {
+	return nil
+}
+
+func (r *level2REPEXFlushRepoStub) ResolveOpenProcessingFailures(string, string, *uuid.UUID, string) error {
+	return nil
+}
+
 func TestShouldSkipDuplicateHash(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -123,20 +263,20 @@ func TestMapRawRRToRelationshipRecord_WrappedSchema(t *testing.T) {
 	}
 }
 
-func TestGleifStringList_UnmarshalAndJoin(t *testing.T) {
+func TestGleifStringList_UnmarshalAndToJSONB(t *testing.T) {
 	var reasons gleifStringList
 	if err := json.Unmarshal([]byte(`[{"$":"NON_CONSOLIDATING"},{"$":"NO_KNOWN_PERSON"}]`), &reasons); err != nil {
 		t.Fatalf("array unmarshal failed: %v", err)
 	}
-	if got := joinGLEIFReasons(reasons); got != "NON_CONSOLIDATING,NO_KNOWN_PERSON" {
-		t.Fatalf("unexpected joined reasons: %s", got)
+	if got := string(gleifReasonsToJSONB(reasons)); got != `["NON_CONSOLIDATING","NO_KNOWN_PERSON"]` {
+		t.Fatalf("unexpected JSONB multi-reasons: %s", got)
 	}
 
 	if err := json.Unmarshal([]byte(`{"$":"NON_CONSOLIDATING"}`), &reasons); err != nil {
 		t.Fatalf("single unmarshal failed: %v", err)
 	}
-	if got := joinGLEIFReasons(reasons); got != "NON_CONSOLIDATING" {
-		t.Fatalf("unexpected single reason: %s", got)
+	if got := string(gleifReasonsToJSONB(reasons)); got != `["NON_CONSOLIDATING"]` {
+		t.Fatalf("unexpected JSONB single-reason: %s", got)
 	}
 }
 
@@ -176,8 +316,8 @@ func TestRawREPEXRecord_UnmarshalArrayWrappedReference(t *testing.T) {
 	if raw.ExceptionCategory.String() != "NON_PUBLIC" {
 		t.Fatalf("unexpected category: %s", raw.ExceptionCategory.String())
 	}
-	if got := joinGLEIFReasons(raw.ExceptionReason); got != "NON_CONSOLIDATING" {
-		t.Fatalf("unexpected reason: %s", got)
+	if got := string(gleifReasonsToJSONB(raw.ExceptionReason)); got != `["NON_CONSOLIDATING"]` {
+		t.Fatalf("unexpected JSONB reason payload: %s", got)
 	}
 	if raw.ExceptionReference.String() != "Datenschutz" {
 		t.Fatalf("unexpected reference: %s", raw.ExceptionReference.String())
@@ -201,6 +341,22 @@ type level2RepoStub struct {
 	gotOpenOnly bool
 	gotLimit    int
 	gotOffset   int
+}
+
+type leiRepoUpdateStub struct {
+	repository.LEIRepository
+	updateCalls int
+	lastFile    *domain.SourceFile
+	updateErr   error
+}
+
+func (r *leiRepoUpdateStub) UpdateSourceFile(file *domain.SourceFile) error {
+	r.updateCalls++
+	if file != nil {
+		copied := *file
+		r.lastFile = &copied
+	}
+	return r.updateErr
 }
 
 func (r *level2RepoStub) ListProcessingFailures(jobType string, openOnly bool, limit, offset int) ([]*domain.LEILevel2ProcessingFailure, error) {
@@ -396,5 +552,365 @@ func TestGetProcessingFailures_ResolvedAndOpenFailures(t *testing.T) {
 	}
 	if got[1].Resolved != true || got[1].ResolvedNote != "Resolved by subsequent successful upsert" {
 		t.Fatalf("second failure should be resolved: %+v", got[1])
+	}
+}
+
+func TestShouldPersistLevel2ProgressCheckpoint(t *testing.T) {
+	tests := []struct {
+		name              string
+		previousProcessed int
+		processed         int
+		previousFailed    int
+		failed            int
+		force             bool
+		expected          bool
+	}{
+		{
+			name:              "no change does not persist",
+			previousProcessed: 100,
+			processed:         100,
+			previousFailed:    0,
+			failed:            0,
+			force:             false,
+			expected:          false,
+		},
+		{
+			name:              "failure count change always persists",
+			previousProcessed: 100,
+			processed:         100,
+			previousFailed:    0,
+			failed:            1,
+			force:             false,
+			expected:          true,
+		},
+		{
+			name:              "processed in same checkpoint interval does not persist",
+			previousProcessed: 100,
+			processed:         999,
+			previousFailed:    0,
+			failed:            0,
+			force:             false,
+			expected:          false,
+		},
+		{
+			name:              "crossing checkpoint interval persists",
+			previousProcessed: 999,
+			processed:         1000,
+			previousFailed:    0,
+			failed:            0,
+			force:             false,
+			expected:          true,
+		},
+		{
+			name:              "forced persist with changes",
+			previousProcessed: 10,
+			processed:         11,
+			previousFailed:    0,
+			failed:            0,
+			force:             true,
+			expected:          true,
+		},
+		{
+			name:              "forced persist with no changes is skipped",
+			previousProcessed: 10,
+			processed:         10,
+			previousFailed:    1,
+			failed:            1,
+			force:             true,
+			expected:          false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := shouldPersistLevel2ProgressCheckpoint(
+				tt.previousProcessed,
+				tt.processed,
+				tt.previousFailed,
+				tt.failed,
+				tt.force,
+			)
+
+			if got != tt.expected {
+				t.Fatalf("expected %v, got %v", tt.expected, got)
+			}
+		})
+	}
+}
+
+func TestPersistLevel2Progress(t *testing.T) {
+	tests := []struct {
+		name               string
+		initialProcessed   int
+		initialFailed      int
+		initialTotal       int
+		nextProcessed      int
+		nextFailed         int
+		force              bool
+		expectedCalls      int
+		expectedProcessed  int
+		expectedFailed     int
+		expectedTotal      int
+	}{
+		{
+			name:              "checkpoint interval not crossed does not persist",
+			initialProcessed:  100,
+			initialFailed:     0,
+			initialTotal:      2000,
+			nextProcessed:     500,
+			nextFailed:        0,
+			force:             false,
+			expectedCalls:     0,
+			expectedProcessed: 100,
+			expectedFailed:    0,
+			expectedTotal:     2000,
+		},
+		{
+			name:              "crossing checkpoint persists",
+			initialProcessed:  999,
+			initialFailed:     0,
+			initialTotal:      2000,
+			nextProcessed:     1000,
+			nextFailed:        0,
+			force:             false,
+			expectedCalls:     1,
+			expectedProcessed: 1000,
+			expectedFailed:    0,
+			expectedTotal:     2000,
+		},
+		{
+			name:              "failed count change persists immediately",
+			initialProcessed:  200,
+			initialFailed:     0,
+			initialTotal:      2000,
+			nextProcessed:     200,
+			nextFailed:        1,
+			force:             false,
+			expectedCalls:     1,
+			expectedProcessed: 200,
+			expectedFailed:    1,
+			expectedTotal:     2000,
+		},
+		{
+			name:              "force persists changed state",
+			initialProcessed:  10,
+			initialFailed:     0,
+			initialTotal:      2000,
+			nextProcessed:     11,
+			nextFailed:        0,
+			force:             true,
+			expectedCalls:     1,
+			expectedProcessed: 11,
+			expectedFailed:    0,
+			expectedTotal:     2000,
+		},
+		{
+			name:              "force without state change is skipped",
+			initialProcessed:  10,
+			initialFailed:     0,
+			initialTotal:      2000,
+			nextProcessed:     10,
+			nextFailed:        0,
+			force:             true,
+			expectedCalls:     0,
+			expectedProcessed: 10,
+			expectedFailed:    0,
+			expectedTotal:     2000,
+		},
+		{
+			name:              "total records is expanded when processed exceeds total",
+			initialProcessed:  5,
+			initialFailed:     0,
+			initialTotal:      5,
+			nextProcessed:     7,
+			nextFailed:        0,
+			force:             true,
+			expectedCalls:     1,
+			expectedProcessed: 7,
+			expectedFailed:    0,
+			expectedTotal:     7,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			leiRepo := &leiRepoUpdateStub{}
+			svc := &leiLevel2Service{leiRepo: leiRepo}
+			sourceFile := &domain.SourceFile{
+				ID:               uuid.New(),
+				ProcessedRecords: tt.initialProcessed,
+				FailedRecords:    tt.initialFailed,
+				TotalRecords:     tt.initialTotal,
+			}
+
+			svc.persistLevel2Progress(sourceFile, tt.nextProcessed, tt.nextFailed, tt.force)
+
+			if leiRepo.updateCalls != tt.expectedCalls {
+				t.Fatalf("expected %d update call(s), got %d", tt.expectedCalls, leiRepo.updateCalls)
+			}
+
+			if sourceFile.ProcessedRecords != tt.expectedProcessed {
+				t.Fatalf("expected processed %d, got %d", tt.expectedProcessed, sourceFile.ProcessedRecords)
+			}
+			if sourceFile.FailedRecords != tt.expectedFailed {
+				t.Fatalf("expected failed %d, got %d", tt.expectedFailed, sourceFile.FailedRecords)
+			}
+			if sourceFile.TotalRecords != tt.expectedTotal {
+				t.Fatalf("expected total %d, got %d", tt.expectedTotal, sourceFile.TotalRecords)
+			}
+
+			if tt.expectedCalls > 0 && leiRepo.lastFile == nil {
+				t.Fatal("expected repository to receive updated source file")
+			}
+		})
+	}
+}
+
+type level2RRFlushRepoStub struct {
+	repository.LEILevel2Repository
+	batchUpsertCalls int
+	batchInput       []*domain.LEIRelationshipRecord
+	batchCreated     int
+	batchUpdated     int
+	batchErr         error
+	upsertCalls      int
+	failures         []*domain.LEILevel2ProcessingFailure
+}
+
+func (r *level2RRFlushRepoStub) BatchUpsertRelationshipRecords(records []*domain.LEIRelationshipRecord) (int, int, error) {
+	r.batchUpsertCalls++
+	r.batchInput = append([]*domain.LEIRelationshipRecord(nil), records...)
+	return r.batchCreated, r.batchUpdated, r.batchErr
+}
+
+func (r *level2RRFlushRepoStub) UpsertRelationshipRecord(record *domain.LEIRelationshipRecord) error {
+	r.upsertCalls++
+	return nil
+}
+
+func (r *level2RRFlushRepoStub) CreateProcessingFailure(failure *domain.LEILevel2ProcessingFailure) error {
+	copy := *failure
+	r.failures = append(r.failures, &copy)
+	return nil
+}
+
+func (r *level2RRFlushRepoStub) BatchResolveOpenProcessingFailures(string, []string, *uuid.UUID, string) error {
+	return nil
+}
+
+func (r *level2RRFlushRepoStub) ResolveOpenProcessingFailures(string, string, *uuid.UUID, string) error {
+	return nil
+}
+
+type level2LEILookupStub struct {
+	repository.LEIRepository
+	namesByLEI map[string]string
+	err        error
+	lookups    [][]string
+}
+
+func (r *level2LEILookupStub) FindLegalNamesByLEICodes(codes []string) (map[string]string, error) {
+	lookupCopy := append([]string(nil), codes...)
+	r.lookups = append(r.lookups, lookupCopy)
+	if r.err != nil {
+		return nil, r.err
+	}
+	result := make(map[string]string, len(r.namesByLEI))
+	for k, v := range r.namesByLEI {
+		result[k] = v
+	}
+	return result, nil
+}
+
+func TestFlushRRBatch_DeferredWhenParentLEIMissing(t *testing.T) {
+	sourceFileID := uuid.New()
+	repoStub := &level2RRFlushRepoStub{batchCreated: 1}
+	leiLookup := &level2LEILookupStub{namesByLEI: map[string]string{
+		"VALIDSTART00000000001": "Valid Start",
+		"VALIDEND0000000000002": "Valid End",
+	}}
+	svc := &leiLevel2Service{repo: repoStub, leiRepo: leiLookup}
+
+	batch := []*domain.LEIRelationshipRecord{
+		{
+			StartNodeLEI:     "VALIDSTART00000000001",
+			EndNodeLEI:       "VALIDEND0000000000002",
+			RelationshipType: "IS_DIRECTLY_CONSOLIDATED_BY",
+			SourceFileID:     &sourceFileID,
+		},
+		{
+			StartNodeLEI:     "MISSINGSTART000000001",
+			EndNodeLEI:       "VALIDEND0000000000002",
+			RelationshipType: "IS_ULTIMATELY_CONSOLIDATED_BY",
+			SourceFileID:     &sourceFileID,
+		},
+	}
+
+	processed, failed, err := svc.flushRRBatch(batch)
+	if err != nil {
+		t.Fatalf("flushRRBatch returned error: %v", err)
+	}
+	if processed != 1 {
+		t.Fatalf("expected processed=1, got %d", processed)
+	}
+	if failed != 1 {
+		t.Fatalf("expected failed=1, got %d", failed)
+	}
+	if repoStub.batchUpsertCalls != 1 {
+		t.Fatalf("expected 1 batch upsert call, got %d", repoStub.batchUpsertCalls)
+	}
+	if len(repoStub.batchInput) != 1 {
+		t.Fatalf("expected batch input len 1, got %d", len(repoStub.batchInput))
+	}
+	if repoStub.batchInput[0].StartNodeLEI != "VALIDSTART00000000001" {
+		t.Fatalf("unexpected upserted start LEI: %s", repoStub.batchInput[0].StartNodeLEI)
+	}
+	if len(repoStub.failures) != 1 {
+		t.Fatalf("expected 1 processing failure row, got %d", len(repoStub.failures))
+	}
+	if repoStub.failures[0].FailureStage != "FK_PREREQ" {
+		t.Fatalf("expected failure stage FK_PREREQ, got %s", repoStub.failures[0].FailureStage)
+	}
+}
+
+func TestFlushRRBatch_AllDeferredWhenNoParentLEIsExist(t *testing.T) {
+	sourceFileID := uuid.New()
+	repoStub := &level2RRFlushRepoStub{}
+	leiLookup := &level2LEILookupStub{namesByLEI: map[string]string{}}
+	svc := &leiLevel2Service{repo: repoStub, leiRepo: leiLookup}
+
+	batch := []*domain.LEIRelationshipRecord{
+		{
+			StartNodeLEI:     "MISSINGSTART000000001",
+			EndNodeLEI:       "MISSINGEND00000000002",
+			RelationshipType: "IS_DIRECTLY_CONSOLIDATED_BY",
+			SourceFileID:     &sourceFileID,
+		},
+		{
+			StartNodeLEI:     "MISSINGSTART000000003",
+			EndNodeLEI:       "MISSINGEND00000000004",
+			RelationshipType: "IS_ULTIMATELY_CONSOLIDATED_BY",
+			SourceFileID:     &sourceFileID,
+		},
+	}
+
+	processed, failed, err := svc.flushRRBatch(batch)
+	if err != nil {
+		t.Fatalf("flushRRBatch returned error: %v", err)
+	}
+	if processed != 0 {
+		t.Fatalf("expected processed=0, got %d", processed)
+	}
+	if failed != 2 {
+		t.Fatalf("expected failed=2, got %d", failed)
+	}
+	if repoStub.batchUpsertCalls != 0 {
+		t.Fatalf("expected no batch upsert calls, got %d", repoStub.batchUpsertCalls)
+	}
+	if repoStub.upsertCalls != 0 {
+		t.Fatalf("expected no row-by-row upsert calls, got %d", repoStub.upsertCalls)
+	}
+	if len(repoStub.failures) != 2 {
+		t.Fatalf("expected 2 processing failures, got %d", len(repoStub.failures))
 	}
 }

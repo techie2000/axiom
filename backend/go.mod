@@ -1,8 +1,6 @@
 module github.com/techie2000/axiom
 
-go 1.24.0
-
-toolchain go1.24.12
+go 1.25.1
 
 require (
 	github.com/gin-gonic/gin v1.11.0
@@ -74,7 +72,7 @@ require (
 	go.uber.org/multierr v1.9.0 // indirect
 	golang.org/x/arch v0.24.0 // indirect
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
-	golang.org/x/net v0.50.0 // indirect
+	golang.org/x/net v0.51.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.41.0 // indirect
 	golang.org/x/text v0.34.0 // indirect
