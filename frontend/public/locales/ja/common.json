@@ -1,0 +1,380 @@
+{
+  "nav": {
+    "backToHome": "← ホームへ戻る",
+    "backToDashboard": "← ダッシュボードへ戻る",
+    "backToLogin": "← ログインへ戻る",
+    "signIn": "サインイン",
+    "requestAccess": "アクセスを申請"
+  },
+  "login": {
+    "title": "サインイン",
+    "subtitle": "Axiomの保護された機能にアクセスするにはサインインしてください",
+    "emailLabel": "メールアドレス",
+    "emailPlaceholder": "you@example.com",
+    "passwordLabel": "パスワード",
+    "passwordPlaceholder": "••••••••",
+    "submitButton": "サインイン",
+    "submittingButton": "サインイン中…",
+    "noAccount": "アカウントをお持ちでない方は",
+    "requestAccessLink": "アクセスを申請",
+    "errorGeneric": "ログインに失敗しました",
+    "errorNetwork": "ネットワークエラー – もう一度お試しください"
+  },
+  "register": {
+    "title": "アクセスを申請",
+    "subtitle": "Axiomアカウントの申請を送信してください。管理者が審査・承認します。",
+    "fullNameLabel": "氏名",
+    "fullNamePlaceholder": "田中 太郎",
+    "emailLabel": "メールアドレス",
+    "emailPlaceholder": "taro@example.com",
+    "usernameLabel": "ユーザー名",
+    "usernamePlaceholder": "tanaka",
+    "passwordLabel": "パスワード",
+    "passwordPlaceholder": "8文字以上",
+    "confirmPasswordLabel": "パスワードの確認",
+    "confirmPasswordPlaceholder": "パスワードを再入力",
+    "submitButton": "申請を送信",
+    "submittingButton": "送信中…",
+    "alreadyHaveAccount": "すでにアカウントをお持ちの方は",
+    "signInLink": "サインイン",
+    "errorPasswordMatch": "パスワードが一致しません",
+    "errorPasswordLength": "パスワードは8文字以上で入力してください",
+    "errorGeneric": "登録に失敗しました",
+    "errorNetwork": "ネットワークエラー – もう一度お試しください",
+    "required": "*"
+  },
+  "register_success": {
+    "title": "申請が送信されました",
+    "message": "アカウントの申請が正常に送信されました。管理者がアカウントを審査・承認します。承認後にログインできるようになります。",
+    "backToLogin": "ログインへ戻る"
+  },
+  "language": {
+    "selectLanguage": "言語を選択",
+    "currentLanguage": "言語",
+    "arabic": "アラビア語",
+    "chinese": "中国語（簡体字）",
+    "dutch": "オランダ語",
+    "english": "英語",
+    "french": "フランス語",
+    "german": "ドイツ語",
+    "italian": "イタリア語",
+    "japanese": "日本語",
+    "portuguese": "ポルトガル語（ブラジル）",
+    "spanish": "スペイン語"
+  },
+  "theme": {
+    "toggle": "テーマを切り替える"
+  },
+  "common": {
+    "loading": "読み込み中…",
+    "error": "エラー",
+    "save": "保存",
+    "cancel": "キャンセル",
+    "close": "閉じる",
+    "delete": "削除",
+    "edit": "編集",
+    "add": "追加",
+    "search": "検索",
+    "filter": "フィルター",
+    "clear": "クリア",
+    "clearFilters": "フィルターをクリア",
+    "noResults": "結果が見つかりません",
+    "required": "必須"
+  },
+  "admin": {
+    "translations": {
+      "title": "翻訳",
+      "subtitle": "サポートされているすべての言語でUIの翻訳文字列を管理する",
+      "addTranslation": "翻訳を追加",
+      "searchPlaceholder": "キーまたは値で検索…",
+      "filterByLanguage": "言語でフィルター",
+      "filterByStatus": "ステータスでフィルター",
+      "allLanguages": "すべての言語",
+      "allStatuses": "すべてのステータス",
+      "keyColumn": "キー",
+      "languageColumn": "言語",
+      "valueColumn": "値",
+      "statusColumn": "ステータス",
+      "actionsColumn": "アクション",
+      "statusPending": "レビュー待ち",
+      "statusApproved": "承認済み",
+      "statusRejected": "却下",
+      "approve": "承認",
+      "reject": "却下",
+      "noTranslations": "翻訳が見つかりません",
+      "editTranslation": "翻訳を編集",
+      "newTranslation": "新しい翻訳",
+      "keyLabel": "翻訳キー",
+      "keyPlaceholder": "例: login.title",
+      "languageLabel": "言語",
+      "valueLabel": "翻訳された値",
+      "valuePlaceholder": "翻訳を入力…",
+      "notesLabel": "メモ（任意）",
+      "notesPlaceholder": "レビュアーへのコンテキストやメモ…",
+      "submitForReview": "レビューに送信",
+      "saveApproved": "保存して承認",
+      "deleteConfirm": "この翻訳を削除してもよろしいですか？",
+      "saveSuccess": "翻訳が正常に保存されました",
+      "deleteSuccess": "翻訳が削除されました",
+      "approveSuccess": "翻訳が承認されました",
+      "rejectSuccess": "翻訳が却下されました"
+    }
+  },
+  "footer": {
+    "copyright": "Axiom – 金融サービス静的データ"
+  },
+  "accounts": {
+    "cards": {
+      "maintenanceDescription": "Create, update, and validate account reference data",
+      "maintenanceTitle": "✏️ Data Maintenance",
+      "searchDescription": "Search accounts by number, entity, custodian, and status",
+      "searchTitle": "🔍 Account Search",
+      "ssiDescription": "View and manage standard settlement instructions for each account",
+      "ssiTitle": "📋 SSI Management"
+    },
+    "comingSoon": {
+      "authRequired": "This is protected data requiring user authentication.",
+      "description": "This page will display trading accounts, custodian relationships, and standard settlement instructions (SSI) managed in Axiom.",
+      "featureSummary": "Features coming soon: Browse accounts, search by account number, view SSI details, manage account data",
+      "title": "Accounts Management"
+    },
+    "subtitle": "Trading accounts and settlement instructions",
+    "title": "Accounts"
+  },
+  "actions": {
+    "clearFilters": "actions.clearFilters"
+  },
+  "codeMappings": {
+    "about": {
+      "title": "💡 About Code Mappings:"
+    },
+    "columns": {
+      "description": "Description",
+      "fromCode": "From Code",
+      "fromSystem": "From System",
+      "fromType": "From Type",
+      "status": "Status",
+      "toCode": "To Code",
+      "toSystem": "To System",
+      "toType": "To Type"
+    },
+    "emptyDescription": "—",
+    "emptyWithSearch": "No mappings found matching your search",
+    "emptyWithoutSearch": "No code mappings configured yet",
+    "errorTitle": "⚠️ Error:",
+    "errors": {
+      "apiReturned": "API returned {{status}}: {{statusText}}",
+      "authRequired": "Authentication required. Please log in to view code mappings.",
+      "noneConfigured": "No code mappings have been configured yet.",
+      "unableToConnect": "Unable to connect to backend API. Please ensure the backend service is running at {{apiBaseUrl}}"
+    },
+    "footer": {
+      "prefix": "Code mappings are managed via the API. Use",
+      "suffix": "to create new mappings."
+    },
+    "loading": "Loading code mappings...",
+    "noticeTitle": "📋 Notice:",
+    "searchPlaceholder": "Search by system, code type, or code value...",
+    "stats": {
+      "activeMappings": "Active Mappings",
+      "filteredResults": "Filtered Results",
+      "sourceSystems": "Source Systems",
+      "totalMappings": "Total Mappings"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "subtitle": "Cross-system code translation — map external codes (e.g., ALERT) to internal AXIOM identifiers",
+    "title": "Code Mappings"
+  },
+  "countries": {
+    "actions": {
+      "columns": "countries.actions.columns",
+      "reset": "countries.actions.reset",
+      "selectAll": "countries.actions.selectAll"
+    },
+    "columns": {
+      "continentCode": "countries.columns.continentCode",
+      "continentName": "countries.columns.continentName",
+      "currencyCodes": "countries.columns.currencyCodes",
+      "currencyNames": "countries.columns.currencyNames",
+      "languageCodes": "countries.columns.languageCodes",
+      "languageNames": "countries.columns.languageNames"
+    },
+    "dataQualityTitle": "countries.dataQualityTitle",
+    "emptyWithSearch": "countries.emptyWithSearch",
+    "errorTitle": "countries.errorTitle",
+    "filters": {
+      "${activeFilter}": "countries.filters.${activeFilter}",
+      "active": "countries.filters.active",
+      "all": "countries.filters.all",
+      "allContinentCodes": "countries.filters.allContinentCodes",
+      "allContinents": "countries.filters.allContinents",
+      "allRegions": "countries.filters.allRegions",
+      "continent": "countries.filters.continent",
+      "continentChip": "countries.filters.continentChip",
+      "inactive": "countries.filters.inactive",
+      "region": "countries.filters.region",
+      "regionChip": "countries.filters.regionChip",
+      "search": "countries.filters.search",
+      "status": "countries.filters.status",
+      "statusChip": "countries.filters.statusChip"
+    },
+    "footer": "countries.footer",
+    "loading": "countries.loading",
+    "noDataTip": "countries.noDataTip",
+    "noticeTitle": "countries.noticeTitle",
+    "prompts": {
+      "saveColumnsDefault": "countries.prompts.saveColumnsDefault"
+    },
+    "searchPlaceholder": "countries.searchPlaceholder",
+    "stats": {
+      "dataStandard": "countries.stats.dataStandard",
+      "filteredResults": "countries.stats.filteredResults",
+      "iso3166": "countries.stats.iso3166",
+      "totalCountries": "countries.stats.totalCountries"
+    },
+    "subtitle": "countries.subtitle",
+    "title": "countries.title"
+  },
+  "currencies": {
+    "aria": {
+      "filterAlertCls": "currencies.aria.filterAlertCls",
+      "filterOfac": "currencies.aria.filterOfac"
+    },
+    "columns": {
+      "alertCls": "currencies.columns.alertCls",
+      "code": "currencies.columns.code",
+      "decimals": "currencies.columns.decimals",
+      "name": "currencies.columns.name",
+      "ofac": "currencies.columns.ofac",
+      "symbol": "currencies.columns.symbol"
+    },
+    "emptyWithSearch": "currencies.emptyWithSearch",
+    "errorTitle": "currencies.errorTitle",
+    "filters": {
+      "alertClsAllowed": "currencies.filters.alertClsAllowed",
+      "allCurrencies": "currencies.filters.allCurrencies",
+      "complianceChip": "currencies.filters.complianceChip",
+      "ofacSanctioned": "currencies.filters.ofacSanctioned"
+    },
+    "footer": "currencies.footer",
+    "loading": "currencies.loading",
+    "noDataTip": "currencies.noDataTip",
+    "noticeTitle": "currencies.noticeTitle",
+    "searchPlaceholder": "currencies.searchPlaceholder",
+    "stats": {
+      "alertClsAllowed": "currencies.stats.alertClsAllowed",
+      "filteredResults": "currencies.stats.filteredResults",
+      "ofacSanctioned": "currencies.stats.ofacSanctioned",
+      "totalCurrencies": "currencies.stats.totalCurrencies"
+    },
+    "status": {
+      "allowed": "currencies.status.allowed",
+      "sanctioned": "currencies.status.sanctioned"
+    },
+    "subtitle": "currencies.subtitle",
+    "title": "currencies.title"
+  },
+  "filters": {
+    "activeFilters": "filters.activeFilters",
+    "clearAll": "filters.clearAll",
+    "searchChip": "filters.searchChip"
+  },
+  "instruments": {
+    "cards": {
+      "detailsDescription": "View complete instrument specifications, pricing, and corporate actions",
+      "detailsTitle": "📊 Instrument Details",
+      "managementDescription": "Create, update, and maintain instrument reference data",
+      "managementTitle": "✏️ Data Management",
+      "searchDescription": "Advanced search by ISIN, CUSIP, name, type, and issuer",
+      "searchTitle": "🔍 Search & Filter"
+    },
+    "comingSoon": {
+      "authRequired": "This is protected data requiring user authentication.",
+      "description": "This page will display financial instruments including securities, bonds, derivatives, and other trading instruments managed in Axiom.",
+      "featureSummary": "Features coming soon: Browse instruments, search by ISIN/CUSIP, view instrument details, manage reference data",
+      "title": "Instruments Management"
+    },
+    "subtitle": "Financial instruments and securities reference data",
+    "title": "Instruments"
+  },
+  "languages": {
+    "aria": {
+      "filterLtr": "languages.aria.filterLtr",
+      "filterRtl": "languages.aria.filterRtl"
+    },
+    "columns": {
+      "code": "languages.columns.code",
+      "direction": "languages.columns.direction",
+      "languageName": "languages.columns.languageName",
+      "nativeName": "languages.columns.nativeName"
+    },
+    "emptyWithSearch": "languages.emptyWithSearch",
+    "errorTitle": "languages.errorTitle",
+    "filters": {
+      "all": "languages.filters.all",
+      "direction": "languages.filters.direction",
+      "directionChip": "languages.filters.directionChip",
+      "ltr": "languages.filters.ltr",
+      "rtl": "languages.filters.rtl",
+      "search": "languages.filters.search"
+    },
+    "footer": "languages.footer",
+    "loading": "languages.loading",
+    "noticeTitle": "languages.noticeTitle",
+    "searchPlaceholder": "languages.searchPlaceholder",
+    "stats": {
+      "filteredResults": "languages.stats.filteredResults",
+      "ltrLanguages": "languages.stats.ltrLanguages",
+      "rtlLanguages": "languages.stats.rtlLanguages",
+      "totalLanguages": "languages.stats.totalLanguages"
+    },
+    "subtitle": "languages.subtitle",
+    "title": "languages.title"
+  },
+  "leiRecords": {
+    "subtitle": "GLEIF 法人識別子 (ISO 17442)",
+    "title": "LEI Records"
+  },
+  "referenceLayout": {
+    "displayCodesButton": "referenceLayout.displayCodesButton",
+    "displayModeCodes": "referenceLayout.displayModeCodes",
+    "displayModeNames": "referenceLayout.displayModeNames",
+    "displayNamesButton": "referenceLayout.displayNamesButton",
+    "expandButton": "referenceLayout.expandButton",
+    "expandedWidth": "referenceLayout.expandedWidth",
+    "normalButton": "referenceLayout.normalButton",
+    "normalWidth": "referenceLayout.normalWidth",
+    "saveDisplayModeDefault": "referenceLayout.saveDisplayModeDefault",
+    "savePageWidthDefault": "referenceLayout.savePageWidthDefault"
+  },
+  "ssi": {
+    "cards": {
+      "automationDescription": "Automated settlement instruction generation based on trade details and counterparty rules",
+      "automationTitle": "Settlement Automation",
+      "counterpartyDescription": "Centralized repository of counterparty settlement details with LEI integration",
+      "counterpartyTitle": "Counterparty Management",
+      "templatesDescription": "Pre-configured settlement instruction templates for Equities, Bonds, FX, and Derivatives",
+      "templatesTitle": "SSI Templates",
+      "validationDescription": "Real-time validation of BIC codes, IBANs, and account numbers against ISO standards",
+      "validationTitle": "Validation Rules"
+    },
+    "comingSoon": {
+      "description": "The SSI module is currently under development. This feature will provide:",
+      "points": {
+        "automation": "Settlement workflow automation",
+        "counterparties": "Counterparty SSI database with validation rules",
+        "integration": "Integration with accounts and entities",
+        "multicurrency": "Multi-currency and cross-border settlement support",
+        "templates": "Settlement instruction templates for multiple asset classes",
+        "validation": "BIC/SWIFT code validation"
+      },
+      "title": "Coming Soon"
+    },
+    "subtitle": "Manage settlement instructions for securities trading counterparties",
+    "title": "Standard Settlement Instructions (SSI)"
+  }
+}
+

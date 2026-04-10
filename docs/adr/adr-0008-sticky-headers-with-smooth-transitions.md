@@ -198,4 +198,3 @@ useEffect(() => {
 ## Changelog
 
 - 2026-02-18: Initial ADR documenting sticky header pattern
-

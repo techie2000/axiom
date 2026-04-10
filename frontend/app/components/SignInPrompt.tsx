@@ -2,11 +2,10 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { isAuthenticated } from '../lib/auth-token'
 
 /**
- * Renders a "Sign In" call-to-action on the landing page when the user is not
- * authenticated. Returns null once a token is detected so the prompt disappears
- * automatically after login without a page reload.
+ * Renders a "Sign In" call-to-action when the user is not authenticated.
  */
 export default function SignInPrompt() {
   const [mounted, setMounted] = useState(false)
@@ -14,19 +13,19 @@ export default function SignInPrompt() {
 
   useEffect(() => {
     setMounted(true)
-    setIsLoggedIn(!!localStorage.getItem('axiom_token'))
+    setIsLoggedIn(isAuthenticated())
   }, [])
 
   if (!mounted || isLoggedIn) return null
 
   return (
-    <div className="mb-8 p-4 rounded-lg bg-blue-50 border border-blue-200 dark:bg-blue-900/20 dark:border-blue-700 flex items-center justify-between gap-4">
-      <p className="text-blue-800 dark:text-blue-300 text-sm">
+    <div className="mb-8 p-4 rounded-lg theme-panel border flex items-center justify-between gap-4">
+      <p className="theme-text-muted text-sm">
         Sign in to access protected data and administration features.
       </p>
       <Link
         href="/login"
-        className="shrink-0 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded transition-colors"
+        className="shrink-0 px-4 py-2 rounded theme-btn-primary theme-focus text-sm font-medium"
       >
         Sign In →
       </Link>

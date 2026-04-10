@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -25,6 +26,7 @@ type SchedulerService interface {
 	RunDailyDeltaSync() error
 	RunDailyCleanup() error
 	RunDailyMasterDataSync() error
+	RunGLEIFReferenceSync() error
 	RunLevel2Sync() error
 	RunLevel2RRSync() error
 	RunLevel2REPEXSync() error
@@ -37,22 +39,27 @@ type SchedulerService interface {
 	TriggerFullSync() error
 	TriggerDeltaSync() error
 	TriggerMasterDataSync() error
+	TriggerGLEIFReferenceSync() error
 	TriggerLevel2Sync() error
 	TriggerLevel2RRSync() error
 	TriggerLevel2REPEXSync() error
 }
 
 type schedulerService struct {
-	leiService        LEIService
-	leiLevel2Service  LEILevel2Service
-	masterDataService MasterDataService
-	stopChan          chan struct{}
-	running           bool
+	leiService            LEIService
+	leiLevel2Service      LEILevel2Service
+	masterDataService     MasterDataService
+	gleifReferenceService GLEIFReferenceService
+	stopChan              chan struct{}
+	running               bool
 	// triggerMu serialises concurrent manual-trigger API calls so that the
 	// status check and goroutine spawn happen atomically from the caller's
 	// perspective, eliminating the TOCTOU race between handler validation
 	// and the scheduler-service safety net.
 	triggerMu sync.Mutex
+	// gleifSyncMu serialises all GLEIF reference sync executions across
+	// scheduler pre-sync and manual trigger paths.
+	gleifSyncMu sync.Mutex
 	// Parsed schedule configuration
 	deltaSyncInterval time.Duration
 	fullSyncDay       time.Weekday
@@ -77,6 +84,27 @@ func NewSchedulerService(leiService LEIService, leiLevel2Service LEILevel2Servic
 	// Parse and validate schedule configuration
 	s.parseScheduleConfig(cfg)
 
+	return s
+}
+
+// NewSchedulerServiceWithGLEIF creates a scheduler service with GLEIF reference sync wired in.
+// The GLEIF reference sync runs before every LEI Level 1/2 ingest to keep code lists current.
+func NewSchedulerServiceWithGLEIF(
+	leiService LEIService,
+	leiLevel2Service LEILevel2Service,
+	masterDataService MasterDataService,
+	gleifReferenceService GLEIFReferenceService,
+	cfg *config.Config,
+) SchedulerService {
+	s := &schedulerService{
+		leiService:            leiService,
+		leiLevel2Service:      leiLevel2Service,
+		masterDataService:     masterDataService,
+		gleifReferenceService: gleifReferenceService,
+		stopChan:              make(chan struct{}),
+		running:               false,
+	}
+	s.parseScheduleConfig(cfg)
 	return s
 }
 
@@ -112,15 +140,15 @@ func (s *schedulerService) parseScheduleConfig(cfg *config.Config) {
 			Msg("Full sync day configured")
 	}
 
-	// Parse full sync time (e.g., "02:00")
+	// Parse full sync time (e.g., "12:00")
 	hour, minute, err := parseTimeOfDay(cfg.LEI.FullSyncTime)
 	if err != nil {
 		log.Warn().
 			Str("value", cfg.LEI.FullSyncTime).
-			Str("default", "02:00").
+			Str("default", "12:00").
 			Err(err).
 			Msg("Invalid full sync time, using default")
-		s.fullSyncHour = 2
+		s.fullSyncHour = 12
 		s.fullSyncMinute = 0
 	} else {
 		s.fullSyncHour = hour
@@ -270,7 +298,31 @@ func (s *schedulerService) Start() error {
 					}
 				}()
 			} else {
-				log.Info().Int64("existing_records", count).Msg("Database has existing records, waiting for scheduled full sync")
+				fullStatus, statusErr := s.leiService.GetProcessingStatus("DAILY_FULL")
+				now := time.Now()
+				if statusErr == nil && fullStatus.Status != "RUNNING" && fullStatus.NextRunAt != nil &&
+					(fullStatus.NextRunAt.Before(now) || fullStatus.NextRunAt.Equal(now)) {
+					log.Info().
+						Int64("existing_records", count).
+						Time("overdue_next_run", *fullStatus.NextRunAt).
+						Msg("Database has existing records and DAILY_FULL is overdue, triggering catch-up full sync now")
+
+					go func() {
+						if err := s.RunDailyMasterDataSync(); err != nil {
+							log.Error().Err(err).Msg("Catch-up master data sync check failed; continuing with LEI sync")
+						}
+						if err := s.RunDailyFullSync(); err != nil {
+							log.Error().Err(err).Msg("Failed to run catch-up full sync")
+							return
+						}
+						log.Info().Msg("Catch-up Level 1 sync succeeded, triggering dependent Level 2 sync")
+						if err := s.RunLevel2Sync(); err != nil {
+							log.Error().Err(err).Msg("Failed to run Level 2 sync after catch-up full sync")
+						}
+					}()
+				} else {
+					log.Info().Int64("existing_records", count).Msg("Database has existing records, waiting for scheduled full sync")
+				}
 			}
 		}
 	}
@@ -307,7 +359,7 @@ func (s *schedulerService) Stop() {
 func (s *schedulerService) cleanupStuckJobStatuses() {
 	log.Info().Msg("Checking for stuck job statuses from previous sessions")
 
-	jobTypes := []string{"MASTER_DATA_SYNC", "DAILY_FULL", "DAILY_DELTA", "LEVEL2_RR", "LEVEL2_REPEX"}
+	jobTypes := []string{"MASTER_DATA_SYNC", "GLEIF_REFERENCE_SYNC", "DAILY_FULL", "DAILY_DELTA", "LEVEL2_RR", "LEVEL2_REPEX"}
 	for _, jobType := range jobTypes {
 		st, err := s.leiService.GetProcessingStatus(jobType)
 		if err == nil && st.Status == "RUNNING" {
@@ -406,6 +458,38 @@ func (s *schedulerService) initializeNextRunTimes() {
 		}
 	}
 
+	// Ensure GLEIF_REFERENCE_SYNC exists and is chained after MASTER_DATA_SYNC.
+	if gleifStatus, gleifErr := s.leiService.GetProcessingStatus("GLEIF_REFERENCE_SYNC"); gleifErr != nil {
+		now := time.Now()
+		newGLEIF := &domain.FileProcessingStatus{
+			JobType:          "GLEIF_REFERENCE_SYNC",
+			Status:           "IDLE",
+			DependsOnJobType: "MASTER_DATA_SYNC",
+			CreatedAt:        now,
+			UpdatedAt:        now,
+		}
+		if createErr := s.leiService.UpdateProcessingStatus(newGLEIF); createErr != nil {
+			log.Error().Err(createErr).Msg("Failed to create GLEIF_REFERENCE_SYNC job status row")
+		} else {
+			log.Info().Msg("GLEIF_REFERENCE_SYNC job status row created")
+		}
+	} else if gleifStatus.DependsOnJobType != "MASTER_DATA_SYNC" {
+		gleifStatus.DependsOnJobType = "MASTER_DATA_SYNC"
+		if updateErr := s.leiService.UpdateProcessingStatus(gleifStatus); updateErr != nil {
+			log.Error().Err(updateErr).Msg("Failed to set depends_on_job_type on GLEIF_REFERENCE_SYNC")
+		}
+	}
+
+	// Ensure DAILY_FULL is chained after GLEIF_REFERENCE_SYNC.
+	if fullStatus, fullErr := s.leiService.GetProcessingStatus("DAILY_FULL"); fullErr == nil {
+		if fullStatus.DependsOnJobType != "GLEIF_REFERENCE_SYNC" {
+			fullStatus.DependsOnJobType = "GLEIF_REFERENCE_SYNC"
+			if updateErr := s.leiService.UpdateProcessingStatus(fullStatus); updateErr != nil {
+				log.Error().Err(updateErr).Msg("Failed to set depends_on_job_type on DAILY_FULL")
+			}
+		}
+	}
+
 	// Ensure LEVEL2_RR and LEVEL2_REPEX rows exist with the correct dependency metadata.
 	// Migration 000026 seeds these rows, but this guard handles cases where the migration
 	// has not yet been applied (e.g. local dev without running migrations first).
@@ -433,8 +517,8 @@ func (s *schedulerService) initializeNextRunTimes() {
 			} else {
 				log.Info().Str("job_type", def.jobType).Str("depends_on", def.dependsOnJobType).Msg("Level 2 job status row created")
 			}
-		} else if st.DependsOnJobType == "" {
-			// Row exists but dependency column was not yet set (pre-migration 000026).
+		} else if st.DependsOnJobType != def.dependsOnJobType {
+			// Row exists but dependency column is missing or stale.
 			st.DependsOnJobType = def.dependsOnJobType
 			if updateErr := s.leiService.UpdateProcessingStatus(st); updateErr != nil {
 				log.Error().Err(updateErr).Str("job_type", def.jobType).Msg("Failed to set depends_on_job_type on Level 2 job row")
@@ -515,6 +599,46 @@ func (s *schedulerService) resumeInterruptedFullSyncOnStartup() (bool, error) {
 		return false, nil
 	}
 
+	fileID := interruptedFile.ID
+	fileAvailable, err := s.leiService.SourceFileExists(fileID)
+	if err != nil {
+		return false, fmt.Errorf("failed to verify interrupted source file availability: %w", err)
+	}
+
+	if !fileAvailable {
+		log.Warn().
+			Str("source_file_id", fileID.String()).
+			Str("file_name", interruptedFile.FileName).
+			Msg("Interrupted full-sync source file is missing; marking file failed and triggering fresh full sync")
+
+		interruptedFile.ProcessingStatus = "FAILED"
+		interruptedFile.ProcessingError = "Source file missing on startup; resumed processing skipped"
+		interruptedFile.FailureCategory = "FILE_MISSING"
+		if updateErr := s.leiService.UpdateSourceFile(interruptedFile); updateErr != nil {
+			log.Error().Err(updateErr).Str("source_file_id", fileID.String()).Msg("Failed to mark missing interrupted file as FAILED")
+		}
+
+		status, statusErr := s.leiService.GetProcessingStatus("DAILY_FULL")
+		if statusErr != nil {
+			status = &domain.FileProcessingStatus{JobType: "DAILY_FULL", Status: "IDLE"}
+		}
+		status.Status = "IDLE"
+		status.ErrorMessage = "Auto-resume skipped: source file missing"
+		status.CurrentSourceFileID = nil
+		status.NextRunAt = s.calculateNextDailyFullRun()
+		if updateErr := s.leiService.UpdateProcessingStatus(status); updateErr != nil {
+			log.Error().Err(updateErr).Msg("Failed to reset DAILY_FULL status after missing interrupted file")
+		}
+
+		go func() {
+			if freshErr := s.RunDailyFullSync(); freshErr != nil {
+				log.Error().Err(freshErr).Msg("Fresh full sync failed after missing interrupted source file")
+			}
+		}()
+
+		return true, nil
+	}
+
 	status, err := s.leiService.GetProcessingStatus("DAILY_FULL")
 	if err != nil {
 		status = &domain.FileProcessingStatus{
@@ -524,7 +648,6 @@ func (s *schedulerService) resumeInterruptedFullSyncOnStartup() (bool, error) {
 	}
 
 	now := time.Now()
-	fileID := interruptedFile.ID
 	status.Status = "RUNNING"
 	status.LastRunAt = &now
 	status.CurrentSourceFileID = &fileID
@@ -553,6 +676,28 @@ func (s *schedulerService) resumeInterruptedFullSyncOnStartup() (bool, error) {
 				log.Error().Err(getErr).Msg("Failed to get DAILY_FULL status after resume failure")
 				return
 			}
+
+			if strings.Contains(strings.ToLower(err.Error()), "source file not found") {
+				log.Warn().
+					Err(err).
+					Str("source_file_id", fileID.String()).
+					Msg("Auto-resume source file missing; resetting to IDLE and triggering fresh full sync")
+
+				status.Status = "IDLE"
+				status.ErrorMessage = "Auto-resume skipped: source file missing"
+				status.CurrentSourceFileID = nil
+				status.NextRunAt = s.calculateNextDailyFullRun()
+				if updateErr := s.leiService.UpdateProcessingStatus(status); updateErr != nil {
+					log.Error().Err(updateErr).Msg("Failed to reset DAILY_FULL status to IDLE after missing resume file")
+					return
+				}
+
+				if freshErr := s.RunDailyFullSync(); freshErr != nil {
+					log.Error().Err(freshErr).Msg("Fresh full sync failed after missing resume file")
+				}
+				return
+			}
+
 			status.Status = "FAILED"
 			status.ErrorMessage = err.Error()
 			status.CurrentSourceFileID = nil
@@ -748,12 +893,12 @@ func (s *schedulerService) dailyDeltaSyncLoop() {
 }
 */
 
-// dailyFullSyncLoop runs full sync every day at configured time (default 2:00 AM)
+// dailyFullSyncLoop runs full sync every day at configured time (default 12:00 UTC)
 func (s *schedulerService) dailyFullSyncLoop() {
 	for {
 		// Calculate next run at configured time today or tomorrow
-		now := time.Now()
-		nextRun := time.Date(now.Year(), now.Month(), now.Day(), s.fullSyncHour, s.fullSyncMinute, 0, 0, now.Location())
+		now := time.Now().UTC()
+		nextRun := time.Date(now.Year(), now.Month(), now.Day(), s.fullSyncHour, s.fullSyncMinute, 0, 0, time.UTC)
 
 		// If we've already passed today's scheduled time, schedule for tomorrow
 		if nextRun.Before(now) || nextRun.Equal(now) {
@@ -821,6 +966,8 @@ func (s *schedulerService) RunDailyDeltaSync() error {
 	// Update status
 	status.Status = "RUNNING"
 	status.ErrorMessage = ""
+	status.CurrentSourceFileID = nil
+	status.ProgressMessage = "Preparing delta sync"
 	now := time.Now()
 	status.LastRunAt = &now
 	if err := s.leiService.UpdateProcessingStatus(status); err != nil {
@@ -833,6 +980,17 @@ func (s *schedulerService) RunDailyDeltaSync() error {
 // doDeltaSyncWork executes the download-and-process pipeline for a DAILY_DELTA job whose status
 // has already been set to RUNNING by the caller.
 func (s *schedulerService) doDeltaSyncWork(status *domain.FileProcessingStatus, now time.Time) error {
+	// Run GLEIF reference sync first to ensure all code lists are current before LEI delta ingest.
+	if err := s.runGLEIFReferenceSyncIfConfigured("delta_sync"); err != nil {
+		status.Status = "FAILED"
+		status.ErrorMessage = err.Error()
+		status.ProgressMessage = ""
+		if updateErr := s.leiService.UpdateProcessingStatus(status); updateErr != nil {
+			log.Error().Err(updateErr).Msg("Failed to update delta sync status after GLEIF pre-sync failure")
+		}
+		return err
+	}
+
 	// Download delta file
 	sourceFile, err := s.leiService.DownloadDeltaFile()
 	if err != nil {
@@ -868,6 +1026,7 @@ func (s *schedulerService) doDeltaSyncWork(status *domain.FileProcessingStatus, 
 	if err := s.leiService.ProcessSourceFile(sourceFile.ID); err != nil {
 		status.Status = "FAILED"
 		status.ErrorMessage = err.Error()
+		status.ProgressMessage = ""
 		if updateErr := s.leiService.UpdateProcessingStatus(status); updateErr != nil {
 			log.Error().Err(updateErr).Msg("Failed to update delta sync processing status to FAILED")
 		}
@@ -879,6 +1038,7 @@ func (s *schedulerService) doDeltaSyncWork(status *domain.FileProcessingStatus, 
 	status.LastSuccessAt = &now
 	status.NextRunAt = calculateNextRun(s.deltaSyncInterval)
 	status.ErrorMessage = ""
+	status.ProgressMessage = ""
 	if err := s.leiService.UpdateProcessingStatus(status); err != nil {
 		log.Error().Err(err).Msg("Failed to update processing status")
 	}
@@ -918,6 +1078,8 @@ func (s *schedulerService) RunDailyFullSync() error {
 	// Update status
 	status.Status = "RUNNING"
 	status.ErrorMessage = ""
+	status.CurrentSourceFileID = nil
+	status.ProgressMessage = "Preparing full sync"
 	now := time.Now()
 	status.LastRunAt = &now
 	if err := s.leiService.UpdateProcessingStatus(status); err != nil {
@@ -930,6 +1092,17 @@ func (s *schedulerService) RunDailyFullSync() error {
 // doFullSyncWork executes the download-and-process pipeline for a DAILY_FULL job whose status
 // has already been set to RUNNING by the caller.
 func (s *schedulerService) doFullSyncWork(status *domain.FileProcessingStatus, now time.Time) error {
+	// Run GLEIF reference sync first to ensure all code lists are current before LEI ingest.
+	if err := s.runGLEIFReferenceSyncIfConfigured("full_sync"); err != nil {
+		status.Status = "FAILED"
+		status.ErrorMessage = err.Error()
+		status.ProgressMessage = ""
+		if updateErr := s.leiService.UpdateProcessingStatus(status); updateErr != nil {
+			log.Error().Err(updateErr).Msg("Failed to update full sync status after GLEIF pre-sync failure")
+		}
+		return err
+	}
+
 	// Download full file
 	sourceFile, err := s.leiService.DownloadFullFile()
 	if err != nil {
@@ -941,6 +1114,7 @@ func (s *schedulerService) doFullSyncWork(status *domain.FileProcessingStatus, n
 			status.LastSuccessAt = &now
 			status.NextRunAt = s.calculateNextDailyFullRun()
 			status.ErrorMessage = ""
+			status.ProgressMessage = ""
 			if updateErr := s.leiService.UpdateProcessingStatus(status); updateErr != nil {
 				log.Error().Err(updateErr).Msg("Failed to update full sync status to IDLE")
 			}
@@ -949,6 +1123,7 @@ func (s *schedulerService) doFullSyncWork(status *domain.FileProcessingStatus, n
 		// Real error
 		status.Status = "FAILED"
 		status.ErrorMessage = err.Error()
+		status.ProgressMessage = ""
 		if updateErr := s.leiService.UpdateProcessingStatus(status); updateErr != nil {
 			log.Error().Err(updateErr).Msg("Failed to update full sync status to FAILED")
 		}
@@ -957,6 +1132,7 @@ func (s *schedulerService) doFullSyncWork(status *domain.FileProcessingStatus, n
 
 	// Update status with current file
 	status.CurrentSourceFileID = &sourceFile.ID
+	status.ProgressMessage = fmt.Sprintf("Extracting %s", sourceFile.FileName)
 	if updateErr := s.leiService.UpdateProcessingStatus(status); updateErr != nil {
 		log.Error().Err(updateErr).Msg("Failed to update full sync current file")
 	}
@@ -971,6 +1147,7 @@ func (s *schedulerService) doFullSyncWork(status *domain.FileProcessingStatus, n
 	if err := s.leiService.ProcessSourceFileWithResume(sourceFile.ID, resumeLEI); err != nil {
 		status.Status = "FAILED"
 		status.ErrorMessage = err.Error()
+		status.ProgressMessage = ""
 		if updateErr := s.leiService.UpdateProcessingStatus(status); updateErr != nil {
 			log.Error().Err(updateErr).Msg("Failed to update full sync processing status to FAILED")
 		}
@@ -983,6 +1160,7 @@ func (s *schedulerService) doFullSyncWork(status *domain.FileProcessingStatus, n
 	status.LastSuccessAt = &now
 	status.NextRunAt = s.calculateNextDailyFullRun()
 	status.ErrorMessage = ""
+	status.ProgressMessage = ""
 	if err := s.leiService.UpdateProcessingStatus(status); err != nil {
 		log.Error().Err(err).Msg("Failed to update processing status")
 	}
@@ -997,10 +1175,10 @@ func calculateNextRun(interval time.Duration) *time.Time {
 	return &next
 }
 
-// calculateNextDailyFullRun calculates next run at configured daily time (default 2 AM)
+// calculateNextDailyFullRun calculates next run at configured daily time (default 12:00 UTC)
 func (s *schedulerService) calculateNextDailyFullRun() *time.Time {
-	now := time.Now()
-	nextRun := time.Date(now.Year(), now.Month(), now.Day(), s.fullSyncHour, s.fullSyncMinute, 0, 0, now.Location())
+	now := time.Now().UTC()
+	nextRun := time.Date(now.Year(), now.Month(), now.Day(), s.fullSyncHour, s.fullSyncMinute, 0, 0, time.UTC)
 
 	// If we've already passed today's scheduled time, schedule for tomorrow
 	if nextRun.Before(now) || nextRun.Equal(now) {
@@ -1010,7 +1188,7 @@ func (s *schedulerService) calculateNextDailyFullRun() *time.Time {
 	return &nextRun
 }
 
-// DEPRECATED: calculateNextWeeklyRun calculates next Sunday at 2 AM
+// DEPRECATED: calculateNextWeeklyRun calculates next Sunday at 12:00 UTC
 // This function is no longer used - use calculateNextDailyFullRun() instead for daily scheduling
 // Kept for reference only
 /*
@@ -1036,8 +1214,8 @@ func calculateNextWeeklyRun() *time.Time {
 func (s *schedulerService) dailyCleanupLoop() {
 	for {
 		// Calculate next run at configured time
-		now := time.Now()
-		nextRun := time.Date(now.Year(), now.Month(), now.Day(), s.cleanupHour, s.cleanupMinute, 0, 0, now.Location())
+		now := time.Now().UTC()
+		nextRun := time.Date(now.Year(), now.Month(), now.Day(), s.cleanupHour, s.cleanupMinute, 0, 0, time.UTC)
 
 		// If we've passed the configured time today, schedule for tomorrow
 		if nextRun.Before(now) {
@@ -1075,15 +1253,15 @@ func (s *schedulerService) RunDailyCleanup() error {
 	return nil
 }
 
-// dailyMasterDataSyncLoop runs master data sync at 1 AM daily (before LEI sync at 2 AM)
+// dailyMasterDataSyncLoop runs master data sync at 1 AM daily (before default LEI sync at 12:00 UTC)
 func (s *schedulerService) dailyMasterDataSyncLoop() {
 	masterDataSyncHour := 1 // 1 AM - runs BEFORE LEI sync to ensure countries/currencies exist first
 	masterDataSyncMinute := 0
 
 	for {
-		// Calculate next run time (daily at 1:00 AM)
-		now := time.Now()
-		nextRun := time.Date(now.Year(), now.Month(), now.Day(), masterDataSyncHour, masterDataSyncMinute, 0, 0, now.Location())
+		// Calculate next run time (daily at 01:00 UTC)
+		now := time.Now().UTC()
+		nextRun := time.Date(now.Year(), now.Month(), now.Day(), masterDataSyncHour, masterDataSyncMinute, 0, 0, time.UTC)
 		if nextRun.Before(now) {
 			nextRun = nextRun.AddDate(0, 0, 1)
 		}
@@ -1137,12 +1315,12 @@ func (s *schedulerService) RunDailyMasterDataSync() error {
 	st.ErrorMessage = ""
 	_ = s.leiService.UpdateProcessingStatus(st)
 
-	return s.doMasterDataSyncWork(st, now)
+	return s.doMasterDataSyncWork(st)
 }
 
 // doMasterDataSyncWork checks for and applies master data updates for a MASTER_DATA_SYNC job
 // whose status has already been set to RUNNING by the caller.
-func (s *schedulerService) doMasterDataSyncWork(st *domain.FileProcessingStatus, now time.Time) error {
+func (s *schedulerService) doMasterDataSyncWork(st *domain.FileProcessingStatus) error {
 	// Check if master data files have been updated
 	hasUpdates, err := s.masterDataService.CheckForUpdates()
 	if err != nil {
@@ -1228,8 +1406,8 @@ func (s *schedulerService) RunLevel2REPEXSync() error {
 }
 
 func (s *schedulerService) calculateNextMasterDataRun() *time.Time {
-	now := time.Now()
-	next := time.Date(now.Year(), now.Month(), now.Day(), 1, 0, 0, 0, now.Location())
+	now := time.Now().UTC()
+	next := time.Date(now.Year(), now.Month(), now.Day(), 1, 0, 0, 0, time.UTC)
 	if !next.After(now) {
 		next = next.AddDate(0, 0, 1)
 	}
@@ -1404,8 +1582,8 @@ func (s *schedulerService) doREPEXWork(repexStatus *domain.FileProcessingStatus,
 // Trigger* methods – HTTP-handler entry-points with atomic conflict detection
 // --------------------------------------------------------------------------
 
-// TriggerFullSync validates that neither MASTER_DATA_SYNC nor DAILY_FULL is currently
-// running, then spawns RunDailyFullSync in a goroutine and returns immediately.
+// TriggerFullSync validates that MASTER_DATA_SYNC, GLEIF_REFERENCE_SYNC, and DAILY_FULL
+// are not currently running, then spawns RunDailyFullSync in a goroutine and returns immediately.
 func (s *schedulerService) TriggerFullSync() error {
 	s.triggerMu.Lock()
 	defer s.triggerMu.Unlock()
@@ -1416,6 +1594,17 @@ func (s *schedulerService) TriggerFullSync() error {
 	}
 	if masterStatus.Status == "RUNNING" {
 		return fmt.Errorf("cannot start Full Sync while MASTER_DATA_SYNC is running: %w", ErrJobRunning)
+	}
+
+	gleifStatus, err := s.leiService.GetProcessingStatus("GLEIF_REFERENCE_SYNC")
+	if err != nil {
+		return fmt.Errorf("failed to validate GLEIF_REFERENCE_SYNC status: %w", err)
+	}
+	if gleifStatus.Status == "RUNNING" {
+		return fmt.Errorf("cannot start Full Sync while GLEIF_REFERENCE_SYNC is running: %w", ErrJobRunning)
+	}
+	if gleifStatus.LastSuccessAt == nil || gleifStatus.LastSuccessAt.IsZero() {
+		return fmt.Errorf("cannot start Full Sync until GLEIF_REFERENCE_SYNC has completed successfully: %w", ErrJobRunning)
 	}
 
 	fullStatus, err := s.leiService.GetProcessingStatus("DAILY_FULL")
@@ -1587,6 +1776,113 @@ func (s *schedulerService) TriggerLevel2REPEXSync() error {
 	go func() {
 		if err := s.RunLevel2REPEXSync(); err != nil {
 			log.Error().Err(err).Msg("manual LEVEL2_REPEX sync failed")
+		}
+	}()
+	return nil
+}
+
+// runGLEIFReferenceSyncIfConfigured runs GLEIF reference sync when configured.
+// It returns an error when sync fails so callers can stop LEI ingest until
+// reference lists are consistent.
+func (s *schedulerService) runGLEIFReferenceSyncIfConfigured(context string) error {
+	if s.gleifReferenceService == nil {
+		return nil
+	}
+	s.gleifSyncMu.Lock()
+	defer s.gleifSyncMu.Unlock()
+
+	log.Info().Str("context", context).Msg("Running GLEIF reference sync before LEI ingest")
+	if err := s.gleifReferenceService.SyncAll(); err != nil {
+		return fmt.Errorf("GLEIF reference sync failed before %s: %w", context, err)
+	}
+	return nil
+}
+
+// RunGLEIFReferenceSync downloads and upserts all GLEIF reference code lists.
+// It updates the GLEIF_REFERENCE_SYNC job row in file_processing_status for observability.
+// Returns an error if the GLEIF reference service is not configured, so callers invoked
+// directly (e.g. via the manual-trigger API) receive a clear diagnostic.
+func (s *schedulerService) RunGLEIFReferenceSync() error {
+	s.gleifSyncMu.Lock()
+	defer s.gleifSyncMu.Unlock()
+
+	if s.gleifReferenceService == nil {
+		return fmt.Errorf("GLEIF reference service not configured")
+	}
+	log.Info().Msg("Starting GLEIF reference code-list sync")
+
+	status, err := s.leiService.GetProcessingStatus("GLEIF_REFERENCE_SYNC")
+	if err != nil {
+		status = &domain.FileProcessingStatus{
+			JobType: "GLEIF_REFERENCE_SYNC",
+			Status:  "IDLE",
+		}
+	}
+
+	if status.Status == "RUNNING" {
+		log.Warn().Msg("GLEIF reference sync already running, skipping")
+		return nil
+	}
+
+	status.Status = "RUNNING"
+	status.ErrorMessage = ""
+	now := time.Now()
+	status.LastRunAt = &now
+	if updateErr := s.leiService.UpdateProcessingStatus(status); updateErr != nil {
+		log.Error().Err(updateErr).Msg("Failed to update GLEIF reference sync status")
+	}
+
+	syncErr := s.gleifReferenceService.SyncAll()
+	stats := s.gleifReferenceService.LastSyncStats()
+	if statsJSON, marshalErr := json.Marshal(stats); marshalErr == nil {
+		status.ProgressMessage = string(statsJSON)
+	} else {
+		status.ProgressMessage = ""
+	}
+
+	if syncErr != nil {
+		status.Status = "FAILED"
+		status.ErrorMessage = syncErr.Error()
+		log.Error().Err(syncErr).Msg("GLEIF reference sync failed")
+	} else {
+		status.Status = "COMPLETED"
+		status.ErrorMessage = ""
+		status.LastSuccessAt = &now
+		log.Info().Msg("GLEIF reference sync completed")
+	}
+
+	if updateErr := s.leiService.UpdateProcessingStatus(status); updateErr != nil {
+		log.Error().Err(updateErr).Msg("Failed to update GLEIF reference sync final status")
+	}
+
+	return syncErr
+}
+
+// TriggerGLEIFReferenceSync manually triggers a GLEIF reference sync in a goroutine.
+// Returns ErrJobRunning when the sync is already in progress.
+func (s *schedulerService) TriggerGLEIFReferenceSync() error {
+	s.triggerMu.Lock()
+	defer s.triggerMu.Unlock()
+
+	masterStatus, err := s.leiService.GetProcessingStatus("MASTER_DATA_SYNC")
+	if err != nil {
+		return fmt.Errorf("failed to validate MASTER_DATA_SYNC status: %w", err)
+	}
+	if masterStatus.Status == "RUNNING" {
+		return fmt.Errorf("cannot start GLEIF_REFERENCE_SYNC while MASTER_DATA_SYNC is running: %w", ErrJobRunning)
+	}
+
+	status, err := s.leiService.GetProcessingStatus("GLEIF_REFERENCE_SYNC")
+	if err != nil {
+		return fmt.Errorf("failed to validate GLEIF_REFERENCE_SYNC status: %w", err)
+	}
+	if status.Status == "RUNNING" {
+		return fmt.Errorf("GLEIF_REFERENCE_SYNC is already running: %w", ErrJobRunning)
+	}
+
+	go func() {
+		if err := s.RunGLEIFReferenceSync(); err != nil {
+			log.Error().Err(err).Msg("manual GLEIF reference sync failed")
 		}
 	}()
 	return nil

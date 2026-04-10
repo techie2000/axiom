@@ -4,6 +4,10 @@
 
 This directory contains Dockerfiles for the Axiom application with environment-specific configurations.
 
+Base images and infra images are sourced from the Public ECR Docker library mirror
+(`public.ecr.aws/docker/library/*`) to avoid corporate filtering that blocks Docker
+Hub blob CDN URLs.
+
 ## Files
 
 ### Dockerfile.backend
@@ -50,6 +54,32 @@ When using `docker-compose.dev.yml`, the frontend runs with:
 **Production Mode:**
 Uses `npm start` to run pre-built static assets from multi-stage build.
 
+### Dockerfile.docs-user
+
+**Purpose:** Build and serve static `docs-user/` VitePress documentation  
+**Use in:** `docker-compose.dev.yml` with `docs` profile  
+**Features:**
+
+- Multi-stage build (`node:22-alpine` -> `nginx:alpine`)
+- Deterministic dependency install with `npm ci`
+- Ships static output from `docs-user/.vitepress/dist`
+
+**Dev profile usage:**
+
+```bash
+docker compose --env-file .env.dev -f docker-compose.dev.yml --profile docs up -d docs-user
+```
+
+Then open `http://localhost:15173/docs-user/`.
+
+**Main profile usage:**
+
+```bash
+docker compose --env-file .env.main -f docker-compose.main.yml --profile docs up -d docs-user
+```
+
+Then open `http://localhost:45173/docs-user/`.
+
 ## Usage
 
 ### Main Branch (intraday development and fixes)
@@ -64,11 +94,25 @@ Or via Make:
 make docker-main-up
 ```
 
+To include the docs container in main branch daily workflow:
+
+```bash
+docker compose -f docker-compose.main.yml --env-file .env.main --profile docs up -d
+```
+
 ### Local Development (with corporate proxy)
 
 ```bash
 docker-compose -f docker-compose.dev.yml --env-file .env.dev up
 ```
+
+### Local Development with Always-On User Docs
+
+```bash
+docker compose -f docker-compose.dev.yml --env-file .env.dev --profile docs up -d
+```
+
+This starts the normal dev stack plus a static docs container.
 
 ### Production
 

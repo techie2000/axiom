@@ -50,7 +50,7 @@ export function formatLEICellValue(value: unknown, key: string): string {
     return '-'
   }
 
-  if (key === 'entity_category' || key === 'entity_sub_category') {
+  if (key === 'entity_category' || key === 'entity_sub_category' || key === 'registration_status') {
     return formatEnumDisplayValue(baseDisplayValue)
   }
 

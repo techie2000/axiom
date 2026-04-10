@@ -132,3 +132,38 @@ func TestPersistProcessingFailure_NilSourceFileID(t *testing.T) {
 		t.Errorf("SourceFileID: want nil, got %v", repo.captured.SourceFileID)
 	}
 }
+
+func TestParseGLEIFTimeValue_MillisecondVariants(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		wantNil bool
+		wantY   int
+		wantM   int
+		wantD   int
+		wantH   int
+	}{
+		{"whole-second Z", "2026-04-09T10:21:26Z", false, 2026, 4, 9, 10},
+		{"millisecond .360Z", "2026-04-09T10:21:26.360Z", false, 2026, 4, 9, 10},
+		{"millisecond .000Z", "2026-04-09T00:00:00.000Z", false, 2026, 4, 9, 0},
+		{"date-only", "2026-04-09", false, 2026, 4, 9, 0},
+		{"empty string", "", true, 0, 0, 0, 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := parseGLEIFTimeValue(tt.input)
+			if tt.wantNil {
+				if !got.IsZero() {
+					t.Fatalf("parseGLEIFTimeValue(%q) = %v, want zero time", tt.input, got)
+				}
+				return
+			}
+			if got.IsZero() {
+				t.Fatalf("parseGLEIFTimeValue(%q) returned zero time", tt.input)
+			}
+			if got.Year() != tt.wantY || int(got.Month()) != tt.wantM || got.Day() != tt.wantD || got.Hour() != tt.wantH {
+				t.Fatalf("parseGLEIFTimeValue(%q) = %v, want %04d-%02d-%02d %02d:xx", tt.input, got, tt.wantY, tt.wantM, tt.wantD, tt.wantH)
+			}
+		})
+	}
+}

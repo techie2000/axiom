@@ -24,6 +24,8 @@ type Handlers struct {
 	LEI             *LEIHandler
 	DataAcquisition *DataAcquisitionHandler
 	CodeMapping     *CodeMappingHandler
+	UserPreference  *UserPreferenceHandler
+	UITranslation   *UITranslationHandler
 }
 
 // NewHandlers creates a new handlers instance
@@ -40,6 +42,8 @@ func NewHandlers(services *service.Services, schedulerService service.SchedulerS
 		LEI:             NewLEIHandlerWithLevel2(services.LEI, services.LEILevel2, schedulerService),
 		DataAcquisition: NewDataAcquisitionHandler(),
 		CodeMapping:     NewCodeMappingHandler(services.CodeMapping),
+		UserPreference:  NewUserPreferenceHandler(services.UserPreference),
+		UITranslation:   NewUITranslationHandler(services.UITranslation),
 	}
 }
 
@@ -953,7 +957,7 @@ func ibanOrEmpty(account string) string {
 		return ""
 	}
 	prefix := strings.ToUpper(account[:2])
-	if !(prefix[0] >= 'A' && prefix[0] <= 'Z' && prefix[1] >= 'A' && prefix[1] <= 'Z') {
+	if prefix[0] < 'A' || prefix[0] > 'Z' || prefix[1] < 'A' || prefix[1] > 'Z' {
 		return ""
 	}
 	return account
@@ -1162,4 +1166,337 @@ func (h *CodeMappingHandler) Translate(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"to_code": toCode})
+}
+
+// UserPreferenceHandler handles user preference endpoints.
+type UserPreferenceHandler struct {
+	svc service.UserPreferenceService
+}
+
+// NewUserPreferenceHandler creates a new UserPreferenceHandler.
+func NewUserPreferenceHandler(svc service.UserPreferenceService) *UserPreferenceHandler {
+	return &UserPreferenceHandler{svc: svc}
+}
+
+// preferenceResponse is the API shape for a single preference.
+type preferenceResponse struct {
+	PageKey         string `json:"page_key"`
+	PreferenceKey   string `json:"preference_key"`
+	PreferenceValue string `json:"preference_value"`
+}
+
+// setPreferenceRequest is the expected body for PUT /preferences.
+type setPreferenceRequest struct {
+	PageKey         string `json:"page_key" binding:"required"`
+	PreferenceKey   string `json:"preference_key" binding:"required"`
+	PreferenceValue string `json:"preference_value" binding:"required"`
+}
+
+// GetPreferences godoc
+// @Summary Get user preferences
+// @Description Return all stored preferences for the authenticated user, optionally filtered by page_key
+// @Tags preferences
+// @Produce json
+// @Param page_key query string false "Filter by page key (e.g. 'lei-records', 'global')"
+// @Success 200 {array} preferenceResponse
+// @Security BearerAuth
+// @Router /preferences [get]
+func (h *UserPreferenceHandler) GetPreferences(c *gin.Context) {
+	userID := extractUserID(c)
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		return
+	}
+
+	pageKey := c.Query("page_key")
+	var result []*domain.UserPreference
+	var err error
+	if pageKey != "" {
+		result, err = h.svc.GetByPage(userID, pageKey)
+	} else {
+		result, err = h.svc.GetAll(userID)
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load preferences"})
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
+}
+
+// SetPreference godoc
+// @Summary Set a user preference
+// @Description Create or update a single preference for the authenticated user
+// @Tags preferences
+// @Accept json
+// @Produce json
+// @Param preference body setPreferenceRequest true "Preference to set"
+// @Success 200 {object} preferenceResponse
+// @Security BearerAuth
+// @Router /preferences [put]
+func (h *UserPreferenceHandler) SetPreference(c *gin.Context) {
+	userID := extractUserID(c)
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		return
+	}
+
+	var req setPreferenceRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.svc.Set(userID, req.PageKey, req.PreferenceKey, req.PreferenceValue, c.RemoteIP()); err != nil {
+		if strings.Contains(err.Error(), "user_preferences_user_id_fkey") {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "session user no longer exists; please sign in again"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save preference"})
+		return
+	}
+
+	c.JSON(http.StatusOK, preferenceResponse(req))
+}
+
+// DeletePreference godoc
+// @Summary Delete a user preference
+// @Description Remove a specific preference for the authenticated user
+// @Tags preferences
+// @Produce json
+// @Param page_key query string true "Page key"
+// @Param preference_key query string true "Preference key"
+// @Success 204
+// @Security BearerAuth
+// @Router /preferences [delete]
+func (h *UserPreferenceHandler) DeletePreference(c *gin.Context) {
+	userID := extractUserID(c)
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		return
+	}
+
+	pageKey := c.Query("page_key")
+	prefKey := c.Query("preference_key")
+	if pageKey == "" || prefKey == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "page_key and preference_key are required"})
+		return
+	}
+
+	if err := h.svc.Delete(userID, pageKey, prefKey); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete preference"})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
+}
+
+// UITranslationHandler handles translation management endpoints.
+type UITranslationHandler struct {
+	svc service.UITranslationService
+}
+
+// NewUITranslationHandler creates a new UITranslationHandler.
+func NewUITranslationHandler(svc service.UITranslationService) *UITranslationHandler {
+	return &UITranslationHandler{svc: svc}
+}
+
+// uiTranslationPublicDTO is the public-facing representation of a UI translation.
+// It intentionally includes only fields needed by i18n consumers and omits
+// internal metadata such as submitter or reviewer information.
+type uiTranslationPublicDTO struct {
+	TranslationKey   string `json:"translation_key"`
+	LanguageCode     string `json:"language_code"`
+	TranslationValue string `json:"translation_value"`
+}
+
+// translationListResponse wraps a paginated list of translations.
+type translationListResponse struct {
+	Total   int64                     `json:"total"`
+	Records []*uiTranslationPublicDTO `json:"records"`
+}
+
+// adminTranslationListResponse wraps a paginated list of full translation rows
+// used by authenticated admin review tooling.
+type adminTranslationListResponse struct {
+	Total   int64                   `json:"total"`
+	Records []*domain.UITranslation `json:"records"`
+}
+
+// submitTranslationRequest is the request body for POST /translations.
+type submitTranslationRequest struct {
+	TranslationKey   string `json:"translation_key" binding:"required"`
+	LanguageCode     string `json:"language_code" binding:"required"`
+	TranslationValue string `json:"translation_value" binding:"required"`
+	Notes            string `json:"notes"`
+}
+
+// ListTranslations godoc
+// @Summary List approved UI translations
+// @Description Return a paginated list of approved translation strings for public read-only consumption
+// @Tags translations
+// @Produce json
+// @Param language query string false "Filter by ISO 639-1 language code (e.g. fr, es)"
+// @Param status    query string false "Public access only supports approved"
+// @Param search    query string false "Search by key or value substring"
+// @Param limit     query int    false "Maximum records to return (default 50)"
+// @Param offset    query int    false "Offset for pagination (default 0)"
+// @Success 200 {object} translationListResponse
+// @Router /translations [get]
+func (h *UITranslationHandler) ListTranslations(c *gin.Context) {
+	h.listTranslations(c, false)
+}
+
+// ListAdminTranslations godoc
+// @Summary List UI translations for admin review
+// @Description Return a paginated list of translation strings, optionally filtered by language, status, or search text
+// @Tags translations
+// @Produce json
+// @Param language query string false "Filter by ISO 639-1 language code (e.g. fr, es)"
+// @Param status    query string false "Filter by status (pending, approved, rejected)"
+// @Param search    query string false "Search by key or value substring"
+// @Param limit     query int    false "Maximum records to return (default 50)"
+// @Param offset    query int    false "Offset for pagination (default 0)"
+// @Success 200 {object} translationListResponse
+// @Security BearerAuth
+// @Router /admin/translations [get]
+func (h *UITranslationHandler) ListAdminTranslations(c *gin.Context) {
+	h.listTranslations(c, true)
+}
+
+func (h *UITranslationHandler) listTranslations(c *gin.Context, allowNonApproved bool) {
+	lang := c.Query("language")
+	status := strings.ToLower(strings.TrimSpace(c.Query("status")))
+	search := c.Query("search")
+	approvedStatus := string(domain.TranslationStatusApproved)
+
+	if !allowNonApproved {
+		switch status {
+		case "":
+			status = approvedStatus
+		case approvedStatus:
+			// Allowed explicitly.
+		default:
+			c.JSON(http.StatusForbidden, gin.H{"error": "only approved translations are publicly accessible"})
+			return
+		}
+	}
+
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
+	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	if limit <= 0 || limit > 200 {
+		limit = 50
+	}
+
+	records, total, err := h.svc.List(lang, status, search, limit, offset)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list translations"})
+		return
+	}
+
+	if allowNonApproved {
+		c.JSON(http.StatusOK, adminTranslationListResponse{Total: total, Records: records})
+		return
+	}
+
+	publicRecords := make([]*uiTranslationPublicDTO, 0, len(records))
+	for _, record := range records {
+		if record == nil {
+			continue
+		}
+		publicRecords = append(publicRecords, &uiTranslationPublicDTO{
+			TranslationKey:   record.TranslationKey,
+			LanguageCode:     record.LanguageCode,
+			TranslationValue: record.TranslationValue,
+		})
+	}
+
+	c.JSON(http.StatusOK, translationListResponse{Total: total, Records: publicRecords})
+}
+
+// SubmitTranslation godoc
+// @Summary Submit a translation for review
+// @Description Create or update a translation string and mark it as pending review
+// @Tags translations
+// @Accept json
+// @Produce json
+// @Param translation body submitTranslationRequest true "Translation details"
+// @Success 201 {object} domain.UITranslation
+// @Security BearerAuth
+// @Router /translations [post]
+func (h *UITranslationHandler) SubmitTranslation(c *gin.Context) {
+	var req submitTranslationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	userID := extractUserID(c)
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		return
+	}
+
+	t, err := h.svc.Submit(req.TranslationKey, req.LanguageCode, req.TranslationValue, req.Notes, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to submit translation"})
+		return
+	}
+	c.JSON(http.StatusCreated, t)
+}
+
+// ApproveTranslation godoc
+// @Summary Approve a translation
+// @Description Mark a pending translation as approved (admin only)
+// @Tags translations
+// @Produce json
+// @Param id path string true "Translation UUID"
+// @Success 204
+// @Security BearerAuth
+// @Router /translations/{id}/approve [post]
+func (h *UITranslationHandler) ApproveTranslation(c *gin.Context) {
+	id := c.Param("id")
+	userID := extractUserID(c)
+	if err := h.svc.Approve(id, userID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to approve translation"})
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+// RejectTranslation godoc
+// @Summary Reject a translation
+// @Description Mark a pending translation as rejected (admin only)
+// @Tags translations
+// @Produce json
+// @Param id path string true "Translation UUID"
+// @Success 204
+// @Security BearerAuth
+// @Router /translations/{id}/reject [post]
+func (h *UITranslationHandler) RejectTranslation(c *gin.Context) {
+	id := c.Param("id")
+	userID := extractUserID(c)
+	if err := h.svc.Reject(id, userID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to reject translation"})
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+// DeleteTranslation godoc
+// @Summary Delete a translation
+// @Description Remove a translation by its UUID (admin only)
+// @Tags translations
+// @Produce json
+// @Param id path string true "Translation UUID"
+// @Success 204
+// @Security BearerAuth
+// @Router /translations/{id} [delete]
+func (h *UITranslationHandler) DeleteTranslation(c *gin.Context) {
+	id := c.Param("id")
+	if err := h.svc.Delete(id); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete translation"})
+		return
+	}
+	c.Status(http.StatusNoContent)
 }

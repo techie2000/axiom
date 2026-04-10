@@ -27,6 +27,13 @@ Comprehensive security update documentation for February 2026 updates covering:
 - Rollback procedures and troubleshooting guide
 - Compatibility assessment and migration notes
 
+### [Agent Security Access](AGENT_SECURITY_ACCESS.md)
+
+Explains why the Copilot coding agent cannot access Dependabot / code-scanning APIs
+directly (the token has no `security_events` scope), and documents three approaches to
+bridge this gap: paste-as-context, the weekly `security-report.yml` workflow, and a
+fine-grained PAT stored as a repository secret.
+
 ## Quick Reference
 
 For a high-level summary of security updates, see [SECURITY_UPDATE_SUMMARY.md](SECURITY_UPDATE_SUMMARY.md).

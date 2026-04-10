@@ -37,7 +37,8 @@ and [Google's Go Style Guide](https://google.github.io/styleguide/go/).
 - Avoid generic names like `util`, `common`, or `base`
 - Package names should be singular, not plural
 
-#### Package Declaration Rules (CRITICAL):
+#### Package Declaration Rules (CRITICAL)
+
 - **NEVER duplicate `package` declarations** - each Go file should have exactly ONE package declaration at the top
 - Do NOT add package declarations when editing existing files that already have one
 - When creating new files, add the package declaration only once at the very beginning
@@ -94,6 +95,7 @@ import (
 ### Package Organization
 
 Follow a layered architecture:
+
 - `cmd/` - Application entry points
 - `internal/` - Private application code
   - `domain/` - Domain models and business entities
@@ -413,6 +415,7 @@ Use the following tools to maintain code quality:
 - `go mod tidy` - Clean up dependencies
 
 Run before committing:
+
 ```bash
 go fmt ./...
 go vet ./...
