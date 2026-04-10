@@ -7,11 +7,47 @@ applyTo: '**/*.md'
 
 The following markdown content rules are enforced by markdownlint and MUST be followed:
 
+### Canonical Linter
+
+This repository standardizes on `markdownlint-cli2` as the canonical markdown linter for local
+checks, hooks, and CI workflows.
+
+- ✅ **GOOD**: `npx --yes markdownlint-cli2 --config .markdownlint.yaml "**/*.md"`
+- ✅ **GOOD**: `make docs-check`
+- ❌ **BAD**: introducing new `markdownlint-cli`-only commands or workflows alongside `markdownlint-cli2`
+
+When editing markdown, validate with the same toolchain CI uses rather than mixing different markdownlint wrappers.
+
+### Markdownlint Rule Quick Reference
+
+Use this as a fast lookup for the MD rules configured in this repo:
+
+| Rule | What it checks | Repo setting |
+| ---- | -------------- | ------------ |
+| MD003 | Heading style format | `atx` (`#`, `##`, `###`) |
+| MD004 | Unordered list marker style | `dash` (`-`) |
+| MD007 | Nested list indentation | `2` spaces |
+| MD013 | Line length | max `120`; ignore code blocks and tables |
+| MD022 | Blank lines around headings | enabled |
+| MD024 | Duplicate heading names | allowed only for non-sibling headings |
+| MD025 | Multiple top-level headings (H1) | disabled |
+| MD031 | Blank lines around fenced code blocks | enabled |
+| MD032 | Blank lines around lists | enabled |
+| MD033 | Inline HTML usage | restricted allowlist (`details`, `summary`, `img`, `br`, `sub`, `sup`) |
+| MD034 | Bare URLs without markdown links | disabled |
+| MD035 | Horizontal rule style | `---` |
+| MD040 | Language info on fenced code blocks | enabled |
+| MD041 | First line must be top-level heading | disabled |
+| MD046 | Code block style | `fenced` only |
+| MD048 | Code fence marker style | `backtick` |
+| MD049 | Emphasis marker style | `asterisk` |
+| MD050 | Strong marker style | `asterisk` |
+
 1. **Headings**: Use appropriate heading levels (H2, H3, etc.) to structure your content. Do not use an H1 heading,
    as this will be generated based on the title.
 2. **Lists**: Use bullet points or numbered lists for lists. Ensure proper indentation and spacing.
 3. **Code Blocks**: **ALWAYS specify language for fenced code blocks.** Use triple backticks with language identifier
-   (e.g., ```go, ```json, ```bash, ```text).
+  (for example: triple-backtick-go, triple-backtick-json, triple-backtick-bash, triple-backtick-text).
 4. **Links**: Use proper markdown syntax for links. Ensure that links are valid and accessible.
 5. **Images**: Use proper markdown syntax for images. Include alt text for accessibility.
 6. **Tables**: Use markdown tables for tabular data. Ensure proper formatting and alignment.
@@ -31,35 +67,32 @@ Follow these guidelines for formatting and structuring your markdown content:
   substitute.** Always use proper heading syntax.
   - ✅ **GOOD**: `#### Section Title`
   - ❌ **BAD**: `**Section Title**` (emphasis used as heading)
+  - Heading levels must increase by only one level at a time (MD001-compliant).
+    Example: `##` → `###` is valid, but `##` → `####` is not.
 - **Lists**: Use `-` for bullet points and `1.` for numbered lists. Indent nested lists with two spaces.
 - **Code Blocks**: **ALWAYS specify language.** Use triple backticks with language identifier immediately after
   opening backticks.
-  - ✅ **GOOD**: ` ```go`, ` ```json`, ` ```bash`, ` ```text`, ` ```yaml`
-  - ❌ **BAD**: ` ``` ` (no language specified)
+  - ✅ **GOOD**: triple-backtick-go, triple-backtick-json, triple-backtick-bash, triple-backtick-text,
+    triple-backtick-yaml
+  - ❌ **BAD**: triple backticks without any language tag
   - Common languages: `go`, `json`, `yaml`, `bash`, `text`, `markdown`, `dockerfile`, `sql`
 - **Line Length**: **Maximum 120 characters per line.** Break long lines by:
   - Splitting sentences at natural break points
   - Breaking after commas or conjunctions
   - Using soft line breaks (newlines without blank lines)
-  - Example:
-    ```text
-    ✅ GOOD:
-    A high-performance service that monitors directories for
-    CSV files and converts them to JSON format.
-
-    ❌ BAD:
-    A high-performance service that monitors directories for CSV files and converts them to JSON format with routing capabilities.
-    ```
-- **Links**: Use markdown link syntax like `[Architecture](../../docs/architecture.md)`.
-  Ensure that link text is descriptive and targets a valid path.
+  - ✅ **GOOD**: Wrap long prose at natural sentence boundaries.
+  - ❌ **BAD**: Keep long prose as one unbroken line beyond 120 characters.
+- **Links**: Use markdown link syntax with descriptive text and valid targets.
+  For docs references in instruction files, prefer plain text paths (for example `docs/architecture.md`) to avoid
+  false prompts-diagnostics missing-file warnings.
 - **No Placeholder Targets**: Do not use placeholder link/image targets in markdown examples
   (for example `path/to/file`, `IMAGE_URL`, `your-file.md`). Use real repository paths or plain text.
 - **File References**: **CRITICAL** - Always hyperlink file and document references. Use relative paths appropriate
   to file location.
   - ✅ **GOOD** (from `.github/instructions/`):
-    See [architecture.md](../../docs/architecture.md) for system design details
-  - ✅ **GOOD** (from `.github/instructions/`): Configuration in [config.yaml](../../backend/config.yaml)
-  - ✅ **GOOD** (from `.github/instructions/`): Refer to [README.md](../../README.md) for setup instructions
+    See docs/architecture.md for system design details
+  - ✅ **GOOD** (from `.github/instructions/`): Configuration in backend/config.yaml
+  - ✅ **GOOD** (from `.github/instructions/`): Refer to README.md for setup instructions
   - ❌ **BAD**: `See architecture.md for details` (not hyperlinked)
   - ❌ **BAD**: `Configuration in config.yaml` (not hyperlinked)
   - This applies to: ADRs, configuration files, documentation files, source code files, test files, and any other
@@ -73,15 +106,370 @@ Follow these guidelines for formatting and structuring your markdown content:
     - ❌ `|------|----|-----------|`
 - **Whitespace**: Use blank lines to separate sections and improve readability. Avoid excessive whitespace.
   - Lists must be surrounded by blank lines (MD032-compliant).
+  - If a paragraph is immediately followed by a list, insert one blank line first.
   - Headings must be surrounded by blank lines, including one blank line below each heading (MD022-compliant).
+  - Fenced code blocks must have one blank line above and below (MD031-compliant).
+
+### Common MD031/MD032 Failure Patterns
+
+- ✅ **GOOD list spacing**
+
+  ````markdown
+  Paragraph introducing a list.
+
+  - First item
+  - Second item
+  ````
+
+- ✅ **GOOD fenced-code spacing**
+
+  ````markdown
+  Paragraph introducing code.
+
+  ```sql
+  SELECT 1;
+  ```
+  ````
+
+- ❌ **BAD list spacing**
+
+  ````markdown
+  Paragraph introducing a list.
+  - First item
+  ````
+
+- ❌ **BAD fenced-code spacing**
+
+  ````markdown
+  Paragraph introducing code.
+  ```sql
+  SELECT 1;
+  ```
+  ````
+
+### Additional High-Frequency Lint Failures (PR160)
+
+- `MD009` trailing spaces
+
+  - ✅ **GOOD**
+
+    ````markdown
+    - Item one
+    - Item two
+    ````
+
+  - ❌ **BAD**
+
+    ````markdown
+    - Item one 
+    - Item two 
+    ````
+
+- `MD049` emphasis style (use asterisks, not underscores)
+
+  - ✅ **GOOD**
+
+    ````markdown
+    This is *emphasized text* in this repository style.
+    ````
+
+  - ❌ **BAD**
+
+    ````markdown
+    This is _emphasized text_ and triggers MD049.
+    ````
+
+- `MD060` table column style (spaces around pipes)
+
+  - ✅ **GOOD**
+
+    ````markdown
+    | Option | Status | Notes |
+    | ------ | ------ | ----- |
+    | A      | Done   | Safe  |
+    ````
+
+  - ❌ **BAD**
+
+    ````markdown
+    |Option|Status|Notes|
+    |------|------|-----|
+    |A|Done|Safe|
+    ````
+
+- `MD022` headings need blank lines above and below
+
+  - ✅ **GOOD**
+
+    ````markdown
+    Intro paragraph.
+
+    ### Section Title
+
+    Section body text.
+    ````
+
+  - ❌ **BAD**
+
+    ````markdown
+    Intro paragraph.
+    ### Section Title
+    Section body text.
+    ````
+
+- `MD032` lists need blank lines around them
+
+  - ✅ **GOOD**
+
+    ````markdown
+    Intro paragraph.
+
+    - First item
+    - Second item
+
+    Closing paragraph.
+    ````
+
+  - ❌ **BAD**
+
+    ````markdown
+    Intro paragraph.
+    - First item
+    - Second item
+    Closing paragraph.
+    ````
+
+- `MD029` ordered-list numbering style (`1/2/3`)
+
+  - ✅ **GOOD**
+
+    ````markdown
+    1. First step
+    2. Second step
+    3. Third step
+    ````
+
+  - ❌ **BAD**
+
+    ````markdown
+    1. First step
+    1. Second step
+    1. Third step
+    ````
+
+- `MD030` spaces after list markers (single space)
+
+  - ✅ **GOOD**
+
+    ````markdown
+    - Item one
+    1. Step one
+    ````
+
+  - ❌ **BAD**
+
+    ````markdown
+    -  Item one
+    1.  Step one
+    ````
+
+- `MD035` horizontal rule style (`---`)
+
+  - ✅ **GOOD**
+
+    ````markdown
+    Section A
+
+    ---
+
+    Section B
+    ````
+
+  - ❌ **BAD**
+
+    ````markdown
+    Section A
+
+    ***
+
+    Section B
+    ````
+
+- `MD046` use fenced code blocks, not indented code blocks
+
+  - ✅ **GOOD**
+
+    ````markdown
+    ```bash
+    make docs-check
+    ```
+    ````
+
+  - ❌ **BAD**
+
+    ````markdown
+        make docs-check
+    ````
+
+- `MD048` code fence marker style must use backticks
+
+  - ✅ **GOOD**
+
+    ````markdown
+    ```yaml
+    key: value
+    ```
+    ````
+
+  - ❌ **BAD**
+
+    ````markdown
+    ~~~yaml
+    key: value
+    ~~~
+    ````
+
+- `MD050` strong emphasis style (use `**`, not `__`)
+
+  - ✅ **GOOD**
+
+    ````markdown
+    This is **important**.
+    ````
+
+  - ❌ **BAD**
+
+    ````markdown
+    This is __important__.
+    ````
+
+- `MD010` hard tabs are not allowed
+
+  - ✅ **GOOD**
+
+    ````markdown
+    - Item one
+      - Nested item with spaces
+    ````
+
+  - ❌ **BAD**
+
+    ````markdown
+    [tab]- Item one
+    [tab][tab]- Nested item with tabs
+    ````
+
+- `MD012` multiple consecutive blank lines
+
+  - ✅ **GOOD**
+
+    ````markdown
+    First paragraph.
+
+    Second paragraph.
+    ````
+
+  - ❌ **BAD**
+
+    ````markdown
+    First paragraph.
+
+
+    Second paragraph.
+    ````
+
+- `MD045` images must include alt text
+
+  - ✅ **GOOD**
+
+    ````markdown
+    ![LEI sync dashboard screenshot](docs/assets/lei-dashboard.png)
+    ````
+
+  - ❌ **BAD**
+
+    ````markdown
+    ![](docs/assets/lei-dashboard.png)
+    ````
+
+### Nested Markdown Example Safety (MD022/MD031)
+
+When documenting markdown templates that contain headings and fenced blocks, use backtick fences for the outer
+example and keep blank lines around inner headings and fences.
+
+- ✅ **GOOD nested markdown example**
+
+  `````markdown
+  ````markdown
+  ## Template Title
+
+  ### Usage
+
+  ```bash
+  make docs-user-build
+  ```
+  ````
+  `````
+
+- ❌ **BAD nested markdown example**
+
+  `````markdown
+  ````markdown
+  ### Usage
+  ```bash
+  make docs-user-build
+  ```
+  ````
+  `````
+
+Use the GOOD pattern to avoid accidental MD022 (blank lines around headings) and MD031
+(blank lines around fences) violations in instruction files.
+
+### Common MD022/MD031/MD032 Combined Pattern
+
+- ✅ **GOOD heading + list + fence spacing**
+
+  ````markdown
+  Intro paragraph.
+
+  ### Validation Steps
+
+  - Run the linter.
+  - Fix all reported issues.
+
+  ```bash
+  make docs-check
+  ```
+  ````
+
+- ❌ **BAD heading + list + fence spacing**
+
+  ````markdown
+  Intro paragraph.
+  ### Validation Steps
+  - Run the linter.
+  - Fix all reported issues.
+  ```bash
+  make docs-check
+  ```
+  ````
 
 ### Mandatory Pre-Submission Checks (for any edited `.md` file)
 
+- Treat MD013 as a hard gate for non-code-block markdown lines: do not finish
+  a task while any edited non-code-block markdown line is over 120 chars.
+- In fenced code blocks, preserve executable integrity for command examples;
+  do not split commands solely to satisfy line-length limits.
 - Run markdown diagnostics before finishing markdown edits.
-- Fix **all MD013 line-length violations** introduced in edited sections (max 120 chars per line).
-- Fix **all MD060 table-column-style violations** in edited tables.
-- Fix **all MD032 list-spacing violations** in edited sections.
+- Run `make docs-check` for markdown changes, or `npx --yes markdownlint-cli2 --config .markdownlint.yaml "**/*.md"`
+  when you need the direct linter command.
+- Fix **all MD001 heading-increment violations** in edited sections.
+- Fix **all MD013 line-length violations** introduced in edited  non-code-block sections (max 120 chars per line).
 - Fix **all MD022 heading-spacing violations** in edited sections.
+- Fix **all MD031 fenced-code-spacing violations** in edited sections.
+- Fix **all MD032 list-spacing violations** in edited sections.
+- Fix **all MD040 fenced-code-language violations** in edited sections.
+- Fix **all MD060 table-column-style violations** in edited tables.
 - Do not leave newly introduced markdownlint warnings in the edited regions.
 
 ## Validation Requirements

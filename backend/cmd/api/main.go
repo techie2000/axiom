@@ -82,7 +82,7 @@ func main() {
 	}
 
 	// Initialize services with both data directories
-	services := service.NewServices(repos, db, leiDataDir, masterDataDir)
+	services := service.NewServices(repos, db, leiDataDir, masterDataDir, cfg.JWT.Secret, cfg.JWT.Expiry)
 
 	// Load master data on startup (idempotent - only loads if tables are empty)
 	logger.Info().Msg("Checking master data...")
@@ -90,8 +90,28 @@ func main() {
 		logger.Warn().Err(err).Msg("Failed to load master data, continuing anyway...")
 	}
 
+	// Seed the Playwright end-to-end test user when running in dev/main environments.
+	// Controlled by PLAYWRIGHT_SEED_USER=true in the environment file.
+	// Never enable this in UAT or production.
+	if cfg.Testing.PlaywrightSeedUser {
+		logger.Info().Msg("PLAYWRIGHT_SEED_USER is enabled: ensuring Playwright test user exists...")
+		if err := services.Auth.EnsurePlaywrightTestUser(
+			cfg.Testing.PlaywrightUserEmail,
+			cfg.Testing.PlaywrightUserPassword,
+		); err != nil {
+			logger.Warn().Err(err).Msg("Failed to seed Playwright test user, continuing anyway...")
+		}
+	}
+
 	// Initialize scheduler service for LEI data acquisition and master data sync (with config for schedules)
-	schedulerService := service.NewSchedulerService(services.LEI, services.MasterData, cfg)
+	// Uses the GLEIF-aware constructor so reference code lists are synced before each LEI ingest.
+	schedulerService := service.NewSchedulerServiceWithGLEIF(
+		services.LEI,
+		services.LEILevel2,
+		services.MasterData,
+		services.GLEIFReference,
+		cfg,
+	)
 
 	// Start scheduler
 	if err := schedulerService.Start(); err != nil {
@@ -283,12 +303,21 @@ func setupRouter(cfg *config.Config, h *handler.Handlers) *gin.Engine {
 		v1.GET("/currencies/:id", h.Currency.Get)
 		v1.GET("/languages", h.Language.List)
 
+		// Public approved translations (read-only, no auth required)
+		v1.GET("/translations", h.UITranslation.ListTranslations)
+
 		// Public LEI data routes (read-only, no auth required)
 		v1.GET("/lei", h.LEI.ListLEI)
+		v1.GET("/lei/count", h.LEI.GetLEICount)
+		v1.GET("/lei/import-failures", h.LEI.GetImportProcessingFailures)
+		v1.GET("/lei/level2/failures", h.LEI.GetLevel2ProcessingFailures)
+		v1.GET("/lei/names", h.LEI.GetLegalNamesByLEICodes)
 		v1.GET("/lei-countries", h.LEI.GetDistinctCountries)
+		v1.GET("/lei-categories", h.LEI.GetDistinctCategories)
 		v1.GET("/lei-regions", h.LEI.GetDistinctRegions)
 		v1.GET("/lei-legal-forms", h.LEI.GetDistinctLegalForms)
 		v1.GET("/lei/record/:id", h.LEI.GetLEIByID)
+		v1.GET("/lei/:lei/predecessors", h.LEI.GetPredecessorLEIs)
 		v1.GET("/lei/:lei/audit", h.LEI.GetAuditHistory)
 		v1.GET("/lei/:lei", h.LEI.GetLEIByCode)
 
@@ -296,6 +325,42 @@ func setupRouter(cfg *config.Config, h *handler.Handlers) *gin.Engine {
 		protected := v1.Group("")
 		protected.Use(middleware.JWTAuth(cfg))
 		{
+			// Admin-only user management routes
+			adminAuth := protected.Group("/auth")
+			adminAuth.Use(middleware.AdminRequired())
+			{
+				adminAuth.GET("/users", h.Auth.ListUsers)
+				adminAuth.POST("/users/:id/approve", h.Auth.ApproveUser)
+				adminAuth.POST("/users/:id/reject", h.Auth.RejectUser)
+				adminAuth.PUT("/users/:id/role", h.Auth.UpdateUserRole)
+			}
+
+			// User preference routes (any authenticated user)
+			prefs := protected.Group("/preferences")
+			{
+				prefs.GET("", h.UserPreference.GetPreferences)
+				prefs.PUT("", h.UserPreference.SetPreference)
+				prefs.DELETE("", h.UserPreference.DeletePreference)
+			}
+
+			// Translation routes: public listing, authenticated submission, admin review/delete
+			translations := protected.Group("/translations")
+			{
+				translations.POST("", h.UITranslation.SubmitTranslation)
+			}
+			adminTranslations := protected.Group("/translations")
+			adminTranslations.Use(middleware.AdminRequired())
+			{
+				adminTranslations.POST("/:id/approve", h.UITranslation.ApproveTranslation)
+				adminTranslations.POST("/:id/reject", h.UITranslation.RejectTranslation)
+				adminTranslations.DELETE("/:id", h.UITranslation.DeleteTranslation)
+			}
+			adminTranslationList := protected.Group("/admin/translations")
+			adminTranslationList.Use(middleware.AdminRequired())
+			{
+				adminTranslationList.GET("", h.UITranslation.ListAdminTranslations)
+			}
+
 			// Protected write operations for countries and currencies
 			protected.POST("/countries", h.Country.Create)
 			protected.PUT("/countries/:id", h.Country.Update)
@@ -356,8 +421,13 @@ func setupRouter(cfg *config.Config, h *handler.Handlers) *gin.Engine {
 			// LEI management routes (write operations only)
 			lei := protected.Group("/lei")
 			{
+				lei.POST("/sync/masterdata", h.LEI.TriggerMasterDataSync)
+				lei.POST("/sync/gleif-reference", h.LEI.TriggerGLEIFReferenceSync)
 				lei.POST("/sync/full", h.LEI.TriggerFullSync)
 				lei.POST("/sync/delta", h.LEI.TriggerDeltaSync)
+				lei.POST("/sync/level2", h.LEI.TriggerLevel2Sync)
+				lei.POST("/sync/level2/rr", h.LEI.TriggerLevel2RRSync)
+				lei.POST("/sync/level2/repex", h.LEI.TriggerLevel2REPEXSync)
 				lei.POST("/source-file/:id/resume", h.LEI.ResumeProcessing)
 			}
 

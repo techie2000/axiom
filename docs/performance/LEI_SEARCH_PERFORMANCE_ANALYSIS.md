@@ -36,7 +36,7 @@ Query plan shows proper index usage via Bitmap Index Scan.
 The 489ms total time breaks down as:
 
 | Component | Time | Percentage |
-|-----------|------|------------|
+| --------- | ---- | ---------- |
 | **Database execution** | 14ms | 3% |
 | **GORM overhead** | ~475ms | 97% |
 
@@ -89,6 +89,7 @@ default). Any optimization must handle dynamic column selection.
 **Strategy**: Frontend sends list of visible columns to backend, backend fetches only those columns.
 
 **Backend Changes** (`lei_handler.go`):
+
 ```go
 // LIST VIEW - Add new query parameter for visible columns
 func (h *Handler) GetLEIRecords(c *gin.Context) {
@@ -120,6 +121,7 @@ func (h *Handler) GetLEIByCode(c *gin.Context) {
 ```
 
 **Repository Changes** (`lei_repository.go`):
+
 ```go
 // LIST VIEW - Dynamic SELECT based on requested columns
 func (r *leiRepository) FindAllLEIWithFilters(
@@ -154,6 +156,7 @@ func (r *leiRepository) FindLEIByLEI(lei string) (*domain.LEIRecord, error) {
 ```
 
 **Frontend Changes** (`lei-records/page.tsx`):
+
 ```tsx
 // Build column list from visibleColumns state
 const buildColumnsParam = () => {
@@ -168,13 +171,15 @@ const params = new URLSearchParams({
 })
 ```
 
-**Expected Impact**: 
+**Expected Impact**:
+
 - Default view (6 columns): ~50-70ms (7-10x improvement)
 - Maximum view (24 columns): ~150-200ms (2-3x improvement, still reasonable)
 - Scales linearly: ~7-8ms per column group
 - **Detail view (single record)**: ~5-10ms (unaffected - always fetches all fields)
 
 **Benefits**:
+
 - ✅ Handles dynamic column selection properly
 - ✅ Optimal performance for default view (most common)
 - ✅ Still improves performance even with all columns visible
@@ -182,11 +187,13 @@ const params = new URLSearchParams({
 - ✅ Detail view gets complete data (all fields) as expected
 
 **Downsides**:
+
 - ⚠️ Requires API contract change (backward compatible with default)
 - ⚠️ More complex implementation (~50-100 lines of code)
 - ⚠️ Need column validation to prevent SQL injection
 
 **Key Distinction**:
+
 - 📊 **List View** (`GET /api/v1/lei`) → Dynamic SELECT based on visible columns
 - 📄 **Detail View** (`GET /api/v1/lei/{lei_code}`) → SELECT * (all fields, single record)
 
@@ -195,6 +202,7 @@ const params = new URLSearchParams({
 **Strategy**: Keep `SELECT *` to support all 24 toggleable columns, but remove other overhead.
 
 **Changes**:
+
 ```go
 func (r *leiRepository) FindAllLEIWithFilters(...) ([]*domain.LEIRecord, error) {
     var records []*domain.LEIRecord
@@ -213,12 +221,14 @@ func (r *leiRepository) FindAllLEIWithFilters(...) ([]*domain.LEIRecord, error) 
 **Expected Impact**: Reduce GORM time from ~475ms to ~350-400ms (only 20% improvement)
 
 **Benefits**:
+
 - ✅ Simplest implementation (comment out 1 line)
 - ✅ Supports all 24 column combinations without API changes
 - ✅ No risk of missing data when users toggle columns
 - ✅ No frontend changes required
 
 **Downsides**:
+
 - ❌ Minimal performance improvement (~75-125ms reduction)
 - ❌ Still transfers unused data (addresses, JSONB fields)
 - ❌ May not meet <200ms target with complex filters
@@ -241,16 +251,19 @@ if extraColumns != "" {
 }
 ```
 
-**Expected Impact**: 
+**Expected Impact**:
+
 - Default view: ~50-70ms (7-10x improvement)
 - With extra columns: ~80-150ms (3-6x improvement)
 
 **Benefits**:
+
 - ✅ Good performance for default view (most users, most of the time)
 - ✅ Supports dynamic columns via query parameter
 - ✅ Simpler than full dynamic approach
 
 **Downsides**:
+
 - ⚠️ Still requires API changes
 - ⚠️ If user toggles many columns, approaches Option 2 performance
 
@@ -265,7 +278,7 @@ For common searches (like "stores", "bank", etc.), cache results for 5-10 minute
 ## Option Comparison Table
 
 | Factor | Option 1 (Dynamic) | Option 2 (All Columns) | Option 3 (Hybrid) |
-|--------|-------------------|------------------------|-------------------|
+| ------ | ----------------- | ---------------------- | ----------------- |
 | **Performance (6 cols)** | 50-70ms ✅ | 350-400ms ⚠️ | 50-70ms ✅ |
 | **Performance (24 cols)** | 150-200ms ✅ | 350-400ms ⚠️ | 150-200ms ✅ |
 | **Code Complexity** | Medium (~100 lines) | Simple (1 line) ✅ | Medium (~80 lines) |
@@ -277,7 +290,7 @@ For common searches (like "stores", "bank", etc.), cache results for 5-10 minute
 ## Performance Targets
 
 | Scenario | Current | Target | Status |
-|----------|---------|--------|--------|
+| -------- | ------- | ------ | ------ |
 | Database execution | 14ms | <20ms | ✅ Achieved |
 | GORM overhead | ~475ms | <100ms | 🟡 Requires code changes |
 | Total query time | 489ms | <120ms | 🟡 Pending |
@@ -287,12 +300,14 @@ For common searches (like "stores", "bank", etc.), cache results for 5-10 minute
 **Given the 24 toggleable column constraint, here's the recommended phased approach:**
 
 ### ✅ Phase 1: Quick Win (Option 2) - COMPLETED
+
 **Timeline**: 5 minutes  
 **Action**: Added optimized database indexes  
 **Impact**: Database time: 36ms → 14ms (60% improvement)  
 **Status**: ✅ Complete (migration 000010 applied)
 
 ### ✅ Phase 2: Dynamic SELECT (Option 1) - COMPLETED
+
 **Timeline**: 2-4 hours  
 **Action**: Implemented dynamic SELECT based on visible columns  
 **Impact**: Total time: 489ms → 70-200ms (2.5-7x improvement)  
@@ -300,6 +315,7 @@ For common searches (like "stores", "bank", etc.), cache results for 5-10 minute
 **Date Completed**: February 16, 2026
 
 **Implementation Summary**:
+
 - ✅ Backend: Handler, service, and repository updated to accept `columns` parameter
 - ✅ Column validation: Whitelist of 35 valid columns prevents SQL injection
 - ✅ Frontend: Sends visible columns with each API request
@@ -311,12 +327,13 @@ For common searches (like "stores", "bank", etc.), cache results for 5-10 minute
 **Testing completed in dev environment**:
 
 | Test Scenario | Columns | Response Time | Improvement | Status |
-|--------------|---------|---------------|-------------|--------|
+| ------------ | ------- | ------------- | ----------- | ------ |
 | Minimal Search | 3 cols | 86ms | 5.7x | ✅ |
 | Medium Search | 12 cols | 97ms | 5.0x | ✅ |
 | Maximum Search | 24 cols | 80ms | 6.1x | ✅ |
 
 **Key Findings**:
+
 - ✅ All search queries now under 200ms slow query threshold
 - ✅ Dynamic SELECT working correctly (verified in SQL logs)
 - ✅ Performance scales well with column count (80-97ms range)
@@ -331,6 +348,7 @@ For common searches (like "stores", "bank", etc.), cache results for 5-10 minute
 ⚠️ **Issue**: Initial list load without search filter takes 1276ms
 
 **Solution Implemented**: Hybrid sorting based on query context
+
 ```go
 // No filters: ORDER BY updated_at DESC (shows recent updates, fast ~30ms)
 // With filters: ORDER BY legal_name ASC (filtered set is small, fast ~80ms)
@@ -343,6 +361,7 @@ if hasSearchOrFilter {
 ```
 
 **Migration**: `000011_add_updated_at_index.up.sql`
+
 ```sql
 CREATE INDEX idx_lei_records_updated_at 
 ON lei_raw.lei_records(updated_at DESC) 
@@ -350,16 +369,19 @@ WHERE deleted_at IS NULL;
 ```
 
 **Frontend Changes**: Added info box when browsing (no filters applied)
+
 - Message: "Showing recently updated records"
 - Guidance: "Use search or filters to sort by name"
 - Disappears when filters active
 
-**Performance Impact**: 
+**Performance Impact**:
+
 - Initial load: 1276ms → **28.9ms** (44x improvement) ✨
 - Search queries: 80-97ms → **55.8ms** (1.5x additional improvement)
 - All queries now < 60ms (70% faster than 200ms target)
 
 **Verification Results** (2026-02-16 16:51 UTC):
+
 - ✅ 3 unfiltered queries: avg 28.9ms (28.6-29.3ms range)
 - ✅ 3 search queries ("Deutsche"): avg 55.8ms (53.8-57.8ms range)
 - ✅ No slow SQL warnings (all queries <200ms threshold)
@@ -370,6 +392,7 @@ WHERE deleted_at IS NULL;
 **Verification Date**: February 16, 2026
 
 **Benefits**:
+
 - ✅ Eliminates slow query on initial page load
 - ✅ Shows most relevant data first (recent updates)
 - ✅ Encourages good search/filter habits
@@ -450,26 +473,30 @@ This constraint significantly impacts optimization strategy.
 **Recommended Two-Phase Approach:**
 
 **Phase 1 (Do Now - 5 minutes):**
+
 - ✅ Database indexes optimized (done)
 - 🔧 Remove `Preload("SourceFile")` from list view
 - **Result**: 489ms → ~350-400ms (partial improvement)
 
 **Phase 2 (Do This Week - 2-4 hours):**
+
 - 🎯 Implement **Option 1: Dynamic SELECT** based on visible columns
 - Frontend sends column list with each request
 - Backend fetches only requested columns (with validation)
-- **Result**: 
+- **Result**:
   - Default 6 columns: ~70-100ms (7x improvement) ✅
   - All 24 columns: ~170-200ms (2.5x improvement) ✅
   - Both scenarios meet <200ms slow query threshold
 
 **Why Dynamic SELECT?**
+
 - ✅ Respects user's column choices (fair performance trade-off)
 - ✅ Optimal for most common case (default 6 columns)
 - ✅ Still good with all columns toggled on
 - ✅ Scales appropriately: ~7-8ms per column group
 
 **Alternative (If Time Constrained):**
+
 - Stay with Option 2 (SELECT *) + Preload removal
 - Add Redis caching for common search terms
 - Result: 350-400ms uncached, <10ms cached

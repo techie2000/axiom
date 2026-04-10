@@ -75,7 +75,7 @@ You should see log messages:
 
 ```text
 INFO Starting LEI scheduler service
-INFO Scheduled next full sync next_run=2026-02-16T02:00:00Z
+INFO Scheduled next full sync next_run=2026-02-16T12:00:00Z
 INFO Starting daily delta sync
 ```
 
@@ -117,11 +117,16 @@ Response:
 {
   "id": "...",
   "job_type": "DAILY_FULL",
+  "job_label": "Level 1 — LEI Records (DAILY_FULL)",
   "status": "RUNNING",
+  "depends_on_job_type": "MASTER_DATA_SYNC",
+  "depends_on_job_label": "Reference Data (MASTER_DATA_SYNC)",
   "last_run_at": "2026-02-10T14:30:00Z",
   "current_source_file": {
     "id": "...",
     "file_name": "lei-FULL-20260210-143000.json.zip",
+    "job_type": "LEVEL1_FULL",
+    "job_label": "Level 1 — LEI Records (LEVEL1_FULL)",
     "processing_status": "IN_PROGRESS",
     "total_records": 2500000,
     "processed_records": 150000,
@@ -155,16 +160,46 @@ curl -X GET "http://localhost:8080/api/v1/lei/5493001KJTIIGC8Y1R12/audit?limit=5
   -H "Authorization: Bearer $TOKEN" | jq
 ```
 
+### View Import Processing Failures (Level 1 + Level 2)
+
+Preferred endpoint:
+
+```bash
+curl -X GET "http://localhost:8080/api/v1/lei/import-failures?jobType=LEVEL2_RR&openOnly=true&limit=50&offset=0" \
+  -H "Authorization: Bearer $TOKEN" | jq
+```
+
+Deprecated (temporary compatibility) endpoint:
+
+```bash
+curl -X GET "http://localhost:8080/api/v1/lei/level2/failures?jobType=LEVEL2_RR&openOnly=true&limit=50&offset=0" \
+  -H "Authorization: Bearer $TOKEN" | jq
+```
+
+The deprecated endpoint returns deprecation metadata headers (`Deprecation`, `Sunset`, `Link`, `Warning`) to support migration.
+Planned removal target: `v0.5` (tracking issue: `#87`).
+
 ## Scheduler Configuration
 
 ### Default Schedule
 
 - **Delta Sync**: Disabled (commented out in code)
-- **Full Sync**: Daily at 2:00 AM
+- **Full Sync**: Daily at 12:00 UTC
 - **Master Data Sync**: Daily at 1:00 AM (runs before LEI sync)
 - **File Cleanup**: Daily at midnight (runs before all syncs)
 
 ### Manual Triggers
+
+All manual trigger endpoints return `202 Accepted` when accepted and
+`409 Conflict` when the target job (or one of its dependencies) is currently
+`RUNNING`.
+
+Trigger master/reference data sync:
+
+```bash
+curl -X POST http://localhost:8080/api/v1/lei/sync/masterdata \
+  -H "Authorization: Bearer $TOKEN"
+```
 
 Trigger delta sync (still available as manual endpoint):
 
@@ -177,6 +212,27 @@ Trigger full sync:
 
 ```bash
 curl -X POST http://localhost:8080/api/v1/lei/sync/full \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+Trigger Level 2 full chain (RR → REPEX):
+
+```bash
+curl -X POST http://localhost:8080/api/v1/lei/sync/level2 \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+Trigger Level 2 RR only:
+
+```bash
+curl -X POST http://localhost:8080/api/v1/lei/sync/level2/rr \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+Trigger Level 2 REPEX only:
+
+```bash
+curl -X POST http://localhost:8080/api/v1/lei/sync/level2/repex \
   -H "Authorization: Bearer $TOKEN"
 ```
 

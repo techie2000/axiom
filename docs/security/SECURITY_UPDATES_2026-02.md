@@ -187,6 +187,14 @@ docker compose --env-file .env.dev -f docker-compose.dev.yml build --no-cache
 docker compose --env-file .env.dev -f docker-compose.dev.yml up -d
 ```
 
+### Main Environment
+
+```bash
+# Using main compose file
+docker compose --env-file .env.main -f docker-compose.main.yml build --no-cache
+docker compose --env-file .env.main -f docker-compose.main.yml up -d
+```
+
 ### UAT Environment
 
 ```bash
@@ -290,7 +298,7 @@ If you encounter issues after applying these updates:
 2. Review logs: `docker compose --env-file .env.dev -f docker-compose.dev.yml logs`
 3. Report issues with:
    - Error messages
-   - Environment (dev/uat/prod)
+   - Environment (main/dev/uat/prod)
    - Steps to reproduce
 
 ---

@@ -1,0 +1,112 @@
+name: Weekly Promote dev → uat
+
+on:
+  schedule:
+    - cron: '0 1 * * 1'  # 01:00 UTC every Monday — weekly cadence gives dev a full week to stabilise
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (check only, do not create PR)'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  promote:
+    name: Create promotion PR (dev → uat)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Check if promotion is needed
+        id: check
+        run: |
+          git fetch origin dev uat
+          AHEAD=$(git rev-list --count origin/uat..origin/dev)
+          echo "commits_ahead=$AHEAD" >> "$GITHUB_OUTPUT"
+          if [ "$AHEAD" -gt 0 ]; then
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+            echo "ℹ️  dev is $AHEAD commit(s) ahead of uat — promotion needed."
+          else
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+            echo "✅ uat is already up to date with dev — no promotion needed."
+          fi
+
+      - name: Check for existing open promotion PR
+        id: existing
+        if: steps.check.outputs.needed == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: prs } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              head: `${context.repo.owner}:dev`,
+              base: 'uat',
+            });
+            if (prs.length > 0) {
+              console.log(`ℹ️  Existing promotion PR found: #${prs[0].number} — skipping creation.`);
+              return 'true';
+            }
+            return 'false';
+
+      - name: Create promotion PR
+        if: |
+          steps.check.outputs.needed == 'true' &&
+          steps.existing.outputs.result == '"false"' &&
+          !inputs.dry_run
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const ahead = parseInt('${{ steps.check.outputs.commits_ahead }}', 10);
+            const today = new Date().toISOString().split('T')[0];
+            const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+            const body = [
+              '## Automated promotion: `dev` → `uat`',
+              '',
+              `This PR was created automatically by the`,
+              `[weekly promotion workflow](.github/workflows/promote-dev-to-uat.yml).`,
+              '',
+              `There ${ahead === 1 ? 'is' : 'are'} **${plural(ahead, 'commit')}** on \`dev\`` +
+              ` that have not yet been promoted to \`uat\`.`,
+              '',
+              '### What to do',
+              '',
+              '- Review the diff and confirm the changes are safe to deploy to the UAT environment.',
+              '- Ensure all CI checks pass.',
+              '- Obtain **at least one review** before merging.',
+              '- Merge this PR to trigger a UAT deployment.',
+              '- To skip this promotion cycle, close this PR.',
+              '',
+              '---',
+              '*Automatically generated — do not modify the branch directly.*',
+            ].join('\n');
+
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `chore: weekly promotion dev → uat (${today})`,
+              head: 'dev',
+              base: 'uat',
+              body,
+            });
+            console.log(`✅ Created promotion PR #${pr.number}: ${pr.html_url}`);
+
+      - name: Dry run summary
+        if: inputs.dry_run
+        run: |
+          AHEAD="${{ steps.check.outputs.commits_ahead }}"
+          echo "🔍 Dry run — no PR created."
+          echo "   dev is $AHEAD commit(s) ahead of uat."

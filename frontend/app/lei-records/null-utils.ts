@@ -23,6 +23,19 @@ export function formatLEIDisplayValue(value: unknown): string {
   return String(value)
 }
 
+export function formatEnumDisplayValue(value: unknown): string {
+  const baseDisplayValue = formatLEIDisplayValue(value)
+  if (baseDisplayValue === '-') {
+    return '-'
+  }
+
+  return baseDisplayValue
+    .toLowerCase()
+    .split('_')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
+}
+
 export function getStatusBadgePresentation(value: unknown): { label: string; isActive: boolean } {
   const label = formatLEIDisplayValue(value)
   return {
@@ -35,6 +48,10 @@ export function formatLEICellValue(value: unknown, key: string): string {
   const baseDisplayValue = formatLEIDisplayValue(value)
   if (baseDisplayValue === '-') {
     return '-'
+  }
+
+  if (key === 'entity_category' || key === 'entity_sub_category' || key === 'registration_status') {
+    return formatEnumDisplayValue(baseDisplayValue)
   }
 
   if (key.includes('date') && typeof value === 'string') {

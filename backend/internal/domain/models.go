@@ -39,16 +39,16 @@ func (Country) TableName() string {
 // Currency represents a currency entity
 type Currency struct {
 	BaseModel
-	Code               string `gorm:"column:code;uniqueIndex;size:3;not null" json:"code" validate:"required,len=3"`
-	Name               string `gorm:"column:name;not null" json:"name" validate:"required"`
-	Symbol             string `json:"symbol"`
-	SymbolNative       string `json:"symbol_native"`
-	DecimalDigits      int    `gorm:"default:2" json:"decimal_digits"`
-	Rounding           int    `gorm:"default:0" json:"rounding"`
-	NamePlural         string `gorm:"column:name_plural" json:"name_plural"`
-	Active             bool   `gorm:"default:true" json:"active"`
-	IsAlertClsAllowed  bool   `gorm:"column:is_alert_cls_allowed;default:false" json:"is_alert_cls_allowed"`
-	IsOfacSanctioned   bool   `gorm:"column:is_ofac_sanctioned;default:false" json:"is_ofac_sanctioned"`
+	Code              string `gorm:"column:code;uniqueIndex;size:3;not null" json:"code" validate:"required,len=3"`
+	Name              string `gorm:"column:name;not null" json:"name" validate:"required"`
+	Symbol            string `json:"symbol"`
+	SymbolNative      string `json:"symbol_native"`
+	DecimalDigits     int    `gorm:"default:2" json:"decimal_digits"`
+	Rounding          int    `gorm:"default:0" json:"rounding"`
+	NamePlural        string `gorm:"column:name_plural" json:"name_plural"`
+	Active            bool   `gorm:"default:true" json:"active"`
+	IsAlertClsAllowed bool   `gorm:"column:is_alert_cls_allowed;default:false" json:"is_alert_cls_allowed"`
+	IsOfacSanctioned  bool   `gorm:"column:is_ofac_sanctioned;default:false" json:"is_ofac_sanctioned"`
 }
 
 // TableName overrides the table name
@@ -314,6 +314,106 @@ func (CodeMapping) TableName() string {
 	return "code_mappings"
 }
 
+// UserRole represents the role of a system user
+type UserRole string
+
+const (
+	UserRoleAdmin UserRole = "admin"
+	UserRoleUser  UserRole = "user"
+)
+
+// UserStatus represents the provisioning status of a system user
+type UserStatus string
+
+const (
+	UserStatusPending  UserStatus = "pending"
+	UserStatusActive   UserStatus = "active"
+	UserStatusInactive UserStatus = "inactive"
+)
+
+// User represents a system user with authentication and authorisation details
+type User struct {
+	BaseModel
+	Email        string     `gorm:"uniqueIndex;not null;size:255" json:"email"`
+	Username     string     `gorm:"uniqueIndex;not null;size:100" json:"username"`
+	PasswordHash string     `gorm:"column:password_hash;not null" json:"-"`
+	FullName     string     `gorm:"size:255" json:"full_name"`
+	Role         UserRole   `gorm:"type:varchar(50);not null;default:'user'" json:"role"`
+	Status       UserStatus `gorm:"type:varchar(50);not null;default:'pending'" json:"status"`
+	ApprovedBy   *uuid.UUID `gorm:"type:uuid;column:approved_by" json:"approved_by,omitempty"`
+	ApprovedAt   *time.Time `gorm:"column:approved_at" json:"approved_at,omitempty"`
+	// IsBootstrap marks the default seed admin that must be replaced on first login.
+	// Exposed in API responses so the UI can lock down actions on this account.
+	IsBootstrap bool `gorm:"column:is_bootstrap;default:false" json:"is_bootstrap"`
+}
+
+// TableName overrides the table name
+func (User) TableName() string {
+	return "users"
+}
+
+// UserPreference stores a single UI preference for a user on a specific page.
+// page_key="global" is used for cross-page preferences (e.g. theme).
+type UserPreference struct {
+	ID              uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+	UserID          uuid.UUID `gorm:"type:uuid;not null;index" json:"user_id"`
+	PageKey         string    `gorm:"size:100;not null" json:"page_key"`
+	PreferenceKey   string    `gorm:"size:100;not null" json:"preference_key"`
+	PreferenceValue string    `gorm:"type:text;not null" json:"preference_value"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
+}
+
+func (UserPreference) TableName() string {
+	return "user_preferences"
+}
+
+// PreferenceAudit is an append-only record of every preference upsert.
+// old_value is nil when the preference did not previously exist.
+type PreferenceAudit struct {
+	ID            uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+	UserID        uuid.UUID `gorm:"type:uuid;not null;index" json:"user_id"`
+	PageKey       string    `gorm:"size:100;not null" json:"page_key"`
+	PreferenceKey string    `gorm:"size:100;not null" json:"preference_key"`
+	OldValue      *string   `gorm:"type:text" json:"old_value"`
+	NewValue      string    `gorm:"type:text;not null" json:"new_value"`
+	ChangedAt     time.Time `gorm:"not null;default:now()" json:"changed_at"`
+	IPAddress     *string   `gorm:"size:45" json:"ip_address"`
+}
+
+func (PreferenceAudit) TableName() string {
+	return "user_preferences_audit"
+}
+
+// TranslationStatus represents the review lifecycle of a UI translation.
+type TranslationStatus string
+
+const (
+	TranslationStatusPending  TranslationStatus = "pending"
+	TranslationStatusApproved TranslationStatus = "approved"
+	TranslationStatusRejected TranslationStatus = "rejected"
+)
+
+// UITranslation stores a community-contributed UI translation that goes
+// through a review workflow before being shipped as a locale JSON file.
+type UITranslation struct {
+	ID               uuid.UUID         `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+	TranslationKey   string            `gorm:"size:500;not null;index" json:"translation_key"`
+	LanguageCode     string            `gorm:"size:10;not null;index" json:"language_code"`
+	TranslationValue string            `gorm:"type:text;not null" json:"translation_value"`
+	Status           TranslationStatus `gorm:"type:varchar(20);not null;default:'pending'" json:"status"`
+	Notes            string            `gorm:"type:text" json:"notes,omitempty"`
+	SubmittedBy      *uuid.UUID        `gorm:"type:uuid" json:"submitted_by,omitempty"`
+	ReviewedBy       *uuid.UUID        `gorm:"type:uuid" json:"reviewed_by,omitempty"`
+	ReviewedAt       *time.Time        `json:"reviewed_at,omitempty"`
+	CreatedAt        time.Time         `json:"created_at"`
+	UpdatedAt        time.Time         `json:"updated_at"`
+}
+
+func (UITranslation) TableName() string {
+	return "ui_translations"
+}
+
 // CodeMappingAudit represents the complete audit history of code mapping changes
 type CodeMappingAudit struct {
 	ID             uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
@@ -383,6 +483,36 @@ type CurrencyAudit struct {
 
 func (CurrencyAudit) TableName() string {
 	return "currencies_audit"
+}
+
+// ContinentAudit represents the complete audit history of continent changes
+type ContinentAudit struct {
+	ID             uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	ContinentCode  string    `gorm:"size:2;not null;index" json:"continent_code"`
+	Action         string    `gorm:"size:20;not null" json:"action"` // CREATE, UPDATE, DELETE
+	RecordSnapshot string    `gorm:"type:jsonb;not null" json:"record_snapshot"`
+	ChangedFields  string    `gorm:"type:jsonb" json:"changed_fields"`
+	ChangedBy      string    `gorm:"size:100;not null;default:'system'" json:"changed_by"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+func (ContinentAudit) TableName() string {
+	return "continents_audit"
+}
+
+// LanguageAudit represents the complete audit history of language changes
+type LanguageAudit struct {
+	ID             uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	LanguageCode   string    `gorm:"size:2;not null;index" json:"language_code"`
+	Action         string    `gorm:"size:20;not null" json:"action"` // CREATE, UPDATE, DELETE
+	RecordSnapshot string    `gorm:"type:jsonb;not null" json:"record_snapshot"`
+	ChangedFields  string    `gorm:"type:jsonb" json:"changed_fields"`
+	ChangedBy      string    `gorm:"size:100;not null;default:'system'" json:"changed_by"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+func (LanguageAudit) TableName() string {
+	return "languages_audit"
 }
 
 // AddressAudit represents the complete audit history of address changes

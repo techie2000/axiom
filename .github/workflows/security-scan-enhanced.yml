@@ -24,24 +24,27 @@ permissions:
   pull-requests: write
   security-events: write
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 jobs:
   security-scan-and-update:
     runs-on: ubuntu-latest
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version-file: 'backend/go.mod'
           cache-dependency-path: backend/go.sum
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '22'
 
@@ -57,7 +60,7 @@ jobs:
           docker build -f docker/Dockerfile.frontend -t axiom-frontend:latest ./frontend
 
       - name: Run Trivy scan on Backend (JSON output)
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           image-ref: 'axiom-backend:latest'
           format: 'json'
@@ -66,7 +69,7 @@ jobs:
           exit-code: 0
 
       - name: Run Trivy scan on Frontend (JSON output)
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           image-ref: 'axiom-frontend:latest'
           format: 'json'
@@ -75,7 +78,7 @@ jobs:
           exit-code: 0
 
       - name: Upload Trivy results (Backend SARIF)
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           image-ref: 'axiom-backend:latest'
           format: 'sarif'
@@ -89,7 +92,7 @@ jobs:
           category: 'trivy-backend-scan'
 
       - name: Upload Trivy results (Frontend SARIF)
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           image-ref: 'axiom-frontend:latest'
           format: 'sarif'
@@ -415,9 +418,15 @@ jobs:
           
           if [ "${{ steps.parse-vulns.outputs.has_updates }}" == "true" ]; then
             echo "✅ **Updates Applied:**" >> $GITHUB_STEP_SUMMARY
-            [ "${{ steps.parse-vulns.outputs.has_alpine_updates }}" == "true" ] && echo "- Alpine packages updated" >> $GITHUB_STEP_SUMMARY
-            [ "${{ steps.parse-vulns.outputs.has_go_updates }}" == "true" ] && echo "- Go modules updated" >> $GITHUB_STEP_SUMMARY
-            [ "${{ steps.parse-vulns.outputs.has_npm_updates }}" == "true" ] && echo "- npm packages updated" >> $GITHUB_STEP_SUMMARY
+            if [ "${{ steps.parse-vulns.outputs.has_alpine_updates }}" == "true" ]; then
+              echo "- Alpine packages updated" >> $GITHUB_STEP_SUMMARY
+            fi
+            if [ "${{ steps.parse-vulns.outputs.has_go_updates }}" == "true" ]; then
+              echo "- Go modules updated" >> $GITHUB_STEP_SUMMARY
+            fi
+            if [ "${{ steps.parse-vulns.outputs.has_npm_updates }}" == "true" ]; then
+              echo "- npm packages updated" >> $GITHUB_STEP_SUMMARY
+            fi
           else
             echo "✅ No fixable vulnerabilities found" >> $GITHUB_STEP_SUMMARY
           fi

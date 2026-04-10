@@ -1,0 +1,105 @@
+# markdownlint configuration
+# Docs: https://github.com/DavidAnson/markdownlint
+
+# Enable all rules by default unless overridden below.
+default: true
+
+# MD003 - Heading style
+# Enforce ATX headings (#, ##, ###) instead of setext style.
+MD003:
+  style: atx
+
+# MD004 - Unordered list style
+# Use dash (-) consistently for bullet lists.
+MD004:
+  style: dash
+
+# MD007 - Unordered list indentation
+# Nested list items must be indented by 2 spaces.
+MD007:
+  indent: 2
+
+# MD013 - Line length
+# Max 120 chars for prose; ignore code blocks and tables.
+MD013:
+  line_length: 120
+  code_blocks: false
+  tables: false
+
+# MD024 - Multiple headings with the same content
+# Allow duplicate headings only when not siblings.
+MD024:
+  siblings_only: true
+
+# MD022 - Headings should be surrounded by blank lines.
+MD022: true
+
+# MD025 - Multiple top-level headings in one document.
+# Disabled because some docs/front-matter flows may include extra H1 handling.
+MD025: false
+
+# MD031 - Fenced code blocks should be surrounded by blank lines.
+MD031: true
+
+# MD032 - Lists should be surrounded by blank lines.
+MD032: true
+
+# MD033 - Inline HTML
+# Allow selected HTML tags used by this repo's docs.
+MD033:
+  allowed_elements:
+    - details
+    - summary
+    - img
+    - br
+    - sub
+    - sup
+
+# MD034 - Bare URL used (no link syntax)
+# Disabled to allow raw URLs where needed.
+MD034: false
+
+# MD040 - Fenced code blocks should have a language specified.
+MD040: true
+
+# MD041 - First line in file should be a top-level heading.
+# Disabled because many files begin with front matter.
+MD041: false
+
+# MD046 - Code block style
+# Require fenced code blocks instead of indented blocks.
+MD046:
+  style: fenced
+
+# MD048 - Code fence style
+# Enforce backticks (`) for fenced code blocks.
+MD048:
+  style: backtick
+
+# MD049 - Emphasis style
+# Enforce asterisk (*) for emphasis markers.
+MD049:
+  style: asterisk
+
+# MD050 - Strong style
+# Enforce asterisk (**) for strong markers.
+MD050:
+  style: asterisk
+
+# MD029 - Ordered list item prefix
+# Use ascending ordered list markers (1., 2., 3.).
+MD029:
+  style: ordered
+
+# MD030 - Spaces after list markers
+# Keep one space after both ordered and unordered markers.
+MD030:
+  ul_single: 1
+  ol_single: 1
+  ul_multi: 1
+  ol_multi: 1
+
+# MD035 - Horizontal rule style
+# Standardize thematic breaks as three hyphens.
+MD035:
+  style: "---"

@@ -1,5 +1,6 @@
 # Build stage
-FROM node:22-alpine3.21 AS builder
+ARG DOCKER_LIBRARY=public.ecr.aws/docker/library
+FROM ${DOCKER_LIBRARY}/node:22-alpine3.21 AS builder
 
 # Security: Upgrade libssl3 to address CVE vulnerabilities (Alert #117)
 # Version 3.3.6-r0 addresses critical SSL/TLS vulnerabilities
@@ -7,6 +8,10 @@ FROM node:22-alpine3.21 AS builder
 RUN apk add --no-cache --upgrade libssl3=3.3.6-r0
 
 WORKDIR /app
+
+# Security: Upgrade npm to address npm bundled dependency CVEs (tar/minimatch family)
+# security-scan-managed
+RUN npm install -g npm@11.12.0
 
 # Copy package files
 COPY package*.json ./
@@ -21,7 +26,7 @@ ENV NODE_TLS_REJECT_UNAUTHORIZED=0
 RUN npm run build
 
 # Runtime stage
-FROM node:22-alpine3.21
+FROM ${DOCKER_LIBRARY}/node:22-alpine3.21
 
 # Security: Upgrade libssl3 to address CVE vulnerabilities (Alert #117)
 # Version 3.3.6-r0 addresses critical SSL/TLS vulnerabilities
@@ -33,6 +38,9 @@ WORKDIR /app
 # Copy package files and node_modules from builder (no reinstall - faster, avoids npm registry timeouts)
 COPY package*.json ./
 COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /usr/local/bin/npm /usr/local/bin/npm
+COPY --from=builder /usr/local/bin/npx /usr/local/bin/npx
+COPY --from=builder /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/npm
 
 # Copy build output
 COPY --from=builder /app/.next ./.next

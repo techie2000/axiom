@@ -1,5 +1,8 @@
 # Axiom - Financial Services Static Data System
 
+[![CI](https://github.com/techie2000/axiom/actions/workflows/ci.yml/badge.svg)](https://github.com/techie2000/axiom/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/techie2000/axiom/graph/badge.svg)](https://codecov.io/gh/techie2000/axiom)
+
 A modular monolith financial services static data management system built with Go, Next.js, and PostgreSQL.
 
 ## Overview
@@ -7,9 +10,35 @@ A modular monolith financial services static data management system built with G
 Axiom is a comprehensive financial services platform for managing static data including countries, currencies,
 entities, financial instruments, accounts, and settlement instructions.
 
+## Versioning
+
+Axiom uses semantic versioning in `MAJOR.MINOR.PATCH` format.
+
+- `PATCH` increments manually when a patch release is intentionally prepared.
+- `MINOR` increments manually when a change meaningfully advances the delivered capability.
+- `MAJOR` increments manually for breaking changes.
+
+The application footer reads the backend `/version` endpoint and exposes build metadata in a tooltip
+(commit SHA and build timestamp when available), which is the canonical identifier for the exact code
+state under test.
+
+To perform an intentional minor or major bump, run:
+
+```powershell
+pwsh ./scripts/bump-version.ps1 -Part minor
+pwsh ./scripts/bump-version.ps1 -Part major
+```
+
+The helper updates both version sources together:
+
+- `VERSION`
+- `backend/internal/version/version.go`
+
 ## Architecture
 
 Architecture decisions are documented as ADRs in [docs/adr](docs/adr).
+
+Architecture as Code pilot guidance is available in [docs/architecture-as-code](docs/architecture-as-code).
 
 ### Tech Stack
 
@@ -121,21 +150,57 @@ axiom/
 - RabbitMQ 4.2+
 - Docker & Docker Compose
 
+### Frontend Translation Automation
+
+The frontend i18n workflow now includes automated key extraction and locale completeness validation.
+
+```bash
+cd frontend
+
+# Extract keys used in app/**/*.ts(x) into public/locales/en/common.json
+npm run i18n:extract
+
+# Report non-English locale gaps against en/common.json (warnings only; English fallback is intentional)
+npm run i18n:check
+
+# CI command: extract + check + fail if generated English locale changes were not committed
+npm run i18n:verify
+```
+
+When adding new `t('...')` keys, run `npm run i18n:extract` and commit the
+resulting `en/common.json` changes. Non-English locale files may omit new keys
+until translations are approved.
+
 ### Multi-Environment Support
 
 Axiom supports running multiple environments simultaneously on the same machine. Each environment uses a unique port
 prefix to avoid conflicts:
 
+- **Main**: Port prefix 4 (e.g., 48080, 43000, 45432, 45173 for docs)
 - **Development (dev)**: Port prefix 1 (e.g., 18080, 13000, 15432)
 - **UAT**: Port prefix 2 (e.g., 28080, 23000, 25432)
 - **Production (prod)**: Port prefix 3 (e.g., 38080, 33000, 35432)
 
 #### Starting a Specific Environment
 
-`make docker-dev-up`, `make docker-uat-up`, and `make docker-prod-up` now run an automatic PostgreSQL
-major-version precheck/upgrade step before `docker-compose up -d`. If no upgrade is needed, startup proceeds
-immediately.
-`make docker-dev-restart`, `make docker-uat-restart`, and `make docker-prod-restart` run the same precheck.
+`make docker-dev-up` and `make docker-main-up` automatically run two setup steps before
+`docker-compose up -d`:
+
+1. **Bind-mount directory setup** (`scripts/ensure-bind-mounts.sh`) — creates `./data/{env}/postgres`,
+   `./data/{env}/lei`, and `./log/{env}` if they do not exist. On Linux hosts the Postgres data
+   directory is also `chown`-ed to UID 70:70
+   (the `postgres` user inside `postgres:17-alpine`)
+   via a temporary Docker container, so no `sudo` is required.
+   On macOS and Windows, Docker Desktop manages volume ownership automatically
+   and the `chown` step is skipped.
+2. **PostgreSQL major-version precheck/upgrade** (`scripts/upgrade-postgres.sh`) —
+   if the existing data was created by an older Postgres major version,
+   the data is backed up and migrated automatically.
+
+`make docker-dev-restart` and `make docker-main-restart` run the same steps before restarting.
+`make docker-uat-up`, `make docker-prod-up`, and their restart counterparts
+run only the Postgres upgrade precheck,
+as those environments use Docker-managed named volumes (no chown needed).
 
 ```bash
 # Start development environment
@@ -150,6 +215,43 @@ make docker-prod-up
 # Start all environments simultaneously
 make docker-all-up
 ```
+
+### Safe Main-Branch Testing (Isolated Containers, Volumes, Ports, and Logs)
+
+When testing PRs/worktrees against the `main` compose file, avoid reusing `.env.main` across multiple folders.
+Use an isolated env file per test stack so each run gets its own container/volume names, host ports, and log
+directory. LEI data (`./data/main/lei`) is intentionally shared across stacks so cached data does not have to
+be re-downloaded for each test run.
+
+```bash
+# Create an isolated env (example: pr107)
+./scripts/new-main-test-env.ps1 -Name pr107
+
+# Start isolated main-like stack
+docker compose --env-file .env.main.pr107 -f docker-compose.main.yml up -d --build
+
+# Stop isolated stack (non-destructive)
+docker compose --env-file .env.main.pr107 -f docker-compose.main.yml down
+```
+
+Important:
+
+- Avoid `down -v` on shared/long-lived stacks unless you intentionally want to remove data.
+- Keep `.env.main` for your primary main environment; use `.env.main.<suffix>` for temporary test stacks.
+
+### Main PostgreSQL Backup Script
+
+Create a timestamped backup from the running main Postgres container before risky operations:
+
+```bash
+# Custom format backup (recommended)
+./scripts/backup-main-postgres.ps1
+
+# Plain SQL backup
+./scripts/backup-main-postgres.ps1 -Format plain
+```
+
+Backups are saved under `backups/main/postgres/` by default.
 
 #### Stopping Environments
 
@@ -256,9 +358,45 @@ The script validates:
   `bic`, `iban`, `settlement_method`, `status`, `updated_at`
 - no `BGC` text appears in `counterparty_name`/`account_name`
 
+#### Translation Stale-Row Cleanup
+
+To keep UI translation rows aligned with active locale keys (cold-start source), run:
+
+```bash
+# Preview stale rows without deleting
+make cleanup-stale-translations api=http://localhost:18080 token=<ADMIN_JWT> whatif=1
+
+# Delete stale rows
+make cleanup-stale-translations api=http://localhost:18080 token=<ADMIN_JWT>
+```
+
+PowerShell direct usage:
+
+```powershell
+./scripts/cleanup-stale-translations.ps1 -ApiBaseUrl http://localhost:18080 -BearerToken <ADMIN_JWT> -WhatIf
+./scripts/cleanup-stale-translations.ps1 -ApiBaseUrl http://localhost:18080 -BearerToken <ADMIN_JWT>
+```
+
+Recommended daily automation:
+
+1. Remove obsolete keys from `frontend/public/locales/en/common.json`.
+2. Run stale-row cleanup daily (Task Scheduler/cron).
+3. Keep locale files in source control as the cold-start key source of truth.
+
+This ensures rows removed from the active locale key set are also removed from `ui_translations`.
+
 #### Environment-Specific URLs
 
 Once started, each environment is accessible at:
+
+**Main Environment:**
+
+- Frontend: http://localhost:43000
+- Backend API: http://localhost:48080
+- Swagger UI: http://localhost:48080/swagger/index.html
+- PostgreSQL: localhost:45432
+- RabbitMQ Management: http://localhost:45673
+- User Docs (optional profile): http://localhost:45173/docs-user/
 
 **Development Environment:**
 
@@ -267,6 +405,7 @@ Once started, each environment is accessible at:
 - Swagger UI: http://localhost:18080/swagger/index.html
 - PostgreSQL: localhost:15432
 - RabbitMQ Management: http://localhost:15673
+- User Docs (optional profile): http://localhost:15173/docs-user/
 
 **UAT Environment:**
 
@@ -411,7 +550,14 @@ go test ./...
 # Frontend tests
 cd frontend
 npm test
+
+# Frontend tests with coverage report (enforces ≥ 50% line/statement coverage)
+cd frontend
+npm run test:coverage
 ```
+
+Coverage is reported to [Codecov](https://codecov.io/gh/techie2000/axiom) on every CI run.
+The coverage badge at the top of this file reflects the latest `main` branch result.
 
 ## API Documentation
 
@@ -423,6 +569,13 @@ API documentation is available via Swagger UI at:
 - Legacy/Local: http://localhost:8080/swagger/index.html
 
 TODO: Replace the production Swagger URL with the confirmed production base URL.
+
+### API Deprecation Notice
+
+- Preferred endpoint for import processing failures: `GET /api/v1/lei/import-failures`
+- Deprecated endpoint (still available temporarily): `GET /api/v1/lei/level2/failures`
+- Legacy endpoint now returns deprecation metadata headers (`Deprecation`, `Sunset`, `Link`, `Warning`)
+- Planned removal target: `v0.5` (tracked in GitHub issue `#87`)
 
 ## Configuration
 
@@ -449,7 +602,7 @@ lei:
   datadir: ./data/lei
   deltasyncinterval: 1h      # How often to sync delta files
   fullsyncday: Sunday         # Day for full sync
-  fullsynctime: "02:00"       # Time for full sync (HH:MM)
+  fullsynctime: "12:00"       # Time for full sync (HH:MM, UTC)
   cleanuptime: "03:00"        # Time for file cleanup (HH:MM)
   keepfullfiles: 2            # Retain last N full files (~1.8GB)
   keepdeltafiles: 5           # Retain last N delta files (~65MB)
@@ -463,6 +616,18 @@ server:
 
 **Environment Variables:** All config values can be set via environment variables using uppercase with underscores
 (e.g., `DATABASE_LOGLEVEL`, `LEI_DELTA_SYNC_INTERVAL`).
+
+| Variable | Default | Description |
+| -------- | ------- | ----------- |
+| `LOG_FILE_PATH` | *(unset)* | Log file path. Unset = stdout only. `.env.*` files set this per environment. |
+| `LOG_MAX_SIZE_MB` | `10` | Max log file size in MB before rotation. |
+| `LOG_MAX_BACKUPS` | `3` | Max number of rotated log files to retain. |
+| `LOG_MAX_AGE_DAYS` | `7` | Max age in days for rotated log files. |
+| `LOG_COMPRESS` | `false` | Compress rotated log files with gzip (`true`/`false`). |
+
+Retention defaults apply only when `LOG_FILE_PATH` is set. The `.env.*` files in this repo set
+environment-appropriate values (dev: 10 MB / 3 files / 7 days; uat: 25 MB / 5 / 14 days;
+prod: 50 MB / 10 files / 30 days).
 
 See [LEI Configuration](docs/lei/LEI_ACQUISITION.md#environment-variables) for detailed scheduler options.
 
@@ -501,16 +666,16 @@ make lint-docs-fix
 make lint-all
 ```
 
-**Pre-commit Hooks:**
+**Git Hooks (pre-commit and pre-push):**
 
-Install git hooks to automatically validate markdown files before commits:
+Install git hooks to automatically run quality checks on every commit and push:
 
 ```bash
 make install-hooks
 ```
 
-This prevents commits with markdown linting errors (line length > 120 chars, missing code block languages,
-table formatting issues). See [.githooks/README.md](.githooks/README.md) for details.
+The hooks validate markdown linting, VS Code settings sort order, and more.
+See [.githooks/README.md](.githooks/README.md) for the full list of checks and requirements.
 
 ### Go Code
 
@@ -530,6 +695,52 @@ Please read [CONTRIBUTING.md](docs/CONTRIBUTING.md) for details on our developme
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+## User Documentation
+
+End-user and operations documentation is available in [`docs-user/`](docs-user/README.md),
+powered by VitePress. This covers workflows, admin tasks, reference data, and troubleshooting
+written for non-engineering audiences.
+
+Published site: <https://techie2000.github.io/axiom/docs-user/>
+
+**Getting Started:**
+
+- [Sign In & Access](docs-user/getting-started/sign-in-and-access.md)
+- [Navigation Basics](docs-user/getting-started/navigation-basics.md)
+
+**Core Workflows:**
+
+- [LEI Records](docs-user/workflows/lei-records.md)
+- [Countries](docs-user/workflows/countries.md)
+- [Currencies](docs-user/workflows/currencies.md)
+- [Languages](docs-user/workflows/languages.md)
+- [Entities](docs-user/workflows/entities.md)
+- [Settlement Instructions (SSI)](docs-user/workflows/ssi.md)
+
+**Admin Workflows:**
+
+- [User Approvals](docs-user/admin/user-approvals.md)
+- [Translation Review](docs-user/admin/translation-review.md)
+- [Sync Triggers](docs-user/admin/sync-triggers.md)
+
+**Reference:**
+
+- [Data Dictionary](docs-user/reference/data-dictionary.md)
+- [Statuses & States](docs-user/reference/statuses-and-states.md)
+- [Permissions & Roles](docs-user/reference/permissions-and-roles.md)
+
+To preview the user documentation site locally:
+
+```bash
+make docs-user-dev
+```
+
+To build and validate the site:
+
+```bash
+make docs-user-check
+```
+
 ## Documentation
 
 Detailed documentation is available in the `docs/` directory:
@@ -540,6 +751,15 @@ Detailed documentation is available in the `docs/` directory:
 - [Database Schema](docs/database-schema.md)
 - [Deployment Guide](docs/deployment.md)
 - [Development Workflow](docs/development-workflow.md)
+
+**LEI Operations:**
+
+- [LEI Acquisition Guide](docs/lei/LEI_ACQUISITION.md)
+- [LEI Quick Start](docs/lei/LEI_QUICKSTART.md)
+
+Manual LEI sync endpoints (master data, full, delta, Level 2, RR, REPEX) and
+their dependency-aware conflict behavior (`202 Accepted` / `409 Conflict`) are
+documented in the LEI guides above.
 
 **Multi-Environment Setup:**
 

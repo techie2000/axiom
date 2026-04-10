@@ -29,10 +29,24 @@ Located in [contributing/](./contributing/):
 
 - [**Branching Strategy**](./contributing/BRANCHING_STRATEGY.md) - Branch naming, promotion workflow,
   protection rules, and hotfix procedure
+- [**Git Hooks**](../.githooks/README.md) - Pre-commit and pre-push automation (markdown lint,
+  VS Code settings sort)
 
 ### 🎨 Frontend Patterns
 
 - [**UI Patterns Guide**](./ui-patterns.md) - Reusable frontend patterns and component templates ⭐ **For UI development**
+
+### 👤 User Documentation
+
+- [**User Docs Home**](../docs-user/README.md) - Dedicated end-user documentation space for workflow-driven app usage
+  guidance
+- [**Published User Docs Site**](https://techie2000.github.io/axiom/docs-user/) - Publicly hosted docs experience
+
+### 🖼️ Branding Assets
+
+Located in [assets/branding/](./assets/branding/):
+
+- [**Branding Assets README**](./assets/branding/README.md) - Source logo files and generated favicon/logo outputs
 
 ### 💳 SSI (Standard Settlement Instructions)
 
@@ -63,6 +77,15 @@ Located in [lei/](./lei/):
 - [**LEI Data Flow**](./lei/LEI_DATA_FLOW.md) - End-to-end data acquisition and processing flow
 - [**LEI Acquisition**](./lei/LEI_ACQUISITION.md) - GLEIF API integration details
 - [**LEI Countries Refactor**](./lei/LEI_COUNTRIES_REFACTOR.md) - Country data handling improvements
+
+#### API Migration Notice
+
+- Import processing failures endpoint migration:
+  - Preferred: `GET /api/v1/lei/import-failures`
+  - Deprecated (temporary): `GET /api/v1/lei/level2/failures`
+- The deprecated endpoint returns deprecation metadata headers
+  (`Deprecation`, `Sunset`, `Link`, `Warning`) to support client migration.
+- Planned removal target: `v0.5` (tracked by GitHub issue `#87`).
 
 #### Issue Resolution
 
@@ -100,6 +123,11 @@ Located in [performance/](./performance/):
 4. **Building UI components?** → [UI Patterns Guide](./ui-patterns.md) ⭐ **New!**
 5. **Performance tuning?** → [LEI Search Performance Analysis](./performance/LEI_SEARCH_PERFORMANCE_ANALYSIS.md)
 
+### For End Users
+
+1. **How do I use the app?** → [User Docs Home](../docs-user/README.md)
+2. **Live published site** → [https://techie2000.github.io/axiom/docs-user/](https://techie2000.github.io/axiom/docs-user/)
+
 ### For System Administrators
 
 1. **Deploy multi-environment setup** → [Multi-Environment Setup](./environments/multi-environment-setup.md)
@@ -114,7 +142,8 @@ Located in [performance/](./performance/):
 ### For Contributors
 
 1. **Branching and promotion workflow** → [Branching Strategy](./contributing/BRANCHING_STRATEGY.md)
-2. **Branch setup script** → [scripts/setup-branches.sh](../scripts/setup-branches.sh)
+2. **Git hooks (pre-commit / pre-push)** → [Git Hooks](../.githooks/README.md)
+3. **Branch setup script** → [scripts/setup-branches.sh](../scripts/setup-branches.sh)
 
 ---
 
@@ -125,7 +154,7 @@ Located in [performance/](./performance/):
 ✅ **Production Ready**
 
 - Full data acquisition (3.2M+ records)
-- Daily full sync at 2 AM (delta disabled for reliability)
+- Daily full sync at 12:00 UTC (delta disabled for reliability)
 - Search performance < 60ms
 - 99.9% uptime target
 
@@ -162,4 +191,4 @@ When adding new documentation:
 
 ## Last Updated
 
-February 24, 2026
+March 15, 2026

@@ -68,36 +68,69 @@ clicked or the repository setting is enabled).
 
 ### Promoting to dev
 
-When `main` is ready to be deployed to the dev environment, open a PR:
+`main` → `dev` promotions happen **automatically every night** via the
+[`promote-main-to-dev` workflow](../../.github/workflows/promote-main-to-dev.yml).
+
+The workflow runs at **01:00 UTC daily** — deliberately scheduled one hour *before* the GLEIF
+LEI full-sync job window (default: 12:00 UTC) so that if new code on `main` introduces any issues, they are
+caught before the importer runs against the freshly promoted `dev` environment. The
+00:00 slot (LEI cleanup default) and 03:00 slot (`LEI_CLEANUP_TIME` override) are already taken
+by application scheduler jobs. When `main` is ahead of `dev`, it opens a pull request titled
+`chore: nightly promotion main → dev (YYYY-MM-DD)`. Review the diff, confirm CI passes,
+and merge to deploy to the dev environment. If no promotion is needed that day, the workflow exits
+without creating a PR. If a promotion PR is already open, no duplicate is created.
+
+You can also trigger the workflow manually from **Actions → Nightly Promote main → dev →
+Run workflow**. A `dry_run` option is available to see whether a PR *would* be created without
+actually creating one.
+
+To promote immediately outside the nightly window, open a PR manually:
 
 ```text
 main → dev
 ```
 
-This is a fast-forward or merge commit. CI runs against the target, and on success the dev
-environment re-deploys.
-
 ### Promoting to UAT
 
-After dev validation, open a PR:
+`dev` → `uat` promotions happen **automatically every Monday** via the
+[`promote-dev-to-uat` workflow](../../.github/workflows/promote-dev-to-uat.yml).
+
+The workflow runs at **01:00 UTC every Monday**. When `dev` is ahead of `uat`, it opens a pull
+request titled `chore: weekly promotion dev → uat (YYYY-MM-DD)`. Obtain **at least one review**
+before merging. If `uat` is already up to date, or a promotion PR is already open, no action is
+taken.
+
+You can also trigger the workflow manually from **Actions → Weekly Promote dev → uat →
+Run workflow**. A `dry_run` option is available.
+
+To promote immediately outside the weekly window, open a PR manually:
 
 ```text
 dev → uat
 ```
 
-Obtain at least one review before merging. The UAT environment re-deploys on merge.
-
 ### Promoting to production
 
-After UAT sign-off, open a PR:
+`uat` → `prod` promotions happen **automatically on the 1st of each month** via the
+[`promote-uat-to-prod` workflow](../../.github/workflows/promote-uat-to-prod.yml).
+
+The workflow runs at **01:00 UTC on the 1st of every month**. When `uat` is ahead of `prod`, it
+opens a pull request titled `chore: monthly promotion uat → prod (YYYY-MM-DD)`. Require **at
+least two reviews** before merging. Coordinate with the team before merging — production
+deployments should be planned and communicated in advance. Version bumps are intentional and
+manual. If the release warrants a `PATCH`, `MINOR`, or `MAJOR` bump, apply it before the release
+merge using `pwsh ./scripts/bump-version.ps1 -Part patch`, `-Part minor`, or `-Part major`, then
+tag the promoted commit with that version. For exact test-state traceability, use the footer build
+metadata tooltip (commit SHA + build timestamp).
+
+You can also trigger the workflow manually from **Actions → Monthly Promote uat → prod →
+Run workflow**. A `dry_run` option is available.
+
+To promote immediately outside the monthly window, open a PR manually:
 
 ```text
 uat → prod
 ```
-
-Require at least one review (ideally two for high-risk changes). The production environment
-re-deploys on merge. Tag the merge commit with a version number following the conventions in
-[`VERSION`](../../VERSION) and the version management instructions.
 
 ---
 

@@ -12,7 +12,7 @@ processes Legal Entity Identifier (LEI) data from GLEIF (Global Legal Entity Ide
 - **Full Audit Trail**: Complete history of all changes with pre/post state tracking
 - **Resume Capability**: Can resume processing mid-file if interrupted
 - **Source Provenance**: Tracks which source file each record came from
-- **Scheduled Jobs**: Automatic daily full sync at 2 AM (delta sync strategy disabled due to reliability issues)
+- **Scheduled Jobs**: Automatic daily full sync at 12:00 UTC (delta sync strategy disabled due to reliability issues)
 
 ## Architecture
 
@@ -37,7 +37,7 @@ processes Legal Entity Identifier (LEI) data from GLEIF (Global Legal Entity Ide
    - Resume-from-LEI functionality
 
 4. **Scheduler** (`internal/service/scheduler_service.go`)
-   - Daily full file synchronization (runs at 2 AM daily)
+   - Daily full file synchronization (runs at 12:00 UTC daily)
    - Delta sync disabled (caused reliability issues, minimal benefit for daily full sync)
    - Automatic retry on failure
 
@@ -106,8 +106,11 @@ Overall status of scheduled jobs.
 
 Key fields:
 
-- `job_type`: DAILY_FULL or DAILY_DELTA
+- `job_type`: MASTER_DATA_SYNC, GLEIF_REFERENCE_SYNC, DAILY_FULL, DAILY_DELTA, LEVEL2_RR, or LEVEL2_REPEX
+- `job_label`: Human-readable label persisted with the job code
 - `status`: IDLE, RUNNING, or FAILED (COMPLETED is transient and immediately becomes IDLE)
+- `depends_on_job_type`: Upstream job code in chained flows
+- `depends_on_job_label`: Human-readable upstream job label
 - `last_run_at`, `next_run_at`, `last_success_at`: Job timing
 - `current_source_file_id`: Currently processing file
 - `error_message`: Last error if any
@@ -163,11 +166,47 @@ Query parameters:
 
 Response: Array of audit records showing complete change history
 
+#### `GET /api/v1/lei/import-failures` (Preferred)
+
+List persisted import processing failures (Level 1 + Level 2) with open/resolved filtering.
+
+Query parameters:
+
+- `jobType` (optional): `DAILY_FULL`, `DAILY_DELTA`, `LEVEL2_RR`, `LEVEL2_REPEX`
+- `openOnly` (optional, default: `true`): include only unresolved failures when true
+- `limit` (optional, default: `100`, max: `500`)
+- `offset` (optional, default: `0`)
+
+Response: Paged failure payload (`items`, `total`, `limit`, `offset`, `open_only`, `job_type`)
+
+#### `GET /api/v1/lei/level2/failures` (Deprecated)
+
+Deprecated compatibility alias for `GET /api/v1/lei/import-failures`.
+
+Deprecation behavior:
+
+- Returns deprecation metadata headers: `Deprecation`, `Sunset`, `Link`, `Warning`
+- Planned removal target: `v0.5`
+- Tracking issue: `#87`
+
 ### Sync Control Endpoints
+
+Manual sync endpoints return:
+
+- `202 Accepted` when the trigger is queued successfully.
+- `409 Conflict` when the job cannot start due to dependency preconditions
+  (for example dependency currently `RUNNING` or prerequisite success missing).
 
 #### `POST /api/v1/lei/sync/full`
 
 Manually trigger a full synchronization.
+
+Conflict conditions:
+
+- `MASTER_DATA_SYNC` is `RUNNING`
+- `GLEIF_REFERENCE_SYNC` is `RUNNING`
+- `DAILY_FULL` is `RUNNING`
+- `GLEIF_REFERENCE_SYNC` has not completed successfully at least once
 
 Response:
 
@@ -181,11 +220,102 @@ Response:
 
 Manually trigger a delta synchronization.
 
+Conflict conditions:
+
+- `DAILY_DELTA` is `RUNNING`
+- `DAILY_FULL` is `RUNNING`
+
 Response:
 
 ```json
 {
   "message": "Delta sync triggered"
+}
+```
+
+#### `POST /api/v1/lei/sync/masterdata`
+
+Manually trigger a master/reference data synchronization.
+
+Conflict conditions:
+
+- `MASTER_DATA_SYNC` is `RUNNING`
+
+Response:
+
+```json
+{
+  "message": "Master data sync triggered"
+}
+```
+
+#### `POST /api/v1/lei/sync/gleif-reference`
+
+Manually trigger GLEIF reference code-list synchronization.
+
+Conflict conditions:
+
+- `MASTER_DATA_SYNC` is `RUNNING`
+- `GLEIF_REFERENCE_SYNC` is `RUNNING`
+
+Response:
+
+```json
+{
+  "message": "GLEIF reference sync triggered"
+}
+```
+
+#### `POST /api/v1/lei/sync/level2`
+
+Manually trigger the full Level 2 chain (`LEVEL2_RR` → `LEVEL2_REPEX`).
+
+Conflict conditions:
+
+- `DAILY_FULL` is `RUNNING`
+- `LEVEL2_RR` is `RUNNING`
+- `LEVEL2_REPEX` is `RUNNING`
+
+Response:
+
+```json
+{
+  "message": "Level 2 sync triggered (LEVEL2_RR → LEVEL2_REPEX)"
+}
+```
+
+#### `POST /api/v1/lei/sync/level2/rr`
+
+Manually trigger only the `LEVEL2_RR` job.
+
+Conflict conditions:
+
+- `DAILY_FULL` is `RUNNING`
+- `LEVEL2_RR` is `RUNNING`
+
+Response:
+
+```json
+{
+  "message": "LEVEL2_RR sync triggered"
+}
+```
+
+#### `POST /api/v1/lei/sync/level2/repex`
+
+Manually trigger only the `LEVEL2_REPEX` job.
+
+Conflict conditions:
+
+- `DAILY_FULL` is `RUNNING`
+- `LEVEL2_RR` is `RUNNING`
+- `LEVEL2_REPEX` is `RUNNING`
+
+Response:
+
+```json
+{
+  "message": "LEVEL2_REPEX sync triggered"
 }
 ```
 
@@ -197,7 +327,8 @@ Get processing status for a job type.
 
 Path parameters:
 
-- `jobType`: Either `DAILY_FULL` or `DAILY_DELTA`
+- `jobType`: One of `MASTER_DATA_SYNC`, `GLEIF_REFERENCE_SYNC`, `DAILY_FULL`, `DAILY_DELTA`,
+  `LEVEL2_RR`, `LEVEL2_REPEX`
 
 Response: Job status including last run time, next scheduled run, and current file being processed
 
@@ -229,7 +360,7 @@ Response:
 
 ### Full Sync
 
-- **Frequency**: **Daily at 2:00 AM** (changed from weekly)
+- **Frequency**: **Daily at 12:00 UTC** (changed from weekly)
 - **Source**: GLEIF Level 1 Full files (JSON format)
 - **Purpose**: Complete refresh of all data
 - **First run**: On startup if database is empty, otherwise next scheduled time
@@ -322,9 +453,9 @@ The following environment variables configure LEI data acquisition and schedulin
   - Short forms accepted: `Sun`, `Mon`, `Tue`, `Wed`, `Thu`, `Fri`, `Sat`
   - **Note**: This setting is present but not used; full sync runs **daily** at configured time
 
-- `LEI_FULL_SYNC_TIME` - Time of day for full sync (default: `02:00`)
+- `LEI_FULL_SYNC_TIME` - Time of day for full sync (default: `12:00`)
   - Format: `HH:MM` in 24-hour format
-  - Example: `LEI_FULL_SYNC_TIME=01:30` for 1:30 AM
+  - Example: `LEI_FULL_SYNC_TIME=12:30` for 12:30 UTC
   - **Note**: Full sync now runs **daily** at this time (not weekly)
 
 - `LEI_CLEANUP_TIME` - Time of day for daily file cleanup (default: `00:00`)

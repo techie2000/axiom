@@ -1,12 +1,17 @@
 package service
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/techie2000/axiom/internal/domain"
+	"github.com/techie2000/axiom/internal/repository"
 )
 
 func TestIsTerminalJSONDecodeError(t *testing.T) {
@@ -71,14 +76,21 @@ func TestJSONToDomainRecord_NormalizesNullLikeFields(t *testing.T) {
 	jsonRecord := &LEIJSONRecord{
 		LEI: LEIValueField{Value: " 5493001kjtiigc8y1r12 "},
 		Entity: LEIEntity{
-			LegalName:       LEILegalName{Value: "Example Entity"},
-			EntityStatus:    LEIValueField{Value: "NULL"},
-			EntityCategory:  LEIValueField{Value: "null"},
-			LegalAddress:    LEIAddress{FirstAddressLine: LEIValueField{Value: "NULL"}, City: LEIValueField{Value: "Lagos"}, Country: LEIValueField{Value: "NG"}},
-			SuccessorEntity: []LEISuccessorEntity{{SuccessorLEI: LEIValueField{Value: " 5493001kjtiigc8y1r12 "}}},
+			LegalName:         LEILegalName{Value: "Example Entity"},
+			EntityStatus:      LEIValueField{Value: "NULL"},
+			EntityCategory:    LEIValueField{Value: "null"},
+			EntitySubCategory: LEIValueField{Value: "STATE_GOVERNMENT"},
+			LegalJurisdiction: LEIValueField{Value: "NG-LA"},
+			LegalAddress:      LEIAddress{FirstAddressLine: LEIValueField{Value: "NULL"}, City: LEIValueField{Value: "Lagos"}, Country: LEIValueField{Value: "NG"}},
+			SuccessorEntity:   []LEISuccessorEntity{{SuccessorLEI: LEIValueField{Value: " 5493001kjtiigc8y1r12 "}}},
 		},
 		Registration: LEIRegistration{
-			ManagingLOU: LEIValueField{Value: "NULL"},
+			ManagingLOU:        LEIValueField{Value: "NULL"},
+			RegistrationStatus: LEIValueField{Value: "ISSUED"},
+			ValidationSources:  LEIValueField{Value: "FULLY_CORROBORATED"},
+			ValidationAuthority: LEIValidationAuthority{
+				ValidationAuthorityID: LEIValueField{Value: "RA000463"},
+			},
 		},
 	}
 
@@ -106,6 +118,21 @@ func TestJSONToDomainRecord_NormalizesNullLikeFields(t *testing.T) {
 	if record.LegalAddressCity != "Lagos" {
 		t.Fatalf("expected LegalAddressCity to remain unchanged, got %q", record.LegalAddressCity)
 	}
+	if record.EntitySubCategory != "STATE_GOVERNMENT" {
+		t.Fatalf("expected EntitySubCategory to be mapped, got %q", record.EntitySubCategory)
+	}
+	if record.LegalJurisdiction != "NG-LA" {
+		t.Fatalf("expected LegalJurisdiction to be mapped, got %q", record.LegalJurisdiction)
+	}
+	if record.RegistrationStatus != "ISSUED" {
+		t.Fatalf("expected RegistrationStatus to be mapped, got %q", record.RegistrationStatus)
+	}
+	if record.ValidationAuthority != "RA000463" {
+		t.Fatalf("expected ValidationAuthority to be mapped from ValidationAuthorityID, got %q", record.ValidationAuthority)
+	}
+	if string(record.ValidationSources) != `"FULLY_CORROBORATED"` {
+		t.Fatalf("expected ValidationSources to be stored as JSON string, got %q", string(record.ValidationSources))
+	}
 }
 
 func TestNormalizeLEIRecordNullLikeFields_InvalidSuccessorLEIBecomesEmpty(t *testing.T) {
@@ -117,6 +144,20 @@ func TestNormalizeLEIRecordNullLikeFields_InvalidSuccessorLEIBecomesEmpty(t *tes
 
 	if record.SuccessorLEI != "" {
 		t.Fatalf("expected invalid SuccessorLEI to be cleared, got %q", record.SuccessorLEI)
+	}
+}
+
+func TestValidationSourcesToJSONBEmptyProducesNullNotObject(t *testing.T) {
+	got := validationSourcesToJSONB("")
+	if got != "" {
+		t.Fatalf("expected empty ValidationSources to produce empty JSONBString (SQL NULL), got %q", string(got))
+	}
+}
+
+func TestValidationSourcesToJSONBNullLikeProducesNullNotObject(t *testing.T) {
+	got := validationSourcesToJSONB("null")
+	if got != "" {
+		t.Fatalf("expected null-like ValidationSources to produce empty JSONBString (SQL NULL), got %q", string(got))
 	}
 }
 
@@ -296,5 +337,288 @@ func TestSanitizeSourceFileProgress(t *testing.T) {
 
 	if sourceFile.FailedRecords != 60 {
 		t.Fatalf("expected failed records to be capped at processed, got %d", sourceFile.FailedRecords)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// NormalizeProcessingJobType (exported) and normalizeProcessingJobType (private)
+// ---------------------------------------------------------------------------
+
+func TestNormalizeProcessingJobType(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		// Level-1 aliases
+		{input: "DAILY_FULL", want: "LEVEL1_FULL"},
+		{input: "LEVEL1_FULL", want: "LEVEL1_FULL"},
+		{input: "DAILY_DELTA", want: "LEVEL1_DELTA"},
+		{input: "LEVEL1_DELTA", want: "LEVEL1_DELTA"},
+		// Level-2 pass-throughs
+		{input: "LEVEL2_RR", want: "LEVEL2_RR"},
+		{input: "LEVEL2_REPEX", want: "LEVEL2_REPEX"},
+		// Unknown types → empty string
+		{input: "UNKNOWN", want: ""},
+		{input: "", want: ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := NormalizeProcessingJobType(tt.input)
+			if got != tt.want {
+				t.Fatalf("NormalizeProcessingJobType(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestNormalizeProcessingJobTypePrivateDelegates(t *testing.T) {
+	// The private function must map the same known aliases as the exported one
+	// and pass unknown / Level-2 types through unchanged.
+	cases := []struct {
+		input string
+		want  string
+	}{
+		{"DAILY_FULL", "LEVEL1_FULL"},
+		{"LEVEL1_FULL", "LEVEL1_FULL"},
+		{"DAILY_DELTA", "LEVEL1_DELTA"},
+		{"LEVEL1_DELTA", "LEVEL1_DELTA"},
+		{"LEVEL2_RR", "LEVEL2_RR"},
+		{"LEVEL2_REPEX", "LEVEL2_REPEX"},
+		{"UNKNOWN_TYPE", "UNKNOWN_TYPE"}, // pass-through
+		{"", ""},                         // empty → empty
+	}
+	for _, c := range cases {
+		got := normalizeProcessingJobType(c.input)
+		if got != c.want {
+			t.Errorf("normalizeProcessingJobType(%q) = %q, want %q", c.input, got, c.want)
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// batchResolveOpenProcessingFailures (leiService) – stub-based tests
+// ---------------------------------------------------------------------------
+
+// leiRepoStub embeds the full LEIRepository interface so that only the
+// BatchResolveOpenProcessingFailures method needs to be overridden.
+type leiRepoStub struct {
+	repository.LEIRepository
+	calledJobType  string
+	calledKeys     []string
+	calledSourceID *uuid.UUID
+	calledNote     string
+	returnErr      error
+	callCount      int
+}
+
+func (s *leiRepoStub) BatchResolveOpenProcessingFailures(
+	jobType string,
+	naturalKeys []string,
+	resolvedSourceFileID *uuid.UUID,
+	resolvedNote string,
+) error {
+	s.callCount++
+	s.calledJobType = jobType
+	s.calledKeys = naturalKeys
+	s.calledSourceID = resolvedSourceFileID
+	s.calledNote = resolvedNote
+	return s.returnErr
+}
+
+func newLeiServiceWithBatchRepoStub(stub *leiRepoStub) *leiService {
+	return &leiService{repo: stub}
+}
+
+func TestBatchResolveOpenProcessingFailures_Service_EmptyKeys(t *testing.T) {
+	stub := &leiRepoStub{}
+	svc := newLeiServiceWithBatchRepoStub(stub)
+	sourceID := uuid.New()
+
+	svc.batchResolveOpenProcessingFailures("LEVEL1_FULL", []string{}, &sourceID)
+
+	if stub.callCount != 0 {
+		t.Fatalf("expected repo not to be called for empty key slice, got %d calls", stub.callCount)
+	}
+}
+
+func TestBatchResolveOpenProcessingFailures_Service_AllInvalidKeys(t *testing.T) {
+	stub := &leiRepoStub{}
+	svc := newLeiServiceWithBatchRepoStub(stub)
+	sourceID := uuid.New()
+
+	// normalizeLEICodeValue converts "null" / whitespace to empty string.
+	svc.batchResolveOpenProcessingFailures("LEVEL1_FULL", []string{"null", "  ", "NULL"}, &sourceID)
+
+	if stub.callCount != 0 {
+		t.Fatalf("expected repo not to be called when all keys are invalid, got %d calls", stub.callCount)
+	}
+}
+
+func TestBatchResolveOpenProcessingFailures_Service_ValidKeys(t *testing.T) {
+	stub := &leiRepoStub{}
+	svc := newLeiServiceWithBatchRepoStub(stub)
+	sourceID := uuid.New()
+
+	keys := []string{"5493001kjtiigc8y1r12", " AAAAAAAAAAAAAAAAAA01 "}
+	svc.batchResolveOpenProcessingFailures("DAILY_FULL", keys, &sourceID)
+
+	if stub.callCount != 1 {
+		t.Fatalf("expected exactly 1 repo call, got %d", stub.callCount)
+	}
+	// Job type must be normalised (DAILY_FULL → LEVEL1_FULL).
+	if stub.calledJobType != "LEVEL1_FULL" {
+		t.Errorf("expected calledJobType LEVEL1_FULL, got %q", stub.calledJobType)
+	}
+	// LEI codes must be upper-cased and trimmed.
+	if len(stub.calledKeys) != 2 {
+		t.Fatalf("expected 2 normalised keys, got %d: %v", len(stub.calledKeys), stub.calledKeys)
+	}
+	if stub.calledKeys[0] != "5493001KJTIIGC8Y1R12" {
+		t.Errorf("expected first key normalised to uppercase, got %q", stub.calledKeys[0])
+	}
+	if stub.calledSourceID != &sourceID {
+		t.Errorf("sourceFileID not forwarded correctly")
+	}
+}
+
+func TestBatchResolveOpenProcessingFailures_Service_MixedKeys(t *testing.T) {
+	stub := &leiRepoStub{}
+	svc := newLeiServiceWithBatchRepoStub(stub)
+
+	// Mix of valid and invalid keys.
+	svc.batchResolveOpenProcessingFailures("LEVEL1_FULL", []string{"5493001KJTIIGC8Y1R12", "null", ""}, nil)
+
+	if stub.callCount != 1 {
+		t.Fatalf("expected 1 repo call for mixed keys, got %d", stub.callCount)
+	}
+	if len(stub.calledKeys) != 1 {
+		t.Fatalf("expected 1 valid key forwarded to repo, got %d", len(stub.calledKeys))
+	}
+}
+
+func TestBatchResolveOpenProcessingFailures_Service_RepoErrorIsLogged(t *testing.T) {
+	// When the repo returns an error the service must not panic or propagate it;
+	// errors are logged as warnings.
+	stub := &leiRepoStub{returnErr: errors.New("db failure")}
+	svc := newLeiServiceWithBatchRepoStub(stub)
+
+	// Should not panic.
+	svc.batchResolveOpenProcessingFailures("LEVEL1_FULL", []string{"5493001KJTIIGC8Y1R12"}, nil)
+
+	if stub.callCount != 1 {
+		t.Fatalf("expected 1 repo call even when it fails, got %d", stub.callCount)
+	}
+}
+
+type processRecordsRepoStub struct {
+	repository.LEIRepository
+	updateCalls           int
+	updateSnapshots       []domain.SourceFile
+	batchUpsertCallCount  int
+	batchResolveCallCount int
+}
+
+func (s *processRecordsRepoStub) BatchUpsertLEIRecords(records []*domain.LEIRecord) (int, int, error) {
+	s.batchUpsertCallCount++
+	return len(records), 0, nil
+}
+
+func (s *processRecordsRepoStub) BatchResolveOpenProcessingFailures(jobType string, naturalKeys []string, resolvedSourceFileID *uuid.UUID, resolvedNote string) error {
+	s.batchResolveCallCount++
+	return nil
+}
+
+func (s *processRecordsRepoStub) UpdateSourceFile(file *domain.SourceFile) error {
+	s.updateCalls++
+	copy := *file
+	if file.LastProcessedLEI != nil {
+		last := *file.LastProcessedLEI
+		copy.LastProcessedLEI = &last
+	}
+	s.updateSnapshots = append(s.updateSnapshots, copy)
+	return nil
+}
+
+func (s *processRecordsRepoStub) CreateProcessingFailure(failure *domain.LEILevel2ProcessingFailure) error {
+	return nil
+}
+
+func testLEICodeForIndex(index int) string {
+	return fmt.Sprintf("%020d", index)
+}
+
+func buildRecordsArrayJSON(recordCount int) string {
+	var builder strings.Builder
+	builder.WriteString("[")
+	for i := 0; i < recordCount; i++ {
+		if i > 0 {
+			builder.WriteString(",")
+		}
+		builder.WriteString(`{"LEI":{"$":"`)
+		builder.WriteString(testLEICodeForIndex(i))
+		builder.WriteString(`"},"Entity":{"LegalName":{"$":"Entity`)
+		builder.WriteString(strconv.Itoa(i))
+		builder.WriteString(`"}}}`)
+	}
+	builder.WriteString("]")
+	return builder.String()
+}
+
+func TestProcessRecordsArray_CheckpointUpdatesAtConfiguredInterval(t *testing.T) {
+	const recordCount = 10001
+	repoStub := &processRecordsRepoStub{}
+	svc := &leiService{repo: repoStub}
+
+	decoder := json.NewDecoder(strings.NewReader(buildRecordsArrayJSON(recordCount)))
+	sourceFile := &domain.SourceFile{TotalRecords: recordCount}
+
+	if err := svc.processRecordsArray(decoder, sourceFile, ""); err != nil {
+		t.Fatalf("processRecordsArray returned error: %v", err)
+	}
+
+	if repoStub.updateCalls != 3 {
+		t.Fatalf("expected 3 UpdateSourceFile calls (5000, 10000, final), got %d", repoStub.updateCalls)
+	}
+
+	if repoStub.batchUpsertCallCount != 11 {
+		t.Fatalf("expected 11 batch upsert calls for 10001 records at batchSize=1000, got %d", repoStub.batchUpsertCallCount)
+	}
+
+	finalSnapshot := repoStub.updateSnapshots[len(repoStub.updateSnapshots)-1]
+	if finalSnapshot.LastProcessedLEI == nil {
+		t.Fatalf("expected final LastProcessedLEI to be persisted")
+	}
+
+	wantLastLEI := testLEICodeForIndex(recordCount - 1)
+	if *finalSnapshot.LastProcessedLEI != wantLastLEI {
+		t.Fatalf("expected final LastProcessedLEI %q, got %q", wantLastLEI, *finalSnapshot.LastProcessedLEI)
+	}
+}
+
+func TestProcessRecordsArray_FinalUpdatePersistsLastProcessedLEIForSmallFiles(t *testing.T) {
+	const recordCount = 3
+	repoStub := &processRecordsRepoStub{}
+	svc := &leiService{repo: repoStub}
+
+	decoder := json.NewDecoder(strings.NewReader(buildRecordsArrayJSON(recordCount)))
+	sourceFile := &domain.SourceFile{TotalRecords: recordCount}
+
+	if err := svc.processRecordsArray(decoder, sourceFile, ""); err != nil {
+		t.Fatalf("processRecordsArray returned error: %v", err)
+	}
+
+	if repoStub.updateCalls != 1 {
+		t.Fatalf("expected exactly 1 final UpdateSourceFile call for small file, got %d", repoStub.updateCalls)
+	}
+
+	finalSnapshot := repoStub.updateSnapshots[0]
+	if finalSnapshot.LastProcessedLEI == nil {
+		t.Fatalf("expected LastProcessedLEI in final update")
+	}
+
+	wantLastLEI := testLEICodeForIndex(recordCount - 1)
+	if *finalSnapshot.LastProcessedLEI != wantLastLEI {
+		t.Fatalf("expected LastProcessedLEI %q, got %q", wantLastLEI, *finalSnapshot.LastProcessedLEI)
 	}
 }

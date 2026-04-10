@@ -182,6 +182,70 @@ Automatically check if documentation updates are needed when:
   - Revise deployment guides
   - Update infrastructure-as-code examples
 
+### User Documentation Updates (`docs-user/`)
+
+The `docs-user/` directory is the end-user VitePress documentation site. It must be kept in sync
+with the application whenever user-visible behaviour changes.
+
+**Update `docs-user/` when:**
+
+- A new data entity or workflow is added (e.g. new master-data table, new LEI feature)
+  - Add a new page under `docs-user/workflows/` describing the workflow
+  - Add a sidebar entry in `docs-user/.vitepress/config.ts`
+  - Link from the relevant overview page (e.g. `docs-user/workflows/index.md`)
+
+- An existing workflow or UI flow changes in a user-visible way
+  - Update the corresponding page in `docs-user/workflows/`, `docs-user/admin/`, etc.
+  - Update any screenshots or step descriptions that no longer match the UI
+
+- A new admin capability is added (e.g. new sync trigger, new approval type)
+  - Add or update the page under `docs-user/admin/`
+
+- Permissions or roles change
+  - Update `docs-user/reference/permissions-and-roles.md`
+
+- A new status or lifecycle state is introduced
+  - Update `docs-user/reference/statuses-and-states.md`
+
+- A new field appears in the data model that is visible to users
+  - Update `docs-user/reference/data-dictionary.md`
+
+- A new error or common failure mode is identified
+  - Add an entry to `docs-user/troubleshooting/common-errors.md`
+
+**`docs-user/` directory to topic mapping:**
+
+| Area of change | docs-user path |
+| --- | --- |
+| LEI records | `workflows/lei-records.md` |
+| Settlement instructions (SSI) | `workflows/ssi.md` |
+| Countries / currencies | `workflows/countries.md` / `workflows/currencies.md` |
+| Entities / instruments / accounts | `workflows/entities.md` / `workflows/instruments.md` / `workflows/accounts.md` |
+| User approvals | `admin/user-approvals.md` |
+| Translation review | `admin/translation-review.md` |
+| Sync triggers | `admin/sync-triggers.md` |
+| Data dictionary | `reference/data-dictionary.md` |
+| Statuses & states | `reference/statuses-and-states.md` |
+| Permissions & roles | `reference/permissions-and-roles.md` |
+| Sign-in / access | `getting-started/sign-in-and-access.md` |
+| Navigation / UI | `getting-started/navigation-basics.md` |
+| Common errors / FAQ | `troubleshooting/common-errors.md` / `troubleshooting/faq.md` |
+
+**After editing `docs-user/`:**
+
+Always verify the site builds cleanly:
+
+```bash
+make docs-user-build
+```
+
+Run the dev server to visually confirm the changes look correct:
+
+```bash
+make docs-user-dev
+# then open http://localhost:5173/docs-user/
+```
+
 ### Migration and Breaking Changes
 
 **Create migration guides when:**
@@ -299,62 +363,51 @@ If `apply-doc-quality-standard == true`, then apply the following configurable i
 
 ### Code Example Format
 
-```text
-```markdown
+````markdown
 ### Example: [Clear description of what example demonstrates]
-```text
 
-```
-\`\`\`language
+```language
 // Include necessary imports/setup
 import { function } from 'package';
-```text
 
-```
 // Complete, runnable example
 const result = function(parameter);
 console.log(result);
-\`\`\`
-```text
+```
 
-    **Output:**
-```
-\`\`\`
-expected output
-\`\`\`
+**Output:**
+
 ```text
+expected output
 ```
+````
 
 ### API Documentation Format
 
-```text
-```markdown
+````markdown
 ### `functionName(param1, param2)`
-```text
 
-```
 Brief description of what the function does.
-```text
 
-    **Parameters:**
-    - `param1` (type): Description of parameter
-    - `param2` (type, optional): Description with default value
+**Parameters:**
 
-    **Returns:**
-    - `type`: Description of return value
+- `param1` (type): Description of parameter
+- `param2` (type, optional): Description with default value
 
-    **Example:**
-```
-\`\`\`language
+**Returns:**
+
+- `type`: Description of return value
+
+**Example:**
+
+```language
 const result = functionName('value', 42);
-\`\`\`
-```text
+```
 
-    **Throws:**
-    - `ErrorType`: When and why error is thrown
-```
-```text
-```
+**Throws:**
+
+- `ErrorType`: When and why error is thrown
+````
 
 ## Automation and Tooling `apply-automation-tooling`
 
@@ -397,84 +450,57 @@ If `apply-doc-patterns == true`, then apply the following configurable instructi
 
 ### Feature Documentation Template
 
-```text
-```markdown
+````markdown
 ## Feature Name
-```text
 
-```
 Brief description of the feature.
-```text
 
-```
 ### Usage
-```text
 
-```
 Basic usage example with code snippet.
-```text
 
-```
 ### Configuration
-```text
 
-```
 Configuration options with examples.
-```text
 
-```
 ### Advanced Usage
-```text
 
-```
 Complex scenarios and edge cases.
-```text
 
-```
 ### Troubleshooting
-```text
 
-```
 Common issues and solutions.
-```text
-```
+````
 
 ### API Endpoint Documentation Template
 
-```text
-```markdown
+````markdown
 ### `HTTP_METHOD /api/endpoint`
-```text
 
-```
 Description of what the endpoint does.
-```text
 
-    **Request:**
-```
-\`\`\`json
+**Request:**
+
+```json
 {
   "param": "value"
 }
-\`\`\`
-```text
-
-    **Response:**
 ```
-\`\`\`json
+
+**Response:**
+
+```json
 {
   "result": "value"
 }
-\`\`\`
-```text
+```
 
-    **Status Codes:**
-    - 200: Success
-    - 400: Bad request
-    - 401: Unauthorized
-```
-```text
-```
+**Status Codes:**
+
+- 200: Success
+- 400: Bad request
+- 401: Unauthorized
+````
 
 ## Best Practices `apply-best-practices`
 
@@ -509,14 +535,12 @@ Example scripts to apply to your project for documentation validation:
 ```json
 {
   "scripts": {
-```
-"docs:build": "Build documentation",
-"docs:test": "Test code examples in docs",
-"docs:lint": "Lint documentation files",
-"docs:links": "Check for broken links",
-"docs:spell": "Spell check documentation",
-"docs:validate": "Run all documentation checks"
-```text
+    "docs:build": "Build documentation",
+    "docs:test": "Test code examples in docs",
+    "docs:lint": "Lint documentation files",
+    "docs:links": "Check for broken links",
+    "docs:spell": "Spell check documentation",
+    "docs:validate": "Run all documentation checks"
   }
 }
 ```
@@ -582,6 +606,8 @@ Before considering documentation complete, and concluding on the **final procedu
 - [ ] Links are valid and not broken
 - [ ] Installation instructions are current
 - [ ] Environment variables are documented
+- [ ] `docs-user/` pages updated for any user-visible UI or workflow changes (see mapping table above)
+- [ ] `make docs-user-build` passes with no errors after any `docs-user/` edits
 
 ## Updating Documentation on Code Change GOAL
 
