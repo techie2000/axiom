@@ -234,13 +234,13 @@ export default function LEIStatusCard() {
                   <div className={`w-3 h-3 rounded-full ${deltaHealth.color}`}></div>
                   <span className="text-xs theme-text-muted">L1-Delta</span>
                 </div>
-                <div className="flex items-center gap-1" title={`Level 2 RR: ${rrHealth.label}`}>
+                <div className="flex items-center gap-1" title={`Level 2 Relationship Records: ${rrHealth.label}`}>
                   <div className={`w-3 h-3 rounded-full ${rrHealth.color}`}></div>
-                  <span className="text-xs theme-text-muted">L2-RR</span>
+                  <span className="text-xs theme-text-muted">Relations</span>
                 </div>
-                <div className="flex items-center gap-1" title={`Level 2 REPEX: ${repexHealth.label}`}>
+                <div className="flex items-center gap-1" title={`Level 2 Reporting Exceptions: ${repexHealth.label}`}>
                   <div className={`w-3 h-3 rounded-full ${repexHealth.color}`}></div>
-                  <span className="text-xs theme-text-muted">L2-REPEX</span>
+                  <span className="text-xs theme-text-muted">Exceptions</span>
                 </div>
               </div>
             )}
@@ -269,7 +269,7 @@ export default function LEIStatusCard() {
                 <span className="font-semibold">{formatNumber(gleifTotalRecords)}</span>
               </div>
               <div className="text-xs theme-text-muted">
-                L2 breakdown: RR {formatNumber(l2RrRecords)} | REPEX {formatNumber(l2RepexRecords)}
+                Level 2 breakdown: Relationship Records {formatNumber(l2RrRecords)} | Reporting Exceptions {formatNumber(l2RepexRecords)}
               </div>
               <div className="text-xs theme-text-muted break-all">
                 Last Snapshot Folder: data/main/lei/gleif-reference

@@ -236,19 +236,19 @@ func (FileProcessingStatus) TableName() string {
 func JobTypeDisplayName(jobType string) string {
 	switch jobType {
 	case "MASTER_DATA_SYNC":
-		return "Reference Data (MASTER_DATA_SYNC)"
+		return "Reference Data"
 	case "LEVEL1_FULL":
-		return "Level 1 — LEI Records (LEVEL1_FULL)"
+		return "Level 1 — LEI Records"
 	case "LEVEL1_DELTA":
-		return "Level 1 — LEI Records Delta (LEVEL1_DELTA)"
+		return "Level 1 — LEI Records Delta"
 	case "DAILY_FULL":
-		return "Level 1 — LEI Records (DAILY_FULL)"
+		return "Level 1 — LEI Records"
 	case "DAILY_DELTA":
-		return "Level 1 — LEI Records Delta (DAILY_DELTA)"
+		return "Level 1 — LEI Records Delta"
 	case "LEVEL2_RR":
-		return "Level 2 — Relationship Records (LEVEL2_RR)"
+		return "Level 2 — Relationship Records"
 	case "LEVEL2_REPEX":
-		return "Level 2 — Reporting Exceptions (LEVEL2_REPEX)"
+		return "Level 2 — Reporting Exceptions"
 	default:
 		return jobType
 	}

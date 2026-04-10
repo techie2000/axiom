@@ -280,13 +280,13 @@ Response:
 
 ```json
 {
-  "message": "Level 2 sync triggered (LEVEL2_RR → LEVEL2_REPEX)"
+  "message": "Level 2 sync triggered (Relationship Records → Reporting Exceptions)"
 }
 ```
 
 #### `POST /api/v1/lei/sync/level2/rr`
 
-Manually trigger only the `LEVEL2_RR` job.
+Manually trigger only the Relationship Records job.
 
 Conflict conditions:
 
@@ -297,13 +297,13 @@ Response:
 
 ```json
 {
-  "message": "LEVEL2_RR sync triggered"
+  "message": "Level 2 Relationship Records sync triggered"
 }
 ```
 
 #### `POST /api/v1/lei/sync/level2/repex`
 
-Manually trigger only the `LEVEL2_REPEX` job.
+Manually trigger only the Reporting Exceptions job.
 
 Conflict conditions:
 
@@ -312,6 +312,12 @@ Conflict conditions:
 - `LEVEL2_REPEX` is `RUNNING`
 
 Response:
+
+```json
+{
+  "message": "Level 2 Reporting Exceptions sync triggered"
+}
+```
 
 ```json
 {

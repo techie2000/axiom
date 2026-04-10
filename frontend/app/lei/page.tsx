@@ -372,17 +372,17 @@ export default function LEIStatusPage() {
   const getJobDisplayName = (jobType: string): string => {
     switch (jobType) {
       case 'GLEIF_REFERENCE_SYNC':
-        return 'GLEIF Reference Code Lists (GLEIF_REFERENCE_SYNC)'
+        return 'GLEIF Reference Code Lists'
       case 'MASTER_DATA_SYNC':
-        return 'Reference Data (MASTER_DATA_SYNC)'
+        return 'Reference Data'
       case 'DAILY_FULL':
-        return 'Level 1 — LEI Records (DAILY_FULL)'
+        return 'Level 1 — LEI Records'
       case 'DAILY_DELTA':
-        return 'Level 1 — LEI Records Delta (DAILY_DELTA)'
+        return 'Level 1 — LEI Records Delta'
       case 'LEVEL2_RR':
-        return 'Level 2 — Relationship Records (LEVEL2_RR)'
+        return 'Level 2 — Relationship Records'
       case 'LEVEL2_REPEX':
-        return 'Level 2 — Reporting Exceptions (LEVEL2_REPEX)'
+        return 'Level 2 — Reporting Exceptions'
       default:
         return jobType
     }
@@ -1052,14 +1052,14 @@ export default function LEIStatusPage() {
                   renderDisclosureButton(
                     showRrChild,
                     () => setRrExpanded((prev) => !prev),
-                    showRrChild ? 'Collapse REPEX job' : 'Expand REPEX job',
+                    showRrChild ? 'Collapse Reporting Exceptions job' : 'Expand Reporting Exceptions job',
                   ),
                   !showRrChild ? '1 child job hidden' : undefined,
                   <div className="flex items-center gap-2">
                     {renderRowActionButton(
-                      () => triggerJob('/api/v1/lei/sync/level2/rr', 'Level 2 Relationship Records sync triggered (LEVEL2_RR)'),
+                      () => triggerJob('/api/v1/lei/sync/level2/rr', 'Level 2 Relationship Records sync triggered'),
                       !canTriggerRr,
-                      !canTriggerRr ? 'Blocked while DAILY_FULL or LEVEL2_RR is running' : 'Trigger Level 2 Relationship Records sync only (LEVEL2_RR)',
+                      !canTriggerRr ? 'Blocked while the Level 1 full sync or Relationship Records job is running' : 'Trigger only the Level 2 Relationship Records sync',
                     )}
                   </div>,
                 )}
@@ -1071,9 +1071,9 @@ export default function LEIStatusPage() {
                   renderControlSpacer(),
                   undefined,
                   renderRowActionButton(
-                    () => triggerJob('/api/v1/lei/sync/level2/repex', 'Level 2 Reporting Exceptions sync triggered (LEVEL2_REPEX)'),
+                    () => triggerJob('/api/v1/lei/sync/level2/repex', 'Level 2 Reporting Exceptions sync triggered'),
                     !canTriggerRepex,
-                    !canTriggerRepex ? 'Blocked while DAILY_FULL, LEVEL2_RR, or LEVEL2_REPEX is running' : 'Trigger Level 2 Reporting Exceptions sync only (LEVEL2_REPEX)',
+                    !canTriggerRepex ? 'Blocked while the Level 1 full sync, Relationship Records job, or Reporting Exceptions job is running' : 'Trigger only the Level 2 Reporting Exceptions sync',
                   ),
                 )}
               </>
