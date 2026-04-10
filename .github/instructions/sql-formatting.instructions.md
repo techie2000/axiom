@@ -7,6 +7,7 @@ These rules are enforced by SQLFluff and should be followed when writing SQL cod
 ## Layout Rules
 
 ### Indentation (LT02)
+
 - **NO indentation at root level**: Top-level SQL statements (ALTER, CREATE, DROP, etc.) start at column 1
 - **Use 4 spaces** for nested indentation (within parentheses, subqueries, etc.)
 - **DO NOT use tabs** - always use spaces
@@ -57,14 +58,17 @@ AND BTRIM(entity_legal_form) <> '';
 ```
 
 ### Trailing Whitespace (LT01)
+
 - **NO trailing whitespace** at end of lines
 - SQLFluff will automatically remove them
 
 ### Line Length (LT05)
+
 - Maximum 120 characters per line
 - Break long lines at natural boundaries (commas, operators)
 
 ### Spacing (LT01)
+
 - **Single space** between identifier and opening parenthesis
 - **Single space** after commas in lists
 - **Touch** before semicolons (no space)
@@ -81,6 +85,7 @@ CREATE INDEX idx_name ON table (column);
 ## Capitalization Rules
 
 ### Keywords (CP01, CP02)
+
 - **UPPERCASE** for all SQL keywords: SELECT, FROM, WHERE, CREATE, ALTER, etc.
 
 ```sql
@@ -92,6 +97,7 @@ SELECT * FROM users WHERE id = 1;
 ```
 
 ### Identifiers (CP01)
+
 - **lowercase** for table names, column names, schema names
 - Use underscores for multi-word names: `legal_address_country`
 
@@ -104,6 +110,7 @@ CREATE TABLE user_accounts (user_id INT);
 ```
 
 ### Functions (CP03)
+
 - **UPPERCASE** for function names: NOW(), GEN_RANDOM_UUID(), COALESCE()
 
 ```sql
@@ -115,6 +122,7 @@ created_at TIMESTAMP NOT NULL DEFAULT NOW()
 ```
 
 ### Data Types (CP04)
+
 - **UPPERCASE** for data types: INTEGER, VARCHAR, UUID, TIMESTAMP
 
 ```sql
@@ -128,6 +136,7 @@ name VARCHAR(100)
 ```
 
 ### Literals (CP04)
+
 - **UPPERCASE** for NULL, TRUE, FALSE
 
 ```sql
@@ -141,6 +150,7 @@ WHERE deleted_at IS NULL
 ## Structure Rules
 
 ### Statement Terminators (LT08)
+
 - **Always end statements** with semicolons
 - **No space** before semicolon (touch)
 
@@ -153,6 +163,7 @@ CREATE TABLE users (id INTEGER);
 ```
 
 ### Comma Placement
+
 - **Trailing commas** (commas at end of line)
 - **No space** before comma
 - **Single space** after comma
@@ -174,6 +185,7 @@ CREATE TABLE users (
 ```
 
 ### Multi-line Format
+
 ```sql
 -- ✅ GOOD: Property formatting for multi-line
 ALTER TABLE lei_raw.source_files
@@ -185,22 +197,26 @@ ALTER TABLE lei_raw.source_files
 ## Naming Conventions
 
 ### Tables
+
 - Lowercase, plural nouns
 - Use underscores for compound names
 - Examples: `users`, `lei_records`, `source_files`
 
 ### Columns
+
 - Lowercase, descriptive names
 - Use underscores for compound names
 - Suffix foreign keys with `_id`
 - Examples: `user_id`, `legal_name`, `created_at`
 
 ### Indexes
+
 - Prefix with `idx_`
 - Include table name and column(s)
 - Examples: `idx_users_email`, `idx_lei_records_lei`
 
 ### Constraints
+
 - Primary keys: Let database auto-name or use `pk_tablename`
 - Foreign keys: `fk_table1_table2` or let database auto-name
 - Unique: `uq_tablename_column`
@@ -208,6 +224,7 @@ ALTER TABLE lei_raw.source_files
 ## Comments
 
 ### Block Comments
+
 ```sql
 -- Multi-line comment explaining
 -- complex logic or business rules
@@ -215,6 +232,7 @@ ALTER TABLE lei_raw.source_files
 ```
 
 ### Inline Comments
+
 ```sql
 CREATE TABLE users (
     id UUID,  -- Unique identifier
@@ -223,6 +241,7 @@ CREATE TABLE users (
 ```
 
 ### COMMENT Statements
+
 ```sql
 COMMENT ON COLUMN source_files.retry_count IS 
 'Number of times this file processing has been retried';
@@ -231,8 +250,8 @@ COMMENT ON COLUMN source_files.retry_count IS
 ## Quick Reference
 
 | Rule | Requirement | Example |
-|------|-------------|---------|
-| LT01 | No trailing whitespace | `WHERE id = 1` (not `WHERE id = 1  `) |
+| ------ | ------------- | --------- |
+| LT01 | No trailing whitespace | `WHERE id = 1` (not `WHERE id = 1`) |
 | LT02 | No root-level indentation | `ALTER TABLE` starts at column 1 |
 | LT05 | Max 120 chars per line | Break long lines at commas |
 | LT08 | End with semicolon | `SELECT 1;` |
@@ -266,12 +285,14 @@ When editing any `.sql` file (especially migrations), follow this workflow befor
 ### **MANDATORY**: Every table and column MUST have a COMMENT
 
 **Why This Matters:**
+
 - Database schema serves as living documentation
 - SQL tools and ORMs display comments in autocomplete
 - DBAs and developers can understand purpose without reading code
 - Comments are visible in `psql \d+` and database IDE tools
 
 ### Table Comments
+
 Every table MUST have a descriptive comment explaining its purpose:
 
 ```sql
@@ -286,7 +307,9 @@ COMMENT ON TABLE lei_raw.lei_records IS
 ```
 
 ### Column Comments
+
 Every column MUST have a comment describing:
+
 - **Purpose**: What the column stores
 - **Format**: Data format or constraints (if not obvious from type)
 - **Source**: Where data comes from (if external)
@@ -315,6 +338,7 @@ COMMENT ON COLUMN lei_raw.source_files.failure_category IS
 ### When to Write Comments
 
 **In CREATE TABLE migrations:**
+
 ```sql
 CREATE TABLE example (
     id UUID PRIMARY KEY,
@@ -328,6 +352,7 @@ COMMENT ON COLUMN example.status IS 'Status values: ACTIVE, PAUSED, DELETED';
 ```
 
 **In ALTER TABLE migrations:**
+
 ```sql
 ALTER TABLE example
     ADD COLUMN retry_count INTEGER DEFAULT 0;
@@ -339,6 +364,7 @@ COMMENT ON COLUMN example.retry_count IS 'Number of retry attempts (0-3). Increm
 ### Comment Style Guide
 
 ✅ **GOOD Comments:**
+
 - Start with what the field stores
 - Include format/constraints
 - Mention enumerations or valid values
@@ -346,12 +372,14 @@ COMMENT ON COLUMN example.retry_count IS 'Number of retry attempts (0-3). Increm
 - Explain business rules
 
 ❌ **BAD Comments (too vague):**
+
 ```sql
 COMMENT ON COLUMN users.email IS 'Email';  -- Says nothing useful
 COMMENT ON COLUMN lei_records.lei IS 'LEI code';  -- What's an LEI?
 ```
 
 ✅ **GOOD Comments (descriptive):**
+
 ```sql
 COMMENT ON COLUMN users.email IS 'User email address (RFC 5322 format). Must be unique. Used for login and notifications.';
 COMMENT ON COLUMN lei_records.lei IS '20-character Legal Entity Identifier (ISO 17442). Format: 18 alphanumeric + 2-digit checksum. Globally unique.';
@@ -387,6 +415,7 @@ sqlfluff fix backend/migrations/*.sql --force
 ## SQLFluff Configuration
 
 The project's `.sqlfluff` file enforces all these rules automatically:
+
 - PostgreSQL dialect
 - 4-space indentation
 - 120-character line length
@@ -397,6 +426,7 @@ The project's `.sqlfluff` file enforces all these rules automatically:
 ## Pre-commit Hook (Recommended)
 
 Add to `.git/hooks/pre-commit`:
+
 ```bash
 #!/bin/bash
 sqlfluff lint backend/migrations/*.sql
@@ -409,6 +439,7 @@ fi
 ---
 
 **Remember**: When writing SQL migration files, always start with:
+
 1. No indentation at root level
 2. UPPERCASE keywords/functions/types
 3. lowercase identifiers

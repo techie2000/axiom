@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 <#!
 .SYNOPSIS
-Runs API smoke tests for dev, UAT, and prod environments.
+Runs API smoke tests for main, dev, UAT, and prod environments.
 
 .DESCRIPTION
 Performs a consistent smoke-test suite against Axiom backend endpoints.
@@ -17,7 +17,7 @@ The script reads JWT secrets and backend ports from .env.<environment> files
 in the workspace root to avoid hardcoding environment values.
 
 .PARAMETER Environment
-Environment to test: dev, uat, prod, or all. Defaults to all.
+Environment to test: main, dev, uat, prod, or all. Defaults to all.
 
 .PARAMETER TimeoutSec
 HTTP timeout in seconds for each request. Defaults to 20.
@@ -48,7 +48,7 @@ Waits up to 120 seconds for API readiness, then runs dev smoke tests.
 
 [CmdletBinding()]
 param(
-    [ValidateSet('dev', 'uat', 'prod', 'all')]
+    [ValidateSet('main', 'dev', 'uat', 'prod', 'all')]
     [string]$Environment = 'all',
 
     [ValidateRange(5, 120)]
@@ -197,13 +197,14 @@ $workspaceRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $workspaceRoot
 
 $environmentFiles = @{
+    main = '.env.main'
     dev  = '.env.dev'
     uat  = '.env.uat'
     prod = '.env.prod'
 }
 
 $targetEnvironments = if ($Environment -eq 'all') {
-    @('dev', 'uat', 'prod')
+    @('main', 'dev', 'uat', 'prod')
 }
 else {
     @($Environment)

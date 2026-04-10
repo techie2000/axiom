@@ -72,8 +72,8 @@ clicked or the repository setting is enabled).
 [`promote-main-to-dev` workflow](../../.github/workflows/promote-main-to-dev.yml).
 
 The workflow runs at **01:00 UTC daily** — deliberately scheduled one hour *before* the GLEIF
-LEI full-sync job (02:00 UTC) so that if new code on `main` introduces any issues, they are
-caught immediately when the importer runs against the freshly promoted `dev` environment. The
+LEI full-sync job window (default: 12:00 UTC) so that if new code on `main` introduces any issues, they are
+caught before the importer runs against the freshly promoted `dev` environment. The
 00:00 slot (LEI cleanup default) and 03:00 slot (`LEI_CLEANUP_TIME` override) are already taken
 by application scheduler jobs. When `main` is ahead of `dev`, it opens a pull request titled
 `chore: nightly promotion main → dev (YYYY-MM-DD)`. Review the diff, confirm CI passes,
@@ -81,7 +81,7 @@ and merge to deploy to the dev environment. If no promotion is needed that day, 
 without creating a PR. If a promotion PR is already open, no duplicate is created.
 
 You can also trigger the workflow manually from **Actions → Nightly Promote main → dev →
-Run workflow**. A `dry_run` option is available to see whether a PR _would_ be created without
+Run workflow**. A `dry_run` option is available to see whether a PR *would* be created without
 actually creating one.
 
 To promote immediately outside the nightly window, open a PR manually:
@@ -117,9 +117,11 @@ dev → uat
 The workflow runs at **01:00 UTC on the 1st of every month**. When `uat` is ahead of `prod`, it
 opens a pull request titled `chore: monthly promotion uat → prod (YYYY-MM-DD)`. Require **at
 least two reviews** before merging. Coordinate with the team before merging — production
-deployments should be planned and communicated in advance. Tag the merge commit with a version
-number following the conventions in [`VERSION`](../../VERSION) and the version management
-instructions.
+deployments should be planned and communicated in advance. Version bumps are intentional and
+manual. If the release warrants a `PATCH`, `MINOR`, or `MAJOR` bump, apply it before the release
+merge using `pwsh ./scripts/bump-version.ps1 -Part patch`, `-Part minor`, or `-Part major`, then
+tag the promoted commit with that version. For exact test-state traceability, use the footer build
+metadata tooltip (commit SHA + build timestamp).
 
 You can also trigger the workflow manually from **Actions → Monthly Promote uat → prod →
 Run workflow**. A `dry_run` option is available.

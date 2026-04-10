@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -75,14 +76,21 @@ func TestJSONToDomainRecord_NormalizesNullLikeFields(t *testing.T) {
 	jsonRecord := &LEIJSONRecord{
 		LEI: LEIValueField{Value: " 5493001kjtiigc8y1r12 "},
 		Entity: LEIEntity{
-			LegalName:       LEILegalName{Value: "Example Entity"},
-			EntityStatus:    LEIValueField{Value: "NULL"},
-			EntityCategory:  LEIValueField{Value: "null"},
-			LegalAddress:    LEIAddress{FirstAddressLine: LEIValueField{Value: "NULL"}, City: LEIValueField{Value: "Lagos"}, Country: LEIValueField{Value: "NG"}},
-			SuccessorEntity: []LEISuccessorEntity{{SuccessorLEI: LEIValueField{Value: " 5493001kjtiigc8y1r12 "}}},
+			LegalName:         LEILegalName{Value: "Example Entity"},
+			EntityStatus:      LEIValueField{Value: "NULL"},
+			EntityCategory:    LEIValueField{Value: "null"},
+			EntitySubCategory: LEIValueField{Value: "STATE_GOVERNMENT"},
+			LegalJurisdiction: LEIValueField{Value: "NG-LA"},
+			LegalAddress:      LEIAddress{FirstAddressLine: LEIValueField{Value: "NULL"}, City: LEIValueField{Value: "Lagos"}, Country: LEIValueField{Value: "NG"}},
+			SuccessorEntity:   []LEISuccessorEntity{{SuccessorLEI: LEIValueField{Value: " 5493001kjtiigc8y1r12 "}}},
 		},
 		Registration: LEIRegistration{
-			ManagingLOU: LEIValueField{Value: "NULL"},
+			ManagingLOU:        LEIValueField{Value: "NULL"},
+			RegistrationStatus: LEIValueField{Value: "ISSUED"},
+			ValidationSources:  LEIValueField{Value: "FULLY_CORROBORATED"},
+			ValidationAuthority: LEIValidationAuthority{
+				ValidationAuthorityID: LEIValueField{Value: "RA000463"},
+			},
 		},
 	}
 
@@ -110,6 +118,21 @@ func TestJSONToDomainRecord_NormalizesNullLikeFields(t *testing.T) {
 	if record.LegalAddressCity != "Lagos" {
 		t.Fatalf("expected LegalAddressCity to remain unchanged, got %q", record.LegalAddressCity)
 	}
+	if record.EntitySubCategory != "STATE_GOVERNMENT" {
+		t.Fatalf("expected EntitySubCategory to be mapped, got %q", record.EntitySubCategory)
+	}
+	if record.LegalJurisdiction != "NG-LA" {
+		t.Fatalf("expected LegalJurisdiction to be mapped, got %q", record.LegalJurisdiction)
+	}
+	if record.RegistrationStatus != "ISSUED" {
+		t.Fatalf("expected RegistrationStatus to be mapped, got %q", record.RegistrationStatus)
+	}
+	if record.ValidationAuthority != "RA000463" {
+		t.Fatalf("expected ValidationAuthority to be mapped from ValidationAuthorityID, got %q", record.ValidationAuthority)
+	}
+	if string(record.ValidationSources) != `"FULLY_CORROBORATED"` {
+		t.Fatalf("expected ValidationSources to be stored as JSON string, got %q", string(record.ValidationSources))
+	}
 }
 
 func TestNormalizeLEIRecordNullLikeFields_InvalidSuccessorLEIBecomesEmpty(t *testing.T) {
@@ -121,6 +144,20 @@ func TestNormalizeLEIRecordNullLikeFields_InvalidSuccessorLEIBecomesEmpty(t *tes
 
 	if record.SuccessorLEI != "" {
 		t.Fatalf("expected invalid SuccessorLEI to be cleared, got %q", record.SuccessorLEI)
+	}
+}
+
+func TestValidationSourcesToJSONBEmptyProducesNullNotObject(t *testing.T) {
+	got := validationSourcesToJSONB("")
+	if got != "" {
+		t.Fatalf("expected empty ValidationSources to produce empty JSONBString (SQL NULL), got %q", string(got))
+	}
+}
+
+func TestValidationSourcesToJSONBNullLikeProducesNullNotObject(t *testing.T) {
+	got := validationSourcesToJSONB("null")
+	if got != "" {
+		t.Fatalf("expected null-like ValidationSources to produce empty JSONBString (SQL NULL), got %q", string(got))
 	}
 }
 
@@ -521,7 +558,7 @@ func buildRecordsArrayJSON(recordCount int) string {
 		builder.WriteString(`{"LEI":{"$":"`)
 		builder.WriteString(testLEICodeForIndex(i))
 		builder.WriteString(`"},"Entity":{"LegalName":{"$":"Entity`)
-		builder.WriteString(fmt.Sprintf("%d", i))
+		builder.WriteString(strconv.Itoa(i))
 		builder.WriteString(`"}}}`)
 	}
 	builder.WriteString("]")

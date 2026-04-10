@@ -79,8 +79,18 @@ compose-output.txt
 /backend/coverage.html
 /frontend/coverage/
 
+# Playwright end-to-end tests
+/frontend/e2e/.auth/
+/frontend/playwright-report/
+/frontend/test-results/
+
 # Documentation
 /docs/*.pdf
+
+# User documentation site (VitePress)
+/docs-user/.vitepress/dist/
+/docs-user/.vitepress/cache/
+/docs-user/node_modules/
 
 # Security scanning - transient output files
 trivy-*.json

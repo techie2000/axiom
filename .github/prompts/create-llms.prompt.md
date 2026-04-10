@@ -1,7 +1,7 @@
 ---
 agent: 'agent'
 description: 'Create an llms.txt file from scratch based on repository structure following the llms.txt specification at https://llmstxt.org/'
-tools: ['search/changes', 'search/codebase', 'edit/editFiles', 'vscode/extensions', 'web/fetch', 'web/githubRepo', 'vscode/openSimpleBrowser', 'read/problems', 'execute/createAndRunTask', 'search', 'search/searchResults', 'read/terminalLastCommand', 'read/terminalSelection', 'execute/testFailure', 'search/usages', 'vscode/vscodeAPI']
+tools: ['search/changes', 'search/codebase', 'edit/editFiles', 'vscode/extensions', 'web/fetch', 'web/githubRepo', 'read/problems', 'execute/createAndRunTask', 'search', 'search/searchResults', 'read/terminalLastCommand', 'read/terminalSelection', 'execute/testFailure', 'search/usages', 'vscode/vscodeAPI']
 ---
 # Create LLMs.txt File from Repository Structure
 
@@ -71,7 +71,9 @@ The `llms.txt` file must follow this exact structure per the specification:
 
 #### File Link Format
 
-Each file link must follow: `\[descriptive-name](relative-url): optional description`
+Each file link in the generated `llms.txt` output must use markdown link syntax with a short description.
+Use this literal structure when writing the file: link text, then relative path, then description.
+Example structure: `[descriptive-name]` + `(relative-url)` + `: optional description`
 
 #### Section Organization
 
@@ -95,6 +97,7 @@ Organize files into logical H2 sections such as:
 #### File Selection Criteria
 
 Include files that:
+
 - Explain the repository's purpose and scope
 - Provide essential technical documentation
 - Show usage examples and patterns
@@ -102,6 +105,7 @@ Include files that:
 - Contain configuration and setup instructions
 
 Exclude files that:
+
 - Are purely implementation details
 - Contain redundant information
 - Are build artifacts or generated content
@@ -134,6 +138,7 @@ Exclude files that:
 5. Ensure all links are valid relative paths
 
 ### Step 4: Validation
+
 1. Verify compliance with https://llmstxt.org/ specification
 2. Check that all links are valid and accessible
 3. Ensure the file serves as an effective LLM navigation tool
@@ -168,7 +173,7 @@ Exclude files that:
 ## Example Structure Template
 
 **Note**: The example below shows what the OUTPUT `llms.txt` file should contain when created at the repository root.
-File paths are relative to the repository root, not to this prompt file location.
+All example links below are repository-root-relative, matching how generated `llms.txt` entries should be written.
 
 ```txt
 # [Repository Name]
@@ -181,7 +186,7 @@ File paths are relative to the repository root, not to this prompt file location
 
 - [Main README](README.md): Primary project documentation and getting started guide
 - [Architecture](docs/architecture.md): System architecture and design documentation
-- [LEI Quickstart](docs/LEI_QUICKSTART.md): Quick start guide for LEI integration
+- [LEI Quickstart](docs/lei/LEI_QUICKSTART.md): Quick start guide for LEI integration
 
 ## Setup and Configuration
 
@@ -191,8 +196,8 @@ File paths are relative to the repository root, not to this prompt file location
 
 ## Technical Specifications
 
-- [LEI Acquisition](docs/LEI_ACQUISITION.md): Legal Entity Identifier data acquisition process
-- [LEI Implementation Summary](docs/LEI_IMPLEMENTATION_SUMMARY.md): LEI feature implementation details
+- [LEI Acquisition](docs/lei/LEI_ACQUISITION.md): Legal Entity Identifier data acquisition process
+- [LEI Implementation Summary](docs/lei/LEI_IMPLEMENTATION_SUMMARY.md): LEI feature implementation details
 
 ## Optional
 
@@ -203,6 +208,7 @@ File paths are relative to the repository root, not to this prompt file location
 ## Success Criteria
 
 The created `llms.txt` file should:
+
 1. Enable LLMs to quickly understand the repository's purpose
 2. Provide clear navigation to essential documentation
 3. Follow the official llms.txt specification exactly

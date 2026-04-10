@@ -1,7 +1,7 @@
 # Multi-Environment Documentation
 
-This directory contains documentation for Axiom's multi-environment Docker setup, which allows running development,
-UAT, and production environments simultaneously on the same machine.
+This directory contains documentation for Axiom's multi-environment Docker setup, which allows running main,
+development, UAT, and production environments simultaneously on the same machine.
 
 ## Documentation Files
 
@@ -71,9 +71,19 @@ scripts\smoke-api.cmd all
 
 ## Port Prefixes
 
+- **4xxxx** - Main environment
 - **1xxxx** - Development environment
 - **2xxxx** - UAT environment
 - **3xxxx** - Production environment
+
+Optional user docs profile ports follow the same prefix rule:
+
+- Main docs-user: `45173`
+- Dev docs-user: `15173`
+
+Published user docs site:
+
+- <https://techie2000.github.io/axiom/docs-user/>
 
 ## Getting Started
 

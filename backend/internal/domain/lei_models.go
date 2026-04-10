@@ -49,10 +49,21 @@ type LEIRecord struct {
 	EntitySubCategory       string `gorm:"size:255" json:"entity_sub_category"`
 	EntityLegalForm         string `gorm:"size:255" json:"entity_legal_form"`
 	EntityStatus            string `gorm:"size:255" json:"entity_status"`
+	LegalJurisdiction       string `gorm:"size:20" json:"legal_jurisdiction"`
+	RegistrationStatus      string `gorm:"size:50" json:"registration_status"`
 
 	// Associated entities
-	ManagingLOU  string `gorm:"size:255" json:"managing_lou"` // Local Operating Unit
-	SuccessorLEI string `gorm:"size:20" json:"successor_lei"`
+	ManagingLOU           string `gorm:"size:255" json:"managing_lou"` // Local Operating Unit
+	SuccessorLEI          string `gorm:"size:20" json:"successor_lei"`
+	ManagingLOULegalName  string `gorm:"->;column:managing_lou_legal_name" json:"managing_lou_legal_name,omitempty"`
+	SuccessorLEILegalName string `gorm:"->;column:successor_lei_legal_name" json:"successor_lei_legal_name,omitempty"`
+
+	// GLEIF reference resolved names (computed via JOIN, not stored in lei_records)
+	RegistrationAuthorityName              string `gorm:"->;column:registration_authority_name" json:"registration_authority_name,omitempty"`
+	RegistrationAuthorityInternationalName string `gorm:"->;column:registration_authority_international_name" json:"registration_authority_international_name,omitempty"`
+	RegistrationAuthorityWebsite           string `gorm:"->;column:registration_authority_website" json:"registration_authority_website,omitempty"`
+	RegistrationAuthorityComments          string `gorm:"->;column:registration_authority_comments" json:"registration_authority_comments,omitempty"`
+	EntityLegalFormName                    string `gorm:"->;column:entity_legal_form_name" json:"entity_legal_form_name,omitempty"`
 
 	// Dates
 	InitialRegistrationDate time.Time `json:"initial_registration_date"`
@@ -209,7 +220,8 @@ type FileProcessingStatus struct {
 	// Known chain: DAILY_FULL → LEVEL2_RR → LEVEL2_REPEX.
 	DependsOnJobType string `gorm:"size:50" json:"depends_on_job_type"`
 
-	ErrorMessage string `gorm:"type:text" json:"error_message"`
+	ErrorMessage    string `gorm:"type:text" json:"error_message"`
+	ProgressMessage string `gorm:"type:text" json:"progress_message"`
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -309,8 +321,8 @@ func (LEIRelationshipRecord) TableName() string {
 type LEIReportingException struct {
 	ID                 uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
 	LEI                string    `gorm:"size:20;not null;index" json:"lei"`
-	ExceptionCategory  string    `gorm:"size:100;not null" json:"exception_category"`
-	ExceptionReason    string    `gorm:"size:200;not null" json:"exception_reason"`
+	ExceptionCategory  string      `gorm:"size:100;not null" json:"exception_category"`
+	ExceptionReasons   JSONBString `gorm:"type:jsonb;not null;default:'[]'" json:"exception_reasons"`
 	ExceptionReference string    `gorm:"size:500" json:"exception_reference"`
 
 	SourceFileID *uuid.UUID `gorm:"type:uuid" json:"source_file_id"`

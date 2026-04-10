@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -34,6 +35,11 @@ type AuthService interface {
 	EnsureBootstrapAdmin() error
 	// IsBootstrapAccount returns true when the given user ID belongs to the bootstrap admin.
 	IsBootstrapAccount(userID string) bool
+	// EnsurePlaywrightTestUser seeds a dedicated active test user for Playwright
+	// end-to-end testing. Must only be called in dev/main environments
+	// (i.e. when PLAYWRIGHT_SEED_USER=true). The user is created with the
+	// supplied email and password; if it already exists the call is a no-op.
+	EnsurePlaywrightTestUser(email, password string) error
 }
 
 // RegisterRequest holds the fields required for a registration request.
@@ -274,6 +280,113 @@ func (s *authService) EnsureBootstrapAdmin() error {
 
 func (s *authService) IsBootstrapAccount(userID string) bool {
 	return userID == bootstrapAdminID
+}
+
+// playwrightTestUserID is the fixed UUID for the Playwright test user. Using a
+// fixed ID makes the seed idempotent and allows it to be safely re-run on every
+// startup. This ID must never be used in UAT or production deployments.
+const playwrightTestUserID = "00000000-0000-0000-0000-000000000002"
+
+// EnsurePlaywrightTestUser creates or reactivates a dedicated Playwright test
+// user so that end-to-end tests can authenticate without manual setup.
+// The user is always given role=admin so that tests can exercise every
+// protected endpoint.
+//
+// IMPORTANT: This method must only be called when PLAYWRIGHT_SEED_USER=true,
+// which should be set in dev/main .env files only, never in UAT or production.
+// The caller (main.go) is responsible for gate-checking the config flag before
+// invoking this method.
+func (s *authService) EnsurePlaywrightTestUser(email, password string) error {
+	// Derive a username from the local part of the email address (e.g.
+	// "playwright" from "playwright@axiom.local") so the username stays
+	// consistent with whatever email is configured.
+	username := email
+	if atIdx := strings.Index(email, "@"); atIdx > 0 {
+		username = email[:atIdx]
+	}
+
+	// Check whether the user already exists (by the fixed ID).
+	existing, err := s.repo.FindByID(playwrightTestUserID)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return fmt.Errorf("database error while checking playwright test user: %w", err)
+	}
+
+	updated := false
+
+	if existing != nil {
+		// User exists. Ensure email matches the configured Playwright email.
+		if existing.Email != email {
+			existing.Email = email
+			updated = true
+		}
+
+		// Ensure username matches the one derived from the email.
+		if existing.Username != username {
+			existing.Username = username
+			updated = true
+		}
+
+		// Ensure the password hash matches the configured Playwright password.
+		if err := bcrypt.CompareHashAndPassword([]byte(existing.PasswordHash), []byte(password)); err != nil {
+			hash, hashErr := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+			if hashErr != nil {
+				return fmt.Errorf("failed to hash playwright test user password: %w", hashErr)
+			}
+			existing.PasswordHash = string(hash)
+			updated = true
+		}
+
+		// Ensure the user is active so tests can log in.
+		if existing.Status != domain.UserStatusActive {
+			existing.Status = domain.UserStatusActive
+			updated = true
+		}
+
+		if updated {
+			if updateErr := s.repo.Update(existing); updateErr != nil {
+				return fmt.Errorf("failed to reconcile playwright test user: %w", updateErr)
+			}
+			logger.Info().Msg("Playwright test user reconciled to match configured credentials")
+		} else {
+			logger.Info().Msg("Playwright test user already exists with matching credentials")
+		}
+		return nil
+	}
+
+	// Also check by email in case of a collision with a manually created account.
+	byEmail, emailErr := s.repo.FindByEmail(email)
+	if emailErr != nil && !errors.Is(emailErr, gorm.ErrRecordNotFound) {
+		return fmt.Errorf("database error while checking email: %w", emailErr)
+	}
+	if emailErr == nil && byEmail != nil {
+		logger.Warn().
+			Str("email", email).
+			Msg("Playwright test user email is already taken by another account; skipping seed")
+		return nil
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("failed to hash playwright test user password: %w", err)
+	}
+
+	user := &domain.User{
+		BaseModel:    domain.BaseModel{ID: uuid.MustParse(playwrightTestUserID)},
+		Email:        email,
+		Username:     username,
+		PasswordHash: string(hash),
+		FullName:     "Playwright Test User",
+		Role:         domain.UserRoleAdmin,
+		Status:       domain.UserStatusActive,
+		IsBootstrap:  false,
+	}
+
+	if createErr := s.repo.Create(user); createErr != nil {
+		return fmt.Errorf("failed to create playwright test user: %w", createErr)
+	}
+
+	logger.Info().Str("email", email).Msg("Playwright test user created successfully")
+	return nil
 }
 
 // generateToken issues a signed JWT for the given user.

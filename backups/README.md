@@ -4,7 +4,8 @@ This directory stores local backup artifacts for environment databases and recov
 
 ## Purpose
 
-- Keep timestamped backups before risky operations (schema upgrades, destructive compose commands, major refactors)
+- Keep timestamped backups before risky operations
+  (schema upgrades, destructive compose commands, major refactors)
 - Provide a simple restore path for local environments
 - Separate backup artifacts from source code and runtime data
 
