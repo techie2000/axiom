@@ -1,0 +1,34 @@
+#!/bin/sh
+# Pre-push hook to ensure VS Code settings are sorted.
+
+if [ ! -f ".vscode/settings.json" ]; then
+    exit 0
+fi
+
+if ! command -v pwsh > /dev/null 2>&1; then
+    echo ""
+    echo "❌ Push blocked: pwsh is required to validate sorted .vscode/settings.json."
+    echo "   Install PowerShell 7+ or run the sort/check from a shell where 'pwsh' is available."
+    echo ""
+    exit 1
+fi
+
+if ! pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/sort-vscode-settings.ps1 -CheckOnly; then
+    echo ""
+    echo "❌ Push blocked: .vscode/settings.json is not sorted."
+    echo "   Run: make settings-sort"
+    echo ""
+    exit 1
+fi
+
+if [ -f "frontend/public/data/ra-urls.json" ]; then
+    if ! pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/sort-ra-urls.ps1 -CheckOnly; then
+        echo ""
+        echo "❌ Push blocked: frontend/public/data/ra-urls.json is not sorted."
+        echo "   Run: make ra-urls-sort"
+        echo ""
+        exit 1
+    fi
+fi
+
+exit 0

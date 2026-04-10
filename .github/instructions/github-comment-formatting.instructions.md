@@ -6,6 +6,7 @@ applyTo: '**'
 # GitHub Comment Formatting Instructions
 
 ## Goal
+
 Ensure PR/issue comments are human-readable Markdown on first post, especially checklists.
 
 ## Required Rules
@@ -22,6 +23,7 @@ Ensure PR/issue comments are human-readable Markdown on first post, especially c
 ## Safe Posting Patterns
 
 ### PowerShell (preferred)
+
 Use here-strings with real newlines:
 
 ```powershell
@@ -35,6 +37,7 @@ gh pr comment <pr-number> --body "$body"
 ```
 
 ### `gh api` patch/post
+
 Use a body variable that already contains real newlines:
 
 ```powershell

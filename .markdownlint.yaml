@@ -70,3 +70,36 @@ MD041: false
 # Require fenced code blocks instead of indented blocks.
 MD046:
   style: fenced
+
+# MD048 - Code fence style
+# Enforce backticks (`) for fenced code blocks.
+MD048:
+  style: backtick
+
+# MD049 - Emphasis style
+# Enforce asterisk (*) for emphasis markers.
+MD049:
+  style: asterisk
+
+# MD050 - Strong style
+# Enforce asterisk (**) for strong markers.
+MD050:
+  style: asterisk
+
+# MD029 - Ordered list item prefix
+# Use ascending ordered list markers (1., 2., 3.).
+MD029:
+  style: ordered
+
+# MD030 - Spaces after list markers
+# Keep one space after both ordered and unordered markers.
+MD030:
+  ul_single: 1
+  ol_single: 1
+  ul_multi: 1
+  ol_multi: 1
+
+# MD035 - Horizontal rule style
+# Standardize thematic breaks as three hyphens.
+MD035:
+  style: "---"

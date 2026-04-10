@@ -25,6 +25,7 @@ import (
 const GLEIFLevel2PublishesURL = "https://goldencopy.gleif.org/api/v2/golden-copies/publishes/latest"
 
 const level2UpsertBatchSize = 1000
+const level2ProgressCheckpointInterval = 1000
 
 // LEILevel2Service downloads and processes GLEIF Level 2 data:
 //   - Relationship Records (RR)  – who owns whom
@@ -420,7 +421,7 @@ func (s *leiLevel2Service) ProcessRRFile(sourceFileID uuid.UUID) error {
 	}
 
 	filePath := filepath.Join(s.dataDir, sourceFile.FileName)
-	processed, failed, err := s.processRRZip(filePath, sourceFileID)
+	processed, failed, err := s.processRRZip(filePath, sourceFile)
 
 	if err != nil {
 		now = time.Now()
@@ -438,6 +439,7 @@ func (s *leiLevel2Service) ProcessRRFile(sourceFileID uuid.UUID) error {
 	sourceFile.ProcessingCompletedAt = &now
 	sourceFile.ProcessedRecords = processed
 	sourceFile.FailedRecords = failed
+	s.persistLevel2Progress(sourceFile, processed, failed, true)
 	if err := s.leiRepo.UpdateSourceFile(sourceFile); err != nil {
 		log.Warn().Err(err).Msg("Failed to update source file to COMPLETED")
 	}
@@ -451,7 +453,7 @@ func (s *leiLevel2Service) ProcessRRFile(sourceFileID uuid.UUID) error {
 	return nil
 }
 
-func (s *leiLevel2Service) processRRZip(filePath string, sourceFileID uuid.UUID) (processed, failed int, err error) {
+func (s *leiLevel2Service) processRRZip(filePath string, sourceFile *domain.SourceFile) (processed, failed int, err error) {
 	r, err := zip.OpenReader(filePath)
 	if err != nil {
 		return 0, 0, fmt.Errorf("failed to open RR ZIP: %w", err)
@@ -474,7 +476,7 @@ func (s *leiLevel2Service) processRRZip(filePath string, sourceFileID uuid.UUID)
 			return processed, failed, fmt.Errorf("failed to open ZIP entry %s: %w", f.Name, openErr)
 		}
 
-		p, fa, processErr := s.parseAndUpsertRR(rc, sourceFileID)
+		p, fa, processErr := s.parseAndUpsertRR(rc, sourceFile)
 		processed += p
 		failed += fa
 
@@ -490,14 +492,14 @@ func (s *leiLevel2Service) processRRZip(filePath string, sourceFileID uuid.UUID)
 	return processed, failed, nil
 }
 
-func (s *leiLevel2Service) parseAndUpsertRR(r io.Reader, sourceFileID uuid.UUID) (processed, failed int, err error) {
+func (s *leiLevel2Service) parseAndUpsertRR(r io.Reader, sourceFile *domain.SourceFile) (processed, failed int, err error) {
 	reader := bufio.NewReader(r)
 	peek, _ := reader.Peek(256)
 	header := strings.ToLower(string(peek))
 	decoder := json.NewDecoder(reader)
 
 	if strings.Contains(header, "\"relations\"") {
-		return s.parseAndUpsertRRWrapped(decoder, sourceFileID)
+		return s.parseAndUpsertRRWrapped(decoder, sourceFile)
 	}
 
 	batch := make([]*domain.LEIRelationshipRecord, 0, level2UpsertBatchSize)
@@ -512,19 +514,22 @@ func (s *leiLevel2Service) parseAndUpsertRR(r io.Reader, sourceFileID uuid.UUID)
 				break
 			}
 			log.Warn().Err(decErr).Msg("Failed to decode RR JSON record, skipping")
-			s.recordProcessingFailure("LEVEL2_RR", &sourceFileID, "DECODE", "", nil, decErr)
+			s.recordProcessingFailure("LEVEL2_RR", &sourceFile.ID, "DECODE", "", nil, decErr)
 			failed++
+			s.persistLevel2Progress(sourceFile, processed, failed, false)
 			continue
 		}
 
-		record, mapErr := mapRawRRToRelationshipRecord(&raw, sourceFileID)
+		record, mapErr := mapRawRRToRelationshipRecord(&raw, sourceFile.ID)
 		if mapErr != nil {
 			log.Warn().Err(mapErr).Msg("Failed to map RR record, skipping")
-			s.recordProcessingFailure("LEVEL2_RR", &sourceFileID, "MAP", rrNaturalKeyFromRaw(&raw), &raw, mapErr)
+			s.recordProcessingFailure("LEVEL2_RR", &sourceFile.ID, "MAP", rrNaturalKeyFromRaw(&raw), &raw, mapErr)
 			failed++
+			s.persistLevel2Progress(sourceFile, processed, failed, false)
 			continue
 		}
 
+		record.SourceFileID = &sourceFile.ID
 		batch = append(batch, record)
 		if len(batch) < level2UpsertBatchSize {
 			continue
@@ -536,6 +541,7 @@ func (s *leiLevel2Service) parseAndUpsertRR(r io.Reader, sourceFileID uuid.UUID)
 		}
 		processed += batchProcessed
 		failed += batchFailed
+		s.persistLevel2Progress(sourceFile, processed, failed, false)
 		if processed%10000 == 0 {
 			log.Info().Int("processed", processed).Int("failed", failed).Msg("RR processing progress")
 		}
@@ -548,11 +554,12 @@ func (s *leiLevel2Service) parseAndUpsertRR(r io.Reader, sourceFileID uuid.UUID)
 	}
 	processed += batchProcessed
 	failed += batchFailed
+	s.persistLevel2Progress(sourceFile, processed, failed, true)
 
 	return processed, failed, nil
 }
 
-func (s *leiLevel2Service) parseAndUpsertRRWrapped(decoder *json.Decoder, sourceFileID uuid.UUID) (processed, failed int, err error) {
+func (s *leiLevel2Service) parseAndUpsertRRWrapped(decoder *json.Decoder, sourceFile *domain.SourceFile) (processed, failed int, err error) {
 	startTok, err := decoder.Token()
 	if err != nil {
 		return 0, 0, fmt.Errorf("failed to read RR wrapper start token: %w", err)
@@ -597,19 +604,22 @@ func (s *leiLevel2Service) parseAndUpsertRRWrapped(decoder *json.Decoder, source
 			var raw rawRRRecord
 			if decErr := decoder.Decode(&raw); decErr != nil {
 				log.Warn().Err(decErr).Msg("Failed to decode RR JSON record in relations array, skipping")
-				s.recordProcessingFailure("LEVEL2_RR", &sourceFileID, "DECODE", "", nil, decErr)
+				s.recordProcessingFailure("LEVEL2_RR", &sourceFile.ID, "DECODE", "", nil, decErr)
 				failed++
+				s.persistLevel2Progress(sourceFile, processed, failed, false)
 				continue
 			}
 
-			record, mapErr := mapRawRRToRelationshipRecord(&raw, sourceFileID)
+			record, mapErr := mapRawRRToRelationshipRecord(&raw, sourceFile.ID)
 			if mapErr != nil {
 				log.Warn().Err(mapErr).Msg("Failed to map RR record, skipping")
-				s.recordProcessingFailure("LEVEL2_RR", &sourceFileID, "MAP", rrNaturalKeyFromRaw(&raw), &raw, mapErr)
+				s.recordProcessingFailure("LEVEL2_RR", &sourceFile.ID, "MAP", rrNaturalKeyFromRaw(&raw), &raw, mapErr)
 				failed++
+				s.persistLevel2Progress(sourceFile, processed, failed, false)
 				continue
 			}
 
+			record.SourceFileID = &sourceFile.ID
 			batch = append(batch, record)
 			if len(batch) < level2UpsertBatchSize {
 				continue
@@ -621,6 +631,7 @@ func (s *leiLevel2Service) parseAndUpsertRRWrapped(decoder *json.Decoder, source
 			}
 			processed += batchProcessed
 			failed += batchFailed
+			s.persistLevel2Progress(sourceFile, processed, failed, false)
 			if processed%10000 == 0 {
 				log.Info().Int("processed", processed).Int("failed", failed).Msg("RR processing progress")
 			}
@@ -633,6 +644,7 @@ func (s *leiLevel2Service) parseAndUpsertRRWrapped(decoder *json.Decoder, source
 		}
 		processed += batchProcessed
 		failed += batchFailed
+		s.persistLevel2Progress(sourceFile, processed, failed, false)
 
 		arrEndTok, arrEndErr := decoder.Token()
 		if arrEndErr != nil {
@@ -656,6 +668,8 @@ func (s *leiLevel2Service) parseAndUpsertRRWrapped(decoder *json.Decoder, source
 	if !foundRelations {
 		return processed, failed, fmt.Errorf("RR payload missing relations array")
 	}
+
+	s.persistLevel2Progress(sourceFile, processed, failed, true)
 
 	return processed, failed, nil
 }
@@ -776,23 +790,54 @@ func (s *leiLevel2Service) flushRRBatch(batch []*domain.LEIRelationshipRecord) (
 		return 0, 0, nil
 	}
 
-	if created, updated, batchErr := s.repo.BatchUpsertRelationshipRecords(batch); batchErr == nil {
-		naturalKeys := make([]string, 0, len(batch))
+	upsertBatch := batch
+	if s.leiRepo != nil {
+		knownLEIs, lookupErr := s.lookupExistingLEIsFromRRBatch(batch)
+		if lookupErr != nil {
+			log.Warn().Err(lookupErr).Int("batch_size", len(batch)).Msg("RR LEI existence pre-check failed, proceeding with DB upsert path")
+		} else {
+			upsertBatch = upsertBatch[:0]
+			for _, record := range batch {
+				missingRefs := rrMissingNodeRefs(record, knownLEIs)
+				if len(missingRefs) == 0 {
+					upsertBatch = append(upsertBatch, record)
+					continue
+				}
+
+				s.recordProcessingFailure(
+					"LEVEL2_RR",
+					record.SourceFileID,
+					"FK_PREREQ",
+					rrNaturalKey(record.StartNodeLEI, record.EndNodeLEI, record.RelationshipType),
+					record,
+					fmt.Errorf("deferred RR upsert: missing LEI parent record(s): %s", strings.Join(missingRefs, ", ")),
+				)
+				failed++
+			}
+		}
+	}
+
+	if len(upsertBatch) == 0 {
+		return 0, failed, nil
+	}
+
+	if created, updated, batchErr := s.repo.BatchUpsertRelationshipRecords(upsertBatch); batchErr == nil {
+		naturalKeys := make([]string, 0, len(upsertBatch))
 		// All records in a batch are sourced from the same file; use the first non-nil ID.
 		var sourceFileID *uuid.UUID
-		for _, record := range batch {
+		for _, record := range upsertBatch {
 			naturalKeys = append(naturalKeys, rrNaturalKey(record.StartNodeLEI, record.EndNodeLEI, record.RelationshipType))
 			if sourceFileID == nil {
 				sourceFileID = record.SourceFileID
 			}
 		}
 		s.batchResolveOpenProcessingFailures("LEVEL2_RR", naturalKeys, sourceFileID)
-		return created + updated, 0, nil
+		return created + updated, failed, nil
 	} else {
-		log.Warn().Err(batchErr).Int("batch_size", len(batch)).Msg("RR batch upsert failed, falling back to row-by-row")
+		log.Warn().Err(batchErr).Int("batch_size", len(upsertBatch)).Msg("RR batch upsert failed, falling back to row-by-row")
 	}
 
-	for _, record := range batch {
+	for _, record := range upsertBatch {
 		if upsertErr := s.repo.UpsertRelationshipRecord(record); upsertErr != nil {
 			log.Warn().
 				Err(upsertErr).
@@ -808,6 +853,68 @@ func (s *leiLevel2Service) flushRRBatch(batch []*domain.LEIRelationshipRecord) (
 	}
 
 	return processed, failed, nil
+}
+
+func (s *leiLevel2Service) lookupExistingLEIsFromRRBatch(batch []*domain.LEIRelationshipRecord) (map[string]struct{}, error) {
+	if len(batch) == 0 {
+		return map[string]struct{}{}, nil
+	}
+
+	seen := make(map[string]struct{}, len(batch)*2)
+	leiCodes := make([]string, 0, len(batch)*2)
+	for _, record := range batch {
+		start := strings.TrimSpace(record.StartNodeLEI)
+		if start != "" {
+			if _, exists := seen[start]; !exists {
+				seen[start] = struct{}{}
+				leiCodes = append(leiCodes, start)
+			}
+		}
+
+		end := strings.TrimSpace(record.EndNodeLEI)
+		if end != "" {
+			if _, exists := seen[end]; !exists {
+				seen[end] = struct{}{}
+				leiCodes = append(leiCodes, end)
+			}
+		}
+	}
+
+	if len(leiCodes) == 0 {
+		return map[string]struct{}{}, nil
+	}
+
+	namesByLEI, err := s.leiRepo.FindLegalNamesByLEICodes(leiCodes)
+	if err != nil {
+		return nil, err
+	}
+
+	existing := make(map[string]struct{}, len(namesByLEI))
+	for lei := range namesByLEI {
+		existing[strings.TrimSpace(lei)] = struct{}{}
+	}
+
+	return existing, nil
+}
+
+func rrMissingNodeRefs(record *domain.LEIRelationshipRecord, existing map[string]struct{}) []string {
+	missing := make([]string, 0, 2)
+
+	start := strings.TrimSpace(record.StartNodeLEI)
+	if start != "" {
+		if _, ok := existing[start]; !ok {
+			missing = append(missing, "start_node_lei="+start)
+		}
+	}
+
+	end := strings.TrimSpace(record.EndNodeLEI)
+	if end != "" {
+		if _, ok := existing[end]; !ok {
+			missing = append(missing, "end_node_lei="+end)
+		}
+	}
+
+	return missing
 }
 
 // --- Reporting Exceptions (REPEX) processing ---
@@ -843,20 +950,27 @@ func (l *gleifStringList) UnmarshalJSON(data []byte) error {
 	return fmt.Errorf("unsupported GLEIF list format: %s", string(data))
 }
 
-func joinGLEIFReasons(reasons []gleifString) string {
+
+
+func gleifReasonsToJSONB(reasons []gleifString) domain.JSONBString {
 	if len(reasons) == 0 {
-		return ""
+		return domain.JSONBString("[]")
 	}
 
 	parts := make([]string, 0, len(reasons))
 	for _, reason := range reasons {
-		v := reason.String()
-		if v != "" {
-			parts = append(parts, v)
+		value := reason.String()
+		if value != "" {
+			parts = append(parts, value)
 		}
 	}
 
-	return strings.Join(parts, ",")
+	encoded, err := json.Marshal(parts)
+	if err != nil {
+		return domain.JSONBString("[]")
+	}
+
+	return domain.JSONBString(encoded)
 }
 
 // ProcessREPEXFile reads a downloaded REPEX ZIP file and upserts all reporting exceptions.
@@ -880,7 +994,7 @@ func (s *leiLevel2Service) ProcessREPEXFile(sourceFileID uuid.UUID) error {
 	}
 
 	filePath := filepath.Join(s.dataDir, sourceFile.FileName)
-	processed, failed, err := s.processREPEXZip(filePath, sourceFileID)
+	processed, failed, err := s.processREPEXZip(filePath, sourceFile)
 
 	if err != nil {
 		now = time.Now()
@@ -898,6 +1012,7 @@ func (s *leiLevel2Service) ProcessREPEXFile(sourceFileID uuid.UUID) error {
 	sourceFile.ProcessingCompletedAt = &now
 	sourceFile.ProcessedRecords = processed
 	sourceFile.FailedRecords = failed
+	s.persistLevel2Progress(sourceFile, processed, failed, true)
 	if err := s.leiRepo.UpdateSourceFile(sourceFile); err != nil {
 		log.Warn().Err(err).Msg("Failed to update source file to COMPLETED")
 	}
@@ -911,7 +1026,7 @@ func (s *leiLevel2Service) ProcessREPEXFile(sourceFileID uuid.UUID) error {
 	return nil
 }
 
-func (s *leiLevel2Service) processREPEXZip(filePath string, sourceFileID uuid.UUID) (processed, failed int, err error) {
+func (s *leiLevel2Service) processREPEXZip(filePath string, sourceFile *domain.SourceFile) (processed, failed int, err error) {
 	r, err := zip.OpenReader(filePath)
 	if err != nil {
 		return 0, 0, fmt.Errorf("failed to open REPEX ZIP: %w", err)
@@ -934,7 +1049,7 @@ func (s *leiLevel2Service) processREPEXZip(filePath string, sourceFileID uuid.UU
 			return processed, failed, fmt.Errorf("failed to open ZIP entry %s: %w", f.Name, openErr)
 		}
 
-		p, fa, processErr := s.parseAndUpsertREPEX(rc, sourceFileID)
+		p, fa, processErr := s.parseAndUpsertREPEX(rc, sourceFile)
 		processed += p
 		failed += fa
 
@@ -950,14 +1065,14 @@ func (s *leiLevel2Service) processREPEXZip(filePath string, sourceFileID uuid.UU
 	return processed, failed, nil
 }
 
-func (s *leiLevel2Service) parseAndUpsertREPEX(r io.Reader, sourceFileID uuid.UUID) (processed, failed int, err error) {
+func (s *leiLevel2Service) parseAndUpsertREPEX(r io.Reader, sourceFile *domain.SourceFile) (processed, failed int, err error) {
 	reader := bufio.NewReader(r)
 	peek, _ := reader.Peek(256)
 	header := strings.ToLower(string(peek))
 	decoder := json.NewDecoder(reader)
 
 	if strings.Contains(header, "\"exceptions\"") {
-		return s.parseAndUpsertREPEXWrapped(decoder, sourceFileID)
+		return s.parseAndUpsertREPEXWrapped(decoder, sourceFile)
 	}
 
 	batch := make([]*domain.LEIReportingException, 0, level2UpsertBatchSize)
@@ -972,17 +1087,18 @@ func (s *leiLevel2Service) parseAndUpsertREPEX(r io.Reader, sourceFileID uuid.UU
 				break
 			}
 			log.Warn().Err(decErr).Msg("Failed to decode REPEX JSON record, skipping")
-			s.recordProcessingFailure("LEVEL2_REPEX", &sourceFileID, "DECODE", "", nil, decErr)
+			s.recordProcessingFailure("LEVEL2_REPEX", &sourceFile.ID, "DECODE", "", nil, decErr)
 			failed++
+			s.persistLevel2Progress(sourceFile, processed, failed, false)
 			continue
 		}
 
 		exc := &domain.LEIReportingException{
 			LEI:                raw.LEI.String(),
 			ExceptionCategory:  raw.ExceptionCategory.String(),
-			ExceptionReason:    joinGLEIFReasons(raw.ExceptionReason),
+			ExceptionReasons:   gleifReasonsToJSONB(raw.ExceptionReason),
 			ExceptionReference: raw.ExceptionReference.String(),
-			SourceFileID:       &sourceFileID,
+			SourceFileID:       &sourceFile.ID,
 		}
 
 		batch = append(batch, exc)
@@ -996,6 +1112,7 @@ func (s *leiLevel2Service) parseAndUpsertREPEX(r io.Reader, sourceFileID uuid.UU
 		}
 		processed += batchProcessed
 		failed += batchFailed
+		s.persistLevel2Progress(sourceFile, processed, failed, false)
 		if processed%10000 == 0 {
 			log.Info().Int("processed", processed).Int("failed", failed).Msg("REPEX processing progress")
 		}
@@ -1008,11 +1125,12 @@ func (s *leiLevel2Service) parseAndUpsertREPEX(r io.Reader, sourceFileID uuid.UU
 	}
 	processed += batchProcessed
 	failed += batchFailed
+	s.persistLevel2Progress(sourceFile, processed, failed, true)
 
 	return processed, failed, nil
 }
 
-func (s *leiLevel2Service) parseAndUpsertREPEXWrapped(decoder *json.Decoder, sourceFileID uuid.UUID) (processed, failed int, err error) {
+func (s *leiLevel2Service) parseAndUpsertREPEXWrapped(decoder *json.Decoder, sourceFile *domain.SourceFile) (processed, failed int, err error) {
 	startTok, err := decoder.Token()
 	if err != nil {
 		return 0, 0, fmt.Errorf("failed to read REPEX wrapper start token: %w", err)
@@ -1057,17 +1175,18 @@ func (s *leiLevel2Service) parseAndUpsertREPEXWrapped(decoder *json.Decoder, sou
 			var raw rawREPEXRecord
 			if decErr := decoder.Decode(&raw); decErr != nil {
 				log.Warn().Err(decErr).Msg("Failed to decode REPEX JSON record in exceptions array, skipping")
-				s.recordProcessingFailure("LEVEL2_REPEX", &sourceFileID, "DECODE", "", nil, decErr)
+				s.recordProcessingFailure("LEVEL2_REPEX", &sourceFile.ID, "DECODE", "", nil, decErr)
 				failed++
+				s.persistLevel2Progress(sourceFile, processed, failed, false)
 				continue
 			}
 
 			exc := &domain.LEIReportingException{
 				LEI:                raw.LEI.String(),
 				ExceptionCategory:  raw.ExceptionCategory.String(),
-				ExceptionReason:    joinGLEIFReasons(raw.ExceptionReason),
+				ExceptionReasons:   gleifReasonsToJSONB(raw.ExceptionReason),
 				ExceptionReference: raw.ExceptionReference.String(),
-				SourceFileID:       &sourceFileID,
+				SourceFileID:       &sourceFile.ID,
 			}
 
 			batch = append(batch, exc)
@@ -1081,6 +1200,7 @@ func (s *leiLevel2Service) parseAndUpsertREPEXWrapped(decoder *json.Decoder, sou
 			}
 			processed += batchProcessed
 			failed += batchFailed
+			s.persistLevel2Progress(sourceFile, processed, failed, false)
 			if processed%10000 == 0 {
 				log.Info().Int("processed", processed).Int("failed", failed).Msg("REPEX processing progress")
 			}
@@ -1093,6 +1213,7 @@ func (s *leiLevel2Service) parseAndUpsertREPEXWrapped(decoder *json.Decoder, sou
 		}
 		processed += batchProcessed
 		failed += batchFailed
+		s.persistLevel2Progress(sourceFile, processed, failed, false)
 
 		arrEndTok, arrEndErr := decoder.Token()
 		if arrEndErr != nil {
@@ -1117,7 +1238,49 @@ func (s *leiLevel2Service) parseAndUpsertREPEXWrapped(decoder *json.Decoder, sou
 		return processed, failed, fmt.Errorf("REPEX payload missing exceptions array")
 	}
 
+	s.persistLevel2Progress(sourceFile, processed, failed, true)
+
 	return processed, failed, nil
+}
+
+func shouldPersistLevel2ProgressCheckpoint(previousProcessed, processed, previousFailed, failed int, force bool) bool {
+	if force {
+		return previousProcessed != processed || previousFailed != failed
+	}
+
+	if previousFailed != failed {
+		return true
+	}
+
+	if previousProcessed == processed {
+		return false
+	}
+
+	return (processed / level2ProgressCheckpointInterval) > (previousProcessed / level2ProgressCheckpointInterval)
+}
+
+func (s *leiLevel2Service) persistLevel2Progress(sourceFile *domain.SourceFile, processed, failed int, force bool) {
+	if sourceFile == nil {
+		return
+	}
+
+	if !shouldPersistLevel2ProgressCheckpoint(sourceFile.ProcessedRecords, processed, sourceFile.FailedRecords, failed, force) {
+		return
+	}
+
+	sourceFile.ProcessedRecords = processed
+	sourceFile.FailedRecords = failed
+	if sourceFile.TotalRecords > 0 && sourceFile.ProcessedRecords > sourceFile.TotalRecords {
+		sourceFile.TotalRecords = sourceFile.ProcessedRecords
+	}
+
+	if err := s.leiRepo.UpdateSourceFile(sourceFile); err != nil {
+		log.Warn().Err(err).
+			Str("source_file_id", sourceFile.ID.String()).
+			Int("processed", processed).
+			Int("failed", failed).
+			Msg("Failed to persist Level 2 processing progress checkpoint")
+	}
 }
 
 func (s *leiLevel2Service) flushREPEXBatch(batch []*domain.LEIReportingException) (processed int, failed int, err error) {
@@ -1125,23 +1288,54 @@ func (s *leiLevel2Service) flushREPEXBatch(batch []*domain.LEIReportingException
 		return 0, 0, nil
 	}
 
-	if created, updated, batchErr := s.repo.BatchUpsertReportingExceptions(batch); batchErr == nil {
-		naturalKeys := make([]string, 0, len(batch))
+	upsertBatch := batch
+	if s.leiRepo != nil {
+		knownLEIs, lookupErr := s.lookupExistingLEIsFromREPEXBatch(batch)
+		if lookupErr != nil {
+			log.Warn().Err(lookupErr).Int("batch_size", len(batch)).Msg("REPEX LEI existence pre-check failed, proceeding with DB upsert path")
+		} else {
+			upsertBatch = upsertBatch[:0]
+			for _, exc := range batch {
+				lei := strings.TrimSpace(exc.LEI)
+				if _, ok := knownLEIs[lei]; ok || lei == "" {
+					upsertBatch = append(upsertBatch, exc)
+					continue
+				}
+
+				s.recordProcessingFailure(
+					"LEVEL2_REPEX",
+					exc.SourceFileID,
+					"FK_PREREQ",
+					repexNaturalKey(exc.LEI, exc.ExceptionCategory),
+					exc,
+					fmt.Errorf("deferred REPEX upsert: missing LEI parent record: %s", lei),
+				)
+				failed++
+			}
+		}
+	}
+
+	if len(upsertBatch) == 0 {
+		return 0, failed, nil
+	}
+
+	if created, updated, batchErr := s.repo.BatchUpsertReportingExceptions(upsertBatch); batchErr == nil {
+		naturalKeys := make([]string, 0, len(upsertBatch))
 		// All exceptions in a batch are sourced from the same file; use the first non-nil ID.
 		var sourceFileID *uuid.UUID
-		for _, exc := range batch {
+		for _, exc := range upsertBatch {
 			naturalKeys = append(naturalKeys, repexNaturalKey(exc.LEI, exc.ExceptionCategory))
 			if sourceFileID == nil {
 				sourceFileID = exc.SourceFileID
 			}
 		}
 		s.batchResolveOpenProcessingFailures("LEVEL2_REPEX", naturalKeys, sourceFileID)
-		return created + updated, 0, nil
+		return created + updated, failed, nil
 	} else {
-		log.Warn().Err(batchErr).Int("batch_size", len(batch)).Msg("REPEX batch upsert failed, falling back to row-by-row")
+		log.Warn().Err(batchErr).Int("batch_size", len(upsertBatch)).Msg("REPEX batch upsert failed, falling back to row-by-row")
 	}
 
-	for _, exc := range batch {
+	for _, exc := range upsertBatch {
 		if upsertErr := s.repo.UpsertReportingException(exc); upsertErr != nil {
 			log.Warn().
 				Err(upsertErr).
@@ -1156,6 +1350,40 @@ func (s *leiLevel2Service) flushREPEXBatch(batch []*domain.LEIReportingException
 	}
 
 	return processed, failed, nil
+}
+
+func (s *leiLevel2Service) lookupExistingLEIsFromREPEXBatch(batch []*domain.LEIReportingException) (map[string]struct{}, error) {
+	if len(batch) == 0 {
+		return map[string]struct{}{}, nil
+	}
+
+	seen := make(map[string]struct{}, len(batch))
+	leiCodes := make([]string, 0, len(batch))
+	for _, exc := range batch {
+		lei := strings.TrimSpace(exc.LEI)
+		if lei != "" {
+			if _, exists := seen[lei]; !exists {
+				seen[lei] = struct{}{}
+				leiCodes = append(leiCodes, lei)
+			}
+		}
+	}
+
+	if len(leiCodes) == 0 {
+		return map[string]struct{}{}, nil
+	}
+
+	namesByLEI, err := s.leiRepo.FindLegalNamesByLEICodes(leiCodes)
+	if err != nil {
+		return nil, err
+	}
+
+	existing := make(map[string]struct{}, len(namesByLEI))
+	for lei := range namesByLEI {
+		existing[strings.TrimSpace(lei)] = struct{}{}
+	}
+
+	return existing, nil
 }
 
 // --- Counts ---
@@ -1180,12 +1408,14 @@ func (s *leiLevel2Service) GetProcessingFailures(jobType string, openOnly bool, 
 	return failures, total, nil
 }
 
-// parseGLEIFTime parses common GLEIF timestamp formats.
+// parseGLEIFTime parses common GLEIF timestamp formats, including sub-second variants
+// such as "2026-04-09T10:21:26.360Z" that appear on newly-issued LEI records.
 func parseGLEIFTime(value string) *time.Time {
 	if value == "" {
 		return nil
 	}
 	for _, layout := range []string{
+		time.RFC3339Nano, // handles .360Z, .000Z, etc.
 		"2006-01-02T15:04:05Z",
 		"2006-01-02T15:04:05",
 		"2006-01-02 15:04:05",

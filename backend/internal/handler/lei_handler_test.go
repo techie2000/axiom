@@ -16,8 +16,31 @@ import (
 
 type leiServiceStub struct {
 	service.LEIService
-	statuses map[string]*domain.FileProcessingStatus
-	errs     map[string]error
+	statuses       map[string]*domain.FileProcessingStatus
+	errs           map[string]error
+	predecessors   []*domain.LEIRecord
+	predecessorErr error
+	legalNames     map[string]string
+	legalNamesErr  error
+	receivedCodes  []string
+}
+
+func (s *leiServiceStub) GetLegalNamesByLEICodes(codes []string) (map[string]string, error) {
+	s.receivedCodes = append([]string{}, codes...)
+	if s.legalNamesErr != nil {
+		return nil, s.legalNamesErr
+	}
+	if s.legalNames == nil {
+		return map[string]string{}, nil
+	}
+	return s.legalNames, nil
+}
+
+func (s *leiServiceStub) GetPredecessorLEIs(_ string) ([]*domain.LEIRecord, error) {
+	if s.predecessorErr != nil {
+		return nil, s.predecessorErr
+	}
+	return s.predecessors, nil
 }
 
 func (s *leiServiceStub) GetProcessingStatus(jobType string) (*domain.FileProcessingStatus, error) {
@@ -121,6 +144,14 @@ func (s *schedulerServiceStub) TriggerLevel2REPEXSync() error {
 	return nil
 }
 
+func (s *schedulerServiceStub) TriggerGLEIFReferenceSync() error {
+	if err := s.triggerErr("TriggerGLEIFReferenceSync"); err != nil {
+		return err
+	}
+	s.notify("TriggerGLEIFReferenceSync")
+	return nil
+}
+
 func executePOST(path string, handler gin.HandlerFunc) *httptest.ResponseRecorder {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
@@ -173,6 +204,40 @@ func TestTriggerFullSync_ConflictPaths(t *testing.T) {
 		}
 		if !strings.Contains(resp.Body.String(), "DAILY_FULL") {
 			t.Fatalf("expected DAILY_FULL conflict message, got %s", resp.Body.String())
+		}
+	})
+
+	t.Run("conflict when gleif reference sync is running", func(t *testing.T) {
+		stub := &schedulerServiceStub{
+			triggerErrs: map[string]error{
+				"TriggerFullSync": fmt.Errorf("cannot start Full Sync while GLEIF_REFERENCE_SYNC is running: %w", service.ErrJobRunning),
+			},
+		}
+		h := NewLEIHandler(&leiServiceStub{}, stub)
+
+		resp := executePOST("/sync/full", h.TriggerFullSync)
+		if resp.Code != http.StatusConflict {
+			t.Fatalf("expected status %d, got %d", http.StatusConflict, resp.Code)
+		}
+		if !strings.Contains(resp.Body.String(), "GLEIF_REFERENCE_SYNC") {
+			t.Fatalf("expected GLEIF_REFERENCE_SYNC conflict message, got %s", resp.Body.String())
+		}
+	})
+
+	t.Run("conflict when gleif reference has no successful run yet", func(t *testing.T) {
+		stub := &schedulerServiceStub{
+			triggerErrs: map[string]error{
+				"TriggerFullSync": fmt.Errorf("cannot start Full Sync until GLEIF_REFERENCE_SYNC has completed successfully: %w", service.ErrJobRunning),
+			},
+		}
+		h := NewLEIHandler(&leiServiceStub{}, stub)
+
+		resp := executePOST("/sync/full", h.TriggerFullSync)
+		if resp.Code != http.StatusConflict {
+			t.Fatalf("expected status %d, got %d", http.StatusConflict, resp.Code)
+		}
+		if !strings.Contains(resp.Body.String(), "GLEIF_REFERENCE_SYNC") {
+			t.Fatalf("expected GLEIF_REFERENCE_SYNC precondition message, got %s", resp.Body.String())
 		}
 	})
 }
@@ -331,6 +396,193 @@ func TestGetLevel2ProcessingFailures_DeprecationHeaders(t *testing.T) {
 	}
 }
 
+func TestGetPredecessorLEIs(t *testing.T) {
+	t.Run("returns predecessor records", func(t *testing.T) {
+		h := NewLEIHandler(&leiServiceStub{
+			predecessors: []*domain.LEIRecord{
+				{LEI: "AAA11111111111111111", LegalName: "Predecessor One", SuccessorLEI: "BBB22222222222222222"},
+			},
+		}, &schedulerServiceStub{})
+
+		resp := executeGET("/lei/:lei/predecessors", "/lei/BBB22222222222222222/predecessors", h.GetPredecessorLEIs)
+		if resp.Code != http.StatusOK {
+			t.Fatalf("expected status %d, got %d", http.StatusOK, resp.Code)
+		}
+		if !strings.Contains(resp.Body.String(), "Predecessor One") {
+			t.Fatalf("expected predecessor payload, got %s", resp.Body.String())
+		}
+	})
+
+	t.Run("returns internal server error on service failure", func(t *testing.T) {
+		h := NewLEIHandler(&leiServiceStub{predecessorErr: errors.New("db failure")}, &schedulerServiceStub{})
+
+		resp := executeGET("/lei/:lei/predecessors", "/lei/BBB22222222222222222/predecessors", h.GetPredecessorLEIs)
+		if resp.Code != http.StatusInternalServerError {
+			t.Fatalf("expected status %d, got %d", http.StatusInternalServerError, resp.Code)
+		}
+	})
+}
+
+func TestGetLegalNamesByLEICodes(t *testing.T) {
+	t.Run("returns bad request when codes query is missing", func(t *testing.T) {
+		h := NewLEIHandler(&leiServiceStub{}, &schedulerServiceStub{})
+
+		resp := executeGET("/lei/names", "/lei/names", h.GetLegalNamesByLEICodes)
+		if resp.Code != http.StatusBadRequest {
+			t.Fatalf("expected status %d, got %d", http.StatusBadRequest, resp.Code)
+		}
+		if !strings.Contains(resp.Body.String(), "codes query parameter is required") {
+			t.Fatalf("expected validation error, got %s", resp.Body.String())
+		}
+	})
+
+	t.Run("returns bad request when codes query is empty after trimming", func(t *testing.T) {
+		h := NewLEIHandler(&leiServiceStub{}, &schedulerServiceStub{})
+
+		resp := executeGET("/lei/names", "/lei/names?codes=,%20,%20", h.GetLegalNamesByLEICodes)
+		if resp.Code != http.StatusBadRequest {
+			t.Fatalf("expected status %d, got %d", http.StatusBadRequest, resp.Code)
+		}
+		if !strings.Contains(resp.Body.String(), "at least one valid LEI code is required") {
+			t.Fatalf("expected validation error, got %s", resp.Body.String())
+		}
+	})
+
+	t.Run("filters invalid codes and deduplicates normalized valid codes", func(t *testing.T) {
+		stub := &leiServiceStub{legalNames: map[string]string{}}
+		h := NewLEIHandler(stub, &schedulerServiceStub{})
+
+		resp := executeGET(
+			"/lei/names",
+			"/lei/names?codes=AAA11111111111111111,%20aaa11111111111111111,%20INVALID,%20BBB22222222222222222,%20BBB22222222222222222,%20abc123",
+			h.GetLegalNamesByLEICodes,
+		)
+		if resp.Code != http.StatusOK {
+			t.Fatalf("expected status %d, got %d", http.StatusOK, resp.Code)
+		}
+
+		expected := []string{"AAA11111111111111111", "BBB22222222222222222"}
+		if len(stub.receivedCodes) != len(expected) {
+			t.Fatalf("expected %d deduped valid codes, got %d (%v)", len(expected), len(stub.receivedCodes), stub.receivedCodes)
+		}
+		for i := range expected {
+			if stub.receivedCodes[i] != expected[i] {
+				t.Fatalf("expected code %q at index %d, got %q", expected[i], i, stub.receivedCodes[i])
+			}
+		}
+	})
+
+	t.Run("returns bad request when all provided codes are invalid", func(t *testing.T) {
+		h := NewLEIHandler(&leiServiceStub{}, &schedulerServiceStub{})
+
+		resp := executeGET("/lei/names", "/lei/names?codes=abc,123,toolong12345678901234567890", h.GetLegalNamesByLEICodes)
+		if resp.Code != http.StatusBadRequest {
+			t.Fatalf("expected status %d, got %d", http.StatusBadRequest, resp.Code)
+		}
+		if !strings.Contains(resp.Body.String(), "at least one valid LEI code is required") {
+			t.Fatalf("expected validation error, got %s", resp.Body.String())
+		}
+	})
+
+	t.Run("returns legal names for valid codes", func(t *testing.T) {
+		stub := &leiServiceStub{
+			legalNames: map[string]string{
+				"AAA11111111111111111": "Entity A",
+				"BBB22222222222222222": "Entity B",
+			},
+		}
+		h := NewLEIHandler(stub, &schedulerServiceStub{})
+
+		resp := executeGET(
+			"/lei/names",
+			"/lei/names?codes=AAA11111111111111111,%20BBB22222222222222222",
+			h.GetLegalNamesByLEICodes,
+		)
+		if resp.Code != http.StatusOK {
+			t.Fatalf("expected status %d, got %d", http.StatusOK, resp.Code)
+		}
+
+		if len(stub.receivedCodes) != 2 {
+			t.Fatalf("expected 2 codes, got %d (%v)", len(stub.receivedCodes), stub.receivedCodes)
+		}
+		if stub.receivedCodes[0] != "AAA11111111111111111" || stub.receivedCodes[1] != "BBB22222222222222222" {
+			t.Fatalf("expected trimmed codes, got %v", stub.receivedCodes)
+		}
+	})
+
+	t.Run("filters empty entries and preserves valid trimmed codes", func(t *testing.T) {
+		stub := &leiServiceStub{
+			legalNames: map[string]string{
+				"AAA11111111111111111": "Entity A",
+				"BBB22222222222222222": "Entity B",
+				"CCC33333333333333333": "Entity C",
+			},
+		}
+		h := NewLEIHandler(stub, &schedulerServiceStub{})
+
+		resp := executeGET(
+			"/lei/names",
+			"/lei/names?codes=,%20AAA11111111111111111,%20,%20BBB22222222222222222,,%20CCC33333333333333333,%20",
+			h.GetLegalNamesByLEICodes,
+		)
+		if resp.Code != http.StatusOK {
+			t.Fatalf("expected status %d, got %d", http.StatusOK, resp.Code)
+		}
+
+		if len(stub.receivedCodes) != 3 {
+			t.Fatalf("expected 3 filtered codes, got %d (%v)", len(stub.receivedCodes), stub.receivedCodes)
+		}
+
+		expected := []string{"AAA11111111111111111", "BBB22222222222222222", "CCC33333333333333333"}
+		for i := range expected {
+			if stub.receivedCodes[i] != expected[i] {
+				t.Fatalf("expected code %q at index %d, got %q", expected[i], i, stub.receivedCodes[i])
+			}
+		}
+	})
+
+	t.Run("caps requested codes at 500 before service call", func(t *testing.T) {
+		allCodes := make([]string, 0, 505)
+		for i := 1; i <= 505; i++ {
+			allCodes = append(allCodes, fmt.Sprintf("A%019d", i))
+		}
+
+		stub := &leiServiceStub{legalNames: map[string]string{}}
+		h := NewLEIHandler(stub, &schedulerServiceStub{})
+
+		resp := executeGET(
+			"/lei/names",
+			"/lei/names?codes="+strings.Join(allCodes, ","),
+			h.GetLegalNamesByLEICodes,
+		)
+		if resp.Code != http.StatusOK {
+			t.Fatalf("expected status %d, got %d", http.StatusOK, resp.Code)
+		}
+
+		if len(stub.receivedCodes) != 500 {
+			t.Fatalf("expected 500 capped codes, got %d", len(stub.receivedCodes))
+		}
+		if stub.receivedCodes[0] != "A0000000000000000001" {
+			t.Fatalf("unexpected first code after cap: %q", stub.receivedCodes[0])
+		}
+		if stub.receivedCodes[499] != "A0000000000000000500" {
+			t.Fatalf("unexpected last code after cap: %q", stub.receivedCodes[499])
+		}
+	})
+
+	t.Run("returns internal server error on service failure", func(t *testing.T) {
+		h := NewLEIHandler(&leiServiceStub{legalNamesErr: errors.New("db failure")}, &schedulerServiceStub{})
+
+		resp := executeGET("/lei/names", "/lei/names?codes=AAA11111111111111111", h.GetLegalNamesByLEICodes)
+		if resp.Code != http.StatusInternalServerError {
+			t.Fatalf("expected status %d, got %d", http.StatusInternalServerError, resp.Code)
+		}
+		if !strings.Contains(resp.Body.String(), "Failed to retrieve LEI names") {
+			t.Fatalf("expected service error response, got %s", resp.Body.String())
+		}
+	})
+}
+
 func TestTriggerLevel2SubJobs_ConflictPaths(t *testing.T) {
 	t.Run("rr endpoint conflict when full running", func(t *testing.T) {
 		stub := &schedulerServiceStub{
@@ -416,6 +668,13 @@ func TestTriggerManualSync_SuccessPaths(t *testing.T) {
 			handlerFactory:    func(h *LEIHandler) gin.HandlerFunc { return h.TriggerLevel2REPEXSync },
 			expectedMessage:   "Level 2 Reporting Exceptions sync triggered (LEVEL2_REPEX)",
 			expectedScheduler: "TriggerLevel2REPEXSync",
+		},
+		{
+			name:              "gleif reference accepted",
+			path:              "/sync/gleif-reference",
+			handlerFactory:    func(h *LEIHandler) gin.HandlerFunc { return h.TriggerGLEIFReferenceSync },
+			expectedMessage:   "GLEIF reference sync triggered",
+			expectedScheduler: "TriggerGLEIFReferenceSync",
 		},
 	}
 
@@ -527,6 +786,57 @@ func TestTriggerManualSync_ErrorPaths(t *testing.T) {
 		}
 		if !strings.Contains(resp.Body.String(), "Failed to trigger Level 2 Reporting Exceptions sync (LEVEL2_REPEX)") {
 			t.Fatalf("expected generic error message, got %s", resp.Body.String())
+		}
+	})
+
+	t.Run("gleif reference returns 500 on non-conflict service error", func(t *testing.T) {
+		stub := &schedulerServiceStub{
+			triggerErrs: map[string]error{
+				"TriggerGLEIFReferenceSync": errors.New("download failed"),
+			},
+		}
+		h := NewLEIHandler(&leiServiceStub{}, stub)
+
+		resp := executePOST("/sync/gleif-reference", h.TriggerGLEIFReferenceSync)
+		if resp.Code != http.StatusInternalServerError {
+			t.Fatalf("expected status %d, got %d", http.StatusInternalServerError, resp.Code)
+		}
+		if !strings.Contains(resp.Body.String(), "Failed to trigger GLEIF reference sync") {
+			t.Fatalf("expected generic error message, got %s", resp.Body.String())
+		}
+	})
+
+	t.Run("gleif reference returns 409 on conflict", func(t *testing.T) {
+		stub := &schedulerServiceStub{
+			triggerErrs: map[string]error{
+				"TriggerGLEIFReferenceSync": fmt.Errorf("GLEIF_REFERENCE_SYNC is already running: %w", service.ErrJobRunning),
+			},
+		}
+		h := NewLEIHandler(&leiServiceStub{}, stub)
+
+		resp := executePOST("/sync/gleif-reference", h.TriggerGLEIFReferenceSync)
+		if resp.Code != http.StatusConflict {
+			t.Fatalf("expected status %d, got %d", http.StatusConflict, resp.Code)
+		}
+		if !strings.Contains(resp.Body.String(), "GLEIF_REFERENCE_SYNC") {
+			t.Fatalf("expected GLEIF_REFERENCE_SYNC conflict message, got %s", resp.Body.String())
+		}
+	})
+
+	t.Run("gleif reference returns 409 when master data is running", func(t *testing.T) {
+		stub := &schedulerServiceStub{
+			triggerErrs: map[string]error{
+				"TriggerGLEIFReferenceSync": fmt.Errorf("cannot start GLEIF_REFERENCE_SYNC while MASTER_DATA_SYNC is running: %w", service.ErrJobRunning),
+			},
+		}
+		h := NewLEIHandler(&leiServiceStub{}, stub)
+
+		resp := executePOST("/sync/gleif-reference", h.TriggerGLEIFReferenceSync)
+		if resp.Code != http.StatusConflict {
+			t.Fatalf("expected status %d, got %d", http.StatusConflict, resp.Code)
+		}
+		if !strings.Contains(resp.Body.String(), "MASTER_DATA_SYNC") {
+			t.Fatalf("expected MASTER_DATA_SYNC conflict message, got %s", resp.Body.String())
 		}
 	})
 }

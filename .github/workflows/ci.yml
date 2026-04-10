@@ -23,6 +23,43 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  detect-file-changes:
+    name: Detect File Changes
+    runs-on: ubuntu-latest
+    outputs:
+      has_go_changes: ${{ steps.filter.outputs.go }}
+      has_docker_changes: ${{ steps.filter.outputs.docker }}
+      has_frontend_changes: ${{ steps.filter.outputs.frontend }}
+      has_migration_changes: ${{ steps.filter.outputs.migrations }}
+      has_calm_changes: ${{ steps.filter.outputs.calm }}
+      has_docs_user_changes: ${{ steps.filter.outputs.docs_user }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
+
+      - name: Detect file changes by type
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            go:
+              - 'backend/**/*.go'
+              - 'backend/go.mod'
+              - 'backend/go.sum'
+            docker:
+              - 'docker/Dockerfile.*'
+            frontend:
+              - 'frontend/**/*.{ts,tsx,js,jsx,mjs,json}'
+              - 'frontend/package-lock.json'
+            migrations:
+              - 'backend/migrations/**/*.sql'
+            calm:
+              - 'docs/architecture-as-code/**'
+            docs_user:
+              - 'docs-user/**'
+
   detect-environment:
     name: Detect Target Environment
     runs-on: ubuntu-latest
@@ -49,9 +86,11 @@ jobs:
   lint-go:
     name: Go Lint
     runs-on: ubuntu-latest
+    needs: [detect-file-changes]
+    if: ${{ needs.detect-file-changes.outputs.has_go_changes == 'true' }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -61,7 +100,7 @@ jobs:
           cache-dependency-path: 'backend/go.sum'
 
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v4
+        uses: golangci/golangci-lint-action@v8
         with:
           version: latest
           working-directory: ./backend
@@ -70,21 +109,289 @@ jobs:
   lint-docker:
     name: Dockerfile Lint
     runs-on: ubuntu-latest
+    needs: [detect-file-changes]
+    if: ${{ needs.detect-file-changes.outputs.has_docker_changes == 'true' }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Lint Dockerfiles
         run: |
-          docker run --rm -i hadolint/hadolint < ./docker/Dockerfile.backend
-          docker run --rm -i hadolint/hadolint < ./docker/Dockerfile.frontend
+          set -euo pipefail
+
+          HADOLINT_IMAGE="hadolint/hadolint:v2.12.0"
+
+          for attempt in 1 2 3; do
+            if docker pull "$HADOLINT_IMAGE"; then
+              break
+            fi
+
+            if [ "$attempt" -eq 3 ]; then
+              echo "Failed to pull $HADOLINT_IMAGE after 3 attempts"
+              exit 1
+            fi
+
+            sleep $((attempt * 5))
+          done
+
+          for dockerfile in ./docker/Dockerfile.backend ./docker/Dockerfile.frontend; do
+            for attempt in 1 2 3; do
+              if docker run --rm -i "$HADOLINT_IMAGE" < "$dockerfile"; then
+                break
+              fi
+
+              if [ "$attempt" -eq 3 ]; then
+                echo "Hadolint failed for $dockerfile after 3 attempts"
+                exit 1
+              fi
+
+              sleep $((attempt * 5))
+            done
+          done
+
+  lint-docs:
+    name: Markdown Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+
+      - name: Install markdownlint-cli
+        run: npm install -g markdownlint-cli
+
+      - name: Run markdown docs check
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+
+            md_files="$(git diff --name-only --diff-filter=ACMR "$BASE_SHA" "$HEAD_SHA" -- '*.md')"
+
+            if [ -z "$md_files" ]; then
+              echo "No markdown files changed in this pull request."
+              exit 0
+            fi
+
+            echo "Linting changed markdown files:"
+            printf '%s\n' "$md_files" | sed 's/^/ - /'
+
+            printf '%s\n' "$md_files" | xargs markdownlint --config .markdownlint.yaml
+          else
+            make docs-check
+          fi
+
+  validate-architecture-as-code:
+    name: Architecture as Code Validate (warn)
+    runs-on: ubuntu-latest
+    needs: [detect-file-changes]
+    if: ${{ needs.detect-file-changes.outputs.has_calm_changes == 'true' }}
+    continue-on-error: true
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+
+      - name: Validate CALM models (warn mode)
+        run: make calm-validate-warn
+
+  validate-architecture-as-code-strict:
+    name: Architecture as Code Validate (strict)
+    runs-on: ubuntu-latest
+    needs: [detect-file-changes]
+    if: ${{ needs.detect-file-changes.outputs.has_calm_changes == 'true' && vars.CALM_VALIDATE_STRICT == 'true' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+
+      - name: Validate CALM models (strict mode)
+        run: make calm-validate
+
+  validate-migrations:
+    name: Validate DB Migrations
+    runs-on: ubuntu-latest
+    needs: [detect-file-changes]
+    if: ${{ needs.detect-file-changes.outputs.has_migration_changes == 'true' }}
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: axiom_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d axiom_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Validate migration version uniqueness
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Check for duplicate version numbers within up migrations
+          up_versions_all=$(find backend/migrations -maxdepth 1 -name "*.up.sql" -type f \
+            | sed -E 's#.*/([0-9]+)_.*#\1#' \
+            | sort)
+
+          # Check for duplicate version numbers within down migrations
+          down_versions_all=$(find backend/migrations -maxdepth 1 -name "*.down.sql" -type f \
+            | sed -E 's#.*/([0-9]+)_.*#\1#' \
+            | sort)
+
+          up_duplicates=$(printf '%s\n' "$up_versions_all" | uniq -d)
+          down_duplicates=$(printf '%s\n' "$down_versions_all" | uniq -d)
+
+          if [ -n "$up_duplicates" ] || [ -n "$down_duplicates" ]; then
+            echo "Duplicate migration version numbers detected:"
+            [ -n "$up_duplicates" ] && echo "  Duplicate .up.sql versions: $up_duplicates"
+            [ -n "$down_duplicates" ] && echo "  Duplicate .down.sql versions: $down_duplicates"
+            exit 1
+          fi
+
+          # Ensure every version has exactly one up and one down migration
+          # sort -u ensures the inputs to comm are sorted unique lists
+          up_versions=$(printf '%s\n' "$up_versions_all" | sort -u)
+          down_versions=$(printf '%s\n' "$down_versions_all" | sort -u)
+
+          # Versions with an up but no matching down
+          missing_down=$(comm -23 <(printf '%s\n' "$up_versions") <(printf '%s\n' "$down_versions"))
+          # Versions with a down but no matching up
+          missing_up=$(comm -13 <(printf '%s\n' "$up_versions") <(printf '%s\n' "$down_versions"))
+
+          if [ -n "$missing_down" ] || [ -n "$missing_up" ]; then
+            echo "Migration up/down mismatch detected:"
+            if [ -n "$missing_down" ]; then
+              echo "  Versions with .up.sql but missing .down.sql:"
+              echo "$missing_down"
+            fi
+            if [ -n "$missing_up" ]; then
+              echo "  Versions with .down.sql but missing .up.sql:"
+              echo "$missing_up"
+            fi
+            exit 1
+          fi
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'backend/go.mod'
+          cache: true
+          cache-dependency-path: 'backend/go.sum'
+
+      - name: Install migrate CLI
+        run: go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.18.1
+
+      - name: Run migration smoke test
+        shell: bash
+        run: |
+          set -euo pipefail
+          for i in {1..20}; do
+            if $HOME/go/bin/migrate -path backend/migrations -database "postgres://postgres:postgres@localhost:5432/axiom_ci?sslmode=disable" version >/dev/null 2>&1; then
+              break
+            fi
+            sleep 2
+          done
+          $HOME/go/bin/migrate -path backend/migrations -database "postgres://postgres:postgres@localhost:5432/axiom_ci?sslmode=disable" up
+
+  lint-frontend:
+    name: Frontend Lint (ESLint + jsx-a11y)
+    runs-on: ubuntu-latest
+    needs: [detect-file-changes]
+    if: ${{ needs.detect-file-changes.outputs.has_frontend_changes == 'true' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+        working-directory: ./frontend
+
+      - name: Run ESLint (includes jsx-a11y accessibility rules)
+        run: NEXT_TELEMETRY_DISABLED=1 npm run lint
+        working-directory: ./frontend
+
+  build-frontend:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+    needs: [detect-file-changes]
+    if: ${{ needs.detect-file-changes.outputs.has_frontend_changes == 'true' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+
+      - name: Restore Next.js build cache
+        uses: actions/cache@v4
+        with:
+          path: frontend/.next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('frontend/package-lock.json', 'frontend/next.config.js', 'frontend/tsconfig.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci --legacy-peer-deps
+          else
+            npm install --legacy-peer-deps
+          fi
+        working-directory: ./frontend
+
+      - name: Verify i18n catalogs are complete and up to date (non-blocking temporary)
+        continue-on-error: true
+        run: npm run i18n:verify
+        working-directory: ./frontend
+
+      - name: Build frontend
+        run: npm run build
+        working-directory: ./frontend
 
   build-go:
     name: Build Go Backend
     runs-on: ubuntu-latest
+    needs: [detect-file-changes]
+    if: ${{ needs.detect-file-changes.outputs.has_go_changes == 'true' }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -100,9 +407,11 @@ jobs:
   test-go:
     name: Go Tests
     runs-on: ubuntu-latest
+    needs: [detect-file-changes]
+    if: ${{ needs.detect-file-changes.outputs.has_go_changes == 'true' }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -115,34 +424,125 @@ jobs:
         run: go test ./... -v -count=1
         working-directory: ./backend
 
+  build-docs-user:
+    name: Build User Documentation (VitePress)
+    runs-on: ubuntu-latest
+    needs: [detect-file-changes]
+    if: ${{ needs.detect-file-changes.outputs.has_docs_user_changes == 'true' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: 'docs-user/package-lock.json'
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ./docs-user
+
+      - name: Build user documentation site
+        run: npm run docs:build
+        working-directory: ./docs-user
+
   ci-summary:
     name: CI Summary (${{ needs.detect-environment.outputs.environment || 'none' }})
     runs-on: ubuntu-latest
-    needs: [detect-environment, lint-go, lint-docker, build-go, test-go]
+    needs: [detect-file-changes, detect-environment, lint-go, lint-docker, lint-docs, validate-architecture-as-code, validate-architecture-as-code-strict, lint-frontend, validate-migrations, build-go, test-go, build-frontend, build-docs-user]
     if: always()
     steps:
       - name: Report CI result
         run: |
           ENV="${{ needs.detect-environment.outputs.environment }}"
+          HAS_GO_CHANGES="${{ needs.detect-file-changes.outputs.has_go_changes }}"
+          HAS_DOCKER_CHANGES="${{ needs.detect-file-changes.outputs.has_docker_changes }}"
+          HAS_FRONTEND_CHANGES="${{ needs.detect-file-changes.outputs.has_frontend_changes }}"
+          HAS_MIGRATION_CHANGES="${{ needs.detect-file-changes.outputs.has_migration_changes }}"
+          HAS_CALM_CHANGES="${{ needs.detect-file-changes.outputs.has_calm_changes }}"
+          HAS_DOCS_USER_CHANGES="${{ needs.detect-file-changes.outputs.has_docs_user_changes }}"
+          
           LINT_GO="${{ needs.lint-go.result }}"
           LINT_DOCKER="${{ needs.lint-docker.result }}"
-          BUILD="${{ needs.build-go.result }}"
-          TEST="${{ needs.test-go.result }}"
+          LINT_DOCS="${{ needs.lint-docs.result }}"
+          CALM_VALIDATE="${{ needs.validate-architecture-as-code.result }}"
+          CALM_VALIDATE_STRICT="${{ needs.validate-architecture-as-code-strict.result }}"
+          LINT_FRONTEND="${{ needs.lint-frontend.result }}"
+          MIGRATIONS="${{ needs.validate-migrations.result }}"
+          BUILD_GO="${{ needs.build-go.result }}"
+          TEST_GO="${{ needs.test-go.result }}"
+          BUILD_FRONTEND="${{ needs.build-frontend.result }}"
+          BUILD_DOCS_USER="${{ needs.build-docs-user.result }}"
 
-          echo "Environment : $ENV"
-          echo "Go Lint     : $LINT_GO"
-          echo "Docker Lint : $LINT_DOCKER"
-          echo "Build       : $BUILD"
-          echo "Tests       : $TEST"
+          echo "Environment     : $ENV"
+          echo ""
+          echo "File Changes Detected:"
+          echo "  Go files            : $HAS_GO_CHANGES"
+          echo "  Docker files        : $HAS_DOCKER_CHANGES"
+          echo "  Frontend files      : $HAS_FRONTEND_CHANGES"
+          echo "  Migration files     : $HAS_MIGRATION_CHANGES"
+          echo "  CALM files          : $HAS_CALM_CHANGES"
+          echo "  Docs-user files     : $HAS_DOCS_USER_CHANGES"
+          echo ""
+          echo "Job Results:"
+          echo "  Go Lint             : $LINT_GO (skipped if no changes: $HAS_GO_CHANGES)"
+          echo "  Docker Lint         : $LINT_DOCKER (skipped if no changes: $HAS_DOCKER_CHANGES)"
+          echo "  Docs Lint           : $LINT_DOCS"
+          echo "  CALM Validate       : $CALM_VALIDATE (skipped if no changes: $HAS_CALM_CHANGES)"
+          echo "  CALM Strict         : $CALM_VALIDATE_STRICT (skipped if no changes: $HAS_CALM_CHANGES)"
+          echo "  Frontend Lint       : $LINT_FRONTEND (skipped if no changes: $HAS_FRONTEND_CHANGES)"
+          echo "  Migrations          : $MIGRATIONS (skipped if no changes: $HAS_MIGRATION_CHANGES)"
+          echo "  Build Go            : $BUILD_GO (skipped if no changes: $HAS_GO_CHANGES)"
+          echo "  Test Go             : $TEST_GO (skipped if no changes: $HAS_GO_CHANGES)"
+          echo "  Build Frontend      : $BUILD_FRONTEND (skipped if no changes: $HAS_FRONTEND_CHANGES)"
+          echo "  Build User Docs     : $BUILD_DOCS_USER (skipped if no changes: $HAS_DOCS_USER_CHANGES)"
 
-          if [ "$LINT_GO" != "success" ] || \
-             [ "$LINT_DOCKER" != "success" ] || \
-             [ "$BUILD" != "success" ] || \
-             [ "$TEST" != "success" ]; then
+          # Helper to convert skipped+no_changes to success
+          check_result() {
+            local result=$1
+            local has_changes=$2
+            if [ "$result" = "skipped" ] && [ "$has_changes" = "false" ]; then
+              echo "success"
+            else
+              echo "$result"
+            fi
+          }
+
+          LINT_GO_CHECK=$(check_result "$LINT_GO" "$HAS_GO_CHANGES")
+          LINT_DOCKER_CHECK=$(check_result "$LINT_DOCKER" "$HAS_DOCKER_CHANGES")
+          CALM_VALIDATE_CHECK=$(check_result "$CALM_VALIDATE" "$HAS_CALM_CHANGES")
+          CALM_VALIDATE_STRICT_CHECK=$(check_result "$CALM_VALIDATE_STRICT" "$HAS_CALM_CHANGES")
+          LINT_FRONTEND_CHECK=$(check_result "$LINT_FRONTEND" "$HAS_FRONTEND_CHANGES")
+          MIGRATIONS_CHECK=$(check_result "$MIGRATIONS" "$HAS_MIGRATION_CHANGES")
+          BUILD_GO_CHECK=$(check_result "$BUILD_GO" "$HAS_GO_CHANGES")
+          TEST_GO_CHECK=$(check_result "$TEST_GO" "$HAS_GO_CHANGES")
+          BUILD_FRONTEND_CHECK=$(check_result "$BUILD_FRONTEND" "$HAS_FRONTEND_CHANGES")
+          BUILD_DOCS_USER_CHECK=$(check_result "$BUILD_DOCS_USER" "$HAS_DOCS_USER_CHANGES")
+
+          if [ "$LINT_GO_CHECK" != "success" ] || \
+             [ "$LINT_DOCKER_CHECK" != "success" ] || \
+             [ "$LINT_DOCS" != "success" ] || \
+             [ "$CALM_VALIDATE_CHECK" != "success" ] || \
+             [ "$LINT_FRONTEND_CHECK" != "success" ] || \
+             [ "$MIGRATIONS_CHECK" != "success" ] || \
+             [ "$BUILD_GO_CHECK" != "success" ] || \
+             [ "$TEST_GO_CHECK" != "success" ] || \
+             [ "$BUILD_FRONTEND_CHECK" != "success" ] || \
+             [ "$BUILD_DOCS_USER_CHECK" != "success" ]; then
+            echo ""
             echo "❌ CI failed — see individual job logs above."
             exit 1
           fi
 
+          if [ "${{ vars.CALM_VALIDATE_STRICT }}" = "true" ] && [ "$CALM_VALIDATE_STRICT_CHECK" != "success" ]; then
+            echo ""
+            echo "❌ CI failed — CALM strict validation is enabled and did not pass."
+            exit 1
+          fi
+
+          echo ""
           if [ "$ENV" != "none" ]; then
             echo "✅ CI passed — ready to deploy to '$ENV' environment."
           else

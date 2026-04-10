@@ -5,10 +5,395 @@ optimized for performance, accessibility, and user experience.
 
 ## Table of Contents
 
+- [User Preferences](#user-preferences)
+- [Internationalisation](#internationalisation)
 - [Reusable Components](#reusable-components)
 - [Sticky Headers with Smooth Transitions](#sticky-headers-with-smooth-transitions)
 - [Frozen Columns Checklist](#frozen-columns-checklist)
+- [Brand Theme Asset Switch](#brand-theme-asset-switch)
+- [Entry Route Model](#entry-route-model)
 - [Best Practices](#best-practices)
+
+---
+
+## User Preferences
+
+Axiom persists per-user UI preferences to the database so they roam across devices and sessions.
+This section explains the hook, the save prompt, and the step-by-step process for wiring
+preferences into any page.
+
+### Architecture overview
+
+```text
+Browser session
+  └─ useUserPreference hook (shared module-level cache)
+       ├─ on first call  → GET /api/v1/preferences  (one round-trip, then cached)
+       ├─ on write       → PUT /api/v1/preferences  (async, best-effort)
+       └─ always mirrors → localStorage             (offline / pre-load fallback)
+```
+
+When the user is **not logged in** the hook falls back silently to `localStorage` only.
+
+### `useUserPreference` hook
+
+**File:** `frontend/app/lib/useUserPreference.ts`
+
+```tsx
+import { useUserPreference } from '../lib/useUserPreference'
+
+// Signature
+const [value, setValue, isLoading] = useUserPreference(pageKey, prefKey, defaultValue)
+```
+
+#### Parameters
+
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `pageKey` | `string` | Page identifier (e.g. `'countries'`, `'global'`). Use `'global'` for cross-page preferences. |
+| `prefKey` | `string` | Preference name (e.g. `'expanded_width'`, `'visible_columns'`, `'theme'`). |
+| `defaultValue` | `string` | Value to use when no preference has been saved yet. |
+
+#### Return values
+
+| Index | Name | Description |
+| ----- | ---- | ----------- |
+| 0 | `value` | Current preference string (server or localStorage, then default). |
+| 1 | `setValue` | Saves locally and persists to server. |
+| 2 | `isLoading` | `true` while the initial server fetch is in flight. |
+
+#### Lifecycle
+
+1. **Mount** – if the in-memory cache is not yet populated, fires one `GET /api/v1/preferences`
+   and populates the cache with all preferences for the current user.
+2. **Write** – `setValue(newValue)` updates React state, the module-level cache, `localStorage`,
+   and sends a `PUT /api/v1/preferences` request in the background.
+3. **Sign-out** – call `resetPreferencesCache()` so the next login gets fresh server data.
+
+#### Live updates across mounted components
+
+Preference changes must propagate immediately to all mounted consumers without requiring page refresh.
+In practice, `useUserPreference` should broadcast an update event (for example
+`axiom:preference-updated`) on write, and other hook instances should subscribe and update local
+state when their `pageKey` + `prefKey` match.
+
+This behavior is required for global toggles (for example English tooltips, language, and theme)
+because those toggles are commonly changed from shared UI surfaces such as the user menu.
+
+#### `page_key` registry
+
+| Value | Page / context |
+| ----- | -------------- |
+| `global` | Cross-page (e.g. `theme`) |
+| `lei-records` | LEI Records (`/lei-records`) |
+| `countries` | Countries (`/countries`) |
+| `currencies` | Currencies (`/currencies`) |
+| `languages` | Languages (`/languages`) |
+
+Use the URL slug of the page as the `page_key` for any new page.
+
+### `PreferenceSavePrompt` component
+
+**File:** `frontend/app/components/PreferenceSavePrompt.tsx`
+
+An unobtrusive bottom-right toast that asks the user whether to save a changed preference as their
+default. It auto-dismisses after **8 seconds** if the user does not interact.
+
+```tsx
+import PreferenceSavePrompt from '../components/PreferenceSavePrompt'
+
+<PreferenceSavePrompt
+  visible={showWidthPrompt}
+  onSave={handleSaveWidth}
+  onDismiss={handleDismissWidth}
+  label="Save page width as your default?"
+/>
+```
+
+#### Props
+
+| Prop | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `visible` | `boolean` | — | Controls whether the toast is shown. |
+| `onSave` | `() => void` | — | Called when user clicks **Save**. Persist the preference here. |
+| `onDismiss` | `() => void` | — | Called on **No thanks** or auto-dismiss. |
+| `label` | `string` | `'Save this as your default?'` | Message shown inside the toast. |
+
+### Adding preferences to a new page
+
+Follow this pattern to add preference-backed state to any page. The pattern uses two layers:
+
+1. **Pending local state** – applied immediately so the UI is responsive.
+2. **Saved preference** – persisted to the server when the user confirms via the prompt.
+
+#### Step-by-step guide
+
+##### 1. Import the hook and prompt
+
+```tsx
+import { useCallback, useRef, useState } from 'react'
+import PreferenceSavePrompt from '../components/PreferenceSavePrompt'
+import { useUserPreference } from '../lib/useUserPreference'
+```
+
+##### 2. Wire up `expanded_width` preference
+
+```tsx
+// Read the stored preference ('true' | 'false')
+const [storedExpanded, setStoredExpanded] = useUserPreference(
+  'my-page',           // page_key  ← use the URL slug
+  'expanded_width',    // pref_key
+  'true',              // default: start expanded
+)
+const expandedWidth = storedExpanded === 'true'
+
+// Local pending state and prompt flag
+const [localExpanded, setLocalExpanded] = useState<boolean | null>(null)
+const [showWidthPrompt, setShowWidthPrompt] = useState(false)
+const pendingExpanded = useRef<boolean | null>(null)
+
+// Effective value: pending local > saved > default
+const effectiveExpandedWidth = localExpanded ?? expandedWidth
+
+// Handler called by the toggle button
+const handleSetExpandedWidth = useCallback((value: boolean) => {
+  setLocalExpanded(value)
+  pendingExpanded.current = value
+  setShowWidthPrompt(true)
+}, [])
+
+// Confirm save
+const handleSaveWidth = useCallback(() => {
+  if (pendingExpanded.current !== null) {
+    setStoredExpanded(String(pendingExpanded.current))
+    setLocalExpanded(null)
+    pendingExpanded.current = null
+  }
+  setShowWidthPrompt(false)
+}, [setStoredExpanded])
+
+// Dismiss without saving
+const handleDismissWidth = useCallback(() => { setShowWidthPrompt(false) }, [])
+```
+
+```tsx
+{/* Toggle button */}
+<button onClick={() => handleSetExpandedWidth(!effectiveExpandedWidth)}>
+  {effectiveExpandedWidth ? '⬅️ Normal' : '↔️ Expand'}
+</button>
+
+{/* Width prompt – renders outside the page container so it stays fixed bottom-right */}
+<PreferenceSavePrompt
+  visible={showWidthPrompt}
+  onSave={handleSaveWidth}
+  onDismiss={handleDismissWidth}
+  label="Save page width as your default?"
+/>
+```
+
+##### 3. Wire up `visible_columns` preference (column-selector pages only)
+
+```tsx
+// Compute the default visible set once at module level (outside the component)
+const DEFAULT_VISIBLE_KEYS = AVAILABLE_COLUMNS
+  .filter((c) => c.defaultVisible)
+  .map((c) => c.key)
+  .join(',')
+
+// Inside the component:
+const [storedColumns, setStoredColumns] = useUserPreference(
+  'my-page',
+  'visible_columns',
+  DEFAULT_VISIBLE_KEYS,
+)
+
+// Derive the Set from the comma-separated string
+const visibleColumns = useMemo<Set<MyColumnKey>>(() => {
+  if (!storedColumns) return new Set(AVAILABLE_COLUMNS.filter((c) => c.defaultVisible).map((c) => c.key))
+  return new Set(storedColumns.split(',').filter(Boolean) as MyColumnKey[])
+}, [storedColumns])
+
+// Local pending state
+const [localColumns, setLocalColumns] = useState<Set<MyColumnKey> | null>(null)
+const [showColumnsPrompt, setShowColumnsPrompt] = useState(false)
+const pendingColumns = useRef<Set<MyColumnKey> | null>(null)
+
+const effectiveVisibleColumns = localColumns ?? visibleColumns
+
+const handleSetVisibleColumns = useCallback((next: Set<MyColumnKey>) => {
+  setLocalColumns(next)
+  pendingColumns.current = next
+  setShowColumnsPrompt(true)
+}, [])
+
+const handleSaveColumns = useCallback(() => {
+  if (pendingColumns.current) {
+    setStoredColumns(Array.from(pendingColumns.current).join(','))
+    setLocalColumns(null)
+    pendingColumns.current = null
+  }
+  setShowColumnsPrompt(false)
+}, [setStoredColumns])
+
+const handleDismissColumns = useCallback(() => { setShowColumnsPrompt(false) }, [])
+```
+
+```tsx
+{/* Columns prompt */}
+<PreferenceSavePrompt
+  visible={showColumnsPrompt}
+  onSave={handleSaveColumns}
+  onDismiss={handleDismissColumns}
+  label="Save column selection as your default?"
+/>
+```
+
+##### 4. Place prompts outside the scrollable page container
+
+Both `<PreferenceSavePrompt>` elements use CSS `position: fixed` and must be rendered **outside**
+the `max-w-*` container div so they are not clipped:
+
+```tsx
+return (
+  <div className="min-h-screen p-8">
+    <div className={`${effectiveExpandedWidth ? 'max-w-full' : 'max-w-7xl'} mx-auto ...`}>
+      {/* page content */}
+    </div>
+
+    {/* Prompts live outside the container */}
+    <PreferenceSavePrompt visible={showWidthPrompt} onSave={handleSaveWidth} onDismiss={handleDismissWidth} label="Save page width as your default?" />
+    <PreferenceSavePrompt visible={showColumnsPrompt} onSave={handleSaveColumns} onDismiss={handleDismissColumns} label="Save column selection as your default?" />
+  </div>
+)
+```
+
+### Integration checklist
+
+When adding preferences to a page, verify each item:
+
+- [ ] Imported `useUserPreference` and `PreferenceSavePrompt`.
+- [ ] Used the page's URL slug as `page_key` (e.g. `'countries'`, not `'Countries'`).
+- [ ] `DEFAULT_VISIBLE_KEYS` computed **outside** the component function (module-level constant).
+- [ ] `effectiveExpandedWidth` / `effectiveVisibleColumns` used everywhere (not the raw stored value).
+- [ ] Both `<PreferenceSavePrompt>` elements placed **outside** the `max-w-*` container.
+- [ ] `handleSaveWidth` / `handleSaveColumns` clear the pending refs and local state after saving.
+- [ ] `handleDismissWidth` / `handleDismissColumns` only hide the prompt (do not clear local state,
+  so the UI change persists for this session even if not saved).
+- [ ] Verified in both light and dark mode that the toast is visible (it uses a dark semi-transparent
+  background that works in all themes).
+
+### Supported pages (current)
+
+| Page | `expanded_width` | `visible_columns` |
+| ---- | :--------------: | :---------------: |
+| LEI Records | ✅ | ✅ |
+| Countries | ✅ | ✅ |
+| Currencies | ✅ | — |
+| Languages | ✅ | — |
+
+### Sign-out cleanup
+
+When the user signs out, the preference cache must be cleared so the next login does not receive
+stale data. `UserBadge` already calls `resetPreferencesCache()` on sign-out:
+
+```tsx
+import { resetPreferencesCache } from '../lib/useUserPreference'
+
+// inside sign-out handler:
+resetPreferencesCache()
+localStorage.removeItem('axiom_token')
+localStorage.removeItem('axiom_user')
+router.push('/login')
+```
+
+---
+
+## Internationalisation
+
+Axiom's UI strings are fully internationalised using **i18next** and **react-i18next**. Every
+user-facing string must be accessed via the `t()` function rather than being hardcoded in JSX.
+
+See the [full Internationalisation Guide](./i18n/INTERNATIONALISATION.md) for complete coverage.
+This section is a quick reference.
+
+### Supported Languages
+
+| Code | Native Name | RTL |
+| ---- | ----------- | --- |
+| `en` | English | No |
+| `ar` | العربية | Yes |
+| `zh` | 中文 | No |
+| `nl` | Nederlands | No |
+| `fr` | Français | No |
+| `de` | Deutsch | No |
+| `it` | Italiano | No |
+| `ja` | 日本語 | No |
+| `pt` | Português | No |
+| `es` | Español | No |
+
+### Adding a translation key (quick start)
+
+1. Add the key to `frontend/public/locales/en/common.json` (English is the source of truth).
+2. Add the same key to all other locale files (`ar/`, `de/`, `es/`, `fr/`, `it/`, `ja/`, `nl/`, `pt/`, `zh/`).
+3. Use the key in the component:
+
+```tsx
+'use client'
+import '../../lib/i18n'
+import { useTranslation } from 'react-i18next'
+
+export default function MyComponent() {
+  const { t } = useTranslation()
+  return <button>{t('common.save')}</button>
+}
+```
+
+### LanguageSelector
+
+Drop the shared component into any page header to let users switch language without a page
+reload:
+
+```tsx
+import LanguageSelector from '../components/LanguageSelector'
+
+// Standard – flag + native name dropdown
+<LanguageSelector />
+
+// Compact – flag + language code only
+<LanguageSelector compact />
+```
+
+Language is persisted via `useUserPreference('global', 'language', 'en')` so it roams across
+devices when the user is authenticated.
+
+### RTL support
+
+The `I18nProvider` (added to `layout.tsx`) sets `document.documentElement.dir` to `'rtl'` or
+`'ltr'` automatically when the language changes. Use Tailwind's `rtl:` variant for mirrored
+layouts:
+
+```tsx
+<div className="pl-4 rtl:pl-0 rtl:pr-4">…</div>
+```
+
+For popovers and user menus, do not hardcode one-side anchoring (`right-0` only).
+Placement must adapt at open time so panels remain inside visible content bounds in both LTR and
+RTL contexts. Use viewport-safe sizing (for example `max-w-[calc(100vw-1rem)]`) and choose left or
+right alignment based on trigger position.
+
+### Community translation review workflow
+
+Any authenticated user can submit a translation via `POST /api/v1/translations` (status:
+`pending`). Admins approve or reject in the **Admin → Translations** page
+(`/admin/translations`). Only `approved` translations are exported to locale JSON by the nightly
+CI seed job.
+
+### `page_key` registry update
+
+The language preference uses the `global` page key:
+
+| Value | Preference key | Description |
+| ----- | -------------- | ----------- |
+| `global` | `language` | Active UI language (`en`, `fr`, `es`, `de`, `ja`, `ar`) |
 
 ---
 
@@ -178,7 +563,7 @@ import PageHeader from '../components/PageHeader'
 | ------ | ---- | ------- | ----------- |
 | `title` | `string` | — | Page heading (rendered as `h1`) |
 | `subtitle` | `string` | — | Descriptive subtext below the heading |
-| `backHref` | `string` | `'/'` | Destination of the back link |
+| `backHref` | `string` | `'/home'` | Destination of the back link |
 | `backLabel` | `string` | `'← Back to Home'` | Back link label |
 | `actions` | `ReactNode` | — | Extra controls rendered left of `ThemeToggle` |
 
@@ -551,6 +936,91 @@ to prevent divider drift and bleed-through.
 
 ---
 
+## Brand Theme Asset Switch
+
+Use this when you want to switch the active brand from the current primary set to the prepared
+black/white variant.
+
+### Source and generated asset locations
+
+- Primary source: `docs/assets/branding/axiom-logo-source.jfif`
+- Alternate source: `docs/assets/branding/axiom-logo-alt-bw-source.jfif`
+- Active runtime assets: `frontend/public/branding/*`
+- Alternate runtime assets: `frontend/public/branding/alt-bw/*`
+
+### Activate the alternate icon set
+
+Edit `frontend/app/layout.tsx` in `metadata.icons`:
+
+```tsx
+icons: {
+  icon: [
+    { url: '/branding/alt-bw/favicon.ico' },
+    { url: '/branding/alt-bw/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+    { url: '/branding/alt-bw/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+  ],
+  apple: '/branding/alt-bw/apple-touch-icon.png',
+},
+```
+
+### Activate the alternate landing-page logo
+
+Edit `frontend/app/page.tsx` and set the logo image `src` to:
+
+```tsx
+src="/branding/alt-bw/logo.png"
+```
+
+### Revert to primary branding
+
+- Restore icon paths in `frontend/app/layout.tsx` back to `/branding/...`
+- Restore landing logo `src` in `frontend/app/page.tsx` back to `/branding/logo.png`
+
+---
+
+## Entry Route Model
+
+The frontend uses a two-step entry flow:
+
+- `/` — branding-only entry page with navigation choices.
+- `/home` — public reference data hub (countries, currencies, languages, LEI records).
+- `/dashboard` — combined all-options module landing (public + protected + acquisition + admin section).
+
+Protected modules remain behind authentication and are reached after sign-in.
+
+### Navigation defaults
+
+- `PageHeader` default back link points to `/home`.
+- For mixed-access pages (available to both public and authenticated users), make the back target auth-aware:
+  - authenticated user → `/dashboard`
+  - public user → `/home`
+- For auth-only module pages, use explicit `backHref="/dashboard"` and `backLabel="← Back to Dashboard"`.
+
+### Current `PageHeader` route matrix
+
+| Route | Access model | Back-link behaviour |
+| ----- | ------------ | ------------------- |
+| `/dashboard` | Auth-only landing | No back link (`showBackLink={false}`) |
+| `/home` | Public landing | No back link (`showBackLink={false}`) |
+| `/admin/users` | Auth-only | Fixed to `/dashboard` |
+| `/accounts` | Auth-only | Fixed to `/dashboard` |
+| `/instruments` | Auth-only | Fixed to `/dashboard` |
+| `/ssi` | Auth-only | Fixed to `/dashboard` |
+| `/code-mappings` | Auth-only | Fixed to `/dashboard` |
+| `/countries` | Mixed-access | Auth-aware (`/dashboard` if logged in, else `/home`) |
+| `/currencies` | Mixed-access | Auth-aware (`/dashboard` if logged in, else `/home`) |
+| `/languages` | Mixed-access | Auth-aware (`/dashboard` if logged in, else `/home`) |
+| `/lei` | Mixed-access | Auth-aware (`/dashboard` if logged in, else `/home`) |
+| `/lei-records` | Mixed-access | Auth-aware (`/dashboard` if logged in, else `/home`) |
+
+- New pages must declare one of these three models: public landing (no back link),
+  auth-only (fixed `/dashboard`), or mixed-access (auth-aware `/dashboard`/`/home`).
+- Login success redirects to `/dashboard` for non-bootstrap users.
+- `/home` shows `All Modules` only for authenticated users; it routes to `/dashboard`.
+- Auth pages may still use explicit links to `/` when they should return to the branding entry.
+
+---
+
 ## Best Practices
 
 ### General UI Patterns
@@ -594,5 +1064,8 @@ When adding a new UI pattern to this guide:
 
 - [ADR-0006: Next.js and Tailwind CSS](./adr/adr-0006-nextjs-tailwind-frontend.md)
 - [ADR-0008: Sticky Headers with Smooth Transitions](./adr/adr-0008-sticky-headers-with-smooth-transitions.md)
+- [ADR-0011: User Preferences](./adr/adr-0011-user-preferences.md)
+- [ADR-0012: Internationalisation](./adr/adr-0012-internationalisation.md)
+- [Internationalisation Guide](./i18n/INTERNATIONALISATION.md)
 - [Frontend UI Guidelines](.github/instructions/frontend-ui.instructions.md)
 - [Performance Optimization](.github/instructions/performance-optimization.instructions.md)

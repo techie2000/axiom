@@ -9,52 +9,64 @@ from scheduling through to storage.
 flowchart TD
     Start([Backend Startup]) --> Init[Initialize Scheduler Service]
     Init --> CheckDB{Database<br/>Empty?}
-    
-    CheckDB -->|Yes - First Run| FullSync[Schedule Full Sync]
-    CheckDB -->|No - Has Data| DeltaSync[Schedule Delta Sync]
-    
-    FullSync --> DownloadFull[Download Full File<br/>~900MB, 3.2M records]
-    DeltaSync --> DownloadDelta[Download Delta File<br/>~13MB, 58K records]
-    
+
+    CheckDB -->|Yes - First Run| InitialMaster[Run Initial Master Data Sync]
+    CheckDB -->|No - Has Data| WaitSchedule[Wait for scheduled full sync]
+
+    InitialMaster --> InitialGLEIF[Run Initial GLEIF Reference Sync]
+    InitialGLEIF --> InitialFull[Run Initial Full Sync Job]
+
+    WaitSchedule --> MasterSchedule[Master Data Sync<br/>01:00 daily]
+    MasterSchedule --> DailyFull[Daily Full Sync Job<br/>Configured day/time]
+
+    InitialFull --> GLEIFRefSyncFull[Pre-step inside job: Sync GLEIF Reference Code Lists<br/>Registration Authorities<br/>Entity Legal Forms<br/>Organizational Roles<br/>Legal Jurisdictions]
+    DailyFull --> GLEIFRefSyncFull
+
+    ManualDelta[Manual API trigger only<br/>Delta loop is disabled] --> GLEIFRefSyncDelta[Pre-step inside job: Sync GLEIF Reference Code Lists]
+
+    GLEIFRefSyncFull -->|Success| DownloadFull[Download Full File<br/>~900MB, 3.2M records]
+    GLEIFRefSyncFull -->|Failure| AbortFull([Abort: mark FAILED])
+
+    GLEIFRefSyncDelta -->|Success| DownloadDelta[Download Delta File<br/>~13MB, 58K records]
+    GLEIFRefSyncDelta -->|Failure| AbortDelta([Abort: mark FAILED])
+
     DownloadFull --> SaveFile1[Save to ./data/lei/]
     DownloadDelta --> SaveFile2[Save to ./data/lei/]
-    
+
     SaveFile1 --> CreateSourceFile1[Create SourceFile Record<br/>Status: PENDING]
     SaveFile2 --> CreateSourceFile2[Create SourceFile Record<br/>Status: PENDING]
-    
+
     CreateSourceFile1 --> ProcessFile[Process ZIP File]
     CreateSourceFile2 --> ProcessFile
-    
+
     ProcessFile --> Extract[Extract JSON<br/>JSON Lines format]
     Extract --> ParseLoop{For Each<br/>JSON Record}
-    
+
     ParseLoop -->|Parse Record| Transform[Transform JSON to<br/>Domain Model]
     Transform --> Validate[Validate LEI Data]
     Validate --> Upsert[Upsert to Database]
-    
+
     Upsert --> CheckExists{Record<br/>Exists?}
-    
+
     CheckExists -->|No| CreateNew[Create New Record]
     CheckExists -->|Yes| DetectChanges{Changes<br/>Detected?}
-    
+
     CreateNew --> CreateAudit1[Create Audit Record<br/>Action: CREATE]
     DetectChanges -->|Yes| UpdateRecord[Update Record]
     DetectChanges -->|No| Skip[Skip - No Changes]
-    
+
     UpdateRecord --> CreateAudit2[Create Audit Record<br/>Action: UPDATE]
-    
+
     CreateAudit1 --> UpdateProgress[Update Processing Progress]
     CreateAudit2 --> UpdateProgress
     Skip --> UpdateProgress
-    
+
     UpdateProgress --> ParseLoop
-    
+
     ParseLoop -->|All Records Processed| Complete[Mark SourceFile<br/>Status: COMPLETED]
     Complete --> Schedule{Scheduler}
-    
-    Schedule -->|Daily: 2 AM| FullSync
-    
-    Note over Schedule: Delta sync disabled - caused reliability issues,<br/>minimal benefit with daily full sync
+
+    Schedule -->|Daily: 12:00 UTC| FullSync
 ```
 
 ## Detailed Component Interaction
@@ -240,7 +252,8 @@ All schedules are configurable via environment variables. Defaults shown below:
 |---------------------|-------------------|---------------------------|---------------|--------------|
 | File Cleanup        | Midnight daily    | `LEI_CLEANUP_TIME`        | `00:00`       | Active       |
 | Master Data Sync    | 1:00 AM daily     | N/A (hardcoded)           | `01:00`       | Active       |
-| Full Sync           | 2:00 AM daily     | `LEI_FULL_SYNC_TIME`      | `02:00`       | Active       |
+| GLEIF Reference Sync| On-demand pre-step| N/A (chained dependency)  | N/A           | Active       |
+| Full Sync           | 12:00 UTC daily   | `LEI_FULL_SYNC_TIME`      | `12:00`       | Active       |
 | Delta Sync          | N/A (disabled)    | `LEI_DELTA_SYNC_INTERVAL` | `1h`          | **Disabled** |
 | Retain Full Files   | Last 2 files      | `LEI_KEEP_FULL_FILES`     | `2`           | Active       |
 | Retain Delta Files  | Last 5 files      | `LEI_KEEP_DELTA_FILES`    | `5`           | Active       |
@@ -249,8 +262,9 @@ All schedules are configurable via environment variables. Defaults shown below:
 
 - **Delta sync is currently disabled** - Using full sync daily strategy for reliability
 - File cleanup runs at midnight (before all syncs) to prevent interference with long-running LEI syncs
-- Master data sync runs at 1:00 AM to ensure countries/currencies exist before LEI sync
-- Full sync runs daily at 2:00 AM (changed from weekly to ensure fresh data)
+- Master data sync runs at 1:00 AM and is an upstream dependency for GLEIF reference sync
+- GLEIF reference sync is a dependency for Level 1 ingest and runs before each full/delta ingest path
+- Full sync runs daily at 12:00 UTC (changed from weekly to ensure fresh data)
 - Invalid values fall back to defaults
 
 See [LEI_ACQUISITION.md](LEI_ACQUISITION.md#environment-variables) for detailed format specifications.

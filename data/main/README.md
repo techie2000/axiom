@@ -6,4 +6,4 @@ Main-specific reminder:
 
 - Treat this folder as long-lived state.
 - Avoid destructive cleanup unless explicitly intended.
-- Keep backups in `backups/` before risky operations.
+- Keep backups in the repository-root `backups/` directory before risky operations.

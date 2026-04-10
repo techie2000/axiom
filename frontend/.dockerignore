@@ -1,0 +1,10 @@
+# Keep Docker build context minimal and deterministic
+node_modules
+.next
+coverage
+dist
+.npm
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+tsconfig.tsbuildinfo
