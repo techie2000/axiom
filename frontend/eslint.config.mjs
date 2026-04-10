@@ -10,7 +10,7 @@ const compat = new FlatCompat({
 });
 
 const config = [
-  { ignores: ['coverage/**'] },
+  { ignores: ['coverage/**', '.next/**'] },
   ...compat.extends("next/core-web-vitals", "plugin:jsx-a11y/recommended"),
   {
     rules: {

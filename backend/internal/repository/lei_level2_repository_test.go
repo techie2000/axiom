@@ -200,7 +200,7 @@ func TestDetectRepexChangesReturnsEmptyWhenNothingChanged(t *testing.T) {
 	t.Helper()
 
 	exc := &domain.LEIReportingException{
-		ExceptionReason:    "NO_KNOWN_PERSON",
+		ExceptionReasons:   domain.JSONBString(`["NO_KNOWN_PERSON"]`),
 		ExceptionReference: "ref",
 	}
 	changes := level2Repo.detectRepexChanges(exc, exc)
@@ -209,18 +209,27 @@ func TestDetectRepexChangesReturnsEmptyWhenNothingChanged(t *testing.T) {
 	}
 }
 
-func TestDetectRepexChangesDetectsExceptionReasonChange(t *testing.T) {
+func TestDetectRepexChangesIgnoresSemanticEquivalentExceptionReasons(t *testing.T) {
 	t.Helper()
 
-	old := &domain.LEIReportingException{ExceptionReason: "NO_KNOWN_PERSON"}
-	new := &domain.LEIReportingException{ExceptionReason: "NATURAL_PERSONS"}
+	old := &domain.LEIReportingException{ExceptionReasons: domain.JSONBString(`["NO_KNOWN_PERSON"]`)}
+	new := &domain.LEIReportingException{ExceptionReasons: domain.JSONBString(`[ "NO_KNOWN_PERSON" ]`)}
 
 	changes := level2Repo.detectRepexChanges(old, new)
-	if _, ok := changes["ExceptionReason"]; !ok {
-		t.Fatalf("expected ExceptionReason to be detected as changed")
+	if _, ok := changes["ExceptionReasons"]; ok {
+		t.Fatalf("expected semantically equal JSONB to produce no change, got change: %v", changes["ExceptionReasons"])
 	}
-	if len(changes) != 1 {
-		t.Fatalf("expected exactly 1 changed field, got %d", len(changes))
+}
+
+func TestDetectRepexChangesDetectsExceptionReasonsArrayChange(t *testing.T) {
+	t.Helper()
+
+	old := &domain.LEIReportingException{ExceptionReasons: domain.JSONBString(`["NO_KNOWN_PERSON"]`)}
+	new := &domain.LEIReportingException{ExceptionReasons: domain.JSONBString(`["NO_KNOWN_PERSON","NATURAL_PERSONS"]`)}
+
+	changes := level2Repo.detectRepexChanges(old, new)
+	if _, ok := changes["ExceptionReasons"]; !ok {
+		t.Fatalf("expected ExceptionReasons to be detected as changed")
 	}
 }
 
@@ -280,16 +289,16 @@ func TestDetectRepexChangesAllFieldsChecked(t *testing.T) {
 	t.Helper()
 
 	old := &domain.LEIReportingException{
-		ExceptionReason:    "NO_KNOWN_PERSON",
+		ExceptionReasons:   domain.JSONBString(`["NO_KNOWN_PERSON"]`),
 		ExceptionReference: "ref1",
 	}
 	new := &domain.LEIReportingException{
-		ExceptionReason:    "NATURAL_PERSONS",
+		ExceptionReasons:   domain.JSONBString(`["NATURAL_PERSONS"]`),
 		ExceptionReference: "ref2",
 	}
 
 	changes := level2Repo.detectRepexChanges(old, new)
-	for _, field := range []string{"ExceptionReason", "ExceptionReference"} {
+	for _, field := range []string{"ExceptionReasons", "ExceptionReference"} {
 		if _, ok := changes[field]; !ok {
 			t.Fatalf("expected %s to be detected as changed", field)
 		}
@@ -328,7 +337,7 @@ func TestRepexToJSONProducesValidJSON(t *testing.T) {
 	exc := &domain.LEIReportingException{
 		LEI:               "AAAAAAAAAAAAAAAAAA01",
 		ExceptionCategory: "ULTIMATE_ACCOUNTING_CONSOLIDATION_PARENT",
-		ExceptionReason:   "NO_KNOWN_PERSON",
+		ExceptionReasons:  domain.JSONBString(`["NO_KNOWN_PERSON"]`),
 	}
 
 	snapshot := level2Repo.repexToJSON(exc)

@@ -857,20 +857,27 @@ func (l *gleifStringList) UnmarshalJSON(data []byte) error {
 	return fmt.Errorf("unsupported GLEIF list format: %s", string(data))
 }
 
-func joinGLEIFReasons(reasons []gleifString) string {
+
+
+func gleifReasonsToJSONB(reasons []gleifString) domain.JSONBString {
 	if len(reasons) == 0 {
-		return ""
+		return domain.JSONBString("[]")
 	}
 
 	parts := make([]string, 0, len(reasons))
 	for _, reason := range reasons {
-		v := reason.String()
-		if v != "" {
-			parts = append(parts, v)
+		value := reason.String()
+		if value != "" {
+			parts = append(parts, value)
 		}
 	}
 
-	return strings.Join(parts, ",")
+	encoded, err := json.Marshal(parts)
+	if err != nil {
+		return domain.JSONBString("[]")
+	}
+
+	return domain.JSONBString(encoded)
 }
 
 // ProcessREPEXFile reads a downloaded REPEX ZIP file and upserts all reporting exceptions.
@@ -996,7 +1003,7 @@ func (s *leiLevel2Service) parseAndUpsertREPEX(r io.Reader, sourceFile *domain.S
 		exc := &domain.LEIReportingException{
 			LEI:                raw.LEI.String(),
 			ExceptionCategory:  raw.ExceptionCategory.String(),
-			ExceptionReason:    joinGLEIFReasons(raw.ExceptionReason),
+			ExceptionReasons:   gleifReasonsToJSONB(raw.ExceptionReason),
 			ExceptionReference: raw.ExceptionReference.String(),
 			SourceFileID:       &sourceFile.ID,
 		}
@@ -1084,7 +1091,7 @@ func (s *leiLevel2Service) parseAndUpsertREPEXWrapped(decoder *json.Decoder, sou
 			exc := &domain.LEIReportingException{
 				LEI:                raw.LEI.String(),
 				ExceptionCategory:  raw.ExceptionCategory.String(),
-				ExceptionReason:    joinGLEIFReasons(raw.ExceptionReason),
+				ExceptionReasons:   gleifReasonsToJSONB(raw.ExceptionReason),
 				ExceptionReference: raw.ExceptionReference.String(),
 				SourceFileID:       &sourceFile.ID,
 			}

@@ -401,7 +401,6 @@ func (r *leiLevel2Repository) UpsertReportingException(exc *domain.LEIReportingE
 			{Name: "exception_category"},
 		},
 		DoUpdates: clause.AssignmentColumns([]string{
-			"exception_reason",
 			"exception_reference",
 			"source_file_id",
 			"updated_at",
@@ -516,7 +515,7 @@ func (r *leiLevel2Repository) BatchUpsertReportingExceptions(exceptions []*domai
 			{Name: "exception_category"},
 		},
 		DoUpdates: clause.AssignmentColumns([]string{
-			"exception_reason",
+			"exception_reasons",
 			"exception_reference",
 			"source_file_id",
 			"updated_at",
@@ -813,13 +812,19 @@ func (r *leiLevel2Repository) detectRRChanges(old, new *domain.LEIRelationshipRe
 func (r *leiLevel2Repository) detectRepexChanges(old, new *domain.LEIReportingException) map[string]level2ChangeDetection {
 	changes := make(map[string]level2ChangeDetection)
 
+	checkJSONB := func(field string, oldVal, newVal domain.JSONBString) {
+		if !jsonBStringsSemanticEqual(oldVal, newVal) {
+			changes[field] = level2ChangeDetection{field, string(oldVal), string(newVal)}
+		}
+	}
+
 	check := func(field, oldVal, newVal string) {
 		if oldVal != newVal {
 			changes[field] = level2ChangeDetection{field, oldVal, newVal}
 		}
 	}
 
-	check("ExceptionReason", old.ExceptionReason, new.ExceptionReason)
+	checkJSONB("ExceptionReasons", old.ExceptionReasons, new.ExceptionReasons)
 	check("ExceptionReference", old.ExceptionReference, new.ExceptionReference)
 
 	return changes

@@ -270,6 +270,35 @@ EVERY visual change:
 - Prefer a shared column selector component in `frontend/app/components/` for repeated selector UI patterns.
   If a page temporarily inlines selector markup, it must match the shared visual and accessibility behavior exactly.
 
+### i18n Label Standard (Required)
+
+Every user-visible label — including table column headers, modal field labels, detail-panel field
+names, and dynamic label functions — **must** use `t('...')` with a key from `common.json`.
+Do **not** hardcode English strings in JSX or in helper functions that compute labels.
+
+**Column header labels** — When a `ColumnConfig.labelKey` already maps to the right translation key
+(`leiRecords.columns.labels.*`), the default `return t(column.labelKey)` path in `getColumnLabel`
+covers it. Do **not** add special-case `if (column.key === '…') return 'English literal'` branches
+for columns whose `labelKey` is already correct.
+
+**Modal / detail-panel labels** — Every `<span>` or `<label>` that names a field must use `t(...)`:
+
+```tsx
+// ❌ Hardcoded — will not be translated
+<span className="...">Legal Jurisdiction</span>
+
+// ✅ i18n — add key to common.json then use t()
+<span className="...">{t('leiRecords.columns.labels.legalJurisdiction')}</span>
+```
+
+**Adding new fields**: when wiring a new column or modal field:
+
+1. Add the translation key to `frontend/public/locales/en/common.json`
+   under the appropriate namespace (e.g. `leiRecords.columns.labels.*`).
+2. Set the column's `labelKey` to that full dotted key path.
+3. Render via `t(column.labelKey)` (table) and `t('the.key')` (modal) — never a string literal.
+4. Run `npm run i18n:verify` to confirm no missing keys.
+
 ### Table Width Toggle Standard (Required)
 
 - Pages with wide data tables and optional columns must provide an `Expand/Normal` width toggle in the page header.

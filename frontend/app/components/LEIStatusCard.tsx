@@ -140,7 +140,6 @@ export default function LEIStatusCard() {
     const interval = setInterval(fetchStatus, 5000)
 
     return () => clearInterval(interval)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const getHealthIndicator = (status: LEIStatus | null) => {

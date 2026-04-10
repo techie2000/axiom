@@ -49,6 +49,7 @@ interface LEIRecord {
   entity_status: string
   entity_category: string
   entity_sub_category: string
+  legal_jurisdiction: string
   entity_legal_form: string
   entity_legal_form_name?: string
   
@@ -80,6 +81,7 @@ interface LEIRecord {
   registration_authority_comments?: string
   registration_authority_id: string
   registration_number: string
+  registration_status: string
   
   // Associated Entities
   managing_lou: string
@@ -136,12 +138,13 @@ const AVAILABLE_COLUMNS: ColumnConfig[] = [
   { key: 'legal_name', labelKey: 'leiRecords.columns.labels.legalName', groupKey: 'leiRecords.columns.groups.core', defaultVisible: true, width: 'min-w-96' },
   { key: 'entity_status', labelKey: 'leiRecords.columns.labels.status', groupKey: 'leiRecords.columns.groups.core', defaultVisible: true, width: 'w-32' },
   { key: 'entity_category', labelKey: 'leiRecords.columns.labels.category', groupKey: 'leiRecords.columns.groups.core', defaultVisible: true, width: 'w-40' },
+  { key: 'entity_sub_category', labelKey: 'leiRecords.columns.labels.subCategory', groupKey: 'leiRecords.columns.groups.core', defaultVisible: false, width: 'w-40' },
   { key: 'country_flag', labelKey: 'leiRecords.columns.labels.countryFlag', groupKey: 'leiRecords.columns.groups.core', defaultVisible: false, width: 'w-20' },
   { key: 'last_update_date', labelKey: 'leiRecords.columns.labels.lastUpdated', groupKey: 'leiRecords.columns.groups.core', defaultVisible: true, width: 'w-32' },
   
   // Additional Entity Info
   { key: 'transliterated_legal_name', labelKey: 'leiRecords.columns.labels.transliteratedName', groupKey: 'leiRecords.columns.groups.entity', defaultVisible: false, width: 'min-w-64' },
-  { key: 'entity_sub_category', labelKey: 'leiRecords.columns.labels.subCategory', groupKey: 'leiRecords.columns.groups.entity', defaultVisible: false, width: 'w-40' },
+  { key: 'legal_jurisdiction', labelKey: 'leiRecords.columns.labels.legalJurisdiction', groupKey: 'leiRecords.columns.groups.entity', defaultVisible: false, width: 'w-40' },
   { key: 'entity_legal_form', labelKey: 'leiRecords.columns.labels.legalFormName', groupKey: 'leiRecords.columns.groups.entity', defaultVisible: false, width: 'w-40' },
   
   // Legal Address (natural order: address lines, then city/region/country/postal)
@@ -167,6 +170,7 @@ const AVAILABLE_COLUMNS: ColumnConfig[] = [
   // Registration
   { key: 'registration_authority', labelKey: 'leiRecords.columns.labels.registrationAuthority', groupKey: 'leiRecords.columns.groups.registration', defaultVisible: false, width: 'w-48' },
   { key: 'registration_number', labelKey: 'leiRecords.columns.labels.registrationNumber', groupKey: 'leiRecords.columns.groups.registration', defaultVisible: false, width: 'w-40' },
+  { key: 'registration_status', labelKey: 'leiRecords.columns.labels.registrationStatus', groupKey: 'leiRecords.columns.groups.registration', defaultVisible: false, width: 'w-36' },
   { key: 'initial_registration_date', labelKey: 'leiRecords.columns.labels.initialRegistration', groupKey: 'leiRecords.columns.groups.registration', defaultVisible: false, width: 'w-36' },
   { key: 'next_renewal_date', labelKey: 'leiRecords.columns.labels.nextRenewal', groupKey: 'leiRecords.columns.groups.registration', defaultVisible: false, width: 'w-32' },
   
@@ -590,7 +594,6 @@ export default function LEIRecordsPage() {
     debouncedSearch,
     effectiveVisibleColumns,
     itemsPerPage,
-    normalizeStatusFilterForAPI,
     sortDirection,
     sortField,
     statusFilter,
@@ -1106,6 +1109,9 @@ export default function LEIRecordsPage() {
   }
 
   const getColumnLabelTranslationKey = (column: ColumnConfig): string => {
+    if (column.key === 'legal_jurisdiction' || column.key === 'registration_status') {
+      return column.labelKey
+    }
     if (column.key === 'entity_legal_form') {
       return showLocationCodes ? 'leiRecords.columns.labels.legalFormCode' : 'leiRecords.columns.labels.legalFormName'
     }
@@ -1715,6 +1721,7 @@ export default function LEIRecordsPage() {
                           const isSuccessorLei = column.key === 'successor_lei'
                           const isRegistrationAuthority = column.key === 'registration_authority'
                           const isRegistrationNumber = column.key === 'registration_number'
+                          const isRegistrationStatus = column.key === 'registration_status'
                           const isCountryFlagColumn = column.key === 'country_flag'
                           const isRegionColumn = column.key === 'legal_address_region' || column.key === 'hq_address_region'
                           const isCountryColumn = column.key === 'legal_address_country' || column.key === 'hq_address_country'
@@ -1902,6 +1909,8 @@ export default function LEIRecordsPage() {
                                     </div>
                                   )
                                 })()
+                              ) : isRegistrationStatus ? (
+                                formatEnumDisplayValue(value)
                               ) : (
                                 formatCellValue(value, column.key)
                               )}
@@ -2073,10 +2082,14 @@ export default function LEIRecordsPage() {
                   </div>
                   {selectedRecord.entity_sub_category && (
                     <div>
-                      <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">Sub Category</span>
+                      <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">{t('leiRecords.columns.labels.subCategory')}</span>
                       <p className="text-sm text-[rgb(var(--foreground-rgb))] mt-1">{selectedRecord.entity_sub_category}</p>
                     </div>
                   )}
+                  <div>
+                    <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">{t('leiRecords.columns.labels.legalJurisdiction')}</span>
+                    <p className="text-sm text-[rgb(var(--foreground-rgb))] mt-1">{selectedRecord.legal_jurisdiction || '-'}</p>
+                  </div>
                   {selectedRecord.entity_legal_form && (
                     <div>
                       <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">Legal Form</span>
@@ -2431,6 +2444,10 @@ export default function LEIRecordsPage() {
                         </span>
                       )}
                     </p>
+                  </div>
+                  <div>
+                    <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">{t('leiRecords.columns.labels.registrationStatus')}</span>
+                    <p className="text-sm text-[rgb(var(--foreground-rgb))] mt-1">{formatEnumDisplayValue(selectedRecord.registration_status)}</p>
                   </div>
                   <div>
                     <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">Next Renewal</span>

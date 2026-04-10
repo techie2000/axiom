@@ -68,6 +68,7 @@ describe('LEI null-like value helpers', () => {
   it('title-cases entity_category and entity_sub_category cell values', () => {
     expect(formatLEICellValue('GENERAL', 'entity_category')).toBe('General')
     expect(formatLEICellValue('BRANCH', 'entity_sub_category')).toBe('Branch')
+    expect(formatLEICellValue('NOT_AVAILABLE', 'registration_status')).toBe('Not Available')
     expect(formatLEICellValue('NULL', 'entity_category')).toBe('-')
   })
 })

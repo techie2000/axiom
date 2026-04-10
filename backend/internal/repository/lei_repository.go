@@ -151,6 +151,17 @@ func nullableLEICode(value string) interface{} {
 	return normalized
 }
 
+// nullableCode converts any empty or whitespace-only code string to nil so that
+// FK-constrained nullable columns receive NULL rather than an empty string.
+func nullableCode(value string) interface{} {
+	normalized := strings.TrimSpace(value)
+	if normalized == "" {
+		return nil
+	}
+
+	return normalized
+}
+
 // NewLEIRepository creates a new LEI repository instance
 func NewLEIRepository(db *gorm.DB) LEIRepository {
 	return &leiRepository{db: db}
@@ -550,7 +561,6 @@ func applyELFNames(records []*domain.LEIRecord, rows []elfNameRow) {
 		}
 	}
 }
-
 
 // Uses dynamic SELECT based on requested columns for performance optimization
 func (r *leiRepository) FindAllLEIWithFilters(limit, offset int, search, status, category, country, sortBy, sortOrder, columns string, includeLinkedNames bool) ([]*domain.LEIRecord, error) {
@@ -971,61 +981,63 @@ func (r *leiRepository) BatchUpsertLEIRecords(records []*domain.LEIRecord) (int,
 
 		// Build SQL with RETURNING to get affected record IDs
 		valueStrings := make([]string, 0, len(batch))
-		valueArgs := make([]interface{}, 0, len(batch)*42)
+		valueArgs := make([]interface{}, 0, len(batch)*44)
 
 		// Generate all values in Go, use placeholders for everything
 		now := time.Now()
 		emptyChangedFields := "{}"
 
 		for _, record := range batch {
-			// Use placeholders for ALL fields (41 total)
-			valueStrings = append(valueStrings, "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+			// Use placeholders for ALL fields (43 total)
+			valueStrings = append(valueStrings, "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
 
 			// Generate ID and timestamps in Go
 			newID := uuid.New()
 
 			valueArgs = append(valueArgs,
-				newID,                                // id
-				record.LEI,                           // lei
-				record.LegalName,                     // legal_name
-				record.TransliteratedLegalName,       // transliterated_legal_name
-				record.OtherNames,                    // other_names
-				record.LegalAddressLine1,             // legal_address_line_1
-				record.LegalAddressLine2,             // legal_address_line_2
-				record.LegalAddressLine3,             // legal_address_line_3
-				record.LegalAddressLine4,             // legal_address_line_4
-				record.LegalAddressCity,              // legal_address_city
-				record.LegalAddressRegion,            // legal_address_region
-				record.LegalAddressCountry,           // legal_address_country
-				record.LegalAddressPostalCode,        // legal_address_postal_code
-				record.HQAddressLine1,                // hq_address_line_1
-				record.HQAddressLine2,                // hq_address_line_2
-				record.HQAddressLine3,                // hq_address_line_3
-				record.HQAddressLine4,                // hq_address_line_4
-				record.HQAddressCity,                 // hq_address_city
-				record.HQAddressRegion,               // hq_address_region
-				record.HQAddressCountry,              // hq_address_country
-				record.HQAddressPostalCode,           // hq_address_postal_code
-				record.RegistrationAuthority,         // registration_authority
-				record.RegistrationAuthorityID,       // registration_authority_id
-				record.RegistrationNumber,            // registration_number
-				record.EntityCategory,                // entity_category
-				record.EntitySubCategory,             // entity_sub_category
-				record.EntityLegalForm,               // entity_legal_form
-				record.EntityStatus,                  // entity_status
-				nullableLEICode(record.SuccessorLEI), // successor_lei
-				record.ValidationAuthority,           // validation_authority
-				record.InitialRegistrationDate,       // initial_registration_date
-				record.LastUpdateDate,                // last_update_date
-				record.NextRenewalDate,               // next_renewal_date
-				record.ManagingLOU,                   // managing_lou
-				record.ValidationSources,             // validation_sources
-				record.SourceFileID,                  // source_file_id
-				now,                                  // created_at
-				now,                                  // updated_at
-				"system",                             // created_by
-				"system",                             // updated_by
-				emptyChangedFields,                   // changed_fields
+				newID,                                      // id
+				record.LEI,                                 // lei
+				record.LegalName,                           // legal_name
+				record.TransliteratedLegalName,             // transliterated_legal_name
+				record.OtherNames,                          // other_names
+				record.LegalAddressLine1,                   // legal_address_line_1
+				record.LegalAddressLine2,                   // legal_address_line_2
+				record.LegalAddressLine3,                   // legal_address_line_3
+				record.LegalAddressLine4,                   // legal_address_line_4
+				record.LegalAddressCity,                    // legal_address_city
+				record.LegalAddressRegion,                  // legal_address_region
+				record.LegalAddressCountry,                 // legal_address_country
+				record.LegalAddressPostalCode,              // legal_address_postal_code
+				record.HQAddressLine1,                      // hq_address_line_1
+				record.HQAddressLine2,                      // hq_address_line_2
+				record.HQAddressLine3,                      // hq_address_line_3
+				record.HQAddressLine4,                      // hq_address_line_4
+				record.HQAddressCity,                       // hq_address_city
+				record.HQAddressRegion,                     // hq_address_region
+				record.HQAddressCountry,                    // hq_address_country
+				record.HQAddressPostalCode,                 // hq_address_postal_code
+				nullableCode(record.RegistrationAuthority), // registration_authority
+				record.RegistrationAuthorityID,             // registration_authority_id
+				record.RegistrationNumber,                  // registration_number
+				record.EntityCategory,                      // entity_category
+				record.EntitySubCategory,                   // entity_sub_category
+				nullableCode(record.EntityLegalForm),       // entity_legal_form
+				record.EntityStatus,                        // entity_status
+				record.LegalJurisdiction,                   // legal_jurisdiction
+				record.RegistrationStatus,                  // registration_status
+				nullableLEICode(record.SuccessorLEI),       // successor_lei
+				nullableCode(record.ValidationAuthority),   // validation_authority
+				record.InitialRegistrationDate,             // initial_registration_date
+				record.LastUpdateDate,                      // last_update_date
+				record.NextRenewalDate,                     // next_renewal_date
+				nullableCode(record.ManagingLOU),           // managing_lou
+				record.ValidationSources,                   // validation_sources
+				record.SourceFileID,                        // source_file_id
+				now,                                        // created_at
+				now,                                        // updated_at
+				"system",                                   // created_by
+				"system",                                   // updated_by
+				emptyChangedFields,                         // changed_fields
 			)
 		}
 
@@ -1039,7 +1051,8 @@ func (r *leiRepository) BatchUpsertLEIRecords(records []*domain.LEIRecord) (int,
 				hq_address_city, hq_address_region, hq_address_country, hq_address_postal_code,
 				registration_authority, registration_authority_id, registration_number,
 				entity_category, entity_sub_category, entity_legal_form,
-				entity_status, successor_lei, validation_authority,
+				entity_status, legal_jurisdiction, registration_status,
+				successor_lei, validation_authority,
 				initial_registration_date, last_update_date, next_renewal_date,
 				managing_lou, validation_sources,
 				source_file_id,
@@ -1072,6 +1085,8 @@ func (r *leiRepository) BatchUpsertLEIRecords(records []*domain.LEIRecord) (int,
 				entity_category = EXCLUDED.entity_category,
 				entity_sub_category = EXCLUDED.entity_sub_category,
 				entity_legal_form = EXCLUDED.entity_legal_form,
+				legal_jurisdiction = EXCLUDED.legal_jurisdiction,
+				registration_status = EXCLUDED.registration_status,
 				successor_lei = EXCLUDED.successor_lei,
 				validation_authority = EXCLUDED.validation_authority,
 				initial_registration_date = EXCLUDED.initial_registration_date,
@@ -1110,6 +1125,8 @@ func (r *leiRepository) BatchUpsertLEIRecords(records []*domain.LEIRecord) (int,
 				lei_raw.lei_records.entity_category,
 				lei_raw.lei_records.entity_sub_category,
 				lei_raw.lei_records.entity_legal_form,
+				lei_raw.lei_records.legal_jurisdiction,
+				lei_raw.lei_records.registration_status,
 				lei_raw.lei_records.successor_lei,
 				lei_raw.lei_records.validation_authority,
 				lei_raw.lei_records.initial_registration_date,
@@ -1145,6 +1162,8 @@ func (r *leiRepository) BatchUpsertLEIRecords(records []*domain.LEIRecord) (int,
 				EXCLUDED.entity_category,
 				EXCLUDED.entity_sub_category,
 				EXCLUDED.entity_legal_form,
+				EXCLUDED.legal_jurisdiction,
+				EXCLUDED.registration_status,
 				EXCLUDED.successor_lei,
 				EXCLUDED.validation_authority,
 				EXCLUDED.initial_registration_date,

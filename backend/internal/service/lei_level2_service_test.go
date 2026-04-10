@@ -123,20 +123,20 @@ func TestMapRawRRToRelationshipRecord_WrappedSchema(t *testing.T) {
 	}
 }
 
-func TestGleifStringList_UnmarshalAndJoin(t *testing.T) {
+func TestGleifStringList_UnmarshalAndToJSONB(t *testing.T) {
 	var reasons gleifStringList
 	if err := json.Unmarshal([]byte(`[{"$":"NON_CONSOLIDATING"},{"$":"NO_KNOWN_PERSON"}]`), &reasons); err != nil {
 		t.Fatalf("array unmarshal failed: %v", err)
 	}
-	if got := joinGLEIFReasons(reasons); got != "NON_CONSOLIDATING,NO_KNOWN_PERSON" {
-		t.Fatalf("unexpected joined reasons: %s", got)
+	if got := string(gleifReasonsToJSONB(reasons)); got != `["NON_CONSOLIDATING","NO_KNOWN_PERSON"]` {
+		t.Fatalf("unexpected JSONB multi-reasons: %s", got)
 	}
 
 	if err := json.Unmarshal([]byte(`{"$":"NON_CONSOLIDATING"}`), &reasons); err != nil {
 		t.Fatalf("single unmarshal failed: %v", err)
 	}
-	if got := joinGLEIFReasons(reasons); got != "NON_CONSOLIDATING" {
-		t.Fatalf("unexpected single reason: %s", got)
+	if got := string(gleifReasonsToJSONB(reasons)); got != `["NON_CONSOLIDATING"]` {
+		t.Fatalf("unexpected JSONB single-reason: %s", got)
 	}
 }
 
@@ -176,8 +176,8 @@ func TestRawREPEXRecord_UnmarshalArrayWrappedReference(t *testing.T) {
 	if raw.ExceptionCategory.String() != "NON_PUBLIC" {
 		t.Fatalf("unexpected category: %s", raw.ExceptionCategory.String())
 	}
-	if got := joinGLEIFReasons(raw.ExceptionReason); got != "NON_CONSOLIDATING" {
-		t.Fatalf("unexpected reason: %s", got)
+	if got := string(gleifReasonsToJSONB(raw.ExceptionReason)); got != `["NON_CONSOLIDATING"]` {
+		t.Fatalf("unexpected JSONB reason payload: %s", got)
 	}
 	if raw.ExceptionReference.String() != "Datenschutz" {
 		t.Fatalf("unexpected reference: %s", raw.ExceptionReference.String())

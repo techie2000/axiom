@@ -97,6 +97,8 @@ Sub-elements: `RegistrationAuthorityID` (GLEIF RA code e.g. `RA000589`) and
 
 ISO 3166-1/3166-2 code for the jurisdiction of legal formation.
 
+**Axiom column:** `lei_records.legal_jurisdiction`
+
 ### EntityCategory
 
 Classification of the entity type:
@@ -198,7 +200,7 @@ Lifecycle state of the LEI registration:
 | `PENDING_TRANSFER` | Transfer to another LOU in progress |
 | `PENDING_ARCHIVAL` | About to be removed from LOU-specific file |
 
-**Axiom column:** `lei_records.entity_status` (mapped from LEI registration status)
+**Axiom column:** `lei_records.registration_status`
 
 ### NextRenewalDate
 
