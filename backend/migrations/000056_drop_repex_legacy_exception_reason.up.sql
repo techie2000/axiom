@@ -7,7 +7,7 @@ BEGIN
         FROM lei_raw.lei_reporting_exceptions
         WHERE exception_reasons = '[]'::jsonb
           AND exception_reason IS NOT NULL
-          AND exception_reason <> ''
+          AND BTRIM(exception_reason) <> ''
         LIMIT 1
     ) THEN
         RAISE EXCEPTION

@@ -209,6 +209,18 @@ func TestDetectRepexChangesReturnsEmptyWhenNothingChanged(t *testing.T) {
 	}
 }
 
+func TestDetectRepexChangesIgnoresSemanticEquivalentExceptionReasons(t *testing.T) {
+	t.Helper()
+
+	old := &domain.LEIReportingException{ExceptionReasons: domain.JSONBString(`["NO_KNOWN_PERSON"]`)}
+	new := &domain.LEIReportingException{ExceptionReasons: domain.JSONBString(`[ "NO_KNOWN_PERSON" ]`)}
+
+	changes := level2Repo.detectRepexChanges(old, new)
+	if _, ok := changes["ExceptionReasons"]; ok {
+		t.Fatalf("expected semantically equal JSONB to produce no change, got change: %v", changes["ExceptionReasons"])
+	}
+}
+
 func TestDetectRepexChangesDetectsExceptionReasonsArrayChange(t *testing.T) {
 	t.Helper()
 

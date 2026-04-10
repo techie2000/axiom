@@ -18,7 +18,7 @@ func repoRootFromTestFile(t *testing.T) string {
 	if !ok {
 		t.Fatal("failed to resolve test file path")
 	}
-	return filepath.Clean(filepath.Join(filepath.Dir(filename), "..", ".."))
+	return filepath.Clean(filepath.Join(filepath.Dir(filename), "..", "..", ".."))
 }
 
 func readRepoFile(t *testing.T, root string, relParts ...string) string {
@@ -33,7 +33,7 @@ func readRepoFile(t *testing.T, root string, relParts ...string) string {
 
 func TestLEIFieldReferenceDocumentsPersistedLevel1Fields(t *testing.T) {
 	root := repoRootFromTestFile(t)
-	content := readRepoFile(t, root, "..", "docs", "lei", "gleif-specs", "LEI-CDF-v3-1-field-reference.md")
+	content := readRepoFile(t, root, "docs", "lei", "gleif-specs", "LEI-CDF-v3-1-field-reference.md")
 
 	for _, snippet := range []string{
 		"EntitySubCategory",
@@ -76,7 +76,7 @@ func TestREPEXModelPreservesRepeatableReasons(t *testing.T) {
 
 func TestREPEXMigrationsAvoidFragileReasonCheckConstraints(t *testing.T) {
 	root := repoRootFromTestFile(t)
-	migrationsDir := filepath.Join(root, "migrations")
+	migrationsDir := filepath.Join(root, "backend", "migrations")
 	entries, err := os.ReadDir(migrationsDir)
 	if err != nil {
 		t.Fatalf("failed to read migrations dir: %v", err)
@@ -89,7 +89,7 @@ func TestREPEXMigrationsAvoidFragileReasonCheckConstraints(t *testing.T) {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".sql") {
 			continue
 		}
-		content := readRepoFile(t, root, "migrations", entry.Name())
+		content := readRepoFile(t, root, "backend", "migrations", entry.Name())
 		if forbidden.MatchString(content) {
 			t.Fatalf("migration %s introduces a CHECK constraint on REPEX reasons; use JSONB array semantics instead", entry.Name())
 		}

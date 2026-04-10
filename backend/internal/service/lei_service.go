@@ -760,6 +760,11 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 	var scannedRecords int
 	var processedRecords int
 	var failedRecords int
+	// DB write counters — derived from actual BatchUpsertLEIRecords results.
+	// totalCreated: net-new rows inserted. totalUpdated: rows whose data changed and were written.
+	// totalUnchanged: rows present in the batch whose existing DB values were identical (intentional no-op).
+	var totalCreated int
+	var totalUpdated int
 	shouldProcess := resumeFromLEI == ""
 	var lastProcessedLEI string
 
@@ -822,12 +827,19 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 				percentComplete = (float64(cumulativeProcessed) / float64(progressTotalRecords)) * 100
 			}
 
+			totalUnchanged := processedRecords - totalCreated - totalUpdated
+			if totalUnchanged < 0 {
+				totalUnchanged = 0
+			}
 			log.Info().
 				Int("total_records", progressTotalRecords).
 				Int("scanned_records", scannedRecords).
 				Int("checkpoint_processed", checkpointProcessed).
 				Int("session_processed", processedRecords).
 				Int("cumulative_processed", cumulativeProcessed).
+				Int("db_inserted", totalCreated).
+				Int("db_updated", totalUpdated).
+				Int("db_unchanged", totalUnchanged).
 				Int("failed_records", failedRecords).
 				Float64("percent_complete", percentComplete).
 				Float64("records_per_sec", rate).
@@ -890,7 +902,11 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 			}
 			s.batchResolveOpenProcessingFailures(jobType, naturalKeys, &sourceFile.ID)
 
-			// Track records processed in this session (use batch size, not DB results)
+			// Accumulate actual DB write outcomes.
+			totalCreated += created
+			totalUpdated += updated
+
+			// processedRecords counts records attempted against the DB (used for progress/ETA).
 			processedRecords += len(batch)
 
 			// Always keep LastProcessedLEI in sync so the mandatory final UpdateSourceFile
@@ -913,13 +929,20 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 				percentComplete = (float64(cumulativeProcessed) / float64(progressTotalRecords)) * 100
 			}
 
+			batchUnchanged := len(batch) - created - updated
+			if batchUnchanged < 0 {
+				batchUnchanged = 0
+			}
 			log.Info().
 				Int("total_scanned", scannedRecords).
 				Int("expected_total", progressTotalRecords).
 				Int("cumulative_processed", cumulativeProcessed).
 				Int("session_processed", processedRecords).
-				Int("created", created).
-				Int("updated", updated).
+				Int("batch_inserted", created).
+				Int("batch_updated", updated).
+				Int("batch_unchanged", batchUnchanged).
+				Int("total_inserted", totalCreated).
+				Int("total_updated", totalUpdated).
 				Int("failed", failedRecords).
 				Float64("percent_complete", percentComplete).
 				Str("last_lei", lastProcessedLEI).
@@ -1016,12 +1039,30 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 		log.Error().Err(err).Msg("Failed to update final source file status")
 	}
 
+	totalUnchanged := processedRecords - totalCreated - totalUpdated
+	if totalUnchanged < 0 {
+		totalUnchanged = 0
+	}
+
+	if processedRecords > 0 && totalCreated == 0 && totalUpdated == 0 && failedRecords == 0 {
+		log.Warn().
+			Int("scanned_records", scannedRecords).
+			Int("session_processed", processedRecords).
+			Int("db_inserted", totalCreated).
+			Int("db_updated", totalUpdated).
+			Int("db_unchanged", totalUnchanged).
+			Msg("WARNING: processing reported success but zero DB writes occurred — all records may already be identical or a silent rollback may have happened")
+	}
+
 	log.Info().
 		Int("total_records", progressTotalRecords).
 		Int("scanned_records", scannedRecords).
 		Int("checkpoint_processed", checkpointProcessed).
 		Int("session_processed", processedRecords).
 		Int("cumulative_processed", cumulativeProcessed).
+		Int("db_inserted", totalCreated).
+		Int("db_updated", totalUpdated).
+		Int("db_unchanged", totalUnchanged).
 		Int("total_failed", failedRecords).
 		Msg("File processing completed")
 
@@ -1200,6 +1241,22 @@ type LEIValidationAuthority struct {
 	ValidationAuthorityEntityID LEIValueField `json:"ValidationAuthorityEntityID"`
 }
 
+// parseGLEIFTimeValue parses GLEIF timestamp strings, handling both whole-second
+// ("2026-04-09T10:21:26Z") and sub-second ("2026-04-09T10:21:26.360Z") variants.
+// Returns the zero value of time.Time if the value cannot be parsed.
+func parseGLEIFTimeValue(value string) time.Time {
+	for _, layout := range []string{
+		time.RFC3339Nano,       // "2006-01-02T15:04:05.999999999Z07:00"
+		"2006-01-02T15:04:05Z", // exact UTC, no sub-seconds
+		"2006-01-02",           // date-only
+	} {
+		if t, err := time.Parse(layout, value); err == nil {
+			return t
+		}
+	}
+	return time.Time{}
+}
+
 func normalizeNullLikeValue(value string) string {
 	if strings.EqualFold(strings.TrimSpace(value), "null") {
 		return ""
@@ -1250,12 +1307,12 @@ func normalizeLEIRecordNullLikeFields(record *domain.LEIRecord) {
 func validationSourcesToJSONB(value string) domain.JSONBString {
 	normalized := normalizeNullLikeValue(value)
 	if normalized == "" {
-		return "{}"
+		return ""
 	}
 
 	encoded, err := json.Marshal(normalized)
 	if err != nil {
-		return "{}"
+		return ""
 	}
 
 	return domain.JSONBString(encoded)
@@ -1352,26 +1409,13 @@ func (s *leiService) jsonToDomainRecord(jsonRecord *LEIJSONRecord, sourceFileID 
 
 	// Parse dates (ISO 8601 format)
 	if jsonRecord.Registration.InitialRegistrationDate.Value != "" {
-		if t, err := time.Parse("2006-01-02T15:04:05Z", jsonRecord.Registration.InitialRegistrationDate.Value); err == nil {
-			record.InitialRegistrationDate = t
-		} else if t, err := time.Parse("2006-01-02", jsonRecord.Registration.InitialRegistrationDate.Value); err == nil {
-			record.InitialRegistrationDate = t
-		}
+		record.InitialRegistrationDate = parseGLEIFTimeValue(jsonRecord.Registration.InitialRegistrationDate.Value)
 	}
 	if jsonRecord.Registration.LastUpdateDate.Value != "" {
-		if t, err := time.Parse("2006-01-02T15:04:05Z", jsonRecord.Registration.LastUpdateDate.Value); err == nil {
-			record.LastUpdateDate = t
-		} else if t, err := time.Parse("2006-01-02", jsonRecord.Registration.LastUpdateDate.Value); err == nil {
-			record.LastUpdateDate = t
-		}
+		record.LastUpdateDate = parseGLEIFTimeValue(jsonRecord.Registration.LastUpdateDate.Value)
 	}
 	if jsonRecord.Registration.NextRenewalDate.Value != "" {
-		if t, err := time.Parse("2006-01-02T15:04:05Z", jsonRecord.Registration.NextRenewalDate.Value); err == nil {
-			// Handle standard ISO 8601 format with time
-			record.NextRenewalDate = t
-		} else if t, err := time.Parse("2006-01-02", jsonRecord.Registration.NextRenewalDate.Value); err == nil {
-			record.NextRenewalDate = t
-		}
+		record.NextRenewalDate = parseGLEIFTimeValue(jsonRecord.Registration.NextRenewalDate.Value)
 	}
 
 	normalizeLEIRecordNullLikeFields(record)

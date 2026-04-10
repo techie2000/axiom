@@ -147,6 +147,20 @@ func TestNormalizeLEIRecordNullLikeFields_InvalidSuccessorLEIBecomesEmpty(t *tes
 	}
 }
 
+func TestValidationSourcesToJSONBEmptyProducesNullNotObject(t *testing.T) {
+	got := validationSourcesToJSONB("")
+	if got != "" {
+		t.Fatalf("expected empty ValidationSources to produce empty JSONBString (SQL NULL), got %q", string(got))
+	}
+}
+
+func TestValidationSourcesToJSONBNullLikeProducesNullNotObject(t *testing.T) {
+	got := validationSourcesToJSONB("null")
+	if got != "" {
+		t.Fatalf("expected null-like ValidationSources to produce empty JSONBString (SQL NULL), got %q", string(got))
+	}
+}
+
 func TestNormalizeLEICodeValue(t *testing.T) {
 	tests := []struct {
 		name  string
