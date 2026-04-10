@@ -1,6 +1,94 @@
 -- Persist all valid multilingual/context variants from GLEIF reference lists.
 -- Previous schema enforced one row per code and collapsed valid rows.
 
+-- Keep referential integrity from lei_records.entity_legal_form while allowing
+-- multiple rows per elf_code in gleif_entity_legal_forms.
+CREATE TABLE IF NOT EXISTS lei_raw.gleif_entity_legal_form_codes (
+    elf_code VARCHAR(10) PRIMARY KEY,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+INSERT INTO lei_raw.gleif_entity_legal_form_codes (elf_code)
+SELECT DISTINCT elf_code
+FROM lei_raw.gleif_entity_legal_forms
+WHERE elf_code IS NOT NULL AND BTRIM(elf_code) <> ''
+ON CONFLICT (elf_code) DO NOTHING;
+
+CREATE TRIGGER update_gleif_elf_codes_updated_at
+    BEFORE UPDATE ON lei_raw.gleif_entity_legal_form_codes
+    FOR EACH ROW
+    EXECUTE FUNCTION UPDATE_UPDATED_AT_COLUMN();
+
+CREATE OR REPLACE FUNCTION lei_raw.sync_gleif_elf_code_lookup()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        IF NEW.elf_code IS NOT NULL AND BTRIM(NEW.elf_code) <> '' THEN
+            INSERT INTO lei_raw.gleif_entity_legal_form_codes (elf_code)
+            VALUES (NEW.elf_code)
+            ON CONFLICT (elf_code) DO NOTHING;
+        END IF;
+        RETURN NEW;
+    ELSIF TG_OP = 'UPDATE' THEN
+        IF NEW.elf_code IS NOT NULL AND BTRIM(NEW.elf_code) <> '' THEN
+            INSERT INTO lei_raw.gleif_entity_legal_form_codes (elf_code)
+            VALUES (NEW.elf_code)
+            ON CONFLICT (elf_code) DO NOTHING;
+        END IF;
+
+        IF OLD.elf_code IS DISTINCT FROM NEW.elf_code
+           AND OLD.elf_code IS NOT NULL
+           AND BTRIM(OLD.elf_code) <> ''
+           AND NOT EXISTS (
+               SELECT 1
+               FROM lei_raw.gleif_entity_legal_forms
+               WHERE elf_code = OLD.elf_code
+                 AND id <> OLD.id
+           ) THEN
+            DELETE FROM lei_raw.gleif_entity_legal_form_codes
+            WHERE elf_code = OLD.elf_code;
+        END IF;
+        RETURN NEW;
+    ELSIF TG_OP = 'DELETE' THEN
+        IF OLD.elf_code IS NOT NULL
+           AND BTRIM(OLD.elf_code) <> ''
+           AND NOT EXISTS (
+               SELECT 1
+               FROM lei_raw.gleif_entity_legal_forms
+               WHERE elf_code = OLD.elf_code
+                 AND id <> OLD.id
+           ) THEN
+            DELETE FROM lei_raw.gleif_entity_legal_form_codes
+            WHERE elf_code = OLD.elf_code;
+        END IF;
+        RETURN OLD;
+    END IF;
+
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_sync_gleif_elf_code_lookup
+ON lei_raw.gleif_entity_legal_forms;
+
+CREATE TRIGGER trg_sync_gleif_elf_code_lookup
+    AFTER INSERT OR UPDATE OR DELETE ON lei_raw.gleif_entity_legal_forms
+    FOR EACH ROW
+    EXECUTE FUNCTION lei_raw.sync_gleif_elf_code_lookup();
+
+ALTER TABLE lei_raw.lei_records
+    DROP CONSTRAINT IF EXISTS fk_lei_records_entity_legal_form;
+
+ALTER TABLE lei_raw.lei_records
+    ADD CONSTRAINT fk_lei_records_entity_legal_form
+        FOREIGN KEY (entity_legal_form)
+        REFERENCES lei_raw.gleif_entity_legal_form_codes (elf_code)
+        NOT VALID;
+
+ALTER TABLE lei_raw.lei_records
+    VALIDATE CONSTRAINT fk_lei_records_entity_legal_form;
+
 -- Entity legal forms: add language and make context columns non-null for stable composite uniqueness.
 ALTER TABLE lei_raw.gleif_entity_legal_forms
     ADD COLUMN IF NOT EXISTS language_code VARCHAR(10) NOT NULL DEFAULT '';
