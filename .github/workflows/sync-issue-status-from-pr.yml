@@ -14,9 +14,6 @@ permissions:
   issues: write
   pull-requests: read
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-
 jobs:
   sync-issue-status:
     runs-on: ubuntu-latest

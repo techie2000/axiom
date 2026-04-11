@@ -9,9 +9,6 @@ permissions:
   contents: write  # Required for creating releases and uploading assets
   packages: write  # Required for pushing Docker images to GHCR
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-
 jobs:
   create-release:
     name: Create GitHub Release

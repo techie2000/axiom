@@ -881,3 +881,46 @@ func TestEnsurePlaywrightTestUser_EmailConflict_GracefulSkip(t *testing.T) {
 		t.Errorf("expected graceful skip on email conflict, got error: %v", err)
 	}
 }
+
+func TestEnsurePlaywrightTestUser_RejectsNonDevEmailDomain(t *testing.T) {
+	repo := newAuthRepoStub()
+	svc := newSvc(repo)
+
+	err := svc.EnsurePlaywrightTestUser("playwright@company.com", pwPassword)
+	if err == nil || !strings.Contains(err.Error(), "seeding blocked") {
+		t.Fatalf("expected blocked seed error, got: %v", err)
+	}
+}
+
+func TestEnsurePlaywrightTestUser_RejectsEmailWithMultipleAtSigns(t *testing.T) {
+	repo := newAuthRepoStub()
+	svc := newSvc(repo)
+
+	err := svc.EnsurePlaywrightTestUser("admin@company.com@localhost", pwPassword)
+	if err == nil || !strings.Contains(err.Error(), "seeding blocked") {
+		t.Fatalf("expected blocked seed error, got: %v", err)
+	}
+}
+
+func TestEnsurePlaywrightTestUser_RejectsWeakOrPredictablePassword(t *testing.T) {
+	tests := []struct {
+		name     string
+		email    string
+		password string
+	}{
+		{name: "weak default password", email: pwEmail, password: "password123"},
+		{name: "password equals email", email: pwEmail, password: pwEmail},
+		{name: "password equals username", email: pwEmail, password: "playwright"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			repo := newAuthRepoStub()
+			svc := newSvc(repo)
+			err := svc.EnsurePlaywrightTestUser(tc.email, tc.password)
+			if err == nil || !strings.Contains(err.Error(), "seeding blocked") {
+				t.Fatalf("expected blocked seed error, got: %v", err)
+			}
+		})
+	}
+}
