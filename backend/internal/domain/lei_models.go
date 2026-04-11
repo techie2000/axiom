@@ -235,6 +235,8 @@ func (FileProcessingStatus) TableName() string {
 // JobTypeDisplayName returns the human-readable job label used in API/UI and persisted metadata.
 func JobTypeDisplayName(jobType string) string {
 	switch jobType {
+	case "GLEIF_REFERENCE_SYNC":
+		return "GLEIF Reference Code Lists"
 	case "MASTER_DATA_SYNC":
 		return "Reference Data"
 	case "LEVEL1_FULL":
