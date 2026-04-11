@@ -287,6 +287,63 @@ func (s *authService) IsBootstrapAccount(userID string) bool {
 // startup. This ID must never be used in UAT or production deployments.
 const playwrightTestUserID = "00000000-0000-0000-0000-000000000002"
 
+func validatePlaywrightSeedCredentials(email, password string) error {
+	normalizedEmail := strings.TrimSpace(strings.ToLower(email))
+	normalizedPassword := strings.TrimSpace(password)
+	if normalizedEmail == "" {
+		return errors.New("playwright test user email is required")
+	}
+	if normalizedPassword == "" {
+		return errors.New("playwright test user password is required")
+	}
+
+	atIdx := strings.LastIndex(normalizedEmail, "@")
+	if atIdx <= 0 || atIdx == len(normalizedEmail)-1 {
+		return fmt.Errorf("playwright test user email must be a valid dev/test address: %q", email)
+	}
+
+	username := normalizedEmail[:atIdx]
+	domainPart := normalizedEmail[atIdx+1:]
+	allowedDomains := []string{"localhost", "example.com"}
+	allowedDomainSuffixes := []string{".local", ".test"}
+
+	isAllowedDomain := false
+	for _, allowedDomain := range allowedDomains {
+		if domainPart == allowedDomain {
+			isAllowedDomain = true
+			break
+		}
+	}
+	if !isAllowedDomain {
+		for _, suffix := range allowedDomainSuffixes {
+			if strings.HasSuffix(domainPart, suffix) {
+				isAllowedDomain = true
+				break
+			}
+		}
+	}
+	if !isAllowedDomain {
+		return fmt.Errorf("refusing to seed playwright test user for non-dev/test email domain: %q", email)
+	}
+
+	normalizedPasswordLower := strings.ToLower(normalizedPassword)
+	disallowedPasswords := map[string]struct{}{
+		"password":    {},
+		"password123": {},
+		"changeme":    {},
+		"admin":       {},
+		"playwright":  {},
+	}
+	if _, found := disallowedPasswords[normalizedPasswordLower]; found {
+		return errors.New("refusing to seed playwright test user with a default or weak password")
+	}
+	if normalizedPasswordLower == normalizedEmail || normalizedPasswordLower == username {
+		return errors.New("refusing to seed playwright test user with a predictable password")
+	}
+
+	return nil
+}
+
 // EnsurePlaywrightTestUser creates or reactivates a dedicated Playwright test
 // user so that end-to-end tests can authenticate without manual setup.
 // The user is always given role=admin so that tests can exercise every
@@ -297,6 +354,10 @@ const playwrightTestUserID = "00000000-0000-0000-0000-000000000002"
 // The caller (main.go) is responsible for gate-checking the config flag before
 // invoking this method.
 func (s *authService) EnsurePlaywrightTestUser(email, password string) error {
+	if err := validatePlaywrightSeedCredentials(email, password); err != nil {
+		return fmt.Errorf("playwright test user seeding blocked: %w", err)
+	}
+
 	// Derive a username from the local part of the email address (e.g.
 	// "playwright" from "playwright@axiom.local") so the username stays
 	// consistent with whatever email is configured.

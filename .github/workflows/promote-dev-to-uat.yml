@@ -15,9 +15,6 @@ permissions:
   contents: read
   pull-requests: write
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-
 jobs:
   promote:
     name: Create promotion PR (dev → uat)

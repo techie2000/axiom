@@ -4,10 +4,12 @@ ALTER TABLE lei_raw.lei_reporting_exceptions
 UPDATE lei_raw.lei_reporting_exceptions
 SET exception_reasons = COALESCE(
     (
-        SELECT jsonb_agg(trimmed_reason)
+        SELECT jsonb_agg(trimmed_reason ORDER BY ordinality)
         FROM (
-            SELECT NULLIF(BTRIM(reason_part), '') AS trimmed_reason
-            FROM unnest(string_to_array(COALESCE(exception_reason, ''), ',')) AS reason_part
+            SELECT
+                NULLIF(BTRIM(reason_part), '') AS trimmed_reason,
+                ordinality
+            FROM unnest(string_to_array(COALESCE(exception_reason, ''), ',')) WITH ORDINALITY AS parsed_parts(reason_part, ordinality)
         ) parsed
         WHERE trimmed_reason IS NOT NULL
     ),
