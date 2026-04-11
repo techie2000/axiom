@@ -2,7 +2,7 @@ name: Auto Label Issues
 
 on:
   issues:
-    types: [opened]
+    types: [opened, edited, reopened]
 
 permissions:
   issues: write
@@ -14,7 +14,7 @@ jobs:
   auto-label:
     runs-on: ubuntu-latest
     steps:
-      - name: Apply issue labels from keywords
+      - name: Normalize issue title and apply labels
         uses: actions/github-script@v7
         with:
           script: |
@@ -22,6 +22,24 @@ jobs:
             const title = (issue.title || '').toLowerCase()
             const body = (issue.body || '').toLowerCase()
             const text = `${title}\n${body}`
+
+            const statusLabels = [
+              {
+                name: 'status: triage',
+                color: 'ededed',
+                description: 'Needs initial review'
+              },
+              {
+                name: 'status: in progress',
+                color: 'fbca04',
+                description: 'Actively being worked on'
+              },
+              {
+                name: 'status: done',
+                color: '0e8a16',
+                description: 'Work completed or merged'
+              }
+            ]
 
             const labelRules = [
               {
@@ -94,6 +112,84 @@ jobs:
               }
             ]
 
+            const titlePrefixes = {
+              bug: '[Bug]',
+              enhancement: '[Feature]',
+              documentation: '[Docs]',
+              security: '[Security]',
+              performance: '[Performance]',
+              question: '[Question]'
+            }
+
+            function extractCandidateTitleFromBody(rawBody) {
+              if (!rawBody) {
+                return ''
+              }
+
+              const lines = rawBody
+                .split(/\r?\n/)
+                .map((line) => line.trim())
+                .filter((line) => line.length > 0)
+
+              for (const line of lines) {
+                if (line.startsWith('#')) {
+                  continue
+                }
+                if (line.startsWith('- [ ]') || line.startsWith('- [x]')) {
+                  continue
+                }
+                if (line.startsWith('- ')) {
+                  continue
+                }
+                if (/^\d+\./.test(line)) {
+                  continue
+                }
+                if (/^summary$/i.test(line) || /^description$/i.test(line) || /^objective$/i.test(line)) {
+                  continue
+                }
+                if (/^steps to reproduce$/i.test(line) || /^expected behavior$/i.test(line)) {
+                  continue
+                }
+                if (/^actual behavior$/i.test(line) || /^problem to solve$/i.test(line)) {
+                  continue
+                }
+                if (/^proposed solution$/i.test(line) || /^acceptance criteria$/i.test(line)) {
+                  continue
+                }
+                if (/^environment$/i.test(line) || /^additional context$/i.test(line)) {
+                  continue
+                }
+                if (/^\[.+\]$/.test(line)) {
+                  continue
+                }
+
+                return line.replace(/[.\s]+$/, '')
+              }
+
+              return ''
+            }
+
+            function isWeakTitle(rawTitle) {
+              const normalized = (rawTitle || '').trim().toLowerCase()
+              if (normalized.length < 12) {
+                return true
+              }
+
+              return [
+                /^\[?(bug|feature|task|issue|problem|help|question|docs?)\]?[:\s-]*$/,
+                /^(bug|feature request|task|issue|problem|help|question)[:\s-]/,
+                /^(bug report|feature request|task)$/
+              ].some((pattern) => pattern.test(normalized))
+            }
+
+            function toSentenceCase(value) {
+              if (!value) {
+                return ''
+              }
+
+              return value.charAt(0).toUpperCase() + value.slice(1)
+            }
+
             const labelsToApply = []
             for (const rule of labelRules) {
               if (rule.patterns.some((pattern) => pattern.test(text))) {
@@ -102,8 +198,78 @@ jobs:
             }
 
             if (labelsToApply.length === 0) {
-              labelsToApply.push('triage')
+              labelsToApply.push('question')
             }
+
+            const primaryLabel = labelsToApply[0]
+            const currentTitle = (issue.title || '').trim()
+            const existingPrefixMatch = currentTitle.match(/^\[[^\]]+\]\s*/)
+            const existingPrefix = existingPrefixMatch ? existingPrefixMatch[0].trim() : ''
+            const desiredPrefix = titlePrefixes[primaryLabel] || '[Task]'
+            const bodyCandidate = extractCandidateTitleFromBody(issue.body || '')
+            const baseTitle = bodyCandidate || currentTitle.replace(/^\[[^\]]+\]\s*/, '').trim()
+            const normalizedBaseTitle = toSentenceCase(baseTitle)
+            const needsRewrite = isWeakTitle(currentTitle)
+            const needsPrefix = !existingPrefix && normalizedBaseTitle.length > 0
+
+            if ((needsRewrite || needsPrefix || existingPrefix !== desiredPrefix) && normalizedBaseTitle) {
+              const nextTitle = `${desiredPrefix} ${normalizedBaseTitle}`.trim()
+              if (nextTitle !== issue.title) {
+                await github.rest.issues.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  title: nextTitle
+                })
+                core.info(`Normalized issue title to: ${nextTitle}`)
+              }
+            }
+
+            const areaLabelDefs = [
+              { name: 'area:backend',      color: '2C5F8D', description: 'Backend Go services and API' },
+              { name: 'area:frontend',     color: '17A2B8', description: 'Frontend Next.js / React' },
+              { name: 'area:database',     color: '6f42c1', description: 'Database migrations and schema' },
+              { name: 'area:docs',         color: '0075ca', description: 'Documentation and guides' },
+              { name: 'area:infra',        color: '555555', description: 'Infrastructure and deployment' },
+              { name: 'area:ci',           color: 'e4e669', description: 'CI/CD pipelines and workflows' },
+              { name: 'area:lei',          color: 'D9534F', description: 'LEI data pipeline and GLEIF' },
+              { name: 'area:dependencies', color: '0366d6', description: 'Dependency updates' },
+            ]
+
+            const typeLabelDefs = [
+              { name: 'type:tests',    color: '28A745', description: 'Test coverage addition or fix' },
+              { name: 'type:refactor', color: 'f9d0c4', description: 'Code quality, no behavior change' },
+              { name: 'type:chore',    color: 'fef2c0', description: 'Maintenance, tooling, config' },
+            ]
+
+            const areaKeywordRules = [
+              { label: 'area:lei',          patterns: [/\blei\b/, /\bgleif\b/, /\blevel[- ]?2\b/, /\brelationship record\b/, /\breporting exception\b/] },
+              { label: 'area:database',     patterns: [/\bmigration\b/, /\bpostgres\b/, /\bschema\b/] },
+              { label: 'area:infra',        patterns: [/\bdocker\b/, /\bcontainer\b/, /\bcompose\b/, /\bnginx\b/] },
+              { label: 'area:ci',           patterns: [/\bgithub actions\b/, /\bworkflow\b/, /\bci\/cd\b/] },
+              { label: 'area:frontend',     patterns: [/\breact\b/, /\bnext\.?js\b/, /\btailwind\b/, /\bi18n\b/] },
+              { label: 'area:backend',      patterns: [/\bgolang\b/, /\bgo service\b/, /\bgorm\b/] },
+              { label: 'area:dependencies', patterns: [/\bdependabot\b/, /\bdependency\b/, /\bgo\.mod\b/, /\bpackage\.json\b/] },
+              { label: 'area:docs',         patterns: [/\badr\b/, /\barchitecture decision\b/] },
+            ]
+
+            const typeKeywordRules = [
+              { label: 'type:tests',    patterns: [/\btest(?:s|ing)?\b/, /\bcoverage\b/] },
+              { label: 'type:refactor', patterns: [/\brefactor\b/, /\bclean[- ]?up\b/] },
+              { label: 'type:chore',    patterns: [/\bchore\b/, /\bmaintenance\b/, /\btooling\b/] },
+            ]
+
+            const currentLabelNames = (issue.labels || []).map((l) =>
+              typeof l === 'string' ? l : l.name
+            )
+
+            const inferredAreaLabels = currentLabelNames.some((n) => n.startsWith('area:'))
+              ? []
+              : areaKeywordRules.filter((r) => r.patterns.some((p) => p.test(text))).map((r) => r.label)
+
+            const inferredTypeLabels = currentLabelNames.some((n) => n.startsWith('type:'))
+              ? []
+              : typeKeywordRules.filter((r) => r.patterns.some((p) => p.test(text))).map((r) => r.label)
 
             const allLabels = [
               ...labelRules.map((r) => ({
@@ -111,11 +277,9 @@ jobs:
                 color: r.color,
                 description: r.description
               })),
-              {
-                name: 'triage',
-                color: 'ededed',
-                description: 'Needs triage'
-              }
+              ...areaLabelDefs,
+              ...typeLabelDefs,
+              ...statusLabels
             ]
 
             for (const labelDef of allLabels) {
@@ -146,11 +310,38 @@ jobs:
               }
             }
 
+            const existingNames = (issue.labels || []).map((label) =>
+              typeof label === 'string' ? label : label.name
+            )
+
+            const statusToApply = issue.state === 'open' ? 'status: triage' : 'status: done'
+            const statusNames = statusLabels.map((label) => label.name)
+            const labelsToRemove = existingNames.filter((label) =>
+              statusNames.includes(label) && label !== statusToApply
+            )
+
+            if (labelsToRemove.length > 0) {
+              for (const label of labelsToRemove) {
+                try {
+                  await github.rest.issues.removeLabel({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    name: label
+                  })
+                } catch (error) {
+                  if (error.status !== 404) {
+                    throw error
+                  }
+                }
+              }
+            }
+
             await github.rest.issues.addLabels({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: issue.number,
-              labels: [...new Set(labelsToApply)]
+              labels: [...new Set([...labelsToApply, ...inferredAreaLabels, ...inferredTypeLabels, statusToApply])]
             })
 
-            core.info(`Applied labels: ${[...new Set(labelsToApply)].join(', ')}`)
+            core.info(`Applied labels: ${[...new Set([...labelsToApply, ...inferredAreaLabels, ...inferredTypeLabels, statusToApply])].join(', ')}`)

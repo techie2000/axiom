@@ -1,0 +1,40 @@
+name: Task
+description: Track a discrete implementation or maintenance task.
+title: "[Task] "
+labels:
+  - status: triage
+body:
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objective
+      description: Use an imperative summary of the work to complete.
+      placeholder: Update the LEI backfill script to record source-file provenance
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      placeholder: Describe the scope, files, and constraints that matter.
+    validations:
+      required: true
+  - type: textarea
+    id: checklist
+    attributes:
+      label: Checklist
+      description: One checklist item per line.
+      placeholder: |
+        - [ ] Update repository logic
+        - [ ] Add regression coverage
+        - [ ] Document the operational workflow
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies
+      placeholder: Requires the source file provenance migration to land first.
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Links, background, related issues, or rollout notes.

@@ -1,0 +1,51 @@
+name: Bug report
+description: Report a broken behavior with a concise, action-oriented summary.
+title: "[Bug] "
+labels:
+  - bug
+  - status: triage
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Use a short sentence that names the broken behavior and condition.
+      placeholder: Fix export download failure when the CSV filter contains special characters
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: List the smallest reliable reproduction path.
+      placeholder: |
+        1. Open the LEI records page
+        2. Apply a filter with special characters
+        3. Click Export CSV
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      placeholder: The export completes and downloads a valid CSV file.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      placeholder: The request fails with a 500 response and no file is downloaded.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include environment, browser, OS, and version details when relevant.
+      placeholder: main, Chrome 136, Windows 11, frontend HEAD
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Logs, screenshots, related issues, or suspected cause.

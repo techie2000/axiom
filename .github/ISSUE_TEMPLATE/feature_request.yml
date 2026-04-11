@@ -1,0 +1,50 @@
+name: Feature request
+description: Propose an outcome-focused enhancement with a clear user benefit.
+title: "[Feature] "
+labels:
+  - enhancement
+  - status: triage
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Name the capability to add and who benefits from it.
+      placeholder: Add saved LEI filter presets for operations analysts
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      placeholder: Analysts rebuild the same LEI filters every day, which is slow and error-prone.
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      placeholder: Let users save named filter sets and restore them from the LEI records page.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: One item per line.
+      placeholder: |
+        - Users can save the current filter state with a name
+        - Saved presets can be selected and applied later
+        - Users can delete obsolete presets
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      placeholder: Keep using browser bookmarks, but they do not preserve all table state.
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Related issues, mockups, rollout notes, or constraints.
