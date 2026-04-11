@@ -638,6 +638,35 @@
       "fetchFailed": "Failed to load audit history. Please try again."
     }
   },
+  "leiStatus": {
+    "jobDisplay": {
+      "gleifReferenceSync": "GLEIF Reference Code Lists",
+      "masterDataSync": "Reference Data",
+      "dailyFull": "Level 1 — LEI Records",
+      "dailyDelta": "Level 1 — LEI Records Delta",
+      "level2Rr": "Level 2 — Relationship Records",
+      "level2Repex": "Level 2 — Reporting Exceptions"
+    },
+    "pipeline": {
+      "collapseReportingExceptionsJob": "Collapse Reporting Exceptions job",
+      "expandReportingExceptionsJob": "Expand Reporting Exceptions job",
+      "rrTriggered": "Level 2 Relationship Records sync triggered",
+      "repexTriggered": "Level 2 Reporting Exceptions sync triggered",
+      "rrBlocked": "Blocked while the Level 1 full sync or Relationship Records job is running",
+      "repexBlocked": "Blocked while the Level 1 full sync, Relationship Records job, or Reporting Exceptions job is running",
+      "triggerOnlyRr": "Trigger only the Level 2 Relationship Records sync",
+      "triggerOnlyRepex": "Trigger only the Level 2 Reporting Exceptions sync"
+    },
+    "card": {
+      "health": {
+        "level2Relationship": "Level 2 Relationship Records",
+        "level2Exceptions": "Level 2 Reporting Exceptions",
+        "relationsShort": "Relations",
+        "exceptionsShort": "Exceptions"
+      },
+      "breakdown": "Level 2 breakdown: Relationship Records {{rr}} | Reporting Exceptions {{repex}}"
+    }
+  },
   "footer": {
     "copyright": "Axiom – Financial Services Static Data"
   },

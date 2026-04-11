@@ -428,7 +428,7 @@ func (h *LEIHandler) TriggerDeltaSync(c *gin.Context) {
 
 // TriggerLevel2Sync manually triggers a Level 2 (Relationship Records + Reporting Exceptions) sync
 // @Summary Trigger Level 2 LEI sync
-// @Description Manually trigger a GLEIF Level 2 data synchronization (RR + REPEX). Runs independently of the
+// @Description Manually trigger a GLEIF Level 2 data synchronization (Relationship Records + Reporting Exceptions). Runs independently of the
 // scheduled Level 1 full sync so an operator can re-run just the Level 2 pipeline intra-day.
 // @Tags LEI
 // @Accept json
@@ -446,12 +446,12 @@ func (h *LEIHandler) TriggerLevel2Sync(c *gin.Context) {
 		}
 		return
 	}
-	c.JSON(http.StatusAccepted, gin.H{"message": "Level 2 sync triggered (LEVEL2_RR → LEVEL2_REPEX)"})
+	c.JSON(http.StatusAccepted, gin.H{"message": "Level 2 sync triggered (Relationship Records → Reporting Exceptions)"})
 }
 
-// TriggerLevel2RRSync manually triggers Level 2 RR step
-// @Summary Trigger Level 2 RR sync
-// @Description Manually trigger the LEVEL2_RR job
+// TriggerLevel2RRSync manually triggers the Level 2 Relationship Records step.
+// @Summary Trigger Level 2 Relationship Records sync
+// @Description Manually trigger the Level 2 Relationship Records job.
 // @Tags LEI
 // @Accept json
 // @Produce json
@@ -464,16 +464,16 @@ func (h *LEIHandler) TriggerLevel2RRSync(c *gin.Context) {
 		if errors.Is(err, service.ErrJobRunning) {
 			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to trigger Level 2 Relationship Records sync (LEVEL2_RR)"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to trigger Level 2 Relationship Records sync"})
 		}
 		return
 	}
-	c.JSON(http.StatusAccepted, gin.H{"message": "Level 2 Relationship Records sync triggered (LEVEL2_RR)"})
+	c.JSON(http.StatusAccepted, gin.H{"message": "Level 2 Relationship Records sync triggered"})
 }
 
-// TriggerLevel2REPEXSync manually triggers Level 2 REPEX step
-// @Summary Trigger Level 2 REPEX sync
-// @Description Manually trigger the LEVEL2_REPEX job
+// TriggerLevel2REPEXSync manually triggers the Level 2 Reporting Exceptions step.
+// @Summary Trigger Level 2 Reporting Exceptions sync
+// @Description Manually trigger the Level 2 Reporting Exceptions job.
 // @Tags LEI
 // @Accept json
 // @Produce json
@@ -486,11 +486,11 @@ func (h *LEIHandler) TriggerLevel2REPEXSync(c *gin.Context) {
 		if errors.Is(err, service.ErrJobRunning) {
 			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to trigger Level 2 Reporting Exceptions sync (LEVEL2_REPEX)"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to trigger Level 2 Reporting Exceptions sync"})
 		}
 		return
 	}
-	c.JSON(http.StatusAccepted, gin.H{"message": "Level 2 Reporting Exceptions sync triggered (LEVEL2_REPEX)"})
+	c.JSON(http.StatusAccepted, gin.H{"message": "Level 2 Reporting Exceptions sync triggered"})
 }
 
 // GetProcessingStatus retrieves processing status for a job type
