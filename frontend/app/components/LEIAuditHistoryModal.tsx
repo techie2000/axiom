@@ -218,11 +218,15 @@ function SnapshotValue({ fieldKey, value, snapshot, showCodes = true, countryByC
   if (text === '—') return <span className="theme-text-muted">—</span>
   if (fieldKey === 'registration_authority' && typeof value === 'string') {
     const raCode = value.trim()
+    const snapshotRaCode = typeof snapshot?.registration_authority === 'string'
+      ? snapshot.registration_authority.trim()
+      : ''
+    const canUseSnapshotName = snapshotRaCode !== '' && snapshotRaCode === raCode
     const raName = typeof snapshot?.registration_authority_name === 'string'
-      ? snapshot.registration_authority_name.trim()
+      ? (canUseSnapshotName ? snapshot.registration_authority_name.trim() : '')
       : ''
     const raIntlName = typeof snapshot?.registration_authority_international_name === 'string'
-      ? snapshot.registration_authority_international_name.trim()
+      ? (canUseSnapshotName ? snapshot.registration_authority_international_name.trim() : '')
       : ''
     const showIntl = raIntlName && raIntlName !== raName
 

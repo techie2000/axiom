@@ -20,7 +20,7 @@ import { useCachedLeiCount } from '../lib/useCachedLeiCount'
 import { useUserPreference } from '../lib/useUserPreference'
 import { useSearchFocusShortcut } from '../lib/useSearchFocusShortcut'
 import MapLink from '../components/MapLink'
-import { formatDayDelta, getRelativeTimeInfo } from './date-utils'
+import { getRelativeTimeInfo } from './date-utils'
 import { formatEnumDisplayValue, formatLEICellValue, getStatusBadgePresentation, normalizeRecordNullLikeValues } from './null-utils'
 import { formatStatusFilterLabel, LEI_STATUS_FILTER_OPTIONS, normalizeStatusFilterForAPI } from './status-filter'
 import { computeShowingEnd, formatCurrentPageStatValue } from './stats-format'
@@ -36,8 +36,9 @@ function buildLookupOptions(
   raCode: string | null | undefined,
   raTemplates: Array<{ name: string; url: string }>,
   regNum: string | null | undefined,
+  language: string | null | undefined,
 ): RegistrationLookupOption[] {
-  return buildRegistrationLookupOptions(raCode, raTemplates, regNum)
+  return buildRegistrationLookupOptions(raCode, raTemplates, regNum, language)
 }
 
 interface LEIRecord {
@@ -190,7 +191,7 @@ const DEFAULT_VISIBLE_KEYS = AVAILABLE_COLUMNS.filter(col => col.defaultVisible)
 const COUNTRY_DETAIL_ORDER = ['code', 'name', 'alpha3_code', 'region', 'active']
 
 export default function LEIRecordsPage() {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const { getEnglishTooltip } = useEnglishTooltips()
   const { formatLabel } = useButtonEmojiMode()
   const [isLoggedIn, setIsLoggedIn] = useState(false)
@@ -963,6 +964,42 @@ export default function LEIRecordsPage() {
   const formatCellValue = (value: any, key: keyof LEIRecord): string => {
     return formatLEICellValue(value, key)
   }
+
+  const formatRelativeTimeText = useCallback((dateInfo: ReturnType<typeof getRelativeTimeInfo>): string => {
+    if (dateInfo.isPlaceholder) {
+      return '-'
+    }
+
+    if (dateInfo.tense === 'today') {
+      return t('leiRecords.relativeTime.today')
+    }
+
+    if (dateInfo.tense === 'past') {
+      if (dateInfo.unit === 'day') return t('leiRecords.relativeTime.dayAgo', { count: dateInfo.value })
+      if (dateInfo.unit === 'week') return t('leiRecords.relativeTime.weekAgo', { count: dateInfo.value })
+      if (dateInfo.unit === 'month') return t('leiRecords.relativeTime.monthAgo', { count: dateInfo.value })
+      return t('leiRecords.relativeTime.yearAgo', { count: dateInfo.value })
+    }
+
+    if (dateInfo.unit === 'day') return t('leiRecords.relativeTime.inDay', { count: dateInfo.value })
+    if (dateInfo.unit === 'week') return t('leiRecords.relativeTime.inWeek', { count: dateInfo.value })
+    if (dateInfo.unit === 'month') return t('leiRecords.relativeTime.inMonth', { count: dateInfo.value })
+    return t('leiRecords.relativeTime.inYear', { count: dateInfo.value })
+  }, [t])
+
+  const formatDayDeltaText = useCallback((days: number): string => {
+    if (days === 0) {
+      return t('leiRecords.relativeTime.today')
+    }
+
+    return days < 0
+      ? t('leiRecords.relativeTime.dayAgo', { count: Math.abs(days) })
+      : t('leiRecords.relativeTime.inDay', { count: Math.abs(days) })
+  }, [t])
+
+  const formatOverdueText = useCallback((days: number): string => {
+    return t('leiRecords.relativeTime.overdueBy', { count: Math.abs(days) })
+  }, [t])
 
   const isVirtualColumnKey = (key: keyof LEIRecord): boolean => {
     return Object.prototype.hasOwnProperty.call(VIRTUAL_COLUMN_DEPENDENCIES, key)
@@ -1844,7 +1881,7 @@ export default function LEIRecordsPage() {
                                   const regNum = String(value || '')
                                   const raCode = record.registration_authority
                                   const raTemplates = raCode ? (raUrlTemplates[raCode] ?? []) : []
-                                  const lookupOptions = buildLookupOptions(raCode, raTemplates, regNum)
+                                  const lookupOptions = buildLookupOptions(raCode, raTemplates, regNum, i18n.resolvedLanguage || i18n.language)
                                   if (!regNum) return <span>-</span>
                                   return (
                                     <div className="group/rn inline-flex items-center gap-1">
@@ -1880,7 +1917,7 @@ export default function LEIRecordsPage() {
                                 (() => {
                                   const dateValue = String(value || '')
                                   const renewalInfo = getRelativeTimeInfo(dateValue)
-                                  if (renewalInfo.relative === '-') {
+                                  if (renewalInfo.isPlaceholder) {
                                     return <span>-</span>
                                   }
 
@@ -1889,8 +1926,8 @@ export default function LEIRecordsPage() {
                                       <div>{formatCellValue(value, column.key)}</div>
                                       <div className={`mt-1 text-xs ${renewalInfo.isOverdue ? 'text-red-700 dark:text-red-300 font-medium' : 'theme-text-muted'}`}>
                                         {renewalInfo.isOverdue
-                                          ? `Overdue by ${Math.abs(renewalInfo.days)} ${Math.abs(renewalInfo.days) === 1 ? 'day' : 'days'}`
-                                          : renewalInfo.relative}
+                                          ? formatOverdueText(renewalInfo.days)
+                                          : formatRelativeTimeText(renewalInfo)}
                                       </div>
                                     </div>
                                   )
@@ -2371,7 +2408,7 @@ export default function LEIRecordsPage() {
                       const regNum = selectedRecord.registration_number
                       const raCode = selectedRecord.registration_authority
                       const raTemplates = raCode ? (raUrlTemplates[raCode] ?? []) : []
-                      const lookupOptions = buildLookupOptions(raCode, raTemplates, regNum)
+                      const lookupOptions = buildLookupOptions(raCode, raTemplates, regNum, i18n.resolvedLanguage || i18n.language)
                       return (
                         <p className="text-sm font-mono text-[rgb(var(--foreground-rgb))] mt-1">
                           <span className="group/rn-modal inline-flex items-center gap-1">
@@ -2407,11 +2444,13 @@ export default function LEIRecordsPage() {
                     <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">Initial Registration</span>
                     <p className="text-sm text-[rgb(var(--foreground-rgb))] mt-1">
                       {formatCellValue(selectedRecord.initial_registration_date, 'initial_registration_date')}
-                      {selectedRecord.initial_registration_date && selectedRecord.initial_registration_date !== '0001-01-01T00:00:00Z' && (
+                      {selectedRecord.initial_registration_date && !selectedRecord.initial_registration_date.startsWith('0001-') && (
                         <span className="ml-2 text-xs text-[rgb(var(--muted-foreground-rgb))]">
                           ({(() => {
                             const dateInfo = getRelativeTimeInfo(selectedRecord.initial_registration_date)
-                            return dateDisplayMode === 'relative' ? dateInfo.relative : formatDayDelta(dateInfo.days)
+                            return dateDisplayMode === 'relative'
+                              ? formatRelativeTimeText(dateInfo)
+                              : formatDayDeltaText(dateInfo.days)
                           })()})
                         </span>
                       )}
@@ -2421,11 +2460,13 @@ export default function LEIRecordsPage() {
                     <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">Last Updated</span>
                     <p className="text-sm text-[rgb(var(--foreground-rgb))] mt-1">
                       {formatCellValue(selectedRecord.last_update_date, 'last_update_date')}
-                      {selectedRecord.last_update_date && selectedRecord.last_update_date !== '0001-01-01T00:00:00Z' && (
+                      {selectedRecord.last_update_date && !selectedRecord.last_update_date.startsWith('0001-') && (
                         <span className="ml-2 text-xs text-[rgb(var(--muted-foreground-rgb))]">
                           ({(() => {
                             const dateInfo = getRelativeTimeInfo(selectedRecord.last_update_date)
-                            return dateDisplayMode === 'relative' ? dateInfo.relative : formatDayDelta(dateInfo.days)
+                            return dateDisplayMode === 'relative'
+                              ? formatRelativeTimeText(dateInfo)
+                              : formatDayDeltaText(dateInfo.days)
                           })()})
                         </span>
                       )}
@@ -2439,18 +2480,23 @@ export default function LEIRecordsPage() {
                     <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">Next Renewal</span>
                     <p className="text-sm text-[rgb(var(--foreground-rgb))] mt-1">
                       {formatCellValue(selectedRecord.next_renewal_date, 'next_renewal_date')}
-                      {selectedRecord.next_renewal_date && selectedRecord.next_renewal_date !== '0001-01-01T00:00:00Z' && (
-                        <span className={`ml-2 text-xs ${getRelativeTimeInfo(selectedRecord.next_renewal_date).isOverdue ? 'text-red-700 dark:text-red-300 font-medium' : 'text-[rgb(var(--muted-foreground-rgb))]'}`}>
-                          ({(() => {
-                            const dateInfo = getRelativeTimeInfo(selectedRecord.next_renewal_date)
-                            if (dateDisplayMode === 'relative') {
-                              return dateInfo.isOverdue ? `${dateInfo.relative} (overdue)` : dateInfo.relative
-                            }
-                            return dateInfo.isOverdue
-                              ? `Overdue by ${Math.abs(dateInfo.days)} ${Math.abs(dateInfo.days) === 1 ? 'day' : 'days'}`
-                              : formatDayDelta(dateInfo.days)
-                          })()})
-                        </span>
+                      {selectedRecord.next_renewal_date && !selectedRecord.next_renewal_date.startsWith('0001-') && (
+                        (() => {
+                          const dateInfo = getRelativeTimeInfo(selectedRecord.next_renewal_date)
+                          if (dateInfo.isPlaceholder) {
+                            return null
+                          }
+
+                          return (
+                            <span className={`ml-2 text-xs ${dateInfo.isOverdue ? 'text-red-700 dark:text-red-300 font-medium' : 'text-[rgb(var(--muted-foreground-rgb))]'}`}>
+                              ({dateInfo.isOverdue
+                                ? formatOverdueText(dateInfo.days)
+                                : dateDisplayMode === 'relative'
+                                  ? formatRelativeTimeText(dateInfo)
+                                  : formatDayDeltaText(dateInfo.days)})
+                            </span>
+                          )
+                        })()
                       )}
                     </p>
                   </div>

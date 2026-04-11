@@ -8,10 +8,17 @@
  */
 export function buildRegistrationLookupUrl(
   urlTemplate: string | undefined | null,
-  registrationNumber: string | undefined | null
+  registrationNumber: string | undefined | null,
+  language?: string | undefined | null
 ): string | null {
   if (!urlTemplate || !registrationNumber) return null
-  return urlTemplate.replaceAll('{registration_number}', encodeURIComponent(registrationNumber))
+
+  const baseLang = String(language || 'en').split('-')[0].trim().toLowerCase()
+  const safeLang = /^[a-z]{2,3}$/.test(baseLang) ? baseLang : 'en'
+
+  return urlTemplate
+    .replaceAll('{registration_number}', encodeURIComponent(registrationNumber))
+    .replaceAll('{lang}', encodeURIComponent(safeLang))
 }
 
 export interface RegistrationLookupTemplate {
@@ -58,7 +65,8 @@ function isTexasFranchiseFileNumberLookup(raCode: string, templateUrl: string): 
 export function buildRegistrationLookupOptions(
   raCode: string | undefined | null,
   templates: RegistrationLookupTemplate[],
-  registrationNumber: string | undefined | null
+  registrationNumber: string | undefined | null,
+  language?: string | undefined | null
 ): RegistrationLookupOption[] {
   if (!registrationNumber || !raCode) return []
 
@@ -77,7 +85,7 @@ export function buildRegistrationLookupOptions(
     }
 
     if (isTexasFranchiseFileNumberLookup(raCode, template.url)) {
-      const searchApiUrl = buildRegistrationLookupUrl(template.url, trimmedRegistrationNumber)
+      const searchApiUrl = buildRegistrationLookupUrl(template.url, trimmedRegistrationNumber, language)
       if (!searchApiUrl) return []
 
       return [{
@@ -89,7 +97,7 @@ export function buildRegistrationLookupOptions(
       }]
     }
 
-    const resolvedUrl = buildRegistrationLookupUrl(template.url, trimmedRegistrationNumber)
+    const resolvedUrl = buildRegistrationLookupUrl(template.url, trimmedRegistrationNumber, language)
     if (!resolvedUrl) return []
 
     return [{
