@@ -138,6 +138,48 @@ describe('buildRegistrationLookupOptions', () => {
       },
     ])
   })
+
+  it('falls back to en for unsupported Belgium KBO languages', () => {
+    const options = buildRegistrationLookupOptions(
+      'RA000025',
+      [{
+        name: 'KBO (Belgium)',
+        url: 'https://kbopub.economie.fgov.be/kbopub/zoeknummerform.html?lang={lang}&nummer={registration_number}',
+      }],
+      '0712691464',
+      'es'
+    )
+
+    expect(options).toEqual([
+      {
+        key: 'KBO (Belgium):https://kbopub.economie.fgov.be/kbopub/zoeknummerform.html?lang=en&nummer=0712691464',
+        label: 'KBO (Belgium)',
+        type: 'url',
+        url: 'https://kbopub.economie.fgov.be/kbopub/zoeknummerform.html?lang=en&nummer=0712691464',
+      },
+    ])
+  })
+
+  it('keeps normalized language for registries without an allowlist', () => {
+    const options = buildRegistrationLookupOptions(
+      'RA009999',
+      [{
+        name: 'Example Registry',
+        url: 'https://example.com/find?lang={lang}&id={registration_number}',
+      }],
+      'ABC123',
+      'es-MX'
+    )
+
+    expect(options).toEqual([
+      {
+        key: 'Example Registry:https://example.com/find?lang=es&id=ABC123',
+        label: 'Example Registry',
+        type: 'url',
+        url: 'https://example.com/find?lang=es&id=ABC123',
+      },
+    ])
+  })
 })
 
 describe('openRegistrationLookup', () => {

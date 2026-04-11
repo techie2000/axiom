@@ -45,6 +45,22 @@ const SUNBIZ_DOCUMENT_NUMBER_PATH = '/Inquiry/CorporationSearch/ByDocumentNumber
 const TEXAS_FRANCHISE_SEARCH_PATH = '/data-search/franchise-tax'
 const TEXAS_FRANCHISE_SEARCH_PAGE_URL = 'https://comptroller.texas.gov/taxes/franchise/account-status/search'
 const TEXAS_FRANCHISE_DETAIL_URL_PREFIX = `${TEXAS_FRANCHISE_SEARCH_PAGE_URL}/`
+const REGISTRY_LANGUAGE_ALLOWLIST: Record<string, Set<string>> = {
+  // Belgium KBO supports en/nl/fr/de (issue #302).
+  RA000025: new Set(['en', 'nl', 'fr', 'de']),
+}
+
+function normalizeBaseLanguage(lang?: string): string {
+  const baseLang = lang ? lang.split('-')[0].toLowerCase() : 'en'
+  return /^[a-z]{2,3}$/.test(baseLang) ? baseLang : 'en'
+}
+
+function resolveLookupLanguage(raCode: string, lang?: string): string {
+  const normalizedLang = normalizeBaseLanguage(lang)
+  const allowlist = REGISTRY_LANGUAGE_ALLOWLIST[raCode]
+  if (!allowlist) return normalizedLang
+  return allowlist.has(normalizedLang) ? normalizedLang : 'en'
+}
 
 function isSunbizDocumentLookup(raCode: string, templateUrl: string): boolean {
   if (raCode === 'RA000603') return true
@@ -76,6 +92,7 @@ export function buildRegistrationLookupOptions(
 
   const trimmedRegistrationNumber = String(registrationNumber).trim()
   if (!trimmedRegistrationNumber) return []
+  const lookupLang = resolveLookupLanguage(raCode, lang)
 
   return templates.flatMap<RegistrationLookupOption>(template => {
     if (isSunbizDocumentLookup(raCode, template.url)) {
@@ -89,7 +106,7 @@ export function buildRegistrationLookupOptions(
     }
 
     if (isTexasFranchiseFileNumberLookup(raCode, template.url)) {
-      const searchApiUrl = buildRegistrationLookupUrl(template.url, trimmedRegistrationNumber, lang)
+      const searchApiUrl = buildRegistrationLookupUrl(template.url, trimmedRegistrationNumber, lookupLang)
       if (!searchApiUrl) return []
 
       return [{
@@ -101,7 +118,7 @@ export function buildRegistrationLookupOptions(
       }]
     }
 
-    const resolvedUrl = buildRegistrationLookupUrl(template.url, trimmedRegistrationNumber, lang)
+    const resolvedUrl = buildRegistrationLookupUrl(template.url, trimmedRegistrationNumber, lookupLang)
     if (!resolvedUrl) return []
 
     return [{
