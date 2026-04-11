@@ -21,6 +21,8 @@ updates:
       - "dependencies"
       - "docker"
       - "security"
+      - "area:dependencies"
+      - "no-issue-needed"
     commit-message:
       prefix: "build(docker)"
       include: "scope"
@@ -44,6 +46,8 @@ updates:
       - "dependencies"
       - "go"
       - "backend"
+      - "area:dependencies"
+      - "no-issue-needed"
     commit-message:
       prefix: "build(go)"
       include: "scope"
@@ -79,6 +83,8 @@ updates:
       - "dependencies"
       - "npm"
       - "frontend"
+      - "area:dependencies"
+      - "no-issue-needed"
     commit-message:
       prefix: "build(npm)"
       include: "scope"

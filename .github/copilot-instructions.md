@@ -616,7 +616,12 @@ This repository configuration is designed to make AI coding agents immediately p
 
 When an AI agent creates a pull request, it should complete standard PR hygiene automatically **without asking for confirmation**:
 
-1. Add appropriate labels (at minimum `automated` plus a best-fit category label such as `enhancement`/`bug`).
+1. Add appropriate labels following the three-namespace taxonomy:
+   - **Category** (required): `bug`, `enhancement`, `documentation`, `security`, `performance`, or `question`
+   - **Area** (required, exactly one): `area:backend`, `area:frontend`, `area:database`, `area:docs`,
+     `area:infra`, `area:ci`, `area:lei`, or `area:dependencies` — infer from the files touched
+   - **Type** (optional secondary, one or two): `type:tests`, `type:refactor`, `type:chore`
+   - Add `automated` to mark AI-created items and `no-issue-needed` for PRs with no backing issue
 2. Request a reviewer (prefer `copilot-pull-request-reviewer` when available).
 3. Post a concise verification checklist comment relevant to the changed files.
 4. After each commit push to the PR branch, post a concise implementation summary comment that includes:
