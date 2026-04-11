@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import Alert from '../components/Alert'
 import LoadingSpinner from '../components/LoadingSpinner'
 import PageHeader from '../components/PageHeader'
@@ -73,6 +74,7 @@ interface Level2ProcessingFailure {
 type ImportJobType = 'DAILY_FULL' | 'DAILY_DELTA' | 'LEVEL2_RR' | 'LEVEL2_REPEX'
 
 export default function LEIStatusPage() {
+  const { t } = useTranslation('common')
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [gleifReferenceStatus, setGleifReferenceStatus] = useState<ProcessingStatus | null>(null)
   const [masterDataStatus, setMasterDataStatus] = useState<ProcessingStatus | null>(null)
@@ -372,17 +374,17 @@ export default function LEIStatusPage() {
   const getJobDisplayName = (jobType: string): string => {
     switch (jobType) {
       case 'GLEIF_REFERENCE_SYNC':
-        return 'GLEIF Reference Code Lists (GLEIF_REFERENCE_SYNC)'
+        return t('leiStatus.jobDisplay.gleifReferenceSync')
       case 'MASTER_DATA_SYNC':
-        return 'Reference Data (MASTER_DATA_SYNC)'
+        return t('leiStatus.jobDisplay.masterDataSync')
       case 'DAILY_FULL':
-        return 'Level 1 — LEI Records (DAILY_FULL)'
+        return t('leiStatus.jobDisplay.dailyFull')
       case 'DAILY_DELTA':
-        return 'Level 1 — LEI Records Delta (DAILY_DELTA)'
+        return t('leiStatus.jobDisplay.dailyDelta')
       case 'LEVEL2_RR':
-        return 'Level 2 — Relationship Records (LEVEL2_RR)'
+        return t('leiStatus.jobDisplay.level2Rr')
       case 'LEVEL2_REPEX':
-        return 'Level 2 — Reporting Exceptions (LEVEL2_REPEX)'
+        return t('leiStatus.jobDisplay.level2Repex')
       default:
         return jobType
     }
@@ -1052,14 +1054,18 @@ export default function LEIStatusPage() {
                   renderDisclosureButton(
                     showRrChild,
                     () => setRrExpanded((prev) => !prev),
-                    showRrChild ? 'Collapse REPEX job' : 'Expand REPEX job',
+                    showRrChild
+                      ? t('leiStatus.pipeline.collapseReportingExceptionsJob')
+                      : t('leiStatus.pipeline.expandReportingExceptionsJob'),
                   ),
                   !showRrChild ? '1 child job hidden' : undefined,
                   <div className="flex items-center gap-2">
                     {renderRowActionButton(
-                      () => triggerJob('/api/v1/lei/sync/level2/rr', 'Level 2 Relationship Records sync triggered (LEVEL2_RR)'),
+                      () => triggerJob('/api/v1/lei/sync/level2/rr', t('leiStatus.pipeline.rrTriggered')),
                       !canTriggerRr,
-                      !canTriggerRr ? 'Blocked while DAILY_FULL or LEVEL2_RR is running' : 'Trigger Level 2 Relationship Records sync only (LEVEL2_RR)',
+                      !canTriggerRr
+                        ? t('leiStatus.pipeline.rrBlocked')
+                        : t('leiStatus.pipeline.triggerOnlyRr'),
                     )}
                   </div>,
                 )}
@@ -1071,9 +1077,11 @@ export default function LEIStatusPage() {
                   renderControlSpacer(),
                   undefined,
                   renderRowActionButton(
-                    () => triggerJob('/api/v1/lei/sync/level2/repex', 'Level 2 Reporting Exceptions sync triggered (LEVEL2_REPEX)'),
+                    () => triggerJob('/api/v1/lei/sync/level2/repex', t('leiStatus.pipeline.repexTriggered')),
                     !canTriggerRepex,
-                    !canTriggerRepex ? 'Blocked while DAILY_FULL, LEVEL2_RR, or LEVEL2_REPEX is running' : 'Trigger Level 2 Reporting Exceptions sync only (LEVEL2_REPEX)',
+                    !canTriggerRepex
+                      ? t('leiStatus.pipeline.repexBlocked')
+                      : t('leiStatus.pipeline.triggerOnlyRepex'),
                   ),
                 )}
               </>
