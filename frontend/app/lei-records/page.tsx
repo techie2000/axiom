@@ -20,6 +20,7 @@ import { useCachedLeiCount } from '../lib/useCachedLeiCount'
 import { useUserPreference } from '../lib/useUserPreference'
 import { useSearchFocusShortcut } from '../lib/useSearchFocusShortcut'
 import MapLink from '../components/MapLink'
+import { formatDayDelta, getRelativeTimeInfo } from './date-utils'
 import { formatEnumDisplayValue, formatLEICellValue, getStatusBadgePresentation, normalizeRecordNullLikeValues } from './null-utils'
 import { formatStatusFilterLabel, LEI_STATUS_FILTER_OPTIONS, normalizeStatusFilterForAPI } from './status-filter'
 import { computeShowingEnd, formatCurrentPageStatValue } from './stats-format'
@@ -136,6 +137,7 @@ const AVAILABLE_COLUMNS: ColumnConfig[] = [
   // Core fields
   { key: 'lei', labelKey: 'leiRecords.columns.labels.lei', groupKey: 'leiRecords.columns.groups.core', defaultVisible: true, width: 'w-44' },
   { key: 'legal_name', labelKey: 'leiRecords.columns.labels.legalName', groupKey: 'leiRecords.columns.groups.core', defaultVisible: true, width: 'min-w-96' },
+  { key: 'other_names', labelKey: 'leiRecords.columns.labels.otherNames', groupKey: 'leiRecords.columns.groups.core', defaultVisible: false, width: 'min-w-64' },
   { key: 'entity_status', labelKey: 'leiRecords.columns.labels.status', groupKey: 'leiRecords.columns.groups.core', defaultVisible: true, width: 'w-32' },
   { key: 'entity_category', labelKey: 'leiRecords.columns.labels.category', groupKey: 'leiRecords.columns.groups.core', defaultVisible: true, width: 'w-40' },
   { key: 'entity_sub_category', labelKey: 'leiRecords.columns.labels.subCategory', groupKey: 'leiRecords.columns.groups.core', defaultVisible: false, width: 'w-40' },
@@ -144,7 +146,7 @@ const AVAILABLE_COLUMNS: ColumnConfig[] = [
   
   // Additional Entity Info
   { key: 'transliterated_legal_name', labelKey: 'leiRecords.columns.labels.transliteratedName', groupKey: 'leiRecords.columns.groups.entity', defaultVisible: false, width: 'min-w-64' },
-  { key: 'legal_jurisdiction', labelKey: 'leiRecords.columns.labels.legalJurisdiction', groupKey: 'leiRecords.columns.groups.entity', defaultVisible: false, width: 'w-40' },
+  { key: 'legal_jurisdiction', labelKey: 'leiRecords.columns.labels.legalJurisdiction', groupKey: 'leiRecords.columns.groups.entity', defaultVisible: true, width: 'w-40' },
   { key: 'entity_legal_form', labelKey: 'leiRecords.columns.labels.legalFormName', groupKey: 'leiRecords.columns.groups.entity', defaultVisible: false, width: 'w-40' },
   
   // Legal Address (natural order: address lines, then city/region/country/postal)
@@ -170,7 +172,7 @@ const AVAILABLE_COLUMNS: ColumnConfig[] = [
   // Registration
   { key: 'registration_authority', labelKey: 'leiRecords.columns.labels.registrationAuthority', groupKey: 'leiRecords.columns.groups.registration', defaultVisible: false, width: 'w-48' },
   { key: 'registration_number', labelKey: 'leiRecords.columns.labels.registrationNumber', groupKey: 'leiRecords.columns.groups.registration', defaultVisible: false, width: 'w-40' },
-  { key: 'registration_status', labelKey: 'leiRecords.columns.labels.registrationStatus', groupKey: 'leiRecords.columns.groups.registration', defaultVisible: false, width: 'w-36' },
+  { key: 'registration_status', labelKey: 'leiRecords.columns.labels.registrationStatus', groupKey: 'leiRecords.columns.groups.registration', defaultVisible: true, width: 'w-36' },
   { key: 'initial_registration_date', labelKey: 'leiRecords.columns.labels.initialRegistration', groupKey: 'leiRecords.columns.groups.registration', defaultVisible: false, width: 'w-36' },
   { key: 'next_renewal_date', labelKey: 'leiRecords.columns.labels.nextRenewal', groupKey: 'leiRecords.columns.groups.registration', defaultVisible: false, width: 'w-32' },
   
@@ -179,6 +181,7 @@ const AVAILABLE_COLUMNS: ColumnConfig[] = [
   { key: 'successor_lei', labelKey: 'leiRecords.columns.labels.successorLei', groupKey: 'leiRecords.columns.groups.associated', defaultVisible: false, width: 'w-44' },
 
   // Validation
+  { key: 'validation_sources', labelKey: 'leiRecords.columns.labels.validationSources', groupKey: 'leiRecords.columns.groups.validation', defaultVisible: true, width: 'w-48' },
   { key: 'validation_authority', labelKey: 'leiRecords.columns.labels.validationAuthority', groupKey: 'leiRecords.columns.groups.validation', defaultVisible: false, width: 'w-40' },
 ]
 
@@ -645,45 +648,6 @@ export default function LEIRecordsPage() {
       newColumns.add(columnKey)
     }
     handleSetVisibleColumns(newColumns)
-  }
-
-  // Calculate relative time from a date
-  const getRelativeTime = (dateString: string): { days: number, relative: string } => {
-    if (!dateString || dateString === '0001-01-01T00:00:00Z') {
-      return { days: 0, relative: '-' }
-    }
-    
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffMs = date.getTime() - now.getTime()
-    const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24))
-    const absDays = Math.abs(diffDays)
-    
-    let relative: string
-    if (absDays === 0) {
-      relative = 'today'
-    } else if (absDays === 1) {
-      relative = diffDays < 0 ? '1 day ago' : 'in 1 day'
-    } else if (absDays < 7) {
-      relative = diffDays < 0 ? `${absDays} days ago` : `in ${absDays} days`
-    } else if (absDays < 30) {
-      const weeks = Math.round(absDays / 7)
-      relative = diffDays < 0 
-        ? `${weeks} week${weeks > 1 ? 's' : ''} ago` 
-        : `in ${weeks} week${weeks > 1 ? 's' : ''}`
-    } else if (absDays < 365) {
-      const months = Math.round(absDays / 30)
-      relative = diffDays < 0 
-        ? `${months} month${months > 1 ? 's' : ''} ago` 
-        : `in ${months} month${months > 1 ? 's' : ''}`
-    } else {
-      const years = Math.round(absDays / 365)
-      relative = diffDays < 0 
-        ? `${years} year${years > 1 ? 's' : ''} ago` 
-        : `in ${years} year${years > 1 ? 's' : ''}`
-    }
-    
-    return { days: diffDays, relative }
   }
 
   // Shared helper: batch-fetch legal names for a set of LEI codes using a single HTTP request.
@@ -1722,6 +1686,7 @@ export default function LEIRecordsPage() {
                           const isRegistrationAuthority = column.key === 'registration_authority'
                           const isRegistrationNumber = column.key === 'registration_number'
                           const isRegistrationStatus = column.key === 'registration_status'
+                          const isNextRenewalDate = column.key === 'next_renewal_date'
                           const isCountryFlagColumn = column.key === 'country_flag'
                           const isRegionColumn = column.key === 'legal_address_region' || column.key === 'hq_address_region'
                           const isCountryColumn = column.key === 'legal_address_country' || column.key === 'hq_address_country'
@@ -1911,6 +1876,25 @@ export default function LEIRecordsPage() {
                                 })()
                               ) : isRegistrationStatus ? (
                                 formatEnumDisplayValue(value)
+                              ) : isNextRenewalDate ? (
+                                (() => {
+                                  const dateValue = String(value || '')
+                                  const renewalInfo = getRelativeTimeInfo(dateValue)
+                                  if (renewalInfo.relative === '-') {
+                                    return <span>-</span>
+                                  }
+
+                                  return (
+                                    <div>
+                                      <div>{formatCellValue(value, column.key)}</div>
+                                      <div className={`mt-1 text-xs ${renewalInfo.isOverdue ? 'text-red-700 dark:text-red-300 font-medium' : 'theme-text-muted'}`}>
+                                        {renewalInfo.isOverdue
+                                          ? `Overdue by ${Math.abs(renewalInfo.days)} ${Math.abs(renewalInfo.days) === 1 ? 'day' : 'days'}`
+                                          : renewalInfo.relative}
+                                      </div>
+                                    </div>
+                                  )
+                                })()
                               ) : (
                                 formatCellValue(value, column.key)
                               )}
@@ -2425,9 +2409,10 @@ export default function LEIRecordsPage() {
                       {formatCellValue(selectedRecord.initial_registration_date, 'initial_registration_date')}
                       {selectedRecord.initial_registration_date && selectedRecord.initial_registration_date !== '0001-01-01T00:00:00Z' && (
                         <span className="ml-2 text-xs text-[rgb(var(--muted-foreground-rgb))]">
-                          ({dateDisplayMode === 'relative' 
-                            ? getRelativeTime(selectedRecord.initial_registration_date).relative
-                            : `${Math.abs(getRelativeTime(selectedRecord.initial_registration_date).days)} days ago`})
+                          ({(() => {
+                            const dateInfo = getRelativeTimeInfo(selectedRecord.initial_registration_date)
+                            return dateDisplayMode === 'relative' ? dateInfo.relative : formatDayDelta(dateInfo.days)
+                          })()})
                         </span>
                       )}
                     </p>
@@ -2438,9 +2423,10 @@ export default function LEIRecordsPage() {
                       {formatCellValue(selectedRecord.last_update_date, 'last_update_date')}
                       {selectedRecord.last_update_date && selectedRecord.last_update_date !== '0001-01-01T00:00:00Z' && (
                         <span className="ml-2 text-xs text-[rgb(var(--muted-foreground-rgb))]">
-                          ({dateDisplayMode === 'relative' 
-                            ? getRelativeTime(selectedRecord.last_update_date).relative
-                            : `${Math.abs(getRelativeTime(selectedRecord.last_update_date).days)} days ago`})
+                          ({(() => {
+                            const dateInfo = getRelativeTimeInfo(selectedRecord.last_update_date)
+                            return dateDisplayMode === 'relative' ? dateInfo.relative : formatDayDelta(dateInfo.days)
+                          })()})
                         </span>
                       )}
                     </p>
@@ -2454,10 +2440,16 @@ export default function LEIRecordsPage() {
                     <p className="text-sm text-[rgb(var(--foreground-rgb))] mt-1">
                       {formatCellValue(selectedRecord.next_renewal_date, 'next_renewal_date')}
                       {selectedRecord.next_renewal_date && selectedRecord.next_renewal_date !== '0001-01-01T00:00:00Z' && (
-                        <span className="ml-2 text-xs text-[rgb(var(--muted-foreground-rgb))]">
-                          ({dateDisplayMode === 'relative' 
-                            ? getRelativeTime(selectedRecord.next_renewal_date).relative
-                            : `in ${getRelativeTime(selectedRecord.next_renewal_date).days} days`})
+                        <span className={`ml-2 text-xs ${getRelativeTimeInfo(selectedRecord.next_renewal_date).isOverdue ? 'text-red-700 dark:text-red-300 font-medium' : 'text-[rgb(var(--muted-foreground-rgb))]'}`}>
+                          ({(() => {
+                            const dateInfo = getRelativeTimeInfo(selectedRecord.next_renewal_date)
+                            if (dateDisplayMode === 'relative') {
+                              return dateInfo.isOverdue ? `${dateInfo.relative} (overdue)` : dateInfo.relative
+                            }
+                            return dateInfo.isOverdue
+                              ? `Overdue by ${Math.abs(dateInfo.days)} ${Math.abs(dateInfo.days) === 1 ? 'day' : 'days'}`
+                              : formatDayDelta(dateInfo.days)
+                          })()})
                         </span>
                       )}
                     </p>
@@ -2550,16 +2542,24 @@ export default function LEIRecordsPage() {
               )}
 
               {/* Validation */}
-              {selectedRecord.validation_authority && (
+              {(selectedRecord.validation_authority || selectedRecord.validation_sources) && (
                 <section className="bg-[rgb(var(--surface-rgb))] p-6">
                   <h3 className="text-lg font-semibold text-[rgb(var(--foreground-rgb))] mb-3 pb-2 border-b border-[rgb(var(--border-rgb))]">
                     {t('leiRecords.modal.validation')}
                   </h3>
                   <div className="grid grid-cols-1 gap-4 bg-[rgb(var(--surface-rgb))]">
-                    <div>
-                      <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">{t('leiRecords.modal.validationAuthority')}</span>
-                      <p className="text-sm text-[rgb(var(--foreground-rgb))] mt-1">{selectedRecord.validation_authority}</p>
-                    </div>
+                    {selectedRecord.validation_authority && (
+                      <div>
+                        <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">{t('leiRecords.modal.validationAuthority')}</span>
+                        <p className="text-sm text-[rgb(var(--foreground-rgb))] mt-1">{selectedRecord.validation_authority}</p>
+                      </div>
+                    )}
+                    {selectedRecord.validation_sources && (
+                      <div>
+                        <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">{t('leiRecords.modal.validationSources')}</span>
+                        <p className="text-sm text-[rgb(var(--foreground-rgb))] mt-1">{formatEnumDisplayValue(selectedRecord.validation_sources)}</p>
+                      </div>
+                    )}
                   </div>
                 </section>
               )}

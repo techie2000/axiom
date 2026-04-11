@@ -205,6 +205,7 @@ function formatSnapshotValue(value: unknown): string {
 interface SnapshotValueProps {
   fieldKey: string
   value: unknown
+  snapshot?: ParsedSnapshot
   showCodes?: boolean
   countryByCode?: Map<string, string>
   onLeiClick?: (lei: string) => void
@@ -212,9 +213,31 @@ interface SnapshotValueProps {
 }
 
 /** Renders a value with optional country flag, names/codes display mode, and LEI code links. */
-function SnapshotValue({ fieldKey, value, showCodes = true, countryByCode, onLeiClick, linkedLeiNames }: SnapshotValueProps) {
+function SnapshotValue({ fieldKey, value, snapshot, showCodes = true, countryByCode, onLeiClick, linkedLeiNames }: SnapshotValueProps) {
   const text = formatSnapshotValue(value)
   if (text === '—') return <span className="theme-text-muted">—</span>
+  if (fieldKey === 'registration_authority' && typeof value === 'string') {
+    const raCode = value.trim()
+    const raName = typeof snapshot?.registration_authority_name === 'string'
+      ? snapshot.registration_authority_name.trim()
+      : ''
+    const raIntlName = typeof snapshot?.registration_authority_international_name === 'string'
+      ? snapshot.registration_authority_international_name.trim()
+      : ''
+    const showIntl = raIntlName && raIntlName !== raName
+
+    return (
+      <span className="flex flex-col gap-0.5">
+        <span className="font-mono">{raCode || '—'}</span>
+        {raName && raName !== raCode && (
+          <span className="text-xs theme-text-muted">
+            {raName}
+            {showIntl && <span className="ml-1 opacity-75">({raIntlName})</span>}
+          </span>
+        )}
+      </span>
+    )
+  }
   if (COUNTRY_CODE_FIELDS.has(fieldKey) && typeof value === 'string' && ALPHA2_RE.test(value.trim().toUpperCase())) {
     const code = value.trim().toUpperCase()
     const displayText = (!showCodes && countryByCode) ? (countryByCode.get(code) ?? code) : code
@@ -364,14 +387,14 @@ function SnapshotTable({ snapshot, columns, changedFields, labelMap, showCodes =
                       /* Show old → new inline so the change is immediately obvious */
                       <span className="flex flex-col gap-0.5">
                         <span className="text-red-600 dark:text-red-400 text-xs">
-                          <SnapshotValue fieldKey={col.key} value={change.old_value} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} />
+                          <SnapshotValue fieldKey={col.key} value={change.old_value} snapshot={snapshot} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} />
                         </span>
                         <span className="text-green-600 dark:text-green-400 font-semibold">
-                          <SnapshotValue fieldKey={col.key} value={change.new_value} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} />
+                          <SnapshotValue fieldKey={col.key} value={change.new_value} snapshot={snapshot} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} />
                         </span>
                       </span>
                     ) : (
-                      <SnapshotValue fieldKey={col.key} value={rawValue} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} />
+                      <SnapshotValue fieldKey={col.key} value={rawValue} snapshot={snapshot} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} />
                     )}
                   </td>
                 </tr>
@@ -480,7 +503,7 @@ function CompareTable({
                       isChanged ? 'text-red-600 dark:text-red-400' : 'theme-text-muted'
                     }`}
                   >
-                    <SnapshotValue fieldKey={col.key} value={olderValue} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} />
+                    <SnapshotValue fieldKey={col.key} value={olderValue} snapshot={olderSnapshot} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} />
                   </td>
                   {/* Newer (current) value — green */}
                   <td
@@ -488,7 +511,7 @@ function CompareTable({
                       isChanged ? 'text-green-700 dark:text-green-400 font-semibold' : ''
                     }`}
                   >
-                    <SnapshotValue fieldKey={col.key} value={newerValue} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} />
+                    <SnapshotValue fieldKey={col.key} value={newerValue} snapshot={newerSnapshot} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} />
                   </td>
                 </tr>
               </React.Fragment>

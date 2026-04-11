@@ -503,6 +503,7 @@
       "labels": {
         "lei": "LEI",
         "legalName": "Legal Name",
+        "otherNames": "Other Names",
         "status": "Status",
         "category": "$t(leiRecords.filters.category)",
         "countryFlag": "Country Flag",
@@ -529,6 +530,7 @@
         "nextRenewal": "Next Renewal",
         "managingLou": "Managing LOU",
         "successorLei": "Successor LEI",
+        "validationSources": "Validation Sources",
         "validationAuthority": "Validation Authority",
         "legalFormCode": "Legal Form Code",
         "legalFormName": "Legal Form Name",
@@ -580,6 +582,7 @@
       "loadingName": "Loading name...",
       "nameUnavailable": "Name unavailable.",
       "validation": "Validation",
+      "validationSources": "Validation Sources",
       "validationAuthority": "Validation Authority"
     },
     "widthNormal": "$t(referenceLayout.normalWidth)",
