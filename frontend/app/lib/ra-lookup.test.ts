@@ -63,23 +63,6 @@ describe('buildRegistrationLookupUrl', () => {
     // replaceAll replaces every occurrence for safety
     expect(result).toBe('https://example.com/q=99&id=99')
   })
-
-  it('substitutes {lang} using the provided language base code', () => {
-    const result = buildRegistrationLookupUrl(
-      'https://example.com/search?lang={lang}&id={registration_number}',
-      '0712691464',
-      'fr-BE'
-    )
-    expect(result).toBe('https://example.com/search?lang=fr&id=0712691464')
-  })
-
-  it('defaults {lang} to en when language is omitted', () => {
-    const result = buildRegistrationLookupUrl(
-      'https://example.com/search?lang={lang}&id={registration_number}',
-      '0712691464'
-    )
-    expect(result).toBe('https://example.com/search?lang=en&id=0712691464')
-  })
 })
 
 describe('buildRegistrationLookupOptions', () => {
@@ -114,27 +97,6 @@ describe('buildRegistrationLookupOptions', () => {
         type: 'sunbiz-document-number-post',
         formAction: 'https://search.sunbiz.org/Inquiry/CorporationSearch/ByDocumentNumber',
         documentNumber: 'L24000116074',
-      },
-    ])
-  })
-
-  it('builds Belgium KBO lookup URL with language placeholder expansion', () => {
-    const options = buildRegistrationLookupOptions(
-      'RA000025',
-      [{
-        name: 'KBO (Belgium)',
-        url: 'https://kbopub.economie.fgov.be/kbopub/zoeknummerform.html?lang={lang}&nummer={registration_number}',
-      }],
-      '0712691464',
-      'nl-BE'
-    )
-
-    expect(options).toEqual([
-      {
-        key: 'KBO (Belgium):https://kbopub.economie.fgov.be/kbopub/zoeknummerform.html?lang=nl&nummer=0712691464',
-        label: 'KBO (Belgium)',
-        type: 'url',
-        url: 'https://kbopub.economie.fgov.be/kbopub/zoeknummerform.html?lang=nl&nummer=0712691464',
       },
     ])
   })

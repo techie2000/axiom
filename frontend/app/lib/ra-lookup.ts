@@ -1,28 +1,17 @@
 /**
  * Builds a registration authority lookup URL by substituting the registration
- * number (and optionally a language code) into a URL template loaded from
- * /data/ra-urls.json.
+ * number into a URL template loaded from /data/ra-urls.json.
  *
- * @param urlTemplate - Template string containing `{registration_number}` and
- *                      optionally `{lang}` placeholders
+ * @param urlTemplate - Template string containing `{registration_number}` placeholder
  * @param registrationNumber - The registration number to substitute
- * @param lang - BCP 47 language tag (e.g. 'nl', 'fr', 'de'). When the template
- *               contains `{lang}`, the base subtag (everything before the first
- *               '-') is used. Defaults to 'en' when omitted.
  * @returns The resolved URL, or null if either argument is empty
  */
 export function buildRegistrationLookupUrl(
   urlTemplate: string | undefined | null,
-  registrationNumber: string | undefined | null,
-  lang?: string
+  registrationNumber: string | undefined | null
 ): string | null {
   if (!urlTemplate || !registrationNumber) return null
-  let url = urlTemplate.replaceAll('{registration_number}', encodeURIComponent(registrationNumber))
-  if (url.includes('{lang}')) {
-    const baseLang = lang ? lang.split('-')[0].toLowerCase() : 'en'
-    url = url.replaceAll('{lang}', baseLang)
-  }
-  return url
+  return urlTemplate.replaceAll('{registration_number}', encodeURIComponent(registrationNumber))
 }
 
 export interface RegistrationLookupTemplate {
@@ -69,8 +58,7 @@ function isTexasFranchiseFileNumberLookup(raCode: string, templateUrl: string): 
 export function buildRegistrationLookupOptions(
   raCode: string | undefined | null,
   templates: RegistrationLookupTemplate[],
-  registrationNumber: string | undefined | null,
-  lang?: string
+  registrationNumber: string | undefined | null
 ): RegistrationLookupOption[] {
   if (!registrationNumber || !raCode) return []
 
@@ -89,7 +77,7 @@ export function buildRegistrationLookupOptions(
     }
 
     if (isTexasFranchiseFileNumberLookup(raCode, template.url)) {
-      const searchApiUrl = buildRegistrationLookupUrl(template.url, trimmedRegistrationNumber, lang)
+      const searchApiUrl = buildRegistrationLookupUrl(template.url, trimmedRegistrationNumber)
       if (!searchApiUrl) return []
 
       return [{
@@ -101,7 +89,7 @@ export function buildRegistrationLookupOptions(
       }]
     }
 
-    const resolvedUrl = buildRegistrationLookupUrl(template.url, trimmedRegistrationNumber, lang)
+    const resolvedUrl = buildRegistrationLookupUrl(template.url, trimmedRegistrationNumber)
     if (!resolvedUrl) return []
 
     return [{
