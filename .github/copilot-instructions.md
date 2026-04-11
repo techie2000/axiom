@@ -629,7 +629,9 @@ When an AI agent creates a pull request, it should complete standard PR hygiene 
    - what validation/tests were run,
    - any follow-up actions or known limitations.
 5. For each linked underlying issue (for example `Fixes #123`, `Closes #123`, or issue references in PR description),
-   post a concise issue update comment after each PR push that includes:
+   post a concise issue update comment after each PR push (same per-push trigger as
+   [`instructions/copilot-pr-feedback-resolution.instructions.md`](instructions/copilot-pr-feedback-resolution.instructions.md))
+   that includes:
    - implementation status,
    - validation status,
    - testing guidance for user/UAT verification,
