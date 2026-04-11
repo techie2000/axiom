@@ -892,6 +892,16 @@ func TestEnsurePlaywrightTestUser_RejectsNonDevEmailDomain(t *testing.T) {
 	}
 }
 
+func TestEnsurePlaywrightTestUser_RejectsEmailWithMultipleAtSigns(t *testing.T) {
+	repo := newAuthRepoStub()
+	svc := newSvc(repo)
+
+	err := svc.EnsurePlaywrightTestUser("admin@company.com@localhost", pwPassword)
+	if err == nil || !strings.Contains(err.Error(), "seeding blocked") {
+		t.Fatalf("expected blocked seed error, got: %v", err)
+	}
+}
+
 func TestEnsurePlaywrightTestUser_RejectsWeakOrPredictablePassword(t *testing.T) {
 	tests := []struct {
 		name     string

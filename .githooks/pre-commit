@@ -59,7 +59,7 @@ echo "Linting markdown files:"
 echo "$STAGED_MD_FILES"
 
 # Run markdownlint-cli2 on staged files using local dependencies only (no network installs in hooks)
-if echo "$STAGED_MD_FILES" | xargs npx --no-install markdownlint-cli2 --config .markdownlint.yaml; then
+if git diff --cached --name-only --diff-filter=ACM -z | tr '\0' '\n' | grep '\.md$' | tr '\n' '\0' | xargs -0 npx --no-install markdownlint-cli2 --config .markdownlint.yaml; then
     echo "✅ Markdown linting passed"
     exit 0
 else

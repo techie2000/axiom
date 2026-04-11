@@ -296,6 +296,9 @@ func validatePlaywrightSeedCredentials(email, password string) error {
 	if normalizedPassword == "" {
 		return errors.New("playwright test user password is required")
 	}
+	if strings.Count(normalizedEmail, "@") != 1 {
+		return fmt.Errorf("playwright test user email must contain exactly one '@': %q", email)
+	}
 
 	atIdx := strings.LastIndex(normalizedEmail, "@")
 	if atIdx <= 0 || atIdx == len(normalizedEmail)-1 {
@@ -304,6 +307,9 @@ func validatePlaywrightSeedCredentials(email, password string) error {
 
 	username := normalizedEmail[:atIdx]
 	domainPart := normalizedEmail[atIdx+1:]
+	if strings.Contains(domainPart, "@") {
+		return fmt.Errorf("playwright test user email must be a valid dev/test address: %q", email)
+	}
 	allowedDomains := []string{"localhost", "example.com"}
 	allowedDomainSuffixes := []string{".local", ".test"}
 
