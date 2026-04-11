@@ -33,7 +33,7 @@ jobs:
           work-dir: backend
           repo-checkout: false
           output-format: sarif
-          output-file: backend/govulncheck-results.sarif
+          output-file: govulncheck-results.sarif
 
       - name: Upload govulncheck results to GitHub Security tab
         if: always() && hashFiles('backend/govulncheck-results.sarif') != ''
