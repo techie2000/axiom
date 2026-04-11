@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { useTranslation } from 'react-i18next'
 import { formatStatusLabel } from '../lib/status-label'
 
 interface LEIStatus {
@@ -52,6 +53,7 @@ const resolveStatusTotal = (status: LEIStatus | null): number => {
 }
 
 export default function LEIStatusCard() {
+  const { t } = useTranslation('common')
   const [masterDataStatus, setMasterDataStatus] = useState<LEIStatus | null>(null)
   const [fullStatus, setFullStatus] = useState<LEIStatus | null>(null)
   const [deltaStatus, setDeltaStatus] = useState<LEIStatus | null>(null)
@@ -234,13 +236,13 @@ export default function LEIStatusCard() {
                   <div className={`w-3 h-3 rounded-full ${deltaHealth.color}`}></div>
                   <span className="text-xs theme-text-muted">L1-Delta</span>
                 </div>
-                <div className="flex items-center gap-1" title={`Level 2 Relationship Records: ${rrHealth.label}`}>
+                <div className="flex items-center gap-1" title={`${t('leiStatus.card.health.level2Relationship')}: ${rrHealth.label}`}>
                   <div className={`w-3 h-3 rounded-full ${rrHealth.color}`}></div>
-                  <span className="text-xs theme-text-muted">Relations</span>
+                  <span className="text-xs theme-text-muted">{t('leiStatus.card.health.relationsShort')}</span>
                 </div>
-                <div className="flex items-center gap-1" title={`Level 2 Reporting Exceptions: ${repexHealth.label}`}>
+                <div className="flex items-center gap-1" title={`${t('leiStatus.card.health.level2Exceptions')}: ${repexHealth.label}`}>
                   <div className={`w-3 h-3 rounded-full ${repexHealth.color}`}></div>
-                  <span className="text-xs theme-text-muted">Exceptions</span>
+                  <span className="text-xs theme-text-muted">{t('leiStatus.card.health.exceptionsShort')}</span>
                 </div>
               </div>
             )}
@@ -269,7 +271,10 @@ export default function LEIStatusCard() {
                 <span className="font-semibold">{formatNumber(gleifTotalRecords)}</span>
               </div>
               <div className="text-xs theme-text-muted">
-                Level 2 breakdown: Relationship Records {formatNumber(l2RrRecords)} | Reporting Exceptions {formatNumber(l2RepexRecords)}
+                {t('leiStatus.card.breakdown', {
+                  rr: formatNumber(l2RrRecords),
+                  repex: formatNumber(l2RepexRecords),
+                })}
               </div>
               <div className="text-xs theme-text-muted break-all">
                 Last Snapshot Folder: data/main/lei/gleif-reference

@@ -319,12 +319,6 @@ Response:
 }
 ```
 
-```json
-{
-  "message": "LEVEL2_REPEX sync triggered"
-}
-```
-
 ### Status Endpoints
 
 #### `GET /api/v1/lei/status/:jobType`
