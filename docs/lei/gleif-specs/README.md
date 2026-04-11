@@ -8,7 +8,7 @@ application's LEI sync pipeline.
 The GLEIF specs are the authoritative source of truth for every field mapped in:
 
 - `lei_raw.lei_records` — populated from the Level 1 (LEI-CDF) golden-copy files
-- `lei_raw.lei_relationship_records` — populated from the Level 2 (RR-CDF) golden-copy files
+- `lei_raw.lei_relationship_records` — populated from the Level 2 Relationship Records (RR-CDF) golden-copy files
 - `lei_raw.lei_reporting_exceptions` — populated from the Level 2 Reporting Exceptions golden-copy files
 
 Having local copies means:
@@ -22,11 +22,11 @@ Having local copies means:
 | File | Spec | Version | Downloaded |
 | ---- | ---- | ------- | ---------- |
 | [`lei-cdf-v3-1.xsd`](./lei-cdf-v3-1.xsd) | Level 1 — LEI Common Data File | 3.1 | 2021-03-04 |
-| [`rr-cdf-v2-1.xsd`](./rr-cdf-v2-1.xsd) | Level 2 — Relationship Record CDF | 2.1 | 2021-03-04 |
+| [`rr-cdf-v2-1.xsd`](./rr-cdf-v2-1.xsd) | Level 2 — Relationship Records CDF | 2.1 | 2021-03-04 |
 | [`reporting-exceptions/README.md`](./reporting-exceptions/README.md) | Level 2 — Reporting Exceptions artifact index | 2.1 | 2026-04-09 |
 | [`code-lists/README.md`](./code-lists/README.md) | GLEIF code-list artifact index | Mixed | 2026-04-09 |
 | [`LEI-CDF-v3-1-field-reference.md`](./LEI-CDF-v3-1-field-reference.md) | Level 1 — human-readable field reference | 3.1 | — |
-| [`RR-CDF-v2-1-field-reference.md`](./RR-CDF-v2-1-field-reference.md) | Level 2 — human-readable field reference | 2.1 | — |
+| [`RR-CDF-v2-1-field-reference.md`](./RR-CDF-v2-1-field-reference.md) | Level 2 Relationship Records — human-readable field reference | 2.1 | — |
 
 ## Supporting artifact sets
 
@@ -41,8 +41,8 @@ Having local copies means:
 | -------- | --- |
 | Level 1 spec page | <https://www.gleif.org/en/lei-data/access-and-use-lei-data/level-1-data-lei-cdf-3-1-format> |
 | Level 1 XSD | <https://www.gleif.org/lei-data/access-and-use-lei-data/level-1-data-lei-cdf-3-1-format/2021-03-04_lei-cdf-v3-1.xsd> |
-| Level 2 RR spec page | <https://www.gleif.org/en/lei-data/access-and-use-lei-data/level-2-data-relationship-record-rr-cdf-2-1-format> |
-| Level 2 RR XSD | <https://www.gleif.org/lei-data/access-and-use-lei-data/level-2-data-relationship-record-rr-cdf-2-1-format/2021-03-04_rr-cdf-v2-1.xsd> |
+| Level 2 Relationship Records spec page | <https://www.gleif.org/en/lei-data/access-and-use-lei-data/level-2-data-relationship-record-rr-cdf-2-1-format> |
+| Level 2 Relationship Records XSD | <https://www.gleif.org/lei-data/access-and-use-lei-data/level-2-data-relationship-record-rr-cdf-2-1-format/2021-03-04_rr-cdf-v2-1.xsd> |
 | Level 2 Reporting Exceptions spec page | <https://www.gleif.org/en/lei-data/access-and-use-lei-data/level-2-data-reporting-exceptions-2-1-format> |
 | State Transition & Validation Rules (PDF) | <https://www.gleif.org/lei-data/access-and-use-lei-data/level-1-data-lei-cdf-3-1-format/2025-07-03_state-transition-validation-rules_2.8.5_final.pdf> |
 | GLEIF Golden Copy download | <https://www.gleif.org/en/lei-data/gleif-golden-copy/download-the-golden-copy> |
@@ -66,7 +66,7 @@ If GLEIF releases a new CDF version:
 
 ### Level 1 vs Level 2 data
 
-| | Level 1 (LEI-CDF) | Level 2 (RR-CDF) |
+| | Level 1 (LEI-CDF) | Level 2 Relationship Records (RR-CDF) |
 | - | ------------------- | ------------------ |
 | Question answered | "Who is who?" | "Who owns whom?" |
 | Main table | `lei_raw.lei_records` | `lei_raw.lei_relationship_records` |

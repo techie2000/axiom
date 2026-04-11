@@ -76,6 +76,8 @@ Located in [lei/](./lei/):
 
 - [**LEI Data Flow**](./lei/LEI_DATA_FLOW.md) - End-to-end data acquisition and processing flow
 - [**LEI Acquisition**](./lei/LEI_ACQUISITION.md) - GLEIF API integration details
+- [**GLEIF Source-to-Database Mapping**](./lei/GLEIF_SOURCE_TO_DATABASE_MAPPING.md) - Concrete field mapping
+  from GLEIF source payloads into `lei_raw` tables
 - [**LEI Countries Refactor**](./lei/LEI_COUNTRIES_REFACTOR.md) - Country data handling improvements
 
 #### API Migration Notice
