@@ -180,6 +180,48 @@ describe('buildRegistrationLookupOptions', () => {
       },
     ])
   })
+
+  it('builds Switzerland UID lookup URL with optional supported language', () => {
+    const options = buildRegistrationLookupOptions(
+      'RA000548',
+      [{
+        name: 'UID (Switzerland)',
+        url: 'https://www.uid.admin.ch/Detail.aspx?lang={lang}&uid_id={registration_number}',
+      }],
+      'CHE139733930',
+      'it-CH'
+    )
+
+    expect(options).toEqual([
+      {
+        key: 'UID (Switzerland):https://www.uid.admin.ch/Detail.aspx?lang=it&uid_id=CHE139733930',
+        label: 'UID (Switzerland)',
+        type: 'url',
+        url: 'https://www.uid.admin.ch/Detail.aspx?lang=it&uid_id=CHE139733930',
+      },
+    ])
+  })
+
+  it('falls back to en for unsupported Switzerland UID languages', () => {
+    const options = buildRegistrationLookupOptions(
+      'RA000548',
+      [{
+        name: 'UID (Switzerland)',
+        url: 'https://www.uid.admin.ch/Detail.aspx?lang={lang}&uid_id={registration_number}',
+      }],
+      'CHE139733930',
+      'es'
+    )
+
+    expect(options).toEqual([
+      {
+        key: 'UID (Switzerland):https://www.uid.admin.ch/Detail.aspx?lang=en&uid_id=CHE139733930',
+        label: 'UID (Switzerland)',
+        type: 'url',
+        url: 'https://www.uid.admin.ch/Detail.aspx?lang=en&uid_id=CHE139733930',
+      },
+    ])
+  })
 })
 
 describe('openRegistrationLookup', () => {

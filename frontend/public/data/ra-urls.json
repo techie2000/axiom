@@ -15,7 +15,7 @@
   "RA000548": [
     {
       "name": "UID (Switzerland)",
-      "url": "https://www.uid.admin.ch/Detail.aspx?uid_id={registration_number}"
+      "url": "https://www.uid.admin.ch/Detail.aspx?lang={lang}&uid_id={registration_number}"
     }
   ],
   "RA000585": [

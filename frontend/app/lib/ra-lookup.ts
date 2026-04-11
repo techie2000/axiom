@@ -48,6 +48,8 @@ const TEXAS_FRANCHISE_DETAIL_URL_PREFIX = `${TEXAS_FRANCHISE_SEARCH_PAGE_URL}/`
 const REGISTRY_LANGUAGE_ALLOWLIST: Record<string, Set<string>> = {
   // Belgium KBO supports en/nl/fr/de (issue #302).
   RA000025: new Set(['en', 'nl', 'fr', 'de']),
+  // Switzerland UID optional language support from issue #281 comment.
+  RA000548: new Set(['en', 'fr', 'it', 'de']),
 }
 
 function normalizeBaseLanguage(lang?: string): string {
