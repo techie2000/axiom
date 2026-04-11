@@ -263,9 +263,13 @@ jobs:
               typeof l === 'string' ? l : l.name
             )
 
+            // Infer only the FIRST matching area label (enforce single primary area per issue)
+            const areaMatch = areaKeywordRules.find((r) => r.patterns.some((p) => p.test(text)))
             const inferredAreaLabels = currentLabelNames.some((n) => n.startsWith('area:'))
               ? []
-              : areaKeywordRules.filter((r) => r.patterns.some((p) => p.test(text))).map((r) => r.label)
+              : areaMatch
+              ? [areaMatch.label]
+              : []
 
             const inferredTypeLabels = currentLabelNames.some((n) => n.startsWith('type:'))
               ? []
@@ -314,7 +318,13 @@ jobs:
               typeof label === 'string' ? label : label.name
             )
 
-            const statusToApply = issue.state === 'open' ? 'status: triage' : 'status: done'
+            // Preserve 'status: in progress' if already set (linked PR open); otherwise apply based on issue state
+            const existingStatus = existingNames.find((n) => n.startsWith('status:'))
+            const statusToApply = existingStatus === 'status: in progress'
+              ? 'status: in progress'
+              : issue.state === 'open'
+              ? 'status: triage'
+              : 'status: done'
             const statusNames = statusLabels.map((label) => label.name)
             const labelsToRemove = existingNames.filter((label) =>
               statusNames.includes(label) && label !== statusToApply

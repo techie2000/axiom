@@ -147,8 +147,8 @@ Use these standard labels when applicable:
 
 ## Area Labels
 
-Exactly one `area:*` label must be applied. The CI workflow infers this automatically
-from changed file paths (for PRs) or from keywords (for issues).
+Exactly one `area:*` label is assigned. The CI workflow infers the primary area automatically
+from changed file paths (for PRs) or from the first matching keyword (for issues).
 Apply or correct it manually when the inference is wrong.
 
 | Label                  | Assigned to                                     |

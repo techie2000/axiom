@@ -2,7 +2,7 @@ name: Task
 description: Track a discrete implementation or maintenance task.
 title: "[Task] "
 labels:
-  - status: triage
+  - 'status: triage'
 body:
   - type: textarea
     id: objective

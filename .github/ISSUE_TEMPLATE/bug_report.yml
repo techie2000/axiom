@@ -3,7 +3,7 @@ description: Report a broken behavior with a concise, action-oriented summary.
 title: "[Bug] "
 labels:
   - bug
-  - status: triage
+  - 'status: triage'
 body:
   - type: textarea
     id: summary

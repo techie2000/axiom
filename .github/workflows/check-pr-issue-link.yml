@@ -54,15 +54,24 @@ jobs:
               return
             }
 
-            // Avoid posting a duplicate advisory comment
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: pr.number,
-              per_page: 50,
-            })
+            // Avoid posting a duplicate advisory comment (handle pagination)
+            const allComments = []
+            let page = 1
+            let hasMore = true
+            while (hasMore) {
+              const { data: comments } = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                page: page,
+                per_page: 50,
+              })
+              allComments.push(...comments)
+              hasMore = comments.length === 50
+              page++
+            }
 
-            const alreadyAdvised = comments.some(
+            const alreadyAdvised = allComments.some(
               (c) =>
                 c.user.login === 'github-actions[bot]' &&
                 c.body.includes('<!-- pr-issue-link-advisory -->')
