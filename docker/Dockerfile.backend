@@ -7,6 +7,7 @@ FROM ${DOCKER_LIBRARY}/golang:1.25.1-alpine3.21 AS builder
 
 # Security: keep OpenSSL patched using latest package available in Alpine repo.
 # security-scan-managed
+# hadolint ignore=DL3018
 RUN apk add --no-cache --upgrade libssl3
 
 WORKDIR /app
@@ -39,7 +40,8 @@ FROM ${DOCKER_LIBRARY}/alpine:3.21
 
 # Security: keep OpenSSL patched using latest package available in Alpine repo.
 # security-scan-managed
-RUN apk add --no-cache --upgrade libssl3 ca-certificates=20250911-r0
+# hadolint ignore=DL3018
+RUN apk add --no-cache --upgrade libssl3 ca-certificates
 
 # Copy migrate from builder (compiled with current Go toolchain, no pre-built binary CVEs)
 COPY --from=builder /go/bin/migrate /usr/local/bin/migrate
