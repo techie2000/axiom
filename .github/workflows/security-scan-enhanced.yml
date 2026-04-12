@@ -24,9 +24,6 @@ permissions:
   pull-requests: write
   security-events: write
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-
 jobs:
   security-scan-and-update:
     runs-on: ubuntu-latest
