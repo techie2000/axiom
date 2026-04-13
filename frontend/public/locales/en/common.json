@@ -510,7 +510,16 @@
       "yearAgo_other": "{{count}} years ago",
       "overdueBy": "Overdue by {{count}} days",
       "overdueBy_one": "Overdue by {{count}} day",
-      "overdueBy_other": "Overdue by {{count}} days"
+      "overdueBy_other": "Overdue by {{count}} days",
+      "overdueByWeek": "Overdue by {{count}} weeks",
+      "overdueByWeek_one": "Overdue by {{count}} week",
+      "overdueByWeek_other": "Overdue by {{count}} weeks",
+      "overdueByMonth": "Overdue by {{count}} months",
+      "overdueByMonth_one": "Overdue by {{count}} month",
+      "overdueByMonth_other": "Overdue by {{count}} months",
+      "overdueByYear": "Overdue by {{count}} years",
+      "overdueByYear_one": "Overdue by {{count}} year",
+      "overdueByYear_other": "Overdue by {{count}} years"
     },
     "noDataMatchesFilters": "No LEI data matches the selected filters.",
     "columns": {

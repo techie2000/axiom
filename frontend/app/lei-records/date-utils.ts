@@ -7,6 +7,21 @@ export interface RelativeTimeInfo {
   value: number
 }
 
+export type RelativeTimeTranslationKey =
+  | 'today'
+  | 'dayAgo'
+  | 'weekAgo'
+  | 'monthAgo'
+  | 'yearAgo'
+  | 'inDay'
+  | 'inWeek'
+  | 'inMonth'
+  | 'inYear'
+  | 'overdueBy'
+  | 'overdueByWeek'
+  | 'overdueByMonth'
+  | 'overdueByYear'
+
 export function getRelativeTimeInfo(dateString: string, now: Date = new Date()): RelativeTimeInfo {
   const trimmedDate = (dateString || '').trim()
   if (!trimmedDate || trimmedDate.startsWith('0001-')) {
@@ -65,4 +80,32 @@ export function getRelativeTimeInfo(dateString: string, now: Date = new Date()):
     unit,
     value,
   }
+}
+
+export function getRelativeTimeTranslationKey(
+  dateInfo: RelativeTimeInfo,
+  mode: 'standard' | 'overdue' = 'standard'
+): RelativeTimeTranslationKey {
+  if (dateInfo.isPlaceholder || dateInfo.tense === 'today') {
+    return 'today'
+  }
+
+  if (mode === 'overdue') {
+    if (dateInfo.unit === 'week') return 'overdueByWeek'
+    if (dateInfo.unit === 'month') return 'overdueByMonth'
+    if (dateInfo.unit === 'year') return 'overdueByYear'
+    return 'overdueBy'
+  }
+
+  if (dateInfo.tense === 'past') {
+    if (dateInfo.unit === 'day') return 'dayAgo'
+    if (dateInfo.unit === 'week') return 'weekAgo'
+    if (dateInfo.unit === 'month') return 'monthAgo'
+    return 'yearAgo'
+  }
+
+  if (dateInfo.unit === 'day') return 'inDay'
+  if (dateInfo.unit === 'week') return 'inWeek'
+  if (dateInfo.unit === 'month') return 'inMonth'
+  return 'inYear'
 }

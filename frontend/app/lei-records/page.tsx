@@ -20,7 +20,7 @@ import { useCachedLeiCount } from '../lib/useCachedLeiCount'
 import { useUserPreference } from '../lib/useUserPreference'
 import { useSearchFocusShortcut } from '../lib/useSearchFocusShortcut'
 import MapLink from '../components/MapLink'
-import { getRelativeTimeInfo } from './date-utils'
+import { getRelativeTimeInfo, getRelativeTimeTranslationKey } from './date-utils'
 import { formatEnumDisplayValue, formatLEICellValue, getStatusBadgePresentation, normalizeRecordNullLikeValues } from './null-utils'
 import { formatStatusFilterLabel, LEI_STATUS_FILTER_OPTIONS, normalizeStatusFilterForAPI } from './status-filter'
 import { computeShowingEnd, formatCurrentPageStatValue } from './stats-format'
@@ -542,6 +542,16 @@ export default function LEIRecordsPage() {
       if (columnsToFetch.includes('registration_authority') && !columnsToFetch.includes('registration_number')) {
         columnsToFetch.push('registration_number')
       }
+      // Keep authority display names available for detail/audit rendering whenever
+      // registration authority data is requested.
+      if (columnsToFetch.includes('registration_authority')) {
+        if (!columnsToFetch.includes('registration_authority_name')) {
+          columnsToFetch.push('registration_authority_name')
+        }
+        if (!columnsToFetch.includes('registration_authority_international_name')) {
+          columnsToFetch.push('registration_authority_international_name')
+        }
+      }
       const columnsParam = columnsToFetch.join(',')
       if (columnsParam) params.append('columns', columnsParam)
 
@@ -970,21 +980,11 @@ export default function LEIRecordsPage() {
       return '-'
     }
 
-    if (dateInfo.tense === 'today') {
+    const key = getRelativeTimeTranslationKey(dateInfo, 'standard')
+    if (key === 'today') {
       return t('leiRecords.relativeTime.today')
     }
-
-    if (dateInfo.tense === 'past') {
-      if (dateInfo.unit === 'day') return t('leiRecords.relativeTime.dayAgo', { count: dateInfo.value })
-      if (dateInfo.unit === 'week') return t('leiRecords.relativeTime.weekAgo', { count: dateInfo.value })
-      if (dateInfo.unit === 'month') return t('leiRecords.relativeTime.monthAgo', { count: dateInfo.value })
-      return t('leiRecords.relativeTime.yearAgo', { count: dateInfo.value })
-    }
-
-    if (dateInfo.unit === 'day') return t('leiRecords.relativeTime.inDay', { count: dateInfo.value })
-    if (dateInfo.unit === 'week') return t('leiRecords.relativeTime.inWeek', { count: dateInfo.value })
-    if (dateInfo.unit === 'month') return t('leiRecords.relativeTime.inMonth', { count: dateInfo.value })
-    return t('leiRecords.relativeTime.inYear', { count: dateInfo.value })
+    return t(`leiRecords.relativeTime.${key}`, { count: dateInfo.value })
   }, [t])
 
   const formatDayDeltaText = useCallback((days: number): string => {
@@ -997,8 +997,12 @@ export default function LEIRecordsPage() {
       : t('leiRecords.relativeTime.inDay', { count: Math.abs(days) })
   }, [t])
 
-  const formatOverdueText = useCallback((days: number): string => {
-    return t('leiRecords.relativeTime.overdueBy', { count: Math.abs(days) })
+  const formatOverdueText = useCallback((dateInfo: ReturnType<typeof getRelativeTimeInfo>): string => {
+    const key = getRelativeTimeTranslationKey(dateInfo, 'overdue')
+    if (key === 'today') {
+      return t('leiRecords.relativeTime.today')
+    }
+    return t(`leiRecords.relativeTime.${key}`, { count: dateInfo.value })
   }, [t])
 
   const isVirtualColumnKey = (key: keyof LEIRecord): boolean => {
@@ -1047,6 +1051,23 @@ export default function LEIRecordsPage() {
 
     return legalFormNameByCode.get(normalizedCode) || null
   }
+
+  const registrationAuthorityNameByCode = useMemo<Map<string, string>>(() => {
+    const names = new Map<string, string>()
+
+    records.forEach((record) => {
+      const code = (record.registration_authority || '').trim()
+      if (!code) return
+
+      const name = (record.registration_authority_name || '').trim()
+      const intl = (record.registration_authority_international_name || '').trim()
+      if (name) {
+        names.set(code, intl && intl !== name ? `${name} (${intl})` : name)
+      }
+    })
+
+    return names
+  }, [records])
 
   const formatCountryDisplay = (countryCode: string): string => {
     const normalizedCode = (countryCode || '').trim().toUpperCase()
@@ -1926,7 +1947,7 @@ export default function LEIRecordsPage() {
                                       <div>{formatCellValue(value, column.key)}</div>
                                       <div className={`mt-1 text-xs ${renewalInfo.isOverdue ? 'text-red-700 dark:text-red-300 font-medium' : 'theme-text-muted'}`}>
                                         {renewalInfo.isOverdue
-                                          ? formatOverdueText(renewalInfo.days)
+                                          ? formatOverdueText(renewalInfo)
                                           : formatRelativeTimeText(renewalInfo)}
                                       </div>
                                     </div>
@@ -2490,7 +2511,7 @@ export default function LEIRecordsPage() {
                           return (
                             <span className={`ml-2 text-xs ${dateInfo.isOverdue ? 'text-red-700 dark:text-red-300 font-medium' : 'text-[rgb(var(--muted-foreground-rgb))]'}`}>
                               ({dateInfo.isOverdue
-                                ? formatOverdueText(dateInfo.days)
+                                ? formatOverdueText(dateInfo)
                                 : dateDisplayMode === 'relative'
                                   ? formatRelativeTimeText(dateInfo)
                                   : formatDayDeltaText(dateInfo.days)})
@@ -2723,6 +2744,12 @@ export default function LEIRecordsPage() {
           availableColumns={AVAILABLE_COLUMNS.filter((c) => c.key !== 'country_flag')}
           visibleColumns={effectiveVisibleColumns}
           onLeiClick={handleAuditLeiClick}
+          registrationAuthorityNameByCode={registrationAuthorityNameByCode}
+          registrationAuthorityFallback={{
+            code: auditRecord.registration_authority,
+            name: auditRecord.registration_authority_name,
+            internationalName: auditRecord.registration_authority_international_name,
+          }}
         />
       )}
 

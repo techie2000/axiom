@@ -210,10 +210,16 @@ interface SnapshotValueProps {
   countryByCode?: Map<string, string>
   onLeiClick?: (lei: string) => void
   linkedLeiNames?: Map<string, string>
+  registrationAuthorityNameByCode?: Map<string, string>
+  registrationAuthorityFallback?: {
+    code?: string
+    name?: string
+    internationalName?: string
+  }
 }
 
 /** Renders a value with optional country flag, names/codes display mode, and LEI code links. */
-function SnapshotValue({ fieldKey, value, snapshot, showCodes = true, countryByCode, onLeiClick, linkedLeiNames }: SnapshotValueProps) {
+function SnapshotValue({ fieldKey, value, snapshot, showCodes = true, countryByCode, onLeiClick, linkedLeiNames, registrationAuthorityNameByCode, registrationAuthorityFallback }: SnapshotValueProps) {
   const text = formatSnapshotValue(value)
   if (text === '—') return <span className="theme-text-muted">—</span>
   if (fieldKey === 'registration_authority' && typeof value === 'string') {
@@ -228,15 +234,27 @@ function SnapshotValue({ fieldKey, value, snapshot, showCodes = true, countryByC
     const raIntlName = typeof snapshot?.registration_authority_international_name === 'string'
       ? (canUseSnapshotName ? snapshot.registration_authority_international_name.trim() : '')
       : ''
-    const showIntl = raIntlName && raIntlName !== raName
+    const fallbackNameFromMap = registrationAuthorityNameByCode?.get(raCode)?.trim() || ''
+    const fallbackCode = (registrationAuthorityFallback?.code || '').trim()
+    const fallbackNameFromRecord = fallbackCode === raCode
+      ? (registrationAuthorityFallback?.name || '').trim()
+      : ''
+    const fallbackIntlFromRecord = fallbackCode === raCode
+      ? (registrationAuthorityFallback?.internationalName || '').trim()
+      : ''
+
+    const fallbackName = fallbackNameFromMap || fallbackNameFromRecord
+    const displayName = raName || fallbackName
+    const displayIntlName = raIntlName || fallbackIntlFromRecord
+    const showIntl = displayIntlName && displayName && displayIntlName !== displayName
 
     return (
       <span className="flex flex-col gap-0.5">
         <span className="font-mono">{raCode || '—'}</span>
-        {raName && raName !== raCode && (
+        {displayName && displayName !== raCode && (
           <span className="text-xs theme-text-muted">
-            {raName}
-            {showIntl && <span className="ml-1 opacity-75">({raIntlName})</span>}
+            {displayName}
+            {showIntl && <span className="ml-1 opacity-75">({displayIntlName})</span>}
           </span>
         )}
       </span>
@@ -332,9 +350,15 @@ interface SnapshotTableProps {
   countryByCode?: Map<string, string>
   onLeiClick?: (lei: string) => void
   linkedLeiNames?: Map<string, string>
+  registrationAuthorityNameByCode?: Map<string, string>
+  registrationAuthorityFallback?: {
+    code?: string
+    name?: string
+    internationalName?: string
+  }
 }
 
-function SnapshotTable({ snapshot, columns, changedFields, labelMap, showCodes = true, countryByCode, onLeiClick, linkedLeiNames }: SnapshotTableProps) {
+function SnapshotTable({ snapshot, columns, changedFields, labelMap, showCodes = true, countryByCode, onLeiClick, linkedLeiNames, registrationAuthorityNameByCode, registrationAuthorityFallback }: SnapshotTableProps) {
   const { t } = useTranslation('common')
   if (columns.length === 0) {
     return <p className="text-sm theme-text-muted py-4">{t('leiAudit.noColumnsSelected')}</p>
@@ -391,14 +415,14 @@ function SnapshotTable({ snapshot, columns, changedFields, labelMap, showCodes =
                       /* Show old → new inline so the change is immediately obvious */
                       <span className="flex flex-col gap-0.5">
                         <span className="text-red-600 dark:text-red-400 text-xs">
-                          <SnapshotValue fieldKey={col.key} value={change.old_value} snapshot={snapshot} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} />
+                          <SnapshotValue fieldKey={col.key} value={change.old_value} snapshot={snapshot} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} registrationAuthorityNameByCode={registrationAuthorityNameByCode} registrationAuthorityFallback={registrationAuthorityFallback} />
                         </span>
                         <span className="text-green-600 dark:text-green-400 font-semibold">
-                          <SnapshotValue fieldKey={col.key} value={change.new_value} snapshot={snapshot} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} />
+                          <SnapshotValue fieldKey={col.key} value={change.new_value} snapshot={snapshot} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} registrationAuthorityNameByCode={registrationAuthorityNameByCode} registrationAuthorityFallback={registrationAuthorityFallback} />
                         </span>
                       </span>
                     ) : (
-                      <SnapshotValue fieldKey={col.key} value={rawValue} snapshot={snapshot} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} />
+                      <SnapshotValue fieldKey={col.key} value={rawValue} snapshot={snapshot} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} registrationAuthorityNameByCode={registrationAuthorityNameByCode} registrationAuthorityFallback={registrationAuthorityFallback} />
                     )}
                   </td>
                 </tr>
@@ -423,6 +447,12 @@ interface CompareTableProps {
   countryByCode?: Map<string, string>
   onLeiClick?: (lei: string) => void
   linkedLeiNames?: Map<string, string>
+  registrationAuthorityNameByCode?: Map<string, string>
+  registrationAuthorityFallback?: {
+    code?: string
+    name?: string
+    internationalName?: string
+  }
 }
 
 /** Single merged table for compare mode — rows always aligned. Older (red) on left, Newer (green) on right. */
@@ -438,6 +468,8 @@ function CompareTable({
   countryByCode,
   onLeiClick,
   linkedLeiNames,
+  registrationAuthorityNameByCode,
+  registrationAuthorityFallback,
 }: CompareTableProps) {
   const { t } = useTranslation('common')
   if (columns.length === 0) {
@@ -507,7 +539,7 @@ function CompareTable({
                       isChanged ? 'text-red-600 dark:text-red-400' : 'theme-text-muted'
                     }`}
                   >
-                    <SnapshotValue fieldKey={col.key} value={olderValue} snapshot={olderSnapshot} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} />
+                    <SnapshotValue fieldKey={col.key} value={olderValue} snapshot={olderSnapshot} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} registrationAuthorityNameByCode={registrationAuthorityNameByCode} registrationAuthorityFallback={registrationAuthorityFallback} />
                   </td>
                   {/* Newer (current) value — green */}
                   <td
@@ -515,7 +547,7 @@ function CompareTable({
                       isChanged ? 'text-green-700 dark:text-green-400 font-semibold' : ''
                     }`}
                   >
-                    <SnapshotValue fieldKey={col.key} value={newerValue} snapshot={newerSnapshot} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} />
+                    <SnapshotValue fieldKey={col.key} value={newerValue} snapshot={newerSnapshot} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} registrationAuthorityNameByCode={registrationAuthorityNameByCode} registrationAuthorityFallback={registrationAuthorityFallback} />
                   </td>
                 </tr>
               </React.Fragment>
@@ -535,6 +567,12 @@ interface Props {
   availableColumns: AuditColumnConfig[]
   visibleColumns: Set<string>
   onLeiClick?: (lei: string) => void
+  registrationAuthorityNameByCode?: Map<string, string>
+  registrationAuthorityFallback?: {
+    code?: string
+    name?: string
+    internationalName?: string
+  }
 }
 
 export default function LEIAuditHistoryModal({
@@ -545,6 +583,8 @@ export default function LEIAuditHistoryModal({
   availableColumns,
   visibleColumns,
   onLeiClick,
+  registrationAuthorityNameByCode,
+  registrationAuthorityFallback,
 }: Props) {
   const { t } = useTranslation('common')
   const { formatLabel } = useButtonEmojiMode()
@@ -1231,10 +1271,10 @@ export default function LEIAuditHistoryModal({
                                     {labelMap.get(field) ?? formatFieldLabel(field)}
                                   </span>
                                   <span className="text-red-600 dark:text-red-400 break-words">
-                                    <SnapshotValue fieldKey={field} value={change.old_value} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} />
+                                    <SnapshotValue fieldKey={field} value={change.old_value} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} registrationAuthorityNameByCode={registrationAuthorityNameByCode} registrationAuthorityFallback={registrationAuthorityFallback} />
                                   </span>
                                   <span className="text-green-600 dark:text-green-400 font-medium break-words">
-                                    <SnapshotValue fieldKey={field} value={change.new_value} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} />
+                                    <SnapshotValue fieldKey={field} value={change.new_value} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} registrationAuthorityNameByCode={registrationAuthorityNameByCode} registrationAuthorityFallback={registrationAuthorityFallback} />
                                   </span>
                                 </div>
                               </React.Fragment>
@@ -1260,6 +1300,8 @@ export default function LEIAuditHistoryModal({
                           countryByCode={countryByCode}
                           onLeiClick={onLeiClick}
                           linkedLeiNames={linkedLeiNames}
+                          registrationAuthorityNameByCode={registrationAuthorityNameByCode}
+                          registrationAuthorityFallback={registrationAuthorityFallback}
                         />
                       ) : (
                         <div className="flex flex-col items-center justify-center h-40 gap-2 text-sm theme-text-muted">
@@ -1282,6 +1324,8 @@ export default function LEIAuditHistoryModal({
                         countryByCode={countryByCode}
                         onLeiClick={onLeiClick}
                         linkedLeiNames={linkedLeiNames}
+                        registrationAuthorityNameByCode={registrationAuthorityNameByCode}
+                        registrationAuthorityFallback={registrationAuthorityFallback}
                       />
                     </div>
                   )}
