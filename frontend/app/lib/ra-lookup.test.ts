@@ -80,6 +80,15 @@ describe('buildRegistrationLookupUrl', () => {
     )
     expect(result).toBe('https://example.com/search?lang=en&id=0712691464')
   })
+
+  it('supports digit-only substitution via {registration_number_digits}', () => {
+    const result = buildRegistrationLookupUrl(
+      'https://example.com/id/{registration_number_digits}?raw={registration_number}',
+      '0823.117.650'
+    )
+
+    expect(result).toBe('https://example.com/id/0823117650?raw=0823.117.650')
+  })
 })
 
 describe('buildRegistrationLookupOptions', () => {
@@ -156,6 +165,60 @@ describe('buildRegistrationLookupOptions', () => {
         label: 'KBO (Belgium)',
         type: 'url',
         url: 'https://kbopub.economie.fgov.be/kbopub/zoeknummerform.html?lang=en&nummer=0712691464',
+      },
+    ])
+  })
+
+  it('builds additional Belgium links using digit-only registration number', () => {
+    const options = buildRegistrationLookupOptions(
+      'RA000025',
+      [
+        {
+          name: 'Central Balance Sheet Office (Belgium)',
+          url: 'https://consult.cbso.nbb.be/consult-enterprise/{registration_number_digits}',
+        },
+        {
+          name: 'National Gazette (Belgium)',
+          url: 'https://www.ejustice.just.fgov.be/cgi_tsv/list.pl?language={lang}&btw={registration_number_digits}&',
+        },
+      ],
+      '0823.117.650',
+      'fr-BE'
+    )
+
+    expect(options).toEqual([
+      {
+        key: 'Central Balance Sheet Office (Belgium):https://consult.cbso.nbb.be/consult-enterprise/0823117650',
+        label: 'Central Balance Sheet Office (Belgium)',
+        type: 'url',
+        url: 'https://consult.cbso.nbb.be/consult-enterprise/0823117650',
+      },
+      {
+        key: 'National Gazette (Belgium):https://www.ejustice.just.fgov.be/cgi_tsv/list.pl?language=fr&btw=0823117650&',
+        label: 'National Gazette (Belgium)',
+        type: 'url',
+        url: 'https://www.ejustice.just.fgov.be/cgi_tsv/list.pl?language=fr&btw=0823117650&',
+      },
+    ])
+  })
+
+  it('defaults Belgium National Gazette language to nl when ui language is en', () => {
+    const options = buildRegistrationLookupOptions(
+      'RA000025',
+      [{
+        name: 'National Gazette (Belgium)',
+        url: 'https://www.ejustice.just.fgov.be/cgi_tsv/list.pl?language={lang}&btw={registration_number_digits}&',
+      }],
+      '0823.117.650',
+      'en'
+    )
+
+    expect(options).toEqual([
+      {
+        key: 'National Gazette (Belgium):https://www.ejustice.just.fgov.be/cgi_tsv/list.pl?language=nl&btw=0823117650&',
+        label: 'National Gazette (Belgium)',
+        type: 'url',
+        url: 'https://www.ejustice.just.fgov.be/cgi_tsv/list.pl?language=nl&btw=0823117650&',
       },
     ])
   })
