@@ -11,7 +11,10 @@ import ReferenceDetailList from '../components/ReferenceDetailList'
 import SearchInputWithOverflowTooltip from '../components/SearchInputWithOverflowTooltip'
 import StatCard from '../components/StatCard'
 import SyncedWideTable from '../components/SyncedWideTable'
+import TablePaginationControls from '../components/TablePaginationControls'
 import ThemedSelect from '../components/ThemedSelect'
+import { getApiBaseUrl } from '../lib/api-base'
+import { getAuthToken } from '../lib/auth-token'
 import { useDeferredBooleanPreference } from '../lib/useDeferredBooleanPreference'
 import { buildDocsUrl } from '../lib/docsLinks'
 import { useButtonEmojiMode } from '../lib/useButtonEmojiMode'
@@ -330,9 +333,7 @@ export default function LEIRecordsPage() {
   // Audit history modal state
   const [auditRecord, setAuditRecord] = useState<LEIRecord | null>(null)
 
-  const API_BASE_URL = typeof window !== 'undefined' 
-    ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080')
-    : 'http://backend:8080'
+  const API_BASE_URL = getApiBaseUrl()
   const { count: totalRecordsCount } = useCachedLeiCount(API_BASE_URL, { pollMs: 30000 })
   const totalRecords = totalRecordsCount ?? 0
 
@@ -344,9 +345,7 @@ export default function LEIRecordsPage() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const rawToken = localStorage.getItem('axiom_token')
-    const normalizedToken = rawToken?.replace(/^Bearer\s+/i, '').trim() ?? ''
-    setIsLoggedIn(normalizedToken !== '' && normalizedToken !== 'undefined' && normalizedToken !== 'null')
+    setIsLoggedIn(getAuthToken() !== null)
   }, [])
 
   const backHref = isLoggedIn ? '/dashboard' : '/home'
@@ -1570,27 +1569,21 @@ export default function LEIRecordsPage() {
         </div>
 
         {records.length > 0 && (
-          <div className="mb-4 flex justify-between items-center">
-            <button
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="px-4 py-2 rounded-lg theme-btn-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {t('leiRecords.pagination.previous')}
-            </button>
-            <span className="theme-text-muted">
-                {hasActiveFilters || totalPages === 0
-                  ? t('leiRecords.pagination.pageFiltered', { page: currentPage, count: records.length })
-                  : t('leiRecords.pagination.pageOf', { page: currentPage, total: totalPages.toLocaleString() })}
-            </span>
-            <button
-              onClick={() => setCurrentPage(p => p + 1)}
-              disabled={isLastPage}
-              className="px-4 py-2 rounded-lg theme-btn-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {t('leiRecords.pagination.next')}
-            </button>
-          </div>
+          <TablePaginationControls
+            className="mb-4"
+            currentPage={currentPage}
+            isFirstPage={currentPage === 1}
+            isLastPage={isLastPage}
+            onPrevious={() => setCurrentPage(p => Math.max(1, p - 1))}
+            onNext={() => setCurrentPage(p => p + 1)}
+            pageLabel={
+              hasActiveFilters || totalPages === 0
+                ? t('leiRecords.pagination.pageFiltered', { page: currentPage, count: records.length })
+                : t('leiRecords.pagination.pageOf', { page: currentPage, total: totalPages.toLocaleString() })
+            }
+            previousLabel={t('leiRecords.pagination.previous')}
+            nextLabel={t('leiRecords.pagination.next')}
+          />
         )}
 
         {/* Sticky filter summary bar - shows when scrolling */}
@@ -1973,46 +1966,24 @@ export default function LEIRecordsPage() {
           )}
 
         {records.length > 0 && (
-          <div className="mt-4 flex justify-between items-center flex-wrap gap-4">
-            <button
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="px-4 py-2 rounded-lg theme-btn-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {t('leiRecords.pagination.previous')}
-            </button>
-            <div className="flex items-center gap-4">
-              <span className="theme-text-muted">
-                {t('leiRecords.pagination.page', { page: currentPage })}{hasActiveFilters && ` (${t('leiRecords.stats.showing').toLowerCase()} ${records.length})`}
-              </span>
-              <div className="flex items-center gap-2">
-                <label htmlFor="items-per-page" className="text-sm theme-text-muted">{t('leiRecords.pagination.itemsPerPage')}</label>
-                <ThemedSelect
-                  value={String(itemsPerPage)}
-                  onChange={(next) => {
-                    setItemsPerPage(Number(next))
-                    setCurrentPage(1)
-                  }}
-                  ariaLabel={t('leiRecords.pagination.itemsPerPage')}
-                  className="min-w-[5.5rem]"
-                  buttonClassName="px-3 py-1 text-sm"
-                  options={[
-                    { value: '50', label: '50' },
-                    { value: '100', label: '100' },
-                    { value: '250', label: '250' },
-                    { value: '500', label: '500' },
-                  ]}
-                />
-              </div>
-            </div>
-            <button
-              onClick={() => setCurrentPage(p => p + 1)}
-              disabled={isLastPage}
-              className="px-4 py-2 rounded-lg theme-btn-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {t('leiRecords.pagination.next')}
-            </button>
-          </div>
+          <TablePaginationControls
+            className="mt-4"
+            currentPage={currentPage}
+            isFirstPage={currentPage === 1}
+            isLastPage={isLastPage}
+            onPrevious={() => setCurrentPage(p => Math.max(1, p - 1))}
+            onNext={() => setCurrentPage(p => p + 1)}
+            pageSize={itemsPerPage}
+            pageSizeOptions={[50, 100, 250, 500]}
+            onPageSizeChange={(next) => {
+              setItemsPerPage(next)
+              setCurrentPage(1)
+            }}
+            itemsPerPageLabel={t('leiRecords.pagination.itemsPerPage')}
+            pageLabel={`${t('leiRecords.pagination.page', { page: currentPage })}${hasActiveFilters ? ` (${t('leiRecords.stats.showing').toLowerCase()} ${records.length})` : ''}`}
+            previousLabel={t('leiRecords.pagination.previous')}
+            nextLabel={t('leiRecords.pagination.next')}
+          />
         )}
 
         <div className="mt-8 text-center text-sm text-[rgb(var(--muted-foreground-rgb))]">

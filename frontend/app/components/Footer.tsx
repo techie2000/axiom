@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { getApiBaseUrl } from '../lib/api-base'
 
 import { buildFooterVersionTooltip, type FooterVersionInfo } from './footerVersion'
 
@@ -29,11 +30,7 @@ export default function Footer() {
   useEffect(() => {
     const fetchVersion = async () => {
       try {
-        const API_BASE_URL = typeof window !== 'undefined'
-          ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080')
-          : 'http://backend:8080'
-
-        const response = await fetch(`${API_BASE_URL}/version`)
+        const response = await fetch(`${getApiBaseUrl()}/version`)
         if (response.ok) {
           const data = await response.json()
           setVersionInfo({

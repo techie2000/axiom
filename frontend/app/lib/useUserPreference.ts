@@ -1,6 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { getApiBaseUrl } from './api-base'
+import { getAuthToken } from './auth-token'
 
 const PREFERENCE_SAVE_ERROR_EVENT = 'axiom:preference-save-error'
 const PREFERENCE_UPDATED_EVENT = 'axiom:preference-updated'
@@ -14,11 +16,6 @@ class PreferenceSaveError extends Error {
     this.status = status
   }
 }
-
-const API_BASE_URL =
-  typeof window !== 'undefined'
-    ? process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080'
-    : 'http://backend:8080'
 
 export interface UserPreference {
   page_key: string
@@ -44,23 +41,10 @@ function writeToCache(pageKey: string, prefKey: string, value: string) {
   cache[pageKey][prefKey] = value
 }
 
-function getToken(): string | null {
-  if (typeof window === 'undefined') return null
-
-  const rawToken = localStorage.getItem('axiom_token')
-  const normalizedToken = rawToken?.replace(/^Bearer\s+/i, '').trim() ?? ''
-
-  if (normalizedToken === '' || normalizedToken === 'undefined' || normalizedToken === 'null') {
-    return null
-  }
-
-  return normalizedToken
-}
-
 async function fetchAllPreferences(): Promise<UserPreference[]> {
-  const token = getToken()
+  const token = getAuthToken()
   if (!token) return []
-  const res = await fetch(`${API_BASE_URL}/api/v1/preferences`, {
+  const res = await fetch(`${getApiBaseUrl()}/api/v1/preferences`, {
     headers: { Authorization: `Bearer ${token}` },
   })
   if (!res.ok) return []
@@ -72,7 +56,7 @@ async function ensurePreferencesLoaded(): Promise<void> {
     return
   }
 
-  const token = getToken()
+  const token = getAuthToken()
   if (!token) {
     cacheLoaded = true
     return
@@ -105,9 +89,9 @@ async function savePreferenceToServer(
   preferenceKey: string,
   preferenceValue: string,
 ): Promise<void> {
-  const token = getToken()
+  const token = getAuthToken()
   if (!token) return
-  const response = await fetch(`${API_BASE_URL}/api/v1/preferences`, {
+  const response = await fetch(`${getApiBaseUrl()}/api/v1/preferences`, {
     method: 'PUT',
     headers: {
       Authorization: `Bearer ${token}`,
