@@ -215,6 +215,50 @@ func (r *leiLevel2Repository) BatchUpsertRelationshipRecords(records []*domain.L
 		existingMap[keyOf(&existingSlice[idx])] = &existingSlice[idx]
 	}
 
+	type rrPlannedWrite struct {
+		record  *domain.LEIRelationshipRecord
+		action  string
+		rowID   uuid.UUID
+		changes map[string]level2ChangeDetection
+	}
+
+	plans := make([]rrPlannedWrite, 0, len(records))
+	for _, record := range records {
+		existing, wasExisting := existingMap[keyOf(record)]
+		if !wasExisting {
+			plans = append(plans, rrPlannedWrite{
+				record: record,
+				action: "CREATE",
+				rowID:  record.ID,
+			})
+			continue
+		}
+
+		changes := r.detectRRChanges(existing, record)
+		if len(changes) == 0 {
+			continue
+		}
+
+		plans = append(plans, rrPlannedWrite{
+			record:  record,
+			action:  "UPDATE",
+			rowID:   existing.ID,
+			changes: changes,
+		})
+	}
+
+	if len(plans) == 0 {
+		return 0, 0, nil
+	}
+
+	writeRecords := make([]*domain.LEIRelationshipRecord, 0, len(plans))
+	for _, plan := range plans {
+		if plan.action == "UPDATE" {
+			plan.record.ID = plan.rowID
+		}
+		writeRecords = append(writeRecords, plan.record)
+	}
+
 	// Use a transaction so records and their audit rows are committed atomically.
 	tx := r.db.Begin()
 	if tx.Error != nil {
@@ -249,22 +293,22 @@ func (r *leiLevel2Repository) BatchUpsertRelationshipRecords(records []*domain.L
 			"source_file_id",
 			"updated_at",
 		}),
-	}).CreateInBatches(records, 500).Error; err != nil {
+	}).CreateInBatches(writeRecords, 500).Error; err != nil {
 		tx.Rollback()
 		return 0, 0, err
 	}
 
 	// Build audit records and count creates vs updates.
-	audits := make([]domain.LEIRelationshipRecordAudit, 0, len(records))
+	audits := make([]domain.LEIRelationshipRecordAudit, 0, len(plans))
 	createdCount := 0
 	updatedCount := 0
-	for _, record := range records {
-		existing, wasExisting := existingMap[keyOf(record)]
+	for _, plan := range plans {
+		record := plan.record
 
-		if !wasExisting {
+		if plan.action == "CREATE" {
 			createdCount++
 			audits = append(audits, domain.LEIRelationshipRecordAudit{
-				RRRecordID:       record.ID,
+				RRRecordID:       plan.rowID,
 				StartNodeLEI:     record.StartNodeLEI,
 				EndNodeLEI:       record.EndNodeLEI,
 				RelationshipType: record.RelationshipType,
@@ -277,18 +321,14 @@ func (r *leiLevel2Repository) BatchUpsertRelationshipRecords(records []*domain.L
 			continue
 		}
 
-		changes := r.detectRRChanges(existing, record)
-		if len(changes) == 0 {
-			continue // no meaningful change
-		}
-		changesJSON, jsonErr := json.Marshal(changes)
+		changesJSON, jsonErr := json.Marshal(plan.changes)
 		if jsonErr != nil {
 			tx.Rollback()
 			return 0, 0, fmt.Errorf("failed to marshal RR changes: %w", jsonErr)
 		}
 		updatedCount++
 		audits = append(audits, domain.LEIRelationshipRecordAudit{
-			RRRecordID:       existing.ID,
+			RRRecordID:       plan.rowID,
 			StartNodeLEI:     record.StartNodeLEI,
 			EndNodeLEI:       record.EndNodeLEI,
 			RelationshipType: record.RelationshipType,
@@ -320,7 +360,7 @@ func (r *leiLevel2Repository) BatchUpsertRelationshipRecords(records []*domain.L
 		return 0, 0, fmt.Errorf("failed to commit RR batch upsert: %w", err)
 	}
 
-	log.Debug().Int("created", createdCount).Int("updated", updatedCount).Int("audits", len(audits)).
+	log.Debug().Int("created", createdCount).Int("updated", updatedCount).Int("audits", len(audits)).Int("writes", len(writeRecords)).
 		Msg("RR batch upsert with audit trail completed")
 
 	return createdCount, updatedCount, nil
@@ -497,6 +537,50 @@ func (r *leiLevel2Repository) BatchUpsertReportingExceptions(exceptions []*domai
 		existingMap[keyOf(&existingSlice[idx])] = &existingSlice[idx]
 	}
 
+	type repexPlannedWrite struct {
+		record  *domain.LEIReportingException
+		action  string
+		rowID   uuid.UUID
+		changes map[string]level2ChangeDetection
+	}
+
+	plans := make([]repexPlannedWrite, 0, len(exceptions))
+	for _, exc := range exceptions {
+		existing, wasExisting := existingMap[keyOf(exc)]
+		if !wasExisting {
+			plans = append(plans, repexPlannedWrite{
+				record: exc,
+				action: "CREATE",
+				rowID:  exc.ID,
+			})
+			continue
+		}
+
+		changes := r.detectRepexChanges(existing, exc)
+		if len(changes) == 0 {
+			continue
+		}
+
+		plans = append(plans, repexPlannedWrite{
+			record:  exc,
+			action:  "UPDATE",
+			rowID:   existing.ID,
+			changes: changes,
+		})
+	}
+
+	if len(plans) == 0 {
+		return 0, 0, nil
+	}
+
+	writeExceptions := make([]*domain.LEIReportingException, 0, len(plans))
+	for _, plan := range plans {
+		if plan.action == "UPDATE" {
+			plan.record.ID = plan.rowID
+		}
+		writeExceptions = append(writeExceptions, plan.record)
+	}
+
 	// Use a transaction so records and their audit rows are committed atomically.
 	tx := r.db.Begin()
 	if tx.Error != nil {
@@ -520,22 +604,22 @@ func (r *leiLevel2Repository) BatchUpsertReportingExceptions(exceptions []*domai
 			"source_file_id",
 			"updated_at",
 		}),
-	}).CreateInBatches(exceptions, 500).Error; err != nil {
+	}).CreateInBatches(writeExceptions, 500).Error; err != nil {
 		tx.Rollback()
 		return 0, 0, err
 	}
 
 	// Build audit records and count creates vs updates.
-	audits := make([]domain.LEIReportingExceptionAudit, 0, len(exceptions))
+	audits := make([]domain.LEIReportingExceptionAudit, 0, len(plans))
 	createdCount := 0
 	updatedCount := 0
-	for _, exc := range exceptions {
-		existing, wasExisting := existingMap[keyOf(exc)]
+	for _, plan := range plans {
+		exc := plan.record
 
-		if !wasExisting {
+		if plan.action == "CREATE" {
 			createdCount++
 			audits = append(audits, domain.LEIReportingExceptionAudit{
-				RepexRecordID:     exc.ID,
+				RepexRecordID:     plan.rowID,
 				LEI:               exc.LEI,
 				ExceptionCategory: exc.ExceptionCategory,
 				Action:            "CREATE",
@@ -547,18 +631,14 @@ func (r *leiLevel2Repository) BatchUpsertReportingExceptions(exceptions []*domai
 			continue
 		}
 
-		changes := r.detectRepexChanges(existing, exc)
-		if len(changes) == 0 {
-			continue // no meaningful change
-		}
-		changesJSON, jsonErr := json.Marshal(changes)
+		changesJSON, jsonErr := json.Marshal(plan.changes)
 		if jsonErr != nil {
 			tx.Rollback()
 			return 0, 0, fmt.Errorf("failed to marshal REPEX changes: %w", jsonErr)
 		}
 		updatedCount++
 		audits = append(audits, domain.LEIReportingExceptionAudit{
-			RepexRecordID:     existing.ID,
+			RepexRecordID:     plan.rowID,
 			LEI:               exc.LEI,
 			ExceptionCategory: exc.ExceptionCategory,
 			Action:            "UPDATE",
@@ -589,7 +669,7 @@ func (r *leiLevel2Repository) BatchUpsertReportingExceptions(exceptions []*domai
 		return 0, 0, fmt.Errorf("failed to commit REPEX batch upsert: %w", err)
 	}
 
-	log.Debug().Int("created", createdCount).Int("updated", updatedCount).Int("audits", len(audits)).
+	log.Debug().Int("created", createdCount).Int("updated", updatedCount).Int("audits", len(audits)).Int("writes", len(writeExceptions)).
 		Msg("REPEX batch upsert with audit trail completed")
 
 	return createdCount, updatedCount, nil
