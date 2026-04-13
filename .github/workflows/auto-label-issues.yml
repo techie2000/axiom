@@ -144,6 +144,9 @@ jobs:
                 if (/^summary$/i.test(line) || /^description$/i.test(line) || /^objective$/i.test(line)) {
                   continue
                 }
+                if (/^parent:\s*#\d+/i.test(line) || /^child(?:ren)?:\s*#\d+/i.test(line)) {
+                  continue
+                }
                 if (/^steps to reproduce$/i.test(line) || /^expected behavior$/i.test(line)) {
                   continue
                 }
@@ -203,13 +206,18 @@ jobs:
             const existingPrefixMatch = currentTitle.match(/^\[[^\]]+\]\s*/)
             const existingPrefix = existingPrefixMatch ? existingPrefixMatch[0].trim() : ''
             const desiredPrefix = titlePrefixes[primaryLabel] || '[Task]'
+            const hasExplicitTypedPrefix = /^\[(bug|feature|task|docs|security|performance|question)\]\s+/i.test(currentTitle)
             const bodyCandidate = extractCandidateTitleFromBody(issue.body || '')
-            const baseTitle = bodyCandidate || currentTitle.replace(/^\[[^\]]+\]\s*/, '').trim()
+            const rawStrippedTitle = currentTitle.replace(/^\[[^\]]+\]\s*/, '').trim()
+            const baseTitle = isWeakTitle(currentTitle)
+              ? (bodyCandidate || rawStrippedTitle)
+              : rawStrippedTitle
             const normalizedBaseTitle = toSentenceCase(baseTitle)
             const needsRewrite = isWeakTitle(currentTitle)
             const needsPrefix = !existingPrefix && normalizedBaseTitle.length > 0
+            const allowPrefixOverride = !hasExplicitTypedPrefix || needsRewrite
 
-            if ((needsRewrite || needsPrefix || existingPrefix !== desiredPrefix) && normalizedBaseTitle) {
+            if ((needsRewrite || (needsPrefix && allowPrefixOverride) || (existingPrefix !== desiredPrefix && allowPrefixOverride)) && normalizedBaseTitle) {
               const nextTitle = `${desiredPrefix} ${normalizedBaseTitle}`.trim()
               if (nextTitle !== issue.title) {
                 await github.rest.issues.update({
