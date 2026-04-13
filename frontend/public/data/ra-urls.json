@@ -1,5 +1,31 @@
 {
-  "_comment": "Maps Registration Authority (RA) codes to arrays of lookup URL templates. Each entry has a 'name' (shown in dropdown) and 'url' (with {registration_number} placeholder). Only add entries that have been explicitly verified - do not guess.",
+  "_comment": "Maps Registration Authority (RA) codes to arrays of lookup URL templates. Each entry has a 'name' (shown in dropdown) and 'url' (with {registration_number} placeholder, and optionally {lang} for language-aware registries). Only add entries that have been explicitly verified - do not guess.",
+  "RA000025": [
+    {
+      "name": "KBO (Belgium)",
+      "url": "https://kbopub.economie.fgov.be/kbopub/zoeknummerform.html?lang={lang}&nummer={registration_number}"
+    },
+    {
+      "name": "Central Balance Sheet Office (Belgium)",
+      "url": "https://consult.cbso.nbb.be/consult-enterprise/{registration_number_digits}"
+    },
+    {
+      "name": "National Gazette (Belgium)",
+      "url": "https://www.ejustice.just.fgov.be/cgi_tsv/list.pl?language={lang}&btw={registration_number_digits}&"
+    }
+  ],
+  "RA000463": [
+    {
+      "name": "KVK (Netherlands)",
+      "url": "https://kvk.nl/bestellen/?kvknummer={registration_number}"
+    }
+  ],
+  "RA000548": [
+    {
+      "name": "UID (Switzerland)",
+      "url": "https://www.uid.admin.ch/Detail.aspx?lang={lang}&uid_id={registration_number}"
+    }
+  ],
   "RA000585": [
     {
       "name": "UK Companies House",

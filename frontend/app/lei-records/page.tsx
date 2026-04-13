@@ -35,8 +35,9 @@ function buildLookupOptions(
   raCode: string | null | undefined,
   raTemplates: Array<{ name: string; url: string }>,
   regNum: string | null | undefined,
+  lang?: string,
 ): RegistrationLookupOption[] {
-  return buildRegistrationLookupOptions(raCode, raTemplates, regNum)
+  return buildRegistrationLookupOptions(raCode, raTemplates, regNum, lang)
 }
 
 interface LEIRecord {
@@ -187,7 +188,7 @@ const DEFAULT_VISIBLE_KEYS = AVAILABLE_COLUMNS.filter(col => col.defaultVisible)
 const COUNTRY_DETAIL_ORDER = ['code', 'name', 'alpha3_code', 'region', 'active']
 
 export default function LEIRecordsPage() {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const { getEnglishTooltip } = useEnglishTooltips()
   const { formatLabel } = useButtonEmojiMode()
   const [isLoggedIn, setIsLoggedIn] = useState(false)
@@ -1879,7 +1880,7 @@ export default function LEIRecordsPage() {
                                   const regNum = String(value || '')
                                   const raCode = record.registration_authority
                                   const raTemplates = raCode ? (raUrlTemplates[raCode] ?? []) : []
-                                  const lookupOptions = buildLookupOptions(raCode, raTemplates, regNum)
+                                  const lookupOptions = buildLookupOptions(raCode, raTemplates, regNum, i18n.language)
                                   if (!regNum) return <span>-</span>
                                   return (
                                     <div className="group/rn inline-flex items-center gap-1">
@@ -2387,7 +2388,7 @@ export default function LEIRecordsPage() {
                       const regNum = selectedRecord.registration_number
                       const raCode = selectedRecord.registration_authority
                       const raTemplates = raCode ? (raUrlTemplates[raCode] ?? []) : []
-                      const lookupOptions = buildLookupOptions(raCode, raTemplates, regNum)
+                      const lookupOptions = buildLookupOptions(raCode, raTemplates, regNum, i18n.language)
                       return (
                         <p className="text-sm font-mono text-[rgb(var(--foreground-rgb))] mt-1">
                           <span className="group/rn-modal inline-flex items-center gap-1">

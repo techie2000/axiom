@@ -112,8 +112,12 @@ jobs:
                 test: (p) => p.startsWith('backend/migrations/') || p.endsWith('.sql'),
               },
               {
+                label: 'area:docs',
+                test: (p) => p.startsWith('.github/instructions/'),
+              },
+              {
                 label: 'area:ci',
-                test: (p) => p.startsWith('.github/') || basename(p) === 'Makefile',
+                test: (p) => (p.startsWith('.github/') && !p.startsWith('.github/instructions/')) || basename(p) === 'Makefile',
               },
               {
                 label: 'area:infra',

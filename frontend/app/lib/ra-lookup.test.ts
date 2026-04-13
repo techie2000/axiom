@@ -63,6 +63,32 @@ describe('buildRegistrationLookupUrl', () => {
     // replaceAll replaces every occurrence for safety
     expect(result).toBe('https://example.com/q=99&id=99')
   })
+
+  it('substitutes {lang} using the provided language base code', () => {
+    const result = buildRegistrationLookupUrl(
+      'https://example.com/search?lang={lang}&id={registration_number}',
+      '0712691464',
+      'fr-BE'
+    )
+    expect(result).toBe('https://example.com/search?lang=fr&id=0712691464')
+  })
+
+  it('defaults {lang} to en when language is omitted', () => {
+    const result = buildRegistrationLookupUrl(
+      'https://example.com/search?lang={lang}&id={registration_number}',
+      '0712691464'
+    )
+    expect(result).toBe('https://example.com/search?lang=en&id=0712691464')
+  })
+
+  it('supports digit-only substitution via {registration_number_digits}', () => {
+    const result = buildRegistrationLookupUrl(
+      'https://example.com/id/{registration_number_digits}?raw={registration_number}',
+      '0823.117.650'
+    )
+
+    expect(result).toBe('https://example.com/id/0823117650?raw=0823.117.650')
+  })
 })
 
 describe('buildRegistrationLookupOptions', () => {
@@ -97,6 +123,165 @@ describe('buildRegistrationLookupOptions', () => {
         type: 'sunbiz-document-number-post',
         formAction: 'https://search.sunbiz.org/Inquiry/CorporationSearch/ByDocumentNumber',
         documentNumber: 'L24000116074',
+      },
+    ])
+  })
+
+  it('builds Belgium KBO lookup URL with language placeholder expansion', () => {
+    const options = buildRegistrationLookupOptions(
+      'RA000025',
+      [{
+        name: 'KBO (Belgium)',
+        url: 'https://kbopub.economie.fgov.be/kbopub/zoeknummerform.html?lang={lang}&nummer={registration_number}',
+      }],
+      '0712691464',
+      'nl-BE'
+    )
+
+    expect(options).toEqual([
+      {
+        key: 'KBO (Belgium):https://kbopub.economie.fgov.be/kbopub/zoeknummerform.html?lang=nl&nummer=0712691464',
+        label: 'KBO (Belgium)',
+        type: 'url',
+        url: 'https://kbopub.economie.fgov.be/kbopub/zoeknummerform.html?lang=nl&nummer=0712691464',
+      },
+    ])
+  })
+
+  it('falls back to en for unsupported Belgium KBO languages', () => {
+    const options = buildRegistrationLookupOptions(
+      'RA000025',
+      [{
+        name: 'KBO (Belgium)',
+        url: 'https://kbopub.economie.fgov.be/kbopub/zoeknummerform.html?lang={lang}&nummer={registration_number}',
+      }],
+      '0712691464',
+      'es'
+    )
+
+    expect(options).toEqual([
+      {
+        key: 'KBO (Belgium):https://kbopub.economie.fgov.be/kbopub/zoeknummerform.html?lang=en&nummer=0712691464',
+        label: 'KBO (Belgium)',
+        type: 'url',
+        url: 'https://kbopub.economie.fgov.be/kbopub/zoeknummerform.html?lang=en&nummer=0712691464',
+      },
+    ])
+  })
+
+  it('builds additional Belgium links using digit-only registration number', () => {
+    const options = buildRegistrationLookupOptions(
+      'RA000025',
+      [
+        {
+          name: 'Central Balance Sheet Office (Belgium)',
+          url: 'https://consult.cbso.nbb.be/consult-enterprise/{registration_number_digits}',
+        },
+        {
+          name: 'National Gazette (Belgium)',
+          url: 'https://www.ejustice.just.fgov.be/cgi_tsv/list.pl?language={lang}&btw={registration_number_digits}&',
+        },
+      ],
+      '0823.117.650',
+      'fr-BE'
+    )
+
+    expect(options).toEqual([
+      {
+        key: 'Central Balance Sheet Office (Belgium):https://consult.cbso.nbb.be/consult-enterprise/0823117650',
+        label: 'Central Balance Sheet Office (Belgium)',
+        type: 'url',
+        url: 'https://consult.cbso.nbb.be/consult-enterprise/0823117650',
+      },
+      {
+        key: 'National Gazette (Belgium):https://www.ejustice.just.fgov.be/cgi_tsv/list.pl?language=fr&btw=0823117650&',
+        label: 'National Gazette (Belgium)',
+        type: 'url',
+        url: 'https://www.ejustice.just.fgov.be/cgi_tsv/list.pl?language=fr&btw=0823117650&',
+      },
+    ])
+  })
+
+  it('defaults Belgium National Gazette language to nl when ui language is en', () => {
+    const options = buildRegistrationLookupOptions(
+      'RA000025',
+      [{
+        name: 'National Gazette (Belgium)',
+        url: 'https://www.ejustice.just.fgov.be/cgi_tsv/list.pl?language={lang}&btw={registration_number_digits}&',
+      }],
+      '0823.117.650',
+      'en'
+    )
+
+    expect(options).toEqual([
+      {
+        key: 'National Gazette (Belgium):https://www.ejustice.just.fgov.be/cgi_tsv/list.pl?language=nl&btw=0823117650&',
+        label: 'National Gazette (Belgium)',
+        type: 'url',
+        url: 'https://www.ejustice.just.fgov.be/cgi_tsv/list.pl?language=nl&btw=0823117650&',
+      },
+    ])
+  })
+
+  it('keeps normalized language for registries without an allowlist', () => {
+    const options = buildRegistrationLookupOptions(
+      'RA009999',
+      [{
+        name: 'Example Registry',
+        url: 'https://example.com/find?lang={lang}&id={registration_number}',
+      }],
+      'ABC123',
+      'es-MX'
+    )
+
+    expect(options).toEqual([
+      {
+        key: 'Example Registry:https://example.com/find?lang=es&id=ABC123',
+        label: 'Example Registry',
+        type: 'url',
+        url: 'https://example.com/find?lang=es&id=ABC123',
+      },
+    ])
+  })
+
+  it('builds Switzerland UID lookup URL with optional supported language', () => {
+    const options = buildRegistrationLookupOptions(
+      'RA000548',
+      [{
+        name: 'UID (Switzerland)',
+        url: 'https://www.uid.admin.ch/Detail.aspx?lang={lang}&uid_id={registration_number}',
+      }],
+      'CHE139733930',
+      'it-CH'
+    )
+
+    expect(options).toEqual([
+      {
+        key: 'UID (Switzerland):https://www.uid.admin.ch/Detail.aspx?lang=it&uid_id=CHE139733930',
+        label: 'UID (Switzerland)',
+        type: 'url',
+        url: 'https://www.uid.admin.ch/Detail.aspx?lang=it&uid_id=CHE139733930',
+      },
+    ])
+  })
+
+  it('falls back to en for unsupported Switzerland UID languages', () => {
+    const options = buildRegistrationLookupOptions(
+      'RA000548',
+      [{
+        name: 'UID (Switzerland)',
+        url: 'https://www.uid.admin.ch/Detail.aspx?lang={lang}&uid_id={registration_number}',
+      }],
+      'CHE139733930',
+      'es'
+    )
+
+    expect(options).toEqual([
+      {
+        key: 'UID (Switzerland):https://www.uid.admin.ch/Detail.aspx?lang=en&uid_id=CHE139733930',
+        label: 'UID (Switzerland)',
+        type: 'url',
+        url: 'https://www.uid.admin.ch/Detail.aspx?lang=en&uid_id=CHE139733930',
       },
     ])
   })
