@@ -36,9 +36,9 @@ function buildLookupOptions(
   raCode: string | null | undefined,
   raTemplates: Array<{ name: string; url: string }>,
   regNum: string | null | undefined,
-  language: string | null | undefined,
+  lang?: string,
 ): RegistrationLookupOption[] {
-  return buildRegistrationLookupOptions(raCode, raTemplates, regNum, language)
+  return buildRegistrationLookupOptions(raCode, raTemplates, regNum, lang)
 }
 
 interface LEIRecord {

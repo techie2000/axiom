@@ -4,6 +4,14 @@
     {
       "name": "KBO (Belgium)",
       "url": "https://kbopub.economie.fgov.be/kbopub/zoeknummerform.html?lang={lang}&nummer={registration_number}"
+    },
+    {
+      "name": "Central Balance Sheet Office (Belgium)",
+      "url": "https://consult.cbso.nbb.be/consult-enterprise/{registration_number_digits}"
+    },
+    {
+      "name": "National Gazette (Belgium)",
+      "url": "https://www.ejustice.just.fgov.be/cgi_tsv/list.pl?language={lang}&btw={registration_number_digits}&"
     }
   ],
   "RA000463": [
@@ -15,7 +23,7 @@
   "RA000548": [
     {
       "name": "UID (Switzerland)",
-      "url": "https://www.uid.admin.ch/Detail.aspx?uid_id={registration_number}"
+      "url": "https://www.uid.admin.ch/Detail.aspx?lang={lang}&uid_id={registration_number}"
     }
   ],
   "RA000585": [
