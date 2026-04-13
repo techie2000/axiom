@@ -26,6 +26,28 @@ describe('buildRegistrationLookupUrl', () => {
     expect(result).toBe('https://example.com/search?q=AB%20123%2F456')
   })
 
+  it('substitutes the base language into {lang} placeholders', () => {
+    const result = buildRegistrationLookupUrl(
+      'https://kbopub.economie.fgov.be/kbopub/zoeknummerform.html?lang={lang}&nummer={registration_number}',
+      '0123.456.789',
+      'nl-BE'
+    )
+
+    expect(result).toBe(
+      'https://kbopub.economie.fgov.be/kbopub/zoeknummerform.html?lang=nl&nummer=0123.456.789'
+    )
+  })
+
+  it('falls back to en when language contains unsafe characters', () => {
+    const result = buildRegistrationLookupUrl(
+      'https://example.com/find?lang={lang}&id={registration_number}',
+      '17027441',
+      'en&admin=true'
+    )
+
+    expect(result).toBe('https://example.com/find?lang=en&id=17027441')
+  })
+
   it('returns null when the template is empty', () => {
     expect(buildRegistrationLookupUrl('', '17027441')).toBeNull()
   })
@@ -105,6 +127,24 @@ describe('buildRegistrationLookupOptions', () => {
         label: 'UK Companies House',
         type: 'url',
         url: 'https://example.com/company/12345',
+      },
+    ])
+  })
+
+  it('passes language through to option URL resolution', () => {
+    const options = buildRegistrationLookupOptions(
+      'RA000025',
+      [{ name: 'KBO (Belgium)', url: 'https://kbopub.economie.fgov.be/kbopub/zoeknummerform.html?lang={lang}&nummer={registration_number}' }],
+      '0123.456.789',
+      'fr-BE'
+    )
+
+    expect(options).toEqual([
+      {
+        key: 'KBO (Belgium):https://kbopub.economie.fgov.be/kbopub/zoeknummerform.html?lang=fr&nummer=0123.456.789',
+        label: 'KBO (Belgium)',
+        type: 'url',
+        url: 'https://kbopub.economie.fgov.be/kbopub/zoeknummerform.html?lang=fr&nummer=0123.456.789',
       },
     ])
   })
