@@ -32,6 +32,18 @@ const COUNTRY_CODE_FIELDS = new Set(['legal_address_country', 'hq_address_countr
 const ALPHA2_RE = /^[A-Z]{2}$/
 /** Fields whose values are LEI codes — rendered with monospace primary styling + optional click. */
 const LEI_CODE_FIELDS = new Set(['managing_lou', 'successor_lei'])
+/**
+ * Fields whose values are enum strings with underscores (e.g. FULLY_CORROBORATED).
+ * In the snapshot view these are displayed with underscores replaced by spaces so they read
+ * naturally (e.g. "FULLY CORROBORATED") without altering the stored value.
+ */
+const ENUM_DISPLAY_FIELDS = new Set([
+  'validation_sources',
+  'registration_status',
+  'entity_status',
+  'entity_category',
+  'entity_sub_category',
+])
 /** Border colour that uses the theme token at 75% opacity. Used in column-selector group rows. */
 const GROUP_BORDER_STYLE: React.CSSProperties = { borderColor: 'rgb(var(--border-rgb) / 0.75)' }
 
@@ -155,7 +167,7 @@ function formatNameEntry(obj: Record<string, unknown>): string {
   return `${name}${typePart}${langPart}`
 }
 
-function formatSnapshotValue(value: unknown): string {
+export function formatSnapshotValue(value: unknown): string {
   if (value === null || value === undefined || value === '') return '—'
   if (typeof value === 'string') {
     if (value.startsWith('0001-') || value.toLowerCase() === 'null') return '—'
@@ -197,6 +209,8 @@ function formatSnapshotValue(value: unknown): string {
       .join('\n')
   }
   if (typeof value === 'object') {
+    // An empty plain object (e.g. validation_sources stored as JSONB `{}`) means "no value".
+    if (Object.keys(value as Record<string, unknown>).length === 0) return '—'
     return JSON.stringify(value)
   }
   return String(value)
@@ -303,6 +317,10 @@ function SnapshotValue({ fieldKey, value, snapshot, showCodes = true, countryByC
         ))}
       </span>
     )
+  }
+  // Enum fields (e.g. FULLY_CORROBORATED → "FULLY CORROBORATED", PENDING_TRANSFER → "PENDING TRANSFER")
+  if (ENUM_DISPLAY_FIELDS.has(fieldKey)) {
+    return <>{text.replace(/_/g, ' ')}</>
   }
   return <>{text}</>
 }
