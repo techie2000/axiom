@@ -48,6 +48,7 @@ type LEIRepository interface {
 	// File Processing Status operations
 	FindProcessingStatus(jobType string) (*domain.FileProcessingStatus, error)
 	UpdateProcessingStatus(status *domain.FileProcessingStatus) error
+	UpdateProcessingProgressMessageByJobType(jobType, progressMessage string) error
 
 	// Audit operations
 	CreateAuditRecord(audit *domain.LEIRecordAudit) error
@@ -953,6 +954,14 @@ func (r *leiRepository) BatchUpsertLEIRecords(records []*domain.LEIRecord) (crea
 		}
 	}()
 
+	type plannedWrite struct {
+		record    *domain.LEIRecord
+		rowID     uuid.UUID
+		action    string
+		changes   map[string]domain.LEIChangeDetection
+		insertRow bool
+	}
+
 	// Process in batches of 100 for optimal performance
 	batchSize := 100
 	for i := 0; i < len(records); i += batchSize {
@@ -981,25 +990,58 @@ func (r *leiRepository) BatchUpsertLEIRecords(records []*domain.LEIRecord) (crea
 			existingMap[existingRecords[idx].LEI] = &existingRecords[idx]
 		}
 
-		// Build SQL with RETURNING to get affected record IDs
-		valueStrings := make([]string, 0, len(batch))
-		valueArgs := make([]interface{}, 0, len(batch)*44)
-		batchInsertedIDs := make([]uuid.UUID, 0, len(batch))
+		// Pre-filter unchanged rows so we do not pay SQL upsert cost for no-op records.
+		plans := make([]plannedWrite, 0, len(batch))
+		for _, record := range batch {
+			existingRecord, wasExisting := existingMap[record.LEI]
+			if !wasExisting {
+				plans = append(plans, plannedWrite{
+					record:    record,
+					rowID:     uuid.New(),
+					action:    "CREATE",
+					insertRow: true,
+				})
+				continue
+			}
+
+			changes := r.detectChanges(existingRecord, record)
+			if len(changes) == 0 {
+				continue
+			}
+
+			plans = append(plans, plannedWrite{
+				record:    record,
+				rowID:     existingRecord.ID,
+				action:    "UPDATE",
+				changes:   changes,
+				insertRow: false,
+			})
+		}
+
+		if len(plans) == 0 {
+			continue
+		}
+
+		valueStrings := make([]string, 0, len(plans))
+		valueArgs := make([]interface{}, 0, len(plans)*44)
 
 		// Generate all values in Go, use placeholders for everything
 		now := time.Now()
 		emptyChangedFields := "{}"
 
-		for _, record := range batch {
+		for _, plan := range plans {
+			record := plan.record
 			// Use placeholders for ALL fields (43 total)
 			valueStrings = append(valueStrings, "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
 
 			// Generate ID and timestamps in Go
-			newID := uuid.New()
-			batchInsertedIDs = append(batchInsertedIDs, newID)
+			insertID := uuid.New()
+			if plan.insertRow {
+				insertID = plan.rowID
+			}
 
 			valueArgs = append(valueArgs,
-				newID,                                      // id
+				insertID,                                   // id
 				record.LEI,                                 // lei
 				record.LegalName,                           // legal_name
 				record.TransliteratedLegalName,             // transliterated_legal_name
@@ -1193,36 +1235,22 @@ func (r *leiRepository) BatchUpsertLEIRecords(records []*domain.LEIRecord) (crea
 				Int("batch_start", i).
 				Int("batch_end", end).
 				Int("value_args_count", len(valueArgs)).
-				Int("expected_per_record", len(valueArgs)/len(batch)).
+				Int("expected_per_record", len(valueArgs)/len(plans)).
 				Int("records_in_batch", len(batch)).
+				Int("write_records_in_batch", len(plans)).
 				Str("stmt_preview", stmtPreview).
 				Msg("CRITICAL: Batch upsert failed")
 			return 0, 0, fmt.Errorf("failed to batch upsert records %d-%d: %w", i, end, result.Error)
 		}
 
-		// Map generated IDs to LEIs explicitly to avoid brittle positional assumptions.
-		leiToID := make(map[string]uuid.UUID, len(batch))
-		for idx, record := range batch {
-			leiToID[record.LEI] = batchInsertedIDs[idx]
-		}
-
 		// Build audit records for this batch
-		auditRecords := make([]domain.LEIRecordAudit, 0, len(batch))
-		for _, record := range batch {
-			recordID, exists := leiToID[record.LEI]
-			if !exists {
-				tx.Rollback()
-				return 0, 0, fmt.Errorf("failed to get ID for LEI %s after upsert", record.LEI)
-			}
-
-			// Check if this record existed before
-			existingRecord, wasExisting := existingMap[record.LEI]
-
-			if !wasExisting {
-				// New record - always create audit entry
+		auditRecords := make([]domain.LEIRecordAudit, 0, len(plans))
+		for _, plan := range plans {
+			record := plan.record
+			if plan.action == "CREATE" {
 				createdCount++
 				auditRecords = append(auditRecords, domain.LEIRecordAudit{
-					LEIRecordID:    recordID,
+					LEIRecordID:    plan.rowID,
 					LEI:            record.LEI,
 					Action:         "CREATE",
 					RecordSnapshot: r.recordToJSON(record),
@@ -1230,33 +1258,25 @@ func (r *leiRepository) BatchUpsertLEIRecords(records []*domain.LEIRecord) (crea
 					SourceFileID:   record.SourceFileID,
 					ChangedBy:      "system",
 				})
-			} else {
-				// Existing record - detect changes
-				changes := r.detectChanges(existingRecord, record)
-
-				// Only create audit record if something actually changed
-				if len(changes) > 0 {
-					updatedCount++
-
-					// Convert changes to JSON
-					changesJSON, err := json.Marshal(changes)
-					if err != nil {
-						tx.Rollback()
-						return 0, 0, fmt.Errorf("failed to marshal changes: %w", err)
-					}
-
-					auditRecords = append(auditRecords, domain.LEIRecordAudit{
-						LEIRecordID:    recordID,
-						LEI:            record.LEI,
-						Action:         "UPDATE",
-						RecordSnapshot: r.recordToJSON(record),
-						ChangedFields:  domain.JSONBString(changesJSON),
-						SourceFileID:   record.SourceFileID,
-						ChangedBy:      "system",
-					})
-				}
-				// If no changes, don't create audit record or increment updatedCount
+				continue
 			}
+
+			updatedCount++
+			changesJSON, marshalErr := json.Marshal(plan.changes)
+			if marshalErr != nil {
+				tx.Rollback()
+				return 0, 0, fmt.Errorf("failed to marshal changes: %w", marshalErr)
+			}
+
+			auditRecords = append(auditRecords, domain.LEIRecordAudit{
+				LEIRecordID:    plan.rowID,
+				LEI:            record.LEI,
+				Action:         "UPDATE",
+				RecordSnapshot: r.recordToJSON(record),
+				ChangedFields:  domain.JSONBString(changesJSON),
+				SourceFileID:   record.SourceFileID,
+				ChangedBy:      "system",
+			})
 		}
 
 		// Batch insert audit records (100 at a time)
@@ -1283,6 +1303,7 @@ func (r *leiRepository) BatchUpsertLEIRecords(records []*domain.LEIRecord) (crea
 			Int("batch_start", i).
 			Int("batch_end", end).
 			Int("records", len(batch)).
+			Int("write_records", len(plans)).
 			Int("audits", len(auditRecords)).
 			Msg("Batch upsert with audit trail completed")
 	}
@@ -1463,6 +1484,21 @@ func (r *leiRepository) UpdateProcessingStatus(status *domain.FileProcessingStat
 	return r.db.Model(&domain.FileProcessingStatus{}).
 		Where("id = ?", status.ID).
 		Updates(updates).Error
+}
+
+// UpdateProcessingProgressMessageByJobType updates only progress_message and updated_at for a job type.
+func (r *leiRepository) UpdateProcessingProgressMessageByJobType(jobType, progressMessage string) error {
+	trimmedJobType := strings.TrimSpace(jobType)
+	if trimmedJobType == "" {
+		return fmt.Errorf("jobType is required")
+	}
+
+	return r.db.Model(&domain.FileProcessingStatus{}).
+		Where("job_type = ?", trimmedJobType).
+		Updates(map[string]interface{}{
+			"progress_message": progressMessage,
+			"updated_at":       gorm.Expr("NOW()"),
+		}).Error
 }
 
 // CreateAuditRecord creates a new audit record

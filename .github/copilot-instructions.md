@@ -385,6 +385,15 @@ When implementing frontend preference-driven UX:
 3. **Viewport safety is required**: add max-width safeguards for popovers to prevent clipping on narrow screens.
 4. **Validation must include RTL + LTR**: test layout in both directions before finalizing UI changes.
 
+### Internationalisation From The Start (REQUIRED)
+
+When adding or changing frontend UI text:
+1. Add i18n keys at implementation time (same change), not as a follow-up fix.
+2. Route all visible strings through `t('...')`; avoid hardcoded user-facing text.
+3. Add new keys to `frontend/public/locales/en/common.json` and rely on fallback for other locales.
+4. Run `cd frontend && npm run i18n:verify` and `cd frontend && npm run lint` before completion.
+5. Treat missing i18n coverage as blocking for feature-complete status.
+
 ## How to Use These Files in VS Code
 
 ### Instructions (Automatic Application)
