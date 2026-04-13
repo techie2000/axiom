@@ -1,4 +1,28 @@
 {
+  "leftNav": {
+    "title": "Navigation",
+    "open": "Open navigation panel",
+    "close": "Close navigation panel",
+    "toggle": "Toggle navigation panel",
+    "sections": {
+      "publicData": "Public Reference Data",
+      "masterData": "Master Data Management",
+      "admin": "Admin"
+    },
+    "items": {
+      "dashboard": "Dashboard",
+      "countries": "Countries",
+      "currencies": "Currencies",
+      "languages": "Languages",
+      "leiRecords": "LEI Records",
+      "instruments": "Instruments",
+      "accounts": "Accounts",
+      "ssi": "SSI",
+      "codeMappings": "Code Mappings",
+      "adminUsers": "User Management",
+      "adminTranslations": "Translations"
+    }
+  },
   "nav": {
     "backToHome": "← Back to Home",
     "backToDashboard": "← Back to Dashboard",
@@ -519,7 +543,8 @@
       "overdueByMonth_other": "Overdue by {{count}} months",
       "overdueByYear": "Overdue by {{count}} years",
       "overdueByYear_one": "Overdue by {{count}} year",
-      "overdueByYear_other": "Overdue by {{count}} years"
+      "overdueByYear_other": "Overdue by {{count}} years",
+      "${key}": "leiRecords.relativeTime.${key}"
     },
     "noDataMatchesFilters": "No LEI data matches the selected filters.",
     "columns": {
@@ -809,7 +834,7 @@
       "legendIdle": "Waiting for next scheduled run",
       "legendRunning": "Currently processing data",
       "legendFailed": "Encountered an error (auto-recovery on next startup)",
-      "dataSourceFooter": "Data source: GLEIF Golden Copy Files \u2022 Updated every 5 seconds when auto-refresh is enabled"
+      "dataSourceFooter": "Data source: GLEIF Golden Copy Files • Updated every 5 seconds when auto-refresh is enabled"
     }
   },
   "footer": {
