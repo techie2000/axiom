@@ -7,7 +7,7 @@
     },
     {
       "name": "Central Balance Sheet Office (Belgium)",
-      "url": "https://consult.cbso.nbb.be/consult-enterprise/{registration_number_digits}?language={lang}"
+      "url": "https://consult.cbso.nbb.be/consult-enterprise/{registration_number_digits}"
     },
     {
       "name": "National Gazette (Belgium)",

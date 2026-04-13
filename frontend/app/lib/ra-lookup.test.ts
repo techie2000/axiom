@@ -175,7 +175,7 @@ describe('buildRegistrationLookupOptions', () => {
       [
         {
           name: 'Central Balance Sheet Office (Belgium)',
-          url: 'https://consult.cbso.nbb.be/consult-enterprise/{registration_number_digits}?language={lang}',
+          url: 'https://consult.cbso.nbb.be/consult-enterprise/{registration_number_digits}',
         },
         {
           name: 'National Gazette (Belgium)',
@@ -188,10 +188,10 @@ describe('buildRegistrationLookupOptions', () => {
 
     expect(options).toEqual([
       {
-        key: 'Central Balance Sheet Office (Belgium):https://consult.cbso.nbb.be/consult-enterprise/0823117650?language=fr',
+        key: 'Central Balance Sheet Office (Belgium):https://consult.cbso.nbb.be/consult-enterprise/0823117650',
         label: 'Central Balance Sheet Office (Belgium)',
         type: 'url',
-        url: 'https://consult.cbso.nbb.be/consult-enterprise/0823117650?language=fr',
+        url: 'https://consult.cbso.nbb.be/consult-enterprise/0823117650',
       },
       {
         key: 'National Gazette (Belgium):https://www.ejustice.just.fgov.be/cgi_tsv/list.pl?language=fr&btw=0823117650&',
@@ -219,27 +219,6 @@ describe('buildRegistrationLookupOptions', () => {
         label: 'National Gazette (Belgium)',
         type: 'url',
         url: 'https://www.ejustice.just.fgov.be/cgi_tsv/list.pl?language=nl&btw=0823117650&',
-      },
-    ])
-  })
-
-  it('defaults Belgium CBSO language to en when ui language is unsupported', () => {
-    const options = buildRegistrationLookupOptions(
-      'RA000025',
-      [{
-        name: 'Central Balance Sheet Office (Belgium)',
-        url: 'https://consult.cbso.nbb.be/consult-enterprise/{registration_number_digits}?language={lang}',
-      }],
-      '0823.117.650',
-      'es'
-    )
-
-    expect(options).toEqual([
-      {
-        key: 'Central Balance Sheet Office (Belgium):https://consult.cbso.nbb.be/consult-enterprise/0823117650?language=en',
-        label: 'Central Balance Sheet Office (Belgium)',
-        type: 'url',
-        url: 'https://consult.cbso.nbb.be/consult-enterprise/0823117650?language=en',
       },
     ])
   })
