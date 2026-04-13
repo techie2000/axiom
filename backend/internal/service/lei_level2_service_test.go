@@ -348,6 +348,7 @@ type leiRepoUpdateStub struct {
 	updateCalls int
 	lastFile    *domain.SourceFile
 	updateErr   error
+	status      *domain.FileProcessingStatus
 }
 
 func (r *leiRepoUpdateStub) UpdateSourceFile(file *domain.SourceFile) error {
@@ -357,6 +358,22 @@ func (r *leiRepoUpdateStub) UpdateSourceFile(file *domain.SourceFile) error {
 		r.lastFile = &copied
 	}
 	return r.updateErr
+}
+
+func (r *leiRepoUpdateStub) FindProcessingStatus(jobType string) (*domain.FileProcessingStatus, error) {
+	if r.status == nil {
+		r.status = &domain.FileProcessingStatus{JobType: jobType}
+	}
+	return r.status, nil
+}
+
+func (r *leiRepoUpdateStub) UpdateProcessingStatus(status *domain.FileProcessingStatus) error {
+	if status == nil {
+		return nil
+	}
+	copy := *status
+	r.status = &copy
+	return nil
 }
 
 func (r *level2RepoStub) ListProcessingFailures(jobType string, openOnly bool, limit, offset int) ([]*domain.LEILevel2ProcessingFailure, error) {
@@ -640,17 +657,17 @@ func TestShouldPersistLevel2ProgressCheckpoint(t *testing.T) {
 
 func TestPersistLevel2Progress(t *testing.T) {
 	tests := []struct {
-		name               string
-		initialProcessed   int
-		initialFailed      int
-		initialTotal       int
-		nextProcessed      int
-		nextFailed         int
-		force              bool
-		expectedCalls      int
-		expectedProcessed  int
-		expectedFailed     int
-		expectedTotal      int
+		name              string
+		initialProcessed  int
+		initialFailed     int
+		initialTotal      int
+		nextProcessed     int
+		nextFailed        int
+		force             bool
+		expectedCalls     int
+		expectedProcessed int
+		expectedFailed    int
+		expectedTotal     int
 	}{
 		{
 			name:              "checkpoint interval not crossed does not persist",
@@ -743,7 +760,7 @@ func TestPersistLevel2Progress(t *testing.T) {
 				TotalRecords:     tt.initialTotal,
 			}
 
-			svc.persistLevel2Progress(sourceFile, tt.nextProcessed, tt.nextFailed, tt.force)
+			svc.persistLevel2Progress(sourceFile, tt.nextProcessed, tt.nextFailed, 0, tt.force)
 
 			if leiRepo.updateCalls != tt.expectedCalls {
 				t.Fatalf("expected %d update call(s), got %d", tt.expectedCalls, leiRepo.updateCalls)
@@ -763,6 +780,37 @@ func TestPersistLevel2Progress(t *testing.T) {
 				t.Fatal("expected repository to receive updated source file")
 			}
 		})
+	}
+}
+
+func TestBuildLevel2ProgressMessage(t *testing.T) {
+	raw := buildLevel2ProgressMessage(470651, 470651, 116, 4)
+	if raw == "" {
+		t.Fatal("expected non-empty progress message")
+	}
+
+	var payload level2ProgressMessage
+	if err := json.Unmarshal([]byte(raw), &payload); err != nil {
+		t.Fatalf("expected valid JSON payload, got error: %v", err)
+	}
+
+	if payload.Kind != "level2-progress" {
+		t.Fatalf("expected kind level2-progress, got %q", payload.Kind)
+	}
+	if payload.Evaluated != 470651 {
+		t.Fatalf("expected evaluated 470651, got %d", payload.Evaluated)
+	}
+	if payload.Upserted != 116 {
+		t.Fatalf("expected upserted 116, got %d", payload.Upserted)
+	}
+	if payload.Failed != 4 {
+		t.Fatalf("expected failed 4, got %d", payload.Failed)
+	}
+	if payload.Unchanged != 470531 {
+		t.Fatalf("expected unchanged 470531, got %d", payload.Unchanged)
+	}
+	if payload.Total != 470651 {
+		t.Fatalf("expected total 470651, got %d", payload.Total)
 	}
 }
 

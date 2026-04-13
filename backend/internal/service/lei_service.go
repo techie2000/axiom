@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -198,6 +199,46 @@ type progressWriter struct {
 	startTime   time.Time
 	lastLog     time.Time
 	logInterval time.Duration
+	onProgress  func(percentComplete, mbWritten, mbTotal, mbPerSec, etaSeconds float64)
+}
+
+func formatDurationFromSeconds(seconds float64) string {
+	if !(seconds > 0) || math.IsNaN(seconds) || math.IsInf(seconds, 0) {
+		return "n/a"
+	}
+	return time.Duration(seconds * float64(time.Second)).Round(time.Second).String()
+}
+
+func formatExtractionProgressMessage(fileName string, percentComplete, mbWritten, mbTotal, mbPerSec, etaSeconds float64) string {
+	displayName := strings.TrimSpace(fileName)
+	if displayName == "" {
+		displayName = "file"
+	}
+
+	if math.IsNaN(percentComplete) || math.IsInf(percentComplete, 0) {
+		percentComplete = 0
+	}
+	if percentComplete < 0 {
+		percentComplete = 0
+	}
+	if percentComplete > 100 {
+		percentComplete = 100
+	}
+
+	speedText := "n/a"
+	if mbPerSec > 0 && !math.IsNaN(mbPerSec) && !math.IsInf(mbPerSec, 0) {
+		speedText = fmt.Sprintf("%.1f MB/s", mbPerSec)
+	}
+
+	return fmt.Sprintf(
+		"Extracting %s (%.1f%%, %.1f/%.1f MB, %s, ETA %s)",
+		displayName,
+		percentComplete,
+		mbWritten,
+		mbTotal,
+		speedText,
+		formatDurationFromSeconds(etaSeconds),
+	)
 }
 
 func (pw *progressWriter) Write(p []byte) (int, error) {
@@ -207,13 +248,22 @@ func (pw *progressWriter) Write(p []byte) (int, error) {
 	// Log progress at intervals
 	now := time.Now()
 	if now.Sub(pw.lastLog) >= pw.logInterval {
-		percentComplete := float64(pw.written) / float64(pw.total) * 100
+		percentComplete := 0.0
+		if pw.total > 0 {
+			percentComplete = float64(pw.written) / float64(pw.total) * 100
+		}
 		mbWritten := float64(pw.written) / (1024 * 1024)
 		mbTotal := float64(pw.total) / (1024 * 1024)
 		elapsed := now.Sub(pw.startTime).Seconds()
-		mbPerSec := mbWritten / elapsed
+		mbPerSec := 0.0
+		if elapsed > 0 {
+			mbPerSec = mbWritten / elapsed
+		}
 		remainingMB := mbTotal - mbWritten
-		estimatedSecondsRemaining := remainingMB / mbPerSec
+		estimatedSecondsRemaining := 0.0
+		if mbPerSec > 0 && remainingMB > 0 {
+			estimatedSecondsRemaining = remainingMB / mbPerSec
+		}
 
 		log.Info().
 			Str("file", pw.fileName).
@@ -223,6 +273,10 @@ func (pw *progressWriter) Write(p []byte) (int, error) {
 			Float64("mb_per_second", mbPerSec).
 			Float64("estimated_seconds_remaining", estimatedSecondsRemaining).
 			Msg("ZIP extraction progress")
+
+		if pw.onProgress != nil {
+			pw.onProgress(percentComplete, mbWritten, mbTotal, mbPerSec, estimatedSecondsRemaining)
+		}
 
 		pw.lastLog = now
 	}
@@ -476,7 +530,7 @@ func (s *leiService) ProcessSourceFileWithResume(sourceFileID uuid.UUID, resumeF
 
 		// Unzip file
 		var extractErr error
-		jsonPath, extractErr = s.extractZipFile(filePath)
+		jsonPath, extractErr = s.extractZipFile(filePath, jobType, sourceFile.FileName)
 		if extractErr != nil {
 			sourceFile.ProcessingStatus = "FAILED"
 			sourceFile.ProcessingError = extractErr.Error()
@@ -557,7 +611,7 @@ func (s *leiService) ProcessSourceFileWithResume(sourceFileID uuid.UUID, resumeF
 }
 
 // extractZipFile extracts the JSON file from a ZIP archive
-func (s *leiService) extractZipFile(zipPath string) (string, error) {
+func (s *leiService) extractZipFile(zipPath, jobType, sourceFileName string) (string, error) {
 	r, err := zip.OpenReader(zipPath)
 	if err != nil {
 		return "", err
@@ -571,6 +625,11 @@ func (s *leiService) extractZipFile(zipPath string) (string, error) {
 	// Find the JSON file in the ZIP
 	for _, f := range r.File {
 		if filepath.Ext(f.Name) == ".json" || filepath.Ext(f.Name) == ".jsonl" {
+			displayName := strings.TrimSpace(sourceFileName)
+			if displayName == "" {
+				displayName = filepath.Base(zipPath)
+			}
+
 			rc, err := f.Open()
 			if err != nil {
 				return "", err
@@ -610,6 +669,9 @@ func (s *leiService) extractZipFile(zipPath string) (string, error) {
 				startTime:   startTime,
 				lastLog:     startTime,
 				logInterval: 10 * time.Second, // Log every 10 seconds
+				onProgress: func(percentComplete, mbWritten, mbTotal, mbPerSec, etaSeconds float64) {
+					s.setProgressMessage(jobType, formatExtractionProgressMessage(displayName, percentComplete, mbWritten, mbTotal, mbPerSec, etaSeconds))
+				},
 			}
 			written, err := io.Copy(progressWriter, rc)
 			if err != nil {
@@ -767,6 +829,7 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 	var totalUpdated int
 	shouldProcess := resumeFromLEI == ""
 	var lastProcessedLEI string
+	jobType := normalizeProcessingJobType(sourceFile.JobType)
 
 	// Track checkpoint value separately from session progress
 	checkpointProcessed := 0
@@ -888,14 +951,12 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 				Str("first_lei", batch[0].LEI).
 				Str("last_lei", batch[len(batch)-1].LEI).
 				Msg("CRITICAL: Failed to batch upsert LEI records")
-			jobType := normalizeProcessingJobType(sourceFile.JobType)
 			batchErr := fmt.Errorf("batch upsert of %d LEI records failed: %w", len(batch), err)
 			s.recordProcessingFailure(jobType, &sourceFile.ID, "UPSERT", "", nil, batchErr)
 			failedRecords += len(batch)
 			// Return error to stop processing
 			return fmt.Errorf("batch upsert failed: %w", err)
 		} else {
-			jobType := normalizeProcessingJobType(sourceFile.JobType)
 			naturalKeys := make([]string, 0, len(batch))
 			for _, r := range batch {
 				naturalKeys = append(naturalKeys, r.LEI)
@@ -933,6 +994,10 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 			if batchUnchanged < 0 {
 				batchUnchanged = 0
 			}
+
+			totalUpserted := totalCreated + totalUpdated
+			s.persistLevel1ProgressMessage(jobType, progressTotalRecords, cumulativeProcessed, totalUpserted, failedRecords)
+
 			log.Info().
 				Int("total_scanned", scannedRecords).
 				Int("expected_total", progressTotalRecords).
@@ -1043,6 +1108,9 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 	if totalUnchanged < 0 {
 		totalUnchanged = 0
 	}
+
+	totalUpserted := totalCreated + totalUpdated
+	s.persistLevel1ProgressMessage(jobType, progressTotalRecords, cumulativeProcessed, totalUpserted, failedRecords)
 
 	if processedRecords > 0 && totalCreated == 0 && totalUpdated == 0 && failedRecords == 0 {
 		log.Warn().
@@ -1638,13 +1706,72 @@ func (s *leiService) UpdateProcessingStatus(status *domain.FileProcessingStatus)
 		if status.CurrentSourceFileID == nil {
 			status.CurrentSourceFile = nil
 		}
-		// GLEIF_REFERENCE_SYNC uses ProgressMessage as a post-completion stats summary (JSON),
-		// so preserve it regardless of status. All other jobs only need ProgressMessage while RUNNING.
-		if status.Status != "RUNNING" && status.JobType != "GLEIF_REFERENCE_SYNC" {
+		// Some jobs persist machine-readable post-completion stats in ProgressMessage.
+		// Preserve these payloads outside RUNNING so UI can render accurate final summaries.
+		if status.Status != "RUNNING" && !shouldPreserveProgressMessage(status.JobType) {
 			status.ProgressMessage = ""
 		}
 	}
 	return s.repo.UpdateProcessingStatus(status)
+}
+
+func shouldPreserveProgressMessage(jobType string) bool {
+	switch strings.ToUpper(strings.TrimSpace(jobType)) {
+	case "GLEIF_REFERENCE_SYNC", "LEVEL2_RR", "LEVEL2_REPEX", "DAILY_FULL", "DAILY_DELTA":
+		return true
+	default:
+		return false
+	}
+}
+
+type level1ProgressMessage struct {
+	Kind      string `json:"kind"`
+	Evaluated int    `json:"evaluated"`
+	Upserted  int    `json:"upserted"`
+	Unchanged int    `json:"unchanged"`
+	Failed    int    `json:"failed"`
+	Total     int    `json:"total,omitempty"`
+}
+
+func buildLevel1ProgressMessage(total, evaluated, upserted, failed int) string {
+	unchanged := evaluated - upserted - failed
+	if unchanged < 0 {
+		unchanged = 0
+	}
+
+	payload := level1ProgressMessage{
+		Kind:      "level1-progress",
+		Evaluated: evaluated,
+		Upserted:  upserted,
+		Unchanged: unchanged,
+		Failed:    failed,
+	}
+	if total > 0 {
+		payload.Total = total
+	}
+
+	encoded, err := json.Marshal(payload)
+	if err != nil {
+		return ""
+	}
+
+	return string(encoded)
+}
+
+func (s *leiService) persistLevel1ProgressMessage(jobType string, total, evaluated, upserted, failed int) {
+	if s.repo == nil {
+		return
+	}
+
+	status, err := s.repo.FindProcessingStatus(jobType)
+	if err != nil || status == nil {
+		return
+	}
+
+	status.ProgressMessage = buildLevel1ProgressMessage(total, evaluated, upserted, failed)
+	if updateErr := s.repo.UpdateProcessingStatus(status); updateErr != nil {
+		log.Warn().Err(updateErr).Str("job_type", jobType).Msg("Failed to persist Level 1 progress message")
+	}
 }
 
 // CleanupOldFiles removes old LEI files to free disk space
@@ -1661,13 +1788,14 @@ func (s *leiService) CleanupOldFiles(keepFullFiles, keepDeltaFiles int) error {
 		return fmt.Errorf("failed to read data directory: %w", err)
 	}
 
-	// Separate files by type
+	// Separate files by type. Match case-insensitively so Level 2 files like
+	// gleif-level2-rr_full-...zip inherit the same retention rule as Level 1 full files.
 	var fullFiles, deltaFiles []os.DirEntry
 	for _, file := range files {
 		if file.IsDir() {
 			continue
 		}
-		name := file.Name()
+		name := strings.ToUpper(file.Name())
 		if strings.Contains(name, "FULL") {
 			fullFiles = append(fullFiles, file)
 		} else if strings.Contains(name, "DELTA") {
@@ -1689,6 +1817,8 @@ func (s *leiService) CleanupOldFiles(keepFullFiles, keepDeltaFiles int) error {
 
 	// Remove old full files
 	removedCount := 0
+	removedFullCount := 0
+	removedDeltaCount := 0
 	var totalSize int64
 
 	for i, file := range fullFiles {
@@ -1709,6 +1839,7 @@ func (s *leiService) CleanupOldFiles(keepFullFiles, keepDeltaFiles int) error {
 				Int64("size_mb", info.Size()/1024/1024).
 				Msg("Removed old full file")
 			removedCount++
+			removedFullCount++
 			totalSize += info.Size()
 		}
 	}
@@ -1732,6 +1863,7 @@ func (s *leiService) CleanupOldFiles(keepFullFiles, keepDeltaFiles int) error {
 				Int64("size_mb", info.Size()/1024/1024).
 				Msg("Removed old delta file")
 			removedCount++
+			removedDeltaCount++
 			totalSize += info.Size()
 		}
 	}
@@ -1739,9 +1871,127 @@ func (s *leiService) CleanupOldFiles(keepFullFiles, keepDeltaFiles int) error {
 	log.Info().
 		Int("removed_count", removedCount).
 		Int64("freed_mb", totalSize/1024/1024).
-		Int("full_remaining", len(fullFiles)-removedCount).
-		Int("delta_remaining", len(deltaFiles)).
+		Int("full_remaining", len(fullFiles)-removedFullCount).
+		Int("delta_remaining", len(deltaFiles)-removedDeltaCount).
 		Msg("Cleanup completed successfully")
 
+	removedReferenceSnapshots, freedReferenceBytes, err := cleanupGLEIFReferenceSnapshots(filepath.Join(s.dataDir, "gleif-reference"), keepFullFiles)
+	if err != nil {
+		return err
+	}
+
+	if removedReferenceSnapshots > 0 {
+		log.Info().
+			Int("removed_reference_snapshots", removedReferenceSnapshots).
+			Int64("freed_reference_mb", freedReferenceBytes/1024/1024).
+			Msg("GLEIF reference snapshot cleanup completed")
+	}
+
 	return nil
+}
+
+type snapshotFileGroup struct {
+	baseName string
+	paths    []string
+	modTime  time.Time
+	size     int64
+}
+
+func cleanupGLEIFReferenceSnapshots(rootDir string, keepFiles int) (int, int64, error) {
+	if strings.TrimSpace(rootDir) == "" {
+		return 0, 0, nil
+	}
+
+	entries, err := os.ReadDir(rootDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return 0, 0, nil
+		}
+		return 0, 0, fmt.Errorf("failed to read GLEIF reference snapshot directory: %w", err)
+	}
+
+	removedCount := 0
+	var freedBytes int64
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+
+		removedGroups, groupBytes, cleanupErr := cleanupGLEIFReferenceListSnapshots(filepath.Join(rootDir, entry.Name()), keepFiles)
+		if cleanupErr != nil {
+			return removedCount, freedBytes, cleanupErr
+		}
+		removedCount += removedGroups
+		freedBytes += groupBytes
+	}
+
+	return removedCount, freedBytes, nil
+}
+
+func cleanupGLEIFReferenceListSnapshots(listDir string, keepFiles int) (int, int64, error) {
+	entries, err := os.ReadDir(listDir)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to read GLEIF reference list snapshot directory %s: %w", listDir, err)
+	}
+
+	groups := make(map[string]*snapshotFileGroup)
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		fullPath := filepath.Join(listDir, entry.Name())
+		info, infoErr := entry.Info()
+		if infoErr != nil {
+			return 0, 0, fmt.Errorf("failed to stat GLEIF reference snapshot %s: %w", fullPath, infoErr)
+		}
+
+		baseName := snapshotGroupBaseName(entry.Name())
+		group := groups[baseName]
+		if group == nil {
+			group = &snapshotFileGroup{baseName: baseName}
+			groups[baseName] = group
+		}
+
+		group.paths = append(group.paths, fullPath)
+		group.size += info.Size()
+		if info.ModTime().After(group.modTime) {
+			group.modTime = info.ModTime()
+		}
+	}
+
+	ordered := make([]*snapshotFileGroup, 0, len(groups))
+	for _, group := range groups {
+		ordered = append(ordered, group)
+	}
+
+	sort.Slice(ordered, func(i, j int) bool {
+		return ordered[i].modTime.After(ordered[j].modTime)
+	})
+
+	removedCount := 0
+	var freedBytes int64
+	for i, group := range ordered {
+		if i < keepFiles {
+			continue
+		}
+
+		for _, path := range group.paths {
+			if err := os.Remove(path); err != nil {
+				return removedCount, freedBytes, fmt.Errorf("failed to remove GLEIF reference snapshot %s: %w", path, err)
+			}
+		}
+
+		removedCount++
+		freedBytes += group.size
+	}
+
+	return removedCount, freedBytes, nil
+}
+
+func snapshotGroupBaseName(fileName string) string {
+	if strings.HasSuffix(fileName, ".meta.json") {
+		return strings.TrimSuffix(fileName, ".meta.json")
+	}
+	return strings.TrimSuffix(fileName, filepath.Ext(fileName))
 }
