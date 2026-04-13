@@ -1763,13 +1763,12 @@ func (s *leiService) persistLevel1ProgressMessage(jobType string, total, evaluat
 		return
 	}
 
-	status, err := s.repo.FindProcessingStatus(jobType)
-	if err != nil || status == nil {
+	progressMessage := buildLevel1ProgressMessage(total, evaluated, upserted, failed)
+	if progressMessage == "" {
 		return
 	}
 
-	status.ProgressMessage = buildLevel1ProgressMessage(total, evaluated, upserted, failed)
-	if updateErr := s.repo.UpdateProcessingStatus(status); updateErr != nil {
+	if updateErr := s.repo.UpdateProcessingProgressMessageByJobType(jobType, progressMessage); updateErr != nil {
 		log.Warn().Err(updateErr).Str("job_type", jobType).Msg("Failed to persist Level 1 progress message")
 	}
 }

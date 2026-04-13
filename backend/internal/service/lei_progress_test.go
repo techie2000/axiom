@@ -91,6 +91,12 @@ func (s *progressMsgRepoStub) UpdateProcessingStatus(status *domain.FileProcessi
 	return s.updateErr
 }
 
+func (s *progressMsgRepoStub) UpdateProcessingProgressMessageByJobType(_ string, progressMessage string) error {
+	s.updateCallCount++
+	s.capturedMessage = progressMessage
+	return s.updateErr
+}
+
 func newProgressMsgService(stub *progressMsgRepoStub) *leiService {
 	return &leiService{repo: stub}
 }

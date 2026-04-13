@@ -649,6 +649,10 @@ func (s *processRecordsRepoStub) CreateProcessingFailure(failure *domain.LEILeve
 	return nil
 }
 
+func (s *processRecordsRepoStub) UpdateProcessingProgressMessageByJobType(_ string, _ string) error {
+	return nil
+}
+
 func testLEICodeForIndex(index int) string {
 	return fmt.Sprintf("%020d", index)
 }

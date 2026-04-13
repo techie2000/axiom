@@ -433,15 +433,15 @@ export default function LEIStatusPage() {
     const parts: string[] = []
 
     if (typeof stats.upserted === 'number') {
-      parts.push(`${stats.upserted.toLocaleString()} changed/new`)
+      parts.push(`${stats.upserted.toLocaleString()} ${t('leiStatus.page.changedNew')}`)
     }
 
     if (typeof stats.unchanged === 'number') {
-      parts.push(`${stats.unchanged.toLocaleString()} no change`)
+      parts.push(`${stats.unchanged.toLocaleString()} ${t('leiStatus.page.noChangeLower')}`)
     }
 
     if (typeof stats.failed === 'number' && stats.failed > 0) {
-      parts.push(`${stats.failed.toLocaleString()} failed`)
+      parts.push(`${stats.failed.toLocaleString()} ${t('leiStatus.page.failedLower')}`)
     }
 
     return parts.length > 0 ? parts.join(' | ') : progressMessage
@@ -533,10 +533,14 @@ export default function LEIStatusPage() {
     }))
   }
 
-  const getNextRunDisplay = (status: ProcessingStatus | null, dependency: string): string => {
+  const getNextRunDisplay = (status: ProcessingStatus | null): string => {
     const { nextRun, ultimateParent } = getChainedNextRun(status)
-    if (!nextRun) return dependency !== t('leiStatus.page.none') ? `${t('leiStatus.page.after')} ${dependency}` : t('leiStatus.page.never')
-    if (ultimateParent) return `≥ ${formatDate(nextRun)} (${t('leiStatus.page.afterLower')} ${ultimateParent})`
+    const dependsOn = status?.depends_on_job_type
+    const hasDependency = Boolean(dependsOn && dependsOn !== 'NONE')
+    if (!nextRun) {
+      return hasDependency && dependsOn ? `${t('leiStatus.page.after')} ${getJobDisplayName(dependsOn)}` : t('leiStatus.page.never')
+    }
+    if (ultimateParent) return `≥ ${formatDate(nextRun)} (${t('leiStatus.page.afterLower')} ${getJobDisplayName(ultimateParent)})`
     return formatDate(nextRun)
   }
 
@@ -552,7 +556,7 @@ export default function LEIStatusPage() {
 
   const formatGleifListNames = (lists?: Record<string, GleifListStats>): string => {
     if (!lists || Object.keys(lists).length === 0) {
-      return 'GLEIF reference code lists'
+      return t('leiStatus.page.gleifReferenceCodeLists')
     }
 
     return Object.keys(lists).join(', ')
@@ -605,9 +609,10 @@ export default function LEIStatusPage() {
     const progress = totalRecords > 0
       ? (Math.min(evaluatedRecords, totalRecords) / totalRecords) * 100
       : fallbackProgress
+    const gleifReferencePath = 'data/main/lei/gleif-reference'
     const currentFileLabel = file?.file_name || (isMasterDataJob
-      ? 'Master datasets (countries, currencies, languages)'
-      : (jobKey === 'GLEIF_REFERENCE_SYNC' ? 'Persisted under data/main/lei/gleif-reference' : '-'))
+      ? t('leiStatus.page.masterDatasetsSummary')
+      : (jobKey === 'GLEIF_REFERENCE_SYNC' ? t('leiStatus.page.persistedUnderPath', { path: gleifReferencePath }) : '-'))
     const currentFileSummaryLabel = jobKey === 'GLEIF_REFERENCE_SYNC'
       ? formatGleifListNames(gleifStats?.lists)
       : currentFileLabel
@@ -638,7 +643,9 @@ export default function LEIStatusPage() {
               onClick={() => toggleCardExpand(jobKey)}
               disabled={!canToggle}
               className="px-3 py-1 rounded-full text-xs font-semibold border border-[rgb(var(--border-rgb))] text-[rgb(var(--muted-foreground-rgb))] hover:bg-[rgb(var(--surface-muted-rgb))] dark:border-[rgb(var(--border-rgb))] dark:text-[rgb(var(--muted-foreground-rgb))] dark:hover:bg-[rgb(var(--surface-muted-rgb))] disabled:opacity-60 disabled:cursor-not-allowed"
-              title={canToggle ? (isExpanded ? 'Collapse details' : 'Expand details') : 'Running jobs stay expanded'}
+              title={canToggle
+                ? (isExpanded ? t('leiStatus.page.collapseDetails') : t('leiStatus.page.expandDetails'))
+                : t('leiStatus.page.runningJobsStayExpanded')}
             >
               {isExpanded ? t('leiStatus.page.collapse') : t('leiStatus.page.expand')}
             </button>
@@ -673,7 +680,7 @@ export default function LEIStatusPage() {
           <div className="flex justify-between">
             <span className="text-[rgb(var(--muted-foreground-rgb))]">{t('leiStatus.page.nextRun')}:</span>
             <span className="font-medium text-[rgb(var(--foreground-rgb))]">
-              {getNextRunDisplay(status, dependency)}
+              {getNextRunDisplay(status)}
             </span>
           </div>
           <div className="flex justify-between">

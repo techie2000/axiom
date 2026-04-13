@@ -48,6 +48,7 @@ type LEIRepository interface {
 	// File Processing Status operations
 	FindProcessingStatus(jobType string) (*domain.FileProcessingStatus, error)
 	UpdateProcessingStatus(status *domain.FileProcessingStatus) error
+	UpdateProcessingProgressMessageByJobType(jobType, progressMessage string) error
 
 	// Audit operations
 	CreateAuditRecord(audit *domain.LEIRecordAudit) error
@@ -1483,6 +1484,21 @@ func (r *leiRepository) UpdateProcessingStatus(status *domain.FileProcessingStat
 	return r.db.Model(&domain.FileProcessingStatus{}).
 		Where("id = ?", status.ID).
 		Updates(updates).Error
+}
+
+// UpdateProcessingProgressMessageByJobType updates only progress_message and updated_at for a job type.
+func (r *leiRepository) UpdateProcessingProgressMessageByJobType(jobType, progressMessage string) error {
+	trimmedJobType := strings.TrimSpace(jobType)
+	if trimmedJobType == "" {
+		return fmt.Errorf("jobType is required")
+	}
+
+	return r.db.Model(&domain.FileProcessingStatus{}).
+		Where("job_type = ?", trimmedJobType).
+		Updates(map[string]interface{}{
+			"progress_message": progressMessage,
+			"updated_at":       gorm.Expr("NOW()"),
+		}).Error
 }
 
 // CreateAuditRecord creates a new audit record

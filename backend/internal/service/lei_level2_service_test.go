@@ -376,6 +376,15 @@ func (r *leiRepoUpdateStub) UpdateProcessingStatus(status *domain.FileProcessing
 	return nil
 }
 
+func (r *leiRepoUpdateStub) UpdateProcessingProgressMessageByJobType(jobType, progressMessage string) error {
+	if r.status == nil {
+		r.status = &domain.FileProcessingStatus{JobType: jobType}
+	}
+	r.status.JobType = jobType
+	r.status.ProgressMessage = progressMessage
+	return nil
+}
+
 func (r *level2RepoStub) ListProcessingFailures(jobType string, openOnly bool, limit, offset int) ([]*domain.LEILevel2ProcessingFailure, error) {
 	r.gotJobType = jobType
 	r.gotOpenOnly = openOnly

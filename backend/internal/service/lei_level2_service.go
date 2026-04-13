@@ -1323,14 +1323,9 @@ func (s *leiLevel2Service) persistLevel2Progress(sourceFile *domain.SourceFile, 
 	}
 
 	if s.leiRepo != nil {
-		if status, statusErr := s.leiRepo.FindProcessingStatus(sourceFile.JobType); statusErr != nil {
-			log.Warn().Err(statusErr).
-				Str("source_file_id", sourceFile.ID.String()).
-				Str("job_type", sourceFile.JobType).
-				Msg("Failed to load Level 2 processing status for progress message update")
-		} else if status != nil {
-			status.ProgressMessage = buildLevel2ProgressMessage(sourceFile.TotalRecords, processed, upserted, failed)
-			if err := s.leiRepo.UpdateProcessingStatus(status); err != nil {
+		progressMessage := buildLevel2ProgressMessage(sourceFile.TotalRecords, processed, upserted, failed)
+		if progressMessage != "" {
+			if err := s.leiRepo.UpdateProcessingProgressMessageByJobType(sourceFile.JobType, progressMessage); err != nil {
 				log.Warn().Err(err).
 					Str("source_file_id", sourceFile.ID.String()).
 					Str("job_type", sourceFile.JobType).
