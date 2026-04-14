@@ -12,11 +12,13 @@ interface NavItem {
   icon: string
   labelKey: string
   requiresAuth?: boolean
+  requiresAdmin?: boolean
 }
 
 interface NavSection {
   titleKey: string
   requiresAuth?: boolean
+  requiresAdmin?: boolean
   items: NavItem[]
 }
 
@@ -38,6 +40,14 @@ const NAV_SECTIONS: NavSection[] = [
       { href: '/accounts', icon: '🏦', labelKey: 'leftNav.items.accounts', requiresAuth: true },
       { href: '/ssi', icon: '📋', labelKey: 'leftNav.items.ssi', requiresAuth: true },
       { href: '/code-mappings', icon: '🔄', labelKey: 'leftNav.items.codeMappings', requiresAuth: true },
+    ],
+  },
+  {
+    titleKey: 'leftNav.sections.dataAcquisition',
+    requiresAuth: true,
+    requiresAdmin: true,
+    items: [
+      { href: '/lei', icon: '⚙️', labelKey: 'leftNav.items.syncTriggers', requiresAuth: true, requiresAdmin: true },
     ],
   },
 ]
@@ -93,11 +103,13 @@ export default function LeftNavPanel() {
   if (pathname === '/login' || pathname === '/register') return null
 
   const visibleSections = NAV_SECTIONS.filter(
-    (section) => !section.requiresAuth || isLoggedIn,
+    (section) =>
+      (!section.requiresAuth || isLoggedIn) &&
+      (!section.requiresAdmin || isAdmin),
   )
 
   return (
-    <div ref={panelRef} className="fixed left-0 top-0 h-full z-40 flex items-center pointer-events-none">
+    <div ref={panelRef} className="fixed left-0 top-0 h-full z-[45] flex items-center pointer-events-none">
       {/* Slide-out panel */}
       <div
         className={`
@@ -156,7 +168,13 @@ export default function LeftNavPanel() {
                 {t(section.titleKey)}
               </p>
               <ul className="space-y-0.5">
-                {section.items.map((item) => {
+                {section.items
+                  .filter(
+                    (item) =>
+                      (!item.requiresAuth || isLoggedIn) &&
+                      (!item.requiresAdmin || isAdmin),
+                  )
+                  .map((item) => {
                   const isActive = pathname === item.href || pathname?.startsWith(item.href + '/')
                   return (
                     <li key={item.href}>

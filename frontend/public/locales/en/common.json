@@ -7,6 +7,7 @@
     "sections": {
       "publicData": "Public Reference Data",
       "masterData": "Master Data Management",
+      "dataAcquisition": "Data Acquisition & Processing",
       "admin": "Admin"
     },
     "items": {
@@ -19,6 +20,7 @@
       "accounts": "Accounts",
       "ssi": "SSI",
       "codeMappings": "Code Mappings",
+      "syncTriggers": "Sync Triggers",
       "adminUsers": "User Management",
       "adminTranslations": "Translations"
     }

@@ -110,6 +110,8 @@ describe('LeftNavPanel', () => {
     mocks.user = { role: 'admin' }
     const { getByText } = render(<LeftNavPanel />)
     expect(getByText('leftNav.sections.admin')).toBeTruthy()
+    expect(getByText('leftNav.sections.dataAcquisition')).toBeTruthy()
+    expect(getByText('leftNav.items.syncTriggers')).toBeTruthy()
   })
 
   it('hides Admin section when user is not admin', () => {
@@ -117,6 +119,8 @@ describe('LeftNavPanel', () => {
     mocks.user = { role: 'user' }
     const { queryByText } = render(<LeftNavPanel />)
     expect(queryByText('leftNav.sections.admin')).toBeNull()
+    expect(queryByText('leftNav.sections.dataAcquisition')).toBeNull()
+    expect(queryByText('leftNav.items.syncTriggers')).toBeNull()
   })
 
   it('does not render on /login page', () => {
