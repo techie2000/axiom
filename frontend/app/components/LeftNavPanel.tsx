@@ -64,9 +64,10 @@ export default function LeftNavPanel() {
   useEffect(() => {
     setMounted(true)
     const token = getAuthToken()
-    setIsLoggedIn(token !== null)
+    const hasToken = token !== null
+    setIsLoggedIn(hasToken)
     const user = readStoredUser()
-    setIsAdmin(user?.role?.toLowerCase() === 'admin')
+    setIsAdmin(hasToken && user?.role?.toLowerCase() === 'admin')
   }, [])
 
   // Close on route change
@@ -112,6 +113,7 @@ export default function LeftNavPanel() {
     <div ref={panelRef} className="fixed left-0 top-0 h-full z-[45] flex items-center pointer-events-none">
       {/* Slide-out panel */}
       <div
+        id="left-nav-panel"
         className={`
           pointer-events-auto
           h-full overflow-y-auto
@@ -126,6 +128,7 @@ export default function LeftNavPanel() {
         role="navigation"
         aria-label={t('leftNav.title')}
         aria-hidden={!isOpen}
+        inert={!isOpen}
       >
         {/* Panel header */}
         <div className="flex items-center justify-between p-4 border-b border-[rgb(var(--border-rgb))] shrink-0">
@@ -153,6 +156,7 @@ export default function LeftNavPanel() {
                   : 'hover:bg-[rgb(var(--surface-muted-rgb))] text-[rgb(var(--foreground-rgb))]'
                 }
               `}
+              aria-current={pathname === '/dashboard' ? 'page' : undefined}
             >
               <span aria-hidden="true">🏠</span>
               <span>{t('leftNav.items.dashboard')}</span>
@@ -201,7 +205,7 @@ export default function LeftNavPanel() {
           ))}
 
           {/* Admin section */}
-          {isAdmin && (
+          {isLoggedIn && isAdmin && (
             <div className="mb-4">
               <p className="px-3 mb-1 text-xs font-semibold uppercase tracking-wide theme-text-muted">
                 {t('leftNav.sections.admin')}

@@ -93,6 +93,14 @@ describe('LeftNavPanel', () => {
     expect(activeLink?.getAttribute('href')).toBe('/countries')
   })
 
+  it('marks dashboard as current when pathname is /dashboard', () => {
+    mocks.token = 'some-jwt-token'
+    mocks.pathname = '/dashboard'
+    const { container } = render(<LeftNavPanel />)
+    const activeLink = container.querySelector('a[href="/dashboard"][aria-current="page"]') as HTMLAnchorElement | null
+    expect(activeLink).not.toBeNull()
+  })
+
   it('does not show Master Data section when not logged in', () => {
     mocks.token = null
     const { queryByText } = render(<LeftNavPanel />)
@@ -133,5 +141,42 @@ describe('LeftNavPanel', () => {
     mocks.pathname = '/register'
     const { container } = render(<LeftNavPanel />)
     expect(container.firstChild).toBeNull()
+  })
+
+  it('closes the panel on route change', async () => {
+    const { container, rerender } = render(<LeftNavPanel />)
+    const btn = container.querySelector('button[aria-expanded]') as HTMLButtonElement
+
+    fireEvent.click(btn)
+    await waitFor(() => {
+      const nav = container.querySelector('[role="navigation"]')
+      expect(nav?.className).not.toContain('-translate-x-full')
+    })
+
+    mocks.pathname = '/languages'
+    rerender(<LeftNavPanel />)
+
+    await waitFor(() => {
+      const nav = container.querySelector('[role="navigation"]')
+      expect(nav?.className).toContain('-translate-x-full')
+    })
+  })
+
+  it('closes the panel on outside click', async () => {
+    const { container } = render(<LeftNavPanel />)
+    const btn = container.querySelector('button[aria-expanded]') as HTMLButtonElement
+
+    fireEvent.click(btn)
+    await waitFor(() => {
+      const nav = container.querySelector('[role="navigation"]')
+      expect(nav?.className).not.toContain('-translate-x-full')
+    })
+
+    fireEvent.mouseDown(document.body)
+
+    await waitFor(() => {
+      const nav = container.querySelector('[role="navigation"]')
+      expect(nav?.className).toContain('-translate-x-full')
+    })
   })
 })

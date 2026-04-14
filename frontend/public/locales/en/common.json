@@ -545,8 +545,7 @@
       "overdueByMonth_other": "Overdue by {{count}} months",
       "overdueByYear": "Overdue by {{count}} years",
       "overdueByYear_one": "Overdue by {{count}} year",
-      "overdueByYear_other": "Overdue by {{count}} years",
-      "${key}": "leiRecords.relativeTime.${key}"
+      "overdueByYear_other": "Overdue by {{count}} years"
     },
     "noDataMatchesFilters": "No LEI data matches the selected filters.",
     "columns": {
