@@ -8,6 +8,8 @@ export function useCollectionCount(endpoint: string, pollMs: number = 30000) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    setLoading(true)
+
     const fetchCount = async () => {
       try {
         const response = await fetch(`${getApiBaseUrl()}${endpoint}`, { cache: 'no-store' })
@@ -15,9 +17,12 @@ export function useCollectionCount(endpoint: string, pollMs: number = 30000) {
         if (response.ok) {
           const data = await response.json()
           setCount(Array.isArray(data) ? data.length : 0)
+        } else {
+          setCount(null)
         }
       } catch (error) {
         console.error(`Failed to fetch collection count for ${endpoint}:`, error)
+        setCount(null)
       } finally {
         setLoading(false)
       }

@@ -240,7 +240,7 @@ export default function CurrenciesPage() {
               normalLabel={t('referenceLayout.normalButton')}
               expandLabel={t('referenceLayout.expandButton')}
               saveWidthTitle={getEnglishTooltip('referenceLayout.savePageWidthDefault')}
-              saveWidthLabel="💾 Save width"
+              saveWidthLabel={`💾 ${t('referenceLayout.savePageWidthDefault')}`}
               hasUnsavedWidthChanges={expandedWidthPreference.hasUnsavedChanges}
               onToggleExpandedWidth={expandedWidthPreference.toggle}
               onSaveExpandedWidth={expandedWidthPreference.saveCurrentValue}

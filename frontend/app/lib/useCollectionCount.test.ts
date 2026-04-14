@@ -17,7 +17,7 @@ describe('useCollectionCount', () => {
     })
     vi.stubGlobal('fetch', fetchMock)
 
-    const { result } = renderHook(() => useCollectionCount('/api/v1/countries', 30000))
+    const { result, unmount } = renderHook(() => useCollectionCount('/api/v1/countries', 30000))
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false)
@@ -25,6 +25,7 @@ describe('useCollectionCount', () => {
     })
 
     expect(fetchMock).toHaveBeenCalledWith('https://example.test/api/v1/countries', { cache: 'no-store' })
+    unmount()
   })
 
   it('falls back to zero for non-array responses', async () => {
@@ -35,11 +36,29 @@ describe('useCollectionCount', () => {
     })
     vi.stubGlobal('fetch', fetchMock)
 
-    const { result } = renderHook(() => useCollectionCount('/api/v1/countries', 30000))
+    const { result, unmount } = renderHook(() => useCollectionCount('/api/v1/countries', 30000))
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false)
       expect(result.current.count).toBe(0)
     })
+    unmount()
+  })
+
+  it('sets count to null on non-OK response', async () => {
+    vi.stubEnv('NEXT_PUBLIC_API_URL', 'https://example.test')
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { result, unmount } = renderHook(() => useCollectionCount('/api/v1/countries', 30000))
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false)
+      expect(result.current.count).toBeNull()
+    })
+    unmount()
   })
 })

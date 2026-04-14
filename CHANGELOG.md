@@ -7,17 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-04-13
+
 ### Changed
 
 - Extracted and adopted shared frontend reusability primitives across reference-data surfaces, including
   shared page-header actions, records-card shell, collection-count hook, and reusable pagination controls.
 - Bundled the English i18n namespace at bootstrap so first render and hydration use the same fallback copy,
   preventing key-to-translation mismatch on initial page load.
-
-## [0.4.0] - 2026-04-13
-
-### Changed
-
 - Replaced automatic patch bumping on `main` with manual semantic-version bumps, using footer build
   metadata (commit SHA + build timestamp) as the canonical test-state identifier.
 - Added `scripts/bump-version.ps1` to keep `VERSION` and

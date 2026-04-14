@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useTranslation } from 'react-i18next'
 
 interface ReferenceRecordsCardProps {
   href: string
@@ -21,6 +22,8 @@ export default function ReferenceRecordsCard({
   totalRecords,
   loading,
 }: ReferenceRecordsCardProps) {
+  const { t } = useTranslation('common')
+
   return (
     <Link href={href} className="group theme-panel theme-card-hover border-2 backdrop-blur-sm rounded-lg shadow-lg hover:shadow-xl transition-all p-6 min-h-[240px] flex flex-col">
       <div className="flex items-stretch justify-between flex-1">
@@ -33,11 +36,11 @@ export default function ReferenceRecordsCard({
           </p>
 
           {loading ? (
-            <div className="text-sm theme-text-muted mb-3">Loading...</div>
+            <div className="text-sm theme-text-muted mb-3">{t('referenceRecordsCard.loading')}</div>
           ) : (
             <div className="mb-3 text-sm">
-              <span className="theme-text-muted">Total Records: </span>
-              <span className="font-semibold">{totalRecords !== null ? totalRecords.toLocaleString() : '—'}</span>
+              <span className="theme-text-muted">{t('referenceRecordsCard.totalRecords')} </span>
+              <span className="font-semibold">{totalRecords !== null ? totalRecords.toLocaleString() : t('referenceRecordsCard.noData')}</span>
             </div>
           )}
 
