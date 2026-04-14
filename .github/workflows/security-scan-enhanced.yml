@@ -12,7 +12,7 @@ on:
         default: true
         type: boolean
   push:
-    branches: [main, develop]
+    branches: [main, dev]
     paths:
       - 'docker/**'
       - 'backend/go.mod'

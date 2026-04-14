@@ -128,6 +128,7 @@ export default function PreferenceSavePrompt({
         className="fixed bottom-5 right-5 z-50 flex max-w-[calc(100vw-2.5rem)] items-center gap-3 rounded-lg border theme-panel px-4 py-3 text-sm shadow-xl backdrop-blur-sm transition-all"
       >
         <span className="theme-text-muted">
+          <span aria-hidden="true">✓ </span>
           {undoPromptLabel}
         </span>
         {onUndo && (
