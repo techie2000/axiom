@@ -12,6 +12,7 @@ import { buildDocsUrl } from '../lib/docsLinks'
 import {
   FAST_LEI_REFRESH_MS,
   getLeiAutoRefreshIntervalMs,
+  type MasterDataCounts,
   readCachedMasterDataCounts,
   shouldRefreshMasterDataCounts,
   writeCachedMasterDataCounts,
@@ -66,13 +67,6 @@ interface ImportProgressStats {
   unchanged?: number
   failed?: number
   total?: number
-}
-
-interface MasterDataCounts {
-  countries: number
-  currencies: number
-  languages: number
-  total: number
 }
 
 interface Level2ProcessingFailure {
@@ -153,37 +147,43 @@ export default function LEIStatusPage() {
       if (rrResponse?.ok) setRrStatus(await rrResponse.json())
       if (repexResponse?.ok) setRepexStatus(await repexResponse.json())
 
-      const latestMasterDataSuccessAt = latestMasterDataStatus?.last_success_at ?? null
       const cachedMasterDataCounts = readCachedMasterDataCounts()
-      if (!shouldRefreshMasterDataCounts(latestMasterDataSuccessAt, cachedMasterDataCounts)) {
-        setMasterDataCounts(cachedMasterDataCounts.counts)
+      if (!latestMasterDataStatus) {
+        if (cachedMasterDataCounts) {
+          setMasterDataCounts(cachedMasterDataCounts.counts)
+        }
       } else {
-        const [countriesResponse, currenciesResponse, languagesResponse] = await Promise.all([
-          fetch(`${API_BASE_URL}/api/v1/countries?limit=5000&offset=0`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
-          fetch(`${API_BASE_URL}/api/v1/currencies?limit=5000&offset=0`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
-          fetch(`${API_BASE_URL}/api/v1/languages?limit=5000&offset=0`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
-        ])
-
-        if (countriesResponse?.ok && currenciesResponse?.ok && languagesResponse?.ok) {
-          const [countries, currencies, languages] = await Promise.all([
-            countriesResponse.json(),
-            currenciesResponse.json(),
-            languagesResponse.json(),
+        const latestMasterDataSuccessAt = latestMasterDataStatus.last_success_at ?? null
+        if (cachedMasterDataCounts && !shouldRefreshMasterDataCounts(latestMasterDataSuccessAt, cachedMasterDataCounts)) {
+        setMasterDataCounts(cachedMasterDataCounts.counts)
+        } else {
+          const [countriesResponse, currenciesResponse, languagesResponse] = await Promise.all([
+            fetch(`${API_BASE_URL}/api/v1/countries?limit=5000&offset=0`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
+            fetch(`${API_BASE_URL}/api/v1/currencies?limit=5000&offset=0`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
+            fetch(`${API_BASE_URL}/api/v1/languages?limit=5000&offset=0`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
           ])
 
-          const countriesCount = Array.isArray(countries) ? countries.length : 0
-          const currenciesCount = Array.isArray(currencies) ? currencies.length : 0
-          const languagesCount = Array.isArray(languages) ? languages.length : 0
+          if (countriesResponse?.ok && currenciesResponse?.ok && languagesResponse?.ok) {
+            const [countries, currencies, languages] = await Promise.all([
+              countriesResponse.json(),
+              currenciesResponse.json(),
+              languagesResponse.json(),
+            ])
 
-          const nextCounts: MasterDataCounts = {
-            countries: countriesCount,
-            currencies: currenciesCount,
-            languages: languagesCount,
-            total: countriesCount + currenciesCount + languagesCount,
+            const countriesCount = Array.isArray(countries) ? countries.length : 0
+            const currenciesCount = Array.isArray(currencies) ? currencies.length : 0
+            const languagesCount = Array.isArray(languages) ? languages.length : 0
+
+            const nextCounts: MasterDataCounts = {
+              countries: countriesCount,
+              currencies: currenciesCount,
+              languages: languagesCount,
+              total: countriesCount + currenciesCount + languagesCount,
+            }
+
+            setMasterDataCounts(nextCounts)
+            writeCachedMasterDataCounts(nextCounts, latestMasterDataSuccessAt)
           }
-
-          setMasterDataCounts(nextCounts)
-          writeCachedMasterDataCounts(nextCounts, latestMasterDataSuccessAt)
         }
       }
 
@@ -1070,7 +1070,9 @@ export default function LEIStatusPage() {
                   className="w-4 h-4"
                 />
                 <span className="text-sm opacity-70">
-                  {t('leiStatus.page.autoRefresh')} ({autoRefreshIntervalMs === FAST_LEI_REFRESH_MS ? '5s' : '60s'})
+                  {t('leiStatus.page.autoRefresh')} ({t('leiStatus.page.autoRefreshIntervalSeconds', {
+                    count: Math.round(autoRefreshIntervalMs / 1000),
+                  })})
                 </span>
               </label>
             </>

@@ -63,4 +63,22 @@ describe('leiStatusRefresh', () => {
       lastSuccessAt: '2026-04-14T01:00:00Z',
     })
   })
+
+  it('rejects malformed cache payloads missing numeric fields', () => {
+    sessionStorage.setItem('lei_master_data_counts_cache', JSON.stringify({
+      counts: { total: 12 },
+      lastSuccessAt: '2026-04-14T01:00:00Z',
+    }))
+
+    expect(readCachedMasterDataCounts()).toBeNull()
+  })
+
+  it('rejects malformed cache payloads with invalid lastSuccessAt type', () => {
+    sessionStorage.setItem('lei_master_data_counts_cache', JSON.stringify({
+      counts: { countries: 1, currencies: 2, languages: 3, total: 6 },
+      lastSuccessAt: 123,
+    }))
+
+    expect(readCachedMasterDataCounts()).toBeNull()
+  })
 })

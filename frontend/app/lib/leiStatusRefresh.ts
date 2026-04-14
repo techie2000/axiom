@@ -37,7 +37,20 @@ export function readCachedMasterDataCounts(): MasterDataCountsCache | null {
     }
 
     const parsed = JSON.parse(raw) as MasterDataCountsCache
-    if (!parsed?.counts || typeof parsed.counts.total !== 'number') {
+    if (
+      typeof parsed?.lastSuccessAt !== 'string' &&
+      parsed?.lastSuccessAt !== null
+    ) {
+      return null
+    }
+
+    if (
+      !parsed?.counts ||
+      typeof parsed.counts.countries !== 'number' ||
+      typeof parsed.counts.currencies !== 'number' ||
+      typeof parsed.counts.languages !== 'number' ||
+      typeof parsed.counts.total !== 'number'
+    ) {
       return null
     }
 

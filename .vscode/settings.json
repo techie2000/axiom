@@ -46,6 +46,7 @@
     "Get-PSDrive": true,
     "gh": true,
     "git -C ..": true,
+    "git -C $repo": true,
     "git add": true,
     "git check-ignore": true,
     "git checkout": true,
