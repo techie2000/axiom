@@ -985,6 +985,11 @@
     "subtitle": "Browse supported language codes and metadata",
     "title": "Languages"
   },
+  "referenceRecordsCard": {
+    "loading": "Loading...",
+    "noData": "—",
+    "totalRecords": "Total Records:"
+  },
   "referenceLayout": {
     "displayCodesButton": "🏷️ Display: Codes",
     "displayModeCodes": "Display code values",

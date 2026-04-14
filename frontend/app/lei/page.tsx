@@ -5,6 +5,9 @@ import { useTranslation } from 'react-i18next'
 import Alert from '../components/Alert'
 import LoadingSpinner from '../components/LoadingSpinner'
 import PageHeader from '../components/PageHeader'
+import { getApiBaseUrl } from '../lib/api-base'
+import { getAuthToken } from '../lib/auth-token'
+import { formatDateTimeDisplay, isPlaceholderDateValue } from '../lib/date-display'
 import { buildDocsUrl } from '../lib/docsLinks'
 
 interface SourceFile {
@@ -112,9 +115,7 @@ export default function LEIStatusPage() {
     LEVEL2_REPEX: true,
   })
 
-  const API_BASE_URL = typeof window !== 'undefined'
-    ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080')
-    : 'http://backend:8080'
+  const API_BASE_URL = getApiBaseUrl()
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -173,18 +174,6 @@ export default function LEIStatusPage() {
       setLoading(false)
     }
   }, [API_BASE_URL])
-
-  const getAuthToken = (): string | null => {
-    const rawToken = localStorage.getItem('axiom_token')
-    if (!rawToken) return null
-
-    const normalizedToken = rawToken.replace(/^Bearer\s+/i, '').trim()
-    if (!normalizedToken || normalizedToken === 'undefined' || normalizedToken === 'null') {
-      return null
-    }
-
-    return normalizedToken
-  }
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -351,8 +340,7 @@ export default function LEIStatusPage() {
   }, [fullExpanded, rrExpanded])
 
   const formatDate = (dateString: string | null) => {
-    if (!dateString || dateString.startsWith('0001-')) return 'Never'
-    return new Date(dateString).toISOString().replace('T', ' ').substring(0, 19)
+    return formatDateTimeDisplay(dateString, 'Never')
   }
 
   const getStatusColor = (status: string) => {
@@ -462,7 +450,7 @@ export default function LEIStatusPage() {
   const getChainedNextRun = (status: ProcessingStatus | null): { nextRun: string | null; ultimateParent: string | null } => {
     if (!status) return { nextRun: null, ultimateParent: null }
 
-    if (status.next_run_at && !status.next_run_at.startsWith('0001-')) {
+    if (status.next_run_at && !isPlaceholderDateValue(status.next_run_at)) {
       return { nextRun: status.next_run_at, ultimateParent: null }
     }
 
@@ -489,7 +477,7 @@ export default function LEIStatusPage() {
       const parentSt: ProcessingStatus | null = statusByType[currentDep] ?? null
       if (!parentSt) break
 
-      if (parentSt.next_run_at && !parentSt.next_run_at.startsWith('0001-')) {
+      if (parentSt.next_run_at && !isPlaceholderDateValue(parentSt.next_run_at)) {
         return { nextRun: parentSt.next_run_at, ultimateParent }
       }
 
@@ -509,7 +497,7 @@ export default function LEIStatusPage() {
   const isRrRunning = rrStatus?.status === 'RUNNING'
   const isRepexRunning = repexStatus?.status === 'RUNNING'
   const hasGleifReferenceSuccess = Boolean(
-    gleifReferenceStatus?.last_success_at && !gleifReferenceStatus.last_success_at.startsWith('0001-'),
+    gleifReferenceStatus?.last_success_at && !isPlaceholderDateValue(gleifReferenceStatus.last_success_at),
   )
 
   const canTriggerGleifReference = !isGleifReferenceRunning && !isMasterDataRunning

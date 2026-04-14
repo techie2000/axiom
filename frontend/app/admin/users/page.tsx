@@ -7,14 +7,12 @@ import { useTranslation } from 'react-i18next'
 import PageHeader from '../../components/PageHeader'
 import Alert from '../../components/Alert'
 import LoadingSpinner from '../../components/LoadingSpinner'
+import { getApiBaseUrl } from '../../lib/api-base'
 import { getAuthToken } from '../../lib/auth-token'
 import { buildDocsUrl } from '../../lib/docsLinks'
 import { useEnglishTooltips } from '../../lib/useEnglishTooltips'
 
-const API_BASE_URL =
-  typeof window !== 'undefined'
-    ? process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080'
-    : 'http://backend:8080'
+const API_BASE_URL = getApiBaseUrl()
 
 interface User {
   id: string
