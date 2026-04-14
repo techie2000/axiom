@@ -9,6 +9,13 @@ import { getApiBaseUrl } from '../lib/api-base'
 import { getAuthToken } from '../lib/auth-token'
 import { formatDateTimeDisplay, isPlaceholderDateValue } from '../lib/date-display'
 import { buildDocsUrl } from '../lib/docsLinks'
+import {
+  FAST_LEI_REFRESH_MS,
+  getLeiAutoRefreshIntervalMs,
+  readCachedMasterDataCounts,
+  shouldRefreshMasterDataCounts,
+  writeCachedMasterDataCounts,
+} from '../lib/leiStatusRefresh'
 
 interface SourceFile {
   id: string
@@ -126,9 +133,6 @@ export default function LEIStatusPage() {
         deltaResponse,
         rrResponse,
         repexResponse,
-        countriesResponse,
-        currenciesResponse,
-        languagesResponse,
       ] = await Promise.all([
         fetch(`${API_BASE_URL}/api/v1/lei/status/GLEIF_REFERENCE_SYNC`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
         fetch(`${API_BASE_URL}/api/v1/lei/status/MASTER_DATA_SYNC`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
@@ -136,35 +140,51 @@ export default function LEIStatusPage() {
         fetch(`${API_BASE_URL}/api/v1/lei/status/DAILY_DELTA`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
         fetch(`${API_BASE_URL}/api/v1/lei/status/LEVEL2_RR`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
         fetch(`${API_BASE_URL}/api/v1/lei/status/LEVEL2_REPEX`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
-        fetch(`${API_BASE_URL}/api/v1/countries?limit=5000&offset=0`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
-        fetch(`${API_BASE_URL}/api/v1/currencies?limit=5000&offset=0`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
-        fetch(`${API_BASE_URL}/api/v1/languages?limit=5000&offset=0`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
       ])
 
       if (gleifReferenceResponse?.ok) setGleifReferenceStatus(await gleifReferenceResponse.json())
-      if (mdResponse?.ok) setMasterDataStatus(await mdResponse.json())
+      let latestMasterDataStatus: ProcessingStatus | null = null
+      if (mdResponse?.ok) {
+        latestMasterDataStatus = await mdResponse.json()
+        setMasterDataStatus(latestMasterDataStatus)
+      }
       if (fullResponse?.ok) setFullStatus(await fullResponse.json())
       if (deltaResponse?.ok) setDeltaStatus(await deltaResponse.json())
       if (rrResponse?.ok) setRrStatus(await rrResponse.json())
       if (repexResponse?.ok) setRepexStatus(await repexResponse.json())
 
-      if (countriesResponse?.ok && currenciesResponse?.ok && languagesResponse?.ok) {
-        const [countries, currencies, languages] = await Promise.all([
-          countriesResponse.json(),
-          currenciesResponse.json(),
-          languagesResponse.json(),
+      const latestMasterDataSuccessAt = latestMasterDataStatus?.last_success_at ?? null
+      const cachedMasterDataCounts = readCachedMasterDataCounts()
+      if (!shouldRefreshMasterDataCounts(latestMasterDataSuccessAt, cachedMasterDataCounts)) {
+        setMasterDataCounts(cachedMasterDataCounts.counts)
+      } else {
+        const [countriesResponse, currenciesResponse, languagesResponse] = await Promise.all([
+          fetch(`${API_BASE_URL}/api/v1/countries?limit=5000&offset=0`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
+          fetch(`${API_BASE_URL}/api/v1/currencies?limit=5000&offset=0`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
+          fetch(`${API_BASE_URL}/api/v1/languages?limit=5000&offset=0`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
         ])
 
-        const countriesCount = Array.isArray(countries) ? countries.length : 0
-        const currenciesCount = Array.isArray(currencies) ? currencies.length : 0
-        const languagesCount = Array.isArray(languages) ? languages.length : 0
+        if (countriesResponse?.ok && currenciesResponse?.ok && languagesResponse?.ok) {
+          const [countries, currencies, languages] = await Promise.all([
+            countriesResponse.json(),
+            currenciesResponse.json(),
+            languagesResponse.json(),
+          ])
 
-        setMasterDataCounts({
-          countries: countriesCount,
-          currencies: currenciesCount,
-          languages: languagesCount,
-          total: countriesCount + currenciesCount + languagesCount,
-        })
+          const countriesCount = Array.isArray(countries) ? countries.length : 0
+          const currenciesCount = Array.isArray(currencies) ? currencies.length : 0
+          const languagesCount = Array.isArray(languages) ? languages.length : 0
+
+          const nextCounts: MasterDataCounts = {
+            countries: countriesCount,
+            currencies: currenciesCount,
+            languages: languagesCount,
+            total: countriesCount + currenciesCount + languagesCount,
+          }
+
+          setMasterDataCounts(nextCounts)
+          writeCachedMasterDataCounts(nextCounts, latestMasterDataSuccessAt)
+        }
       }
 
       setError(null)
@@ -319,11 +339,20 @@ export default function LEIStatusPage() {
     }
   }, [fetchStatus])
 
+  const autoRefreshIntervalMs = getLeiAutoRefreshIntervalMs([
+    gleifReferenceStatus,
+    masterDataStatus,
+    fullStatus,
+    deltaStatus,
+    rrStatus,
+    repexStatus,
+  ])
+
   useEffect(() => {
     if (!autoRefresh) return
-    const interval = setInterval(fetchStatus, 5000)
+    const interval = setInterval(fetchStatus, autoRefreshIntervalMs)
     return () => clearInterval(interval)
-  }, [autoRefresh, fetchStatus])
+  }, [autoRefresh, autoRefreshIntervalMs, fetchStatus])
 
   useEffect(() => {
     const handleEscapeKey = (event: KeyboardEvent) => {
@@ -1040,7 +1069,9 @@ export default function LEIStatusPage() {
                   onChange={(e) => setAutoRefresh(e.target.checked)}
                   className="w-4 h-4"
                 />
-                <span className="text-sm opacity-70">{t('leiStatus.page.autoRefresh')}</span>
+                <span className="text-sm opacity-70">
+                  {t('leiStatus.page.autoRefresh')} ({autoRefreshIntervalMs === FAST_LEI_REFRESH_MS ? '5s' : '60s'})
+                </span>
               </label>
             </>
           }

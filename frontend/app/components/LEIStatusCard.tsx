@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import { getApiBaseUrl } from '../lib/api-base'
+import { getLeiAutoRefreshIntervalMs } from '../lib/leiStatusRefresh'
 import { formatStatusLabel } from '../lib/status-label'
 
 interface LEIStatus {
@@ -96,6 +97,15 @@ export default function LEIStatusCard() {
     }
   }
 
+  const autoRefreshIntervalMs = getLeiAutoRefreshIntervalMs([
+    masterDataStatus,
+    fullStatus,
+    deltaStatus,
+    rrStatus,
+    repexStatus,
+    gleifStatus,
+  ])
+
   useEffect(() => {
     // Seed from sessionStorage immediately so the card isn't blank on first paint
     const cached = readCountCache()
@@ -137,10 +147,10 @@ export default function LEIStatusCard() {
     }
 
     fetchStatus()
-    const interval = setInterval(fetchStatus, 5000)
+    const interval = setInterval(fetchStatus, autoRefreshIntervalMs)
 
     return () => clearInterval(interval)
-  }, [])
+  }, [autoRefreshIntervalMs])
 
   const getHealthIndicator = (status: LEIStatus | null) => {
     if (!status) return { color: 'bg-gray-400', label: t('leiStatus.card.status.unknown'), icon: '❓' }
