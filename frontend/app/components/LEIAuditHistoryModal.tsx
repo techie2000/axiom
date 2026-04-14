@@ -216,6 +216,38 @@ export function formatSnapshotValue(value: unknown): string {
   return String(value)
 }
 
+export function formatEnumDisplayText(fieldKey: string, value: unknown, formattedText: string): string {
+  if (!ENUM_DISPLAY_FIELDS.has(fieldKey)) return formattedText
+  if (formattedText === '—') return formattedText
+
+  if (Array.isArray(value) && value.every((item) => typeof item === 'string')) {
+    return (value as string[]).map((item) => item.replace(/_/g, ' ')).join('\n')
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      try {
+        const parsed = JSON.parse(trimmed)
+        if (Array.isArray(parsed) && parsed.every((item) => typeof item === 'string')) {
+          return (parsed as string[]).map((item) => item.replace(/_/g, ' ')).join('\n')
+        }
+      } catch {
+        // Fall through to plain enum string handling.
+      }
+    }
+
+    if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+      return formattedText
+    }
+
+    return formattedText.replace(/_/g, ' ')
+  }
+
+  return formattedText
+}
+
 interface SnapshotValueProps {
   fieldKey: string
   value: unknown
@@ -235,7 +267,8 @@ interface SnapshotValueProps {
 /** Renders a value with optional country flag, names/codes display mode, and LEI code links. */
 function SnapshotValue({ fieldKey, value, snapshot, showCodes = true, countryByCode, onLeiClick, linkedLeiNames, registrationAuthorityNameByCode, registrationAuthorityFallback }: SnapshotValueProps) {
   const text = formatSnapshotValue(value)
-  if (text === '—') return <span className="theme-text-muted">—</span>
+  const displayText = formatEnumDisplayText(fieldKey, value, text)
+  if (displayText === '—') return <span className="theme-text-muted">—</span>
   if (fieldKey === 'registration_authority' && typeof value === 'string') {
     const raCode = value.trim()
     const snapshotRaCode = typeof snapshot?.registration_authority === 'string'
@@ -309,20 +342,16 @@ function SnapshotValue({ fieldKey, value, snapshot, showCodes = true, countryByC
     return leiEl
   }
   // Multi-line values (e.g. other_names with multiple entries)
-  if (text.includes('\n')) {
+  if (displayText.includes('\n')) {
     return (
       <span className="flex flex-col gap-0.5">
-        {text.split('\n').map((line, i) => (
+        {displayText.split('\n').map((line, i) => (
           <span key={i}>{line}</span>
         ))}
       </span>
     )
   }
-  // Enum fields (e.g. FULLY_CORROBORATED → "FULLY CORROBORATED", PENDING_TRANSFER → "PENDING TRANSFER")
-  if (ENUM_DISPLAY_FIELDS.has(fieldKey)) {
-    return <>{text.replace(/_/g, ' ')}</>
-  }
-  return <>{text}</>
+  return <>{displayText}</>
 }
 
 /** Compute changed fields by diffing two snapshots — used for arbitrary version pairs. */

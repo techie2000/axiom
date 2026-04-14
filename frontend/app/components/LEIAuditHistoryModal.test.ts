@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { computeChangedFields, formatSnapshotValue, valuesDifferSemantically } from './LEIAuditHistoryModal'
+import {
+  computeChangedFields,
+  formatEnumDisplayText,
+  formatSnapshotValue,
+  valuesDifferSemantically,
+} from './LEIAuditHistoryModal'
 
 describe('formatSnapshotValue', () => {
   it('returns — for null', () => {
@@ -41,6 +46,49 @@ describe('formatSnapshotValue', () => {
 
   it('returns JSON for non-empty objects', () => {
     expect(formatSnapshotValue({ key: 'value' })).toBe('{"key":"value"}')
+  })
+})
+
+describe('formatEnumDisplayText', () => {
+  it('formats enum string values for configured enum fields', () => {
+    const raw = 'FULLY_CORROBORATED'
+    const formatted = formatSnapshotValue(raw)
+
+    expect(formatEnumDisplayText('validation_sources', raw, formatted)).toBe('FULLY CORROBORATED')
+  })
+
+  it('formats enum arrays (including multiline display) for configured enum fields', () => {
+    const raw = ['FULLY_CORROBORATED', 'PARTIALLY_CORROBORATED']
+    const formatted = formatSnapshotValue(raw)
+
+    expect(formatEnumDisplayText('validation_sources', raw, formatted)).toBe(
+      'FULLY CORROBORATED\nPARTIALLY CORROBORATED'
+    )
+  })
+
+  it('formats JSON-encoded enum arrays for configured enum fields', () => {
+    const raw = '["FULLY_CORROBORATED","PARTIALLY_CORROBORATED"]'
+    const formatted = formatSnapshotValue(raw)
+
+    expect(formatEnumDisplayText('validation_sources', raw, formatted)).toBe(
+      'FULLY CORROBORATED\nPARTIALLY CORROBORATED'
+    )
+  })
+
+  it('does not rewrite underscores inside JSON object output', () => {
+    const raw = { status_code: 'FULLY_CORROBORATED' }
+    const formatted = formatSnapshotValue(raw)
+
+    expect(formatEnumDisplayText('validation_sources', raw, formatted)).toBe(
+      '{"status_code":"FULLY_CORROBORATED"}'
+    )
+  })
+
+  it('leaves non-enum fields unchanged', () => {
+    const raw = 'FULLY_CORROBORATED'
+    const formatted = formatSnapshotValue(raw)
+
+    expect(formatEnumDisplayText('legal_name', raw, formatted)).toBe('FULLY_CORROBORATED')
   })
 })
 
