@@ -385,6 +385,15 @@ When implementing frontend preference-driven UX:
 3. **Viewport safety is required**: add max-width safeguards for popovers to prevent clipping on narrow screens.
 4. **Validation must include RTL + LTR**: test layout in both directions before finalizing UI changes.
 
+### Internationalisation From The Start (REQUIRED)
+
+When adding or changing frontend UI text:
+1. Add i18n keys at implementation time (same change), not as a follow-up fix.
+2. Route all visible strings through `t('...')`; avoid hardcoded user-facing text.
+3. Add new keys to `frontend/public/locales/en/common.json` and rely on fallback for other locales.
+4. Run `cd frontend && npm run i18n:verify` and `cd frontend && npm run lint` before completion.
+5. Treat missing i18n coverage as blocking for feature-complete status.
+
 ## How to Use These Files in VS Code
 
 ### Instructions (Automatic Application)
@@ -616,14 +625,28 @@ This repository configuration is designed to make AI coding agents immediately p
 
 When an AI agent creates a pull request, it should complete standard PR hygiene automatically **without asking for confirmation**:
 
-1. Add appropriate labels (at minimum `automated` plus a best-fit category label such as `enhancement`/`bug`).
+1. Add appropriate labels following the three-namespace taxonomy:
+   - **Category** (required, if applicable): `bug`, `enhancement`, `documentation`, `security`, `performance`, or `question` — only when distinct from area labels
+   - **Area** (required, exactly one): `area:backend`, `area:frontend`, `area:database`, `area:docs`,
+     `area:infra`, `area:ci`, `area:lei`, or `area:dependencies` — infer from the files touched OR let CI workflow auto-apply
+   - **Type** (optional secondary, one or two): `type:tests`, `type:refactor`, `type:chore`
+   - Add `automated` to mark AI-created items and `no-issue-needed` for PRs with no backing issue
+   - **Note**: The CI workflow (`auto-label-prs.yml`) automatically applies Area labels based on file paths. Do not manually add Area labels unless the auto-detection fails. Category labels are only needed when the category is not implicit in the Area (e.g., `area:backend` change that is also a `security` fix should add `security` category).
 2. Request a reviewer (prefer `copilot-pull-request-reviewer` when available).
 3. Post a concise verification checklist comment relevant to the changed files.
 4. After each commit push to the PR branch, post a concise implementation summary comment that includes:
    - what changed,
    - what validation/tests were run,
    - any follow-up actions or known limitations.
-5. Do not ask whether to post the summary/checklist comments; post them by default.
+5. For each linked underlying issue (for example `Fixes #123`, `Closes #123`, or issue references in PR description),
+   post a concise issue update comment after each PR push (same per-push trigger as
+   [`instructions/copilot-pr-feedback-resolution.instructions.md`](instructions/copilot-pr-feedback-resolution.instructions.md))
+   that includes:
+   - implementation status,
+   - validation status,
+   - testing guidance for user/UAT verification,
+   - PR link.
+6. Do not ask whether to post the summary/checklist/issue-update comments; post them by default.
 
 Only ask follow-up questions if required metadata cannot be applied (for example, reviewer handle is unavailable).
 

@@ -1,0 +1,99 @@
+name: Check PR Issue Link
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - edited
+      - ready_for_review
+      - labeled
+      - unlabeled
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  check-issue-link:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Advise when PR has no linked issue and no override
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request
+            const actor = pr.user.login
+
+            // Bots are always exempt
+            if (actor.endsWith('[bot]') || actor === 'dependabot') {
+              core.info('Bot PR — skipping issue link check')
+              return
+            }
+
+            const prLabels = (pr.labels || []).map((l) => (typeof l === 'string' ? l : l.name))
+
+            // Manual override via label (applied by maintainer or auto-label-prs workflow)
+            if (prLabels.includes('no-issue-needed')) {
+              core.info('no-issue-needed label present — skipping')
+              return
+            }
+
+            const body = pr.body || ''
+
+            // Closing keywords: closes/fixes/resolves/refs/relates to + #N
+            const hasClosingKeyword = /\b(closes?|fixes?|resolves?|refs?|relates?\s+to)\s+#\d+/i.test(body)
+
+            // Template override checkbox checked
+            const noIssueChecked = /- \[x\] no linked issue/i.test(body)
+
+            if (hasClosingKeyword || noIssueChecked) {
+              core.info('Issue link or override found')
+              return
+            }
+
+            // Avoid posting a duplicate advisory comment (handle pagination)
+            const allComments = []
+            let page = 1
+            let hasMore = true
+            while (hasMore) {
+              const { data: comments } = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                page: page,
+                per_page: 50,
+              })
+              allComments.push(...comments)
+              hasMore = comments.length === 50
+              page++
+            }
+
+            const alreadyAdvised = allComments.some(
+              (c) =>
+                c.user.login === 'github-actions[bot]' &&
+                c.body.includes('<!-- pr-issue-link-advisory -->')
+            )
+
+            if (alreadyAdvised) {
+              core.info('Advisory already posted')
+              return
+            }
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              body: [
+                '<!-- pr-issue-link-advisory -->',
+                '> [!TIP]',
+                '> This PR does not appear to reference a linked issue.',
+                '> If one exists, add a closing keyword to the PR description, for example:',
+                '> `Closes #123`',
+                '>',
+                '> If this PR does not need a backing issue (hotfix, chore, Dependabot),',
+                '> check the **No linked issue** box in the PR description and add a brief reason.',
+              ].join('\n'),
+            })
+
+            core.info(`Advisory comment posted on PR #${pr.number}`)

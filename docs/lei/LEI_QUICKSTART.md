@@ -215,21 +215,21 @@ curl -X POST http://localhost:8080/api/v1/lei/sync/full \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-Trigger Level 2 full chain (RR → REPEX):
+Trigger the full Level 2 chain (Relationship Records → Reporting Exceptions):
 
 ```bash
 curl -X POST http://localhost:8080/api/v1/lei/sync/level2 \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-Trigger Level 2 RR only:
+Trigger Level 2 Relationship Records only:
 
 ```bash
 curl -X POST http://localhost:8080/api/v1/lei/sync/level2/rr \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-Trigger Level 2 REPEX only:
+Trigger Level 2 Reporting Exceptions only:
 
 ```bash
 curl -X POST http://localhost:8080/api/v1/lei/sync/level2/repex \

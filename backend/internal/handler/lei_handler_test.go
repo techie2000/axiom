@@ -659,14 +659,14 @@ func TestTriggerManualSync_SuccessPaths(t *testing.T) {
 			name:              "level2 rr accepted",
 			path:              "/sync/level2/rr",
 			handlerFactory:    func(h *LEIHandler) gin.HandlerFunc { return h.TriggerLevel2RRSync },
-			expectedMessage:   "Level 2 Relationship Records sync triggered (LEVEL2_RR)",
+			expectedMessage:   "Level 2 Relationship Records sync triggered",
 			expectedScheduler: "TriggerLevel2RRSync",
 		},
 		{
 			name:              "level2 repex accepted",
 			path:              "/sync/level2/repex",
 			handlerFactory:    func(h *LEIHandler) gin.HandlerFunc { return h.TriggerLevel2REPEXSync },
-			expectedMessage:   "Level 2 Reporting Exceptions sync triggered (LEVEL2_REPEX)",
+			expectedMessage:   "Level 2 Reporting Exceptions sync triggered",
 			expectedScheduler: "TriggerLevel2REPEXSync",
 		},
 		{
@@ -767,7 +767,7 @@ func TestTriggerManualSync_ErrorPaths(t *testing.T) {
 		if resp.Code != http.StatusInternalServerError {
 			t.Fatalf("expected status %d, got %d", http.StatusInternalServerError, resp.Code)
 		}
-		if !strings.Contains(resp.Body.String(), "Failed to trigger Level 2 Relationship Records sync (LEVEL2_RR)") {
+		if !strings.Contains(resp.Body.String(), "Failed to trigger Level 2 Relationship Records sync") {
 			t.Fatalf("expected generic error message, got %s", resp.Body.String())
 		}
 	})
@@ -784,7 +784,7 @@ func TestTriggerManualSync_ErrorPaths(t *testing.T) {
 		if resp.Code != http.StatusInternalServerError {
 			t.Fatalf("expected status %d, got %d", http.StatusInternalServerError, resp.Code)
 		}
-		if !strings.Contains(resp.Body.String(), "Failed to trigger Level 2 Reporting Exceptions sync (LEVEL2_REPEX)") {
+		if !strings.Contains(resp.Body.String(), "Failed to trigger Level 2 Reporting Exceptions sync") {
 			t.Fatalf("expected generic error message, got %s", resp.Body.String())
 		}
 	})
