@@ -4,6 +4,7 @@ on:
   pull_request_target:
     types:
       - opened
+      - synchronize
       - edited
       - ready_for_review
       - labeled
@@ -43,10 +44,33 @@ jobs:
             // Closing keywords: closes/fixes/resolves/refs/relates to + #N
             const hasClosingKeyword = /\b(closes?|fixes?|resolves?|refs?|relates?\s+to)\s+#\d+/i.test(body)
 
+            // GitHub-recognized closing references (may come from commits or timeline links)
+            const query = `
+              query($owner: String!, $repo: String!, $number: Int!) {
+                repository(owner: $owner, name: $repo) {
+                  pullRequest(number: $number) {
+                    closingIssuesReferences(first: 50) {
+                      totalCount
+                    }
+                  }
+                }
+              }
+            `
+
+            const result = await github.graphql(query, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              number: pr.number,
+            })
+
+            const linkedIssueCount =
+              result?.repository?.pullRequest?.closingIssuesReferences?.totalCount || 0
+            const hasLinkedClosingIssue = linkedIssueCount > 0
+
             // Template override checkbox checked
             const noIssueChecked = /- \[x\] no linked issue/i.test(body)
 
-            if (hasClosingKeyword || noIssueChecked) {
+            if (hasClosingKeyword || hasLinkedClosingIssue || noIssueChecked) {
               core.info('Issue link or override found')
               return
             }
