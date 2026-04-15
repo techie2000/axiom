@@ -29,7 +29,7 @@ func (s *leiService) batchResolveOpenProcessingFailures(jobType string, naturalK
 	}
 
 	if err := s.repo.BatchResolveOpenProcessingFailures(
-		normalizeProcessingJobType(jobType),
+		normalizeProcessingFailureJobType(jobType),
 		normalizedKeys,
 		sourceFileID,
 		"Resolved by subsequent successful upsert",

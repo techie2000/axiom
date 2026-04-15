@@ -266,7 +266,7 @@ func TestUpdateProcessingStatus_Level2IdleWithEmptyMessageKeepsExistingProgress(
 	}
 }
 
-func TestUpdateProcessingStatus_Level1IdleWithErrorDoesNotReuseExistingProgress(t *testing.T) {
+func TestUpdateProcessingStatus_Level1FailedWithErrorDoesNotReuseExistingProgress(t *testing.T) {
 	stub := &progressMsgRepoStub{
 		statusToReturn: &domain.FileProcessingStatus{
 			ID:              uuid.New(),
