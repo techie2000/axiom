@@ -571,9 +571,9 @@ func TestBatchResolveOpenProcessingFailures_Service_ValidKeys(t *testing.T) {
 	if stub.callCount != 1 {
 		t.Fatalf("expected exactly 1 repo call, got %d", stub.callCount)
 	}
-	// Job type must be normalised (DAILY_FULL → LEVEL1_FULL).
-	if stub.calledJobType != "LEVEL1_FULL" {
-		t.Errorf("expected calledJobType LEVEL1_FULL, got %q", stub.calledJobType)
+	// Job type must be normalised (DAILY_FULL is already canonical).
+	if stub.calledJobType != "DAILY_FULL" {
+		t.Errorf("expected calledJobType DAILY_FULL, got %q", stub.calledJobType)
 	}
 	// LEI codes must be upper-cased and trimmed.
 	if len(stub.calledKeys) != 2 {
