@@ -439,7 +439,7 @@ func (s *leiLevel2Service) ProcessRRFile(sourceFileID uuid.UUID) error {
 	sourceFile.ProcessingCompletedAt = &now
 	sourceFile.ProcessedRecords = processed
 	sourceFile.FailedRecords = failed
-	s.persistLevel2Progress(sourceFile, processed, failed, true)
+	s.persistLevel2Progress(sourceFile, processed, failed, 0, true)
 	if err := s.leiRepo.UpdateSourceFile(sourceFile); err != nil {
 		log.Warn().Err(err).Msg("Failed to update source file to COMPLETED")
 	}
@@ -1020,7 +1020,7 @@ func (s *leiLevel2Service) ProcessREPEXFile(sourceFileID uuid.UUID) error {
 	sourceFile.ProcessingCompletedAt = &now
 	sourceFile.ProcessedRecords = processed
 	sourceFile.FailedRecords = failed
-	s.persistLevel2Progress(sourceFile, processed, failed, true)
+	s.persistLevel2Progress(sourceFile, processed, failed, 0, true)
 	if err := s.leiRepo.UpdateSourceFile(sourceFile); err != nil {
 		log.Warn().Err(err).Msg("Failed to update source file to COMPLETED")
 	}
