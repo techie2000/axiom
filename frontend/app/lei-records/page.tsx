@@ -24,7 +24,7 @@ import { useUserPreference } from '../lib/useUserPreference'
 import { useSearchFocusShortcut } from '../lib/useSearchFocusShortcut'
 import MapLink from '../components/MapLink'
 import { getRelativeTimeInfo, getRelativeTimeTranslationKey } from './date-utils'
-import { formatEnumDisplayValue, formatLEICellValue, getStatusBadgePresentation, normalizeRecordNullLikeValues } from './null-utils'
+import { formatEnumDisplayValue, formatLEICellValue, getStatusBadgePresentation, getRegistrationStatusBadgePresentation, normalizeRecordNullLikeValues } from './null-utils'
 import { formatStatusFilterLabel, LEI_STATUS_FILTER_OPTIONS, normalizeStatusFilterForAPI } from './status-filter'
 import { computeShowingEnd, formatCurrentPageStatValue } from './stats-format'
 import { useTranslation } from 'react-i18next'
@@ -1926,7 +1926,20 @@ export default function LEIRecordsPage() {
                                   )
                                 })()
                               ) : isRegistrationStatus ? (
-                                formatEnumDisplayValue(value)
+                                (() => {
+                                  const regStatusPresentation = getRegistrationStatusBadgePresentation(value)
+                                  const variantStyles = {
+                                    success: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+                                    destructive: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+                                    warning: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
+                                    muted: 'theme-subtle',
+                                  }
+                                  return (
+                                    <span className={`px-2 py-1 text-xs rounded ${variantStyles[regStatusPresentation.variant]}`}>
+                                      {regStatusPresentation.label}
+                                    </span>
+                                  )
+                                })()
                               ) : isNextRenewalDate ? (
                                 (() => {
                                   const dateValue = String(value || '')
@@ -2466,7 +2479,20 @@ export default function LEIRecordsPage() {
                   </div>
                   <div>
                     <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">{t('leiRecords.columns.labels.registrationStatus')}</span>
-                    <p className="text-sm text-[rgb(var(--foreground-rgb))] mt-1">{formatEnumDisplayValue(selectedRecord.registration_status)}</p>
+                    {(() => {
+                      const regStatusPresentation = getRegistrationStatusBadgePresentation(selectedRecord.registration_status)
+                      const variantStyles = {
+                        success: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+                        destructive: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+                        warning: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
+                        muted: 'theme-subtle',
+                      }
+                      return (
+                        <span className={`inline-block mt-1 px-2 py-1 text-xs rounded ${variantStyles[regStatusPresentation.variant]}`}>
+                          {regStatusPresentation.label}
+                        </span>
+                      )
+                    })()}
                   </div>
                   <div>
                     <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">Next Renewal</span>

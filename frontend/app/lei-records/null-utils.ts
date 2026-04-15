@@ -46,6 +46,38 @@ export function getStatusBadgePresentation(value: unknown): { label: string; isA
   }
 }
 
+export type RegistrationStatusVariant = 'success' | 'destructive' | 'warning' | 'muted'
+
+export function getRegistrationStatusBadgePresentation(value: unknown): {
+  label: string
+  variant: RegistrationStatusVariant
+} {
+  const rawValue = String(value || '').toUpperCase().trim()
+
+  // Active status
+  if (rawValue === 'ISSUED') {
+    return { label: 'ISSUED', variant: 'success' }
+  }
+
+  // Invalid/lapsed statuses
+  if (
+    rawValue === 'LAPSED' ||
+    rawValue === 'RETIRED' ||
+    rawValue === 'ANNULLED' ||
+    rawValue === 'DUPLICATE'
+  ) {
+    return { label: formatEnumDisplayValue(rawValue), variant: 'destructive' }
+  }
+
+  // In-transition statuses
+  if (rawValue === 'PENDING_TRANSFER' || rawValue === 'PENDING_ARCHIVAL') {
+    return { label: formatEnumDisplayValue(rawValue), variant: 'warning' }
+  }
+
+  // Unknown/future values - defensive fallback
+  return { label: formatEnumDisplayValue(rawValue), variant: 'muted' }
+}
+
 export function formatLEICellValue(value: unknown, key: string): string {
   const baseDisplayValue = formatLEIDisplayValue(value)
   if (baseDisplayValue === '-') {
