@@ -71,6 +71,7 @@ type GLEIFEntityLegalFormRepository interface {
 	Upsert(records []*domain.GLEIFEntityLegalForm) error
 	Count() (int64, error)
 	FindAll(limit, offset int) ([]*domain.GLEIFEntityLegalForm, error)
+	FindAllForSync() ([]*domain.GLEIFEntityLegalForm, error)
 	FindByELFCode(elfCode string) (*domain.GLEIFEntityLegalForm, error)
 	DeactivateAll() error
 }
@@ -92,13 +93,10 @@ func (r *gleifEntityLegalFormRepository) Upsert(records []*domain.GLEIFEntityLeg
 		Columns: []clause.Column{
 			{Name: "elf_code"},
 			{Name: "language_code"},
-			{Name: "country_of_formation"},
 			{Name: "country_subdivision_of_formation"},
-			{Name: "entity_legal_form_name"},
-			{Name: "status"},
 		},
 		DoUpdates: clause.AssignmentColumns([]string{
-			"abbreviations", "updated_by", "updated_at",
+			"entity_legal_form_name", "abbreviations", "country_of_formation", "status", "updated_by", "updated_at",
 		}),
 	}).Create(records).Error
 }
@@ -117,6 +115,13 @@ func (r *gleifEntityLegalFormRepository) FindAll(limit, offset int) ([]*domain.G
 	return records, err
 }
 
+func (r *gleifEntityLegalFormRepository) FindAllForSync() ([]*domain.GLEIFEntityLegalForm, error) {
+	var records []*domain.GLEIFEntityLegalForm
+	err := r.db.Order("elf_code ASC, language_code ASC, country_of_formation ASC, country_subdivision_of_formation ASC, entity_legal_form_name ASC").
+		Find(&records).Error
+	return records, err
+}
+
 func (r *gleifEntityLegalFormRepository) FindByELFCode(elfCode string) (*domain.GLEIFEntityLegalForm, error) {
 	var record domain.GLEIFEntityLegalForm
 	err := r.db.Where("elf_code = ?", elfCode).First(&record).Error
@@ -130,6 +135,27 @@ func (r *gleifEntityLegalFormRepository) DeactivateAll() error {
 	return r.db.Model(&domain.GLEIFEntityLegalForm{}).
 		Where("status = ?", "ACTIVE").
 		Update("status", "DECOMMISSIONED").Error
+}
+
+// GLEIFEntityLegalFormAuditRepository stores lifecycle changes for ELF variants.
+type GLEIFEntityLegalFormAuditRepository interface {
+	UpsertAuditRecords(records []*domain.GLEIFEntityLegalFormAudit) error
+}
+
+type gleifEntityLegalFormAuditRepository struct {
+	db *gorm.DB
+}
+
+// NewGLEIFEntityLegalFormAuditRepository creates a new GLEIFEntityLegalFormAuditRepository.
+func NewGLEIFEntityLegalFormAuditRepository(db *gorm.DB) GLEIFEntityLegalFormAuditRepository {
+	return &gleifEntityLegalFormAuditRepository{db: db}
+}
+
+func (r *gleifEntityLegalFormAuditRepository) UpsertAuditRecords(records []*domain.GLEIFEntityLegalFormAudit) error {
+	if len(records) == 0 {
+		return nil
+	}
+	return r.db.CreateInBatches(records, 500).Error
 }
 
 // GLEIFOrganizationalRoleRepository defines data access for GLEIF organizational roles.

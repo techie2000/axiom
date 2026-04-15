@@ -48,6 +48,7 @@ func NewServices(repos *repository.Repositories, db *gorm.DB, leiDataDir string,
 		GLEIFReference: NewGLEIFReferenceService(
 			repos.GLEIFRegistrationAuthority,
 			repos.GLEIFEntityLegalForm,
+			repos.GLEIFEntityLegalFormAudit,
 			repos.GLEIFOrganizationalRole,
 			repos.GLEIFLegalJurisdiction,
 			leiDataDir,
