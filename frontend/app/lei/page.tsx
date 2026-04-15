@@ -5,7 +5,18 @@ import { useTranslation } from 'react-i18next'
 import Alert from '../components/Alert'
 import LoadingSpinner from '../components/LoadingSpinner'
 import PageHeader from '../components/PageHeader'
+import { getApiBaseUrl } from '../lib/api-base'
+import { getAuthToken } from '../lib/auth-token'
+import { formatDateTimeDisplay, isPlaceholderDateValue } from '../lib/date-display'
 import { buildDocsUrl } from '../lib/docsLinks'
+import {
+  FAST_LEI_REFRESH_MS,
+  getLeiAutoRefreshIntervalMs,
+  type MasterDataCounts,
+  readCachedMasterDataCounts,
+  shouldRefreshMasterDataCounts,
+  writeCachedMasterDataCounts,
+} from '../lib/leiStatusRefresh'
 
 interface SourceFile {
   id: string
@@ -58,13 +69,6 @@ interface ImportProgressStats {
   total?: number
 }
 
-interface MasterDataCounts {
-  countries: number
-  currencies: number
-  languages: number
-  total: number
-}
-
 interface Level2ProcessingFailure {
   id: string
   job_type: string
@@ -112,9 +116,7 @@ export default function LEIStatusPage() {
     LEVEL2_REPEX: true,
   })
 
-  const API_BASE_URL = typeof window !== 'undefined'
-    ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080')
-    : 'http://backend:8080'
+  const API_BASE_URL = getApiBaseUrl()
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -125,9 +127,6 @@ export default function LEIStatusPage() {
         deltaResponse,
         rrResponse,
         repexResponse,
-        countriesResponse,
-        currenciesResponse,
-        languagesResponse,
       ] = await Promise.all([
         fetch(`${API_BASE_URL}/api/v1/lei/status/GLEIF_REFERENCE_SYNC`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
         fetch(`${API_BASE_URL}/api/v1/lei/status/MASTER_DATA_SYNC`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
@@ -135,35 +134,57 @@ export default function LEIStatusPage() {
         fetch(`${API_BASE_URL}/api/v1/lei/status/DAILY_DELTA`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
         fetch(`${API_BASE_URL}/api/v1/lei/status/LEVEL2_RR`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
         fetch(`${API_BASE_URL}/api/v1/lei/status/LEVEL2_REPEX`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
-        fetch(`${API_BASE_URL}/api/v1/countries?limit=5000&offset=0`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
-        fetch(`${API_BASE_URL}/api/v1/currencies?limit=5000&offset=0`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
-        fetch(`${API_BASE_URL}/api/v1/languages?limit=5000&offset=0`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
       ])
 
       if (gleifReferenceResponse?.ok) setGleifReferenceStatus(await gleifReferenceResponse.json())
-      if (mdResponse?.ok) setMasterDataStatus(await mdResponse.json())
+      let latestMasterDataStatus: ProcessingStatus | null = null
+      if (mdResponse?.ok) {
+        latestMasterDataStatus = await mdResponse.json()
+        setMasterDataStatus(latestMasterDataStatus)
+      }
       if (fullResponse?.ok) setFullStatus(await fullResponse.json())
       if (deltaResponse?.ok) setDeltaStatus(await deltaResponse.json())
       if (rrResponse?.ok) setRrStatus(await rrResponse.json())
       if (repexResponse?.ok) setRepexStatus(await repexResponse.json())
 
-      if (countriesResponse?.ok && currenciesResponse?.ok && languagesResponse?.ok) {
-        const [countries, currencies, languages] = await Promise.all([
-          countriesResponse.json(),
-          currenciesResponse.json(),
-          languagesResponse.json(),
-        ])
+      const cachedMasterDataCounts = readCachedMasterDataCounts()
+      if (!latestMasterDataStatus) {
+        if (cachedMasterDataCounts) {
+          setMasterDataCounts(cachedMasterDataCounts.counts)
+        }
+      } else {
+        const latestMasterDataSuccessAt = latestMasterDataStatus.last_success_at ?? null
+        if (cachedMasterDataCounts && !shouldRefreshMasterDataCounts(latestMasterDataSuccessAt, cachedMasterDataCounts)) {
+        setMasterDataCounts(cachedMasterDataCounts.counts)
+        } else {
+          const [countriesResponse, currenciesResponse, languagesResponse] = await Promise.all([
+            fetch(`${API_BASE_URL}/api/v1/countries?limit=5000&offset=0`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
+            fetch(`${API_BASE_URL}/api/v1/currencies?limit=5000&offset=0`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
+            fetch(`${API_BASE_URL}/api/v1/languages?limit=5000&offset=0`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
+          ])
 
-        const countriesCount = Array.isArray(countries) ? countries.length : 0
-        const currenciesCount = Array.isArray(currencies) ? currencies.length : 0
-        const languagesCount = Array.isArray(languages) ? languages.length : 0
+          if (countriesResponse?.ok && currenciesResponse?.ok && languagesResponse?.ok) {
+            const [countries, currencies, languages] = await Promise.all([
+              countriesResponse.json(),
+              currenciesResponse.json(),
+              languagesResponse.json(),
+            ])
 
-        setMasterDataCounts({
-          countries: countriesCount,
-          currencies: currenciesCount,
-          languages: languagesCount,
-          total: countriesCount + currenciesCount + languagesCount,
-        })
+            const countriesCount = Array.isArray(countries) ? countries.length : 0
+            const currenciesCount = Array.isArray(currencies) ? currencies.length : 0
+            const languagesCount = Array.isArray(languages) ? languages.length : 0
+
+            const nextCounts: MasterDataCounts = {
+              countries: countriesCount,
+              currencies: currenciesCount,
+              languages: languagesCount,
+              total: countriesCount + currenciesCount + languagesCount,
+            }
+
+            setMasterDataCounts(nextCounts)
+            writeCachedMasterDataCounts(nextCounts, latestMasterDataSuccessAt)
+          }
+        }
       }
 
       setError(null)
@@ -173,18 +194,6 @@ export default function LEIStatusPage() {
       setLoading(false)
     }
   }, [API_BASE_URL])
-
-  const getAuthToken = (): string | null => {
-    const rawToken = localStorage.getItem('axiom_token')
-    if (!rawToken) return null
-
-    const normalizedToken = rawToken.replace(/^Bearer\s+/i, '').trim()
-    if (!normalizedToken || normalizedToken === 'undefined' || normalizedToken === 'null') {
-      return null
-    }
-
-    return normalizedToken
-  }
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -330,11 +339,20 @@ export default function LEIStatusPage() {
     }
   }, [fetchStatus])
 
+  const autoRefreshIntervalMs = getLeiAutoRefreshIntervalMs([
+    gleifReferenceStatus,
+    masterDataStatus,
+    fullStatus,
+    deltaStatus,
+    rrStatus,
+    repexStatus,
+  ])
+
   useEffect(() => {
     if (!autoRefresh) return
-    const interval = setInterval(fetchStatus, 5000)
+    const interval = setInterval(fetchStatus, autoRefreshIntervalMs)
     return () => clearInterval(interval)
-  }, [autoRefresh, fetchStatus])
+  }, [autoRefresh, autoRefreshIntervalMs, fetchStatus])
 
   useEffect(() => {
     const handleEscapeKey = (event: KeyboardEvent) => {
@@ -351,8 +369,7 @@ export default function LEIStatusPage() {
   }, [fullExpanded, rrExpanded])
 
   const formatDate = (dateString: string | null) => {
-    if (!dateString || dateString.startsWith('0001-')) return 'Never'
-    return new Date(dateString).toISOString().replace('T', ' ').substring(0, 19)
+    return formatDateTimeDisplay(dateString, 'Never')
   }
 
   const getStatusColor = (status: string) => {
@@ -462,7 +479,7 @@ export default function LEIStatusPage() {
   const getChainedNextRun = (status: ProcessingStatus | null): { nextRun: string | null; ultimateParent: string | null } => {
     if (!status) return { nextRun: null, ultimateParent: null }
 
-    if (status.next_run_at && !status.next_run_at.startsWith('0001-')) {
+    if (status.next_run_at && !isPlaceholderDateValue(status.next_run_at)) {
       return { nextRun: status.next_run_at, ultimateParent: null }
     }
 
@@ -489,7 +506,7 @@ export default function LEIStatusPage() {
       const parentSt: ProcessingStatus | null = statusByType[currentDep] ?? null
       if (!parentSt) break
 
-      if (parentSt.next_run_at && !parentSt.next_run_at.startsWith('0001-')) {
+      if (parentSt.next_run_at && !isPlaceholderDateValue(parentSt.next_run_at)) {
         return { nextRun: parentSt.next_run_at, ultimateParent }
       }
 
@@ -509,7 +526,7 @@ export default function LEIStatusPage() {
   const isRrRunning = rrStatus?.status === 'RUNNING'
   const isRepexRunning = repexStatus?.status === 'RUNNING'
   const hasGleifReferenceSuccess = Boolean(
-    gleifReferenceStatus?.last_success_at && !gleifReferenceStatus.last_success_at.startsWith('0001-'),
+    gleifReferenceStatus?.last_success_at && !isPlaceholderDateValue(gleifReferenceStatus.last_success_at),
   )
 
   const canTriggerGleifReference = !isGleifReferenceRunning && !isMasterDataRunning
@@ -1052,7 +1069,11 @@ export default function LEIStatusPage() {
                   onChange={(e) => setAutoRefresh(e.target.checked)}
                   className="w-4 h-4"
                 />
-                <span className="text-sm opacity-70">{t('leiStatus.page.autoRefresh')}</span>
+                <span className="text-sm opacity-70">
+                  {t('leiStatus.page.autoRefresh')} ({t('leiStatus.page.autoRefreshIntervalSeconds', {
+                    count: Math.round(autoRefreshIntervalMs / 1000),
+                  })})
+                </span>
               </label>
             </>
           }

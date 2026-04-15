@@ -1,4 +1,30 @@
 {
+  "leftNav": {
+    "title": "Navigation",
+    "open": "Open navigation panel",
+    "close": "Close navigation panel",
+    "toggle": "Toggle navigation panel",
+    "sections": {
+      "publicData": "Public Reference Data",
+      "masterData": "Master Data Management",
+      "dataAcquisition": "Data Acquisition & Processing",
+      "admin": "Admin"
+    },
+    "items": {
+      "dashboard": "Dashboard",
+      "countries": "Countries",
+      "currencies": "Currencies",
+      "languages": "Languages",
+      "leiRecords": "LEI Records",
+      "instruments": "Instruments",
+      "accounts": "Accounts",
+      "ssi": "SSI",
+      "codeMappings": "Code Mappings",
+      "syncTriggers": "Sync Triggers",
+      "adminUsers": "User Management",
+      "adminTranslations": "Translations"
+    }
+  },
   "nav": {
     "backToHome": "← Back to Home",
     "backToDashboard": "← Back to Dashboard",
@@ -799,7 +825,8 @@
       "expandDetails": "Expand details",
       "runningJobsStayExpanded": "Running jobs stay expanded",
       "refreshNow": "Refresh Now",
-      "autoRefresh": "Auto-refresh (5s)",
+      "autoRefresh": "Auto-refresh",
+      "autoRefreshIntervalSeconds": "{{count}}s",
       "connectionError": "Connection Error",
       "connectionErrorHint": "Make sure the backend is running and you have proper authentication.",
       "legendTitle": "Status Legend",
@@ -809,7 +836,7 @@
       "legendIdle": "Waiting for next scheduled run",
       "legendRunning": "Currently processing data",
       "legendFailed": "Encountered an error (auto-recovery on next startup)",
-      "dataSourceFooter": "Data source: GLEIF Golden Copy Files \u2022 Updated every 5 seconds when auto-refresh is enabled"
+      "dataSourceFooter": "Data source: GLEIF Golden Copy Files • Updated every 5 seconds when auto-refresh is enabled"
     }
   },
   "footer": {
@@ -958,6 +985,11 @@
     },
     "subtitle": "Browse supported language codes and metadata",
     "title": "Languages"
+  },
+  "referenceRecordsCard": {
+    "loading": "Loading...",
+    "noData": "—",
+    "totalRecords": "Total Records:"
   },
   "referenceLayout": {
     "displayCodesButton": "🏷️ Display: Codes",

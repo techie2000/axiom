@@ -37,6 +37,7 @@ var _ repository.GLEIFRegistrationAuthorityRepository = (*stubRARepo)(nil)
 type stubELFRepo struct {
 	deactivateCalled int
 	upserted         []*domain.GLEIFEntityLegalForm
+	findAllForSync   []*domain.GLEIFEntityLegalForm
 }
 
 func (r *stubELFRepo) Upsert(records []*domain.GLEIFEntityLegalForm) error {
@@ -47,10 +48,24 @@ func (r *stubELFRepo) Count() (int64, error) { return int64(len(r.upserted)), ni
 func (r *stubELFRepo) FindAll(_ int, _ int) ([]*domain.GLEIFEntityLegalForm, error) {
 	return r.upserted, nil
 }
+func (r *stubELFRepo) FindAllForSync() ([]*domain.GLEIFEntityLegalForm, error) {
+	return r.findAllForSync, nil
+}
 func (r *stubELFRepo) FindByELFCode(_ string) (*domain.GLEIFEntityLegalForm, error) { return nil, nil }
 func (r *stubELFRepo) DeactivateAll() error                                         { r.deactivateCalled++; return nil }
 
 var _ repository.GLEIFEntityLegalFormRepository = (*stubELFRepo)(nil)
+
+type stubELFAuditRepo struct {
+	upserted []*domain.GLEIFEntityLegalFormAudit
+}
+
+func (r *stubELFAuditRepo) UpsertAuditRecords(records []*domain.GLEIFEntityLegalFormAudit) error {
+	r.upserted = append(r.upserted, records...)
+	return nil
+}
+
+var _ repository.GLEIFEntityLegalFormAuditRepository = (*stubELFAuditRepo)(nil)
 
 type stubRoleRepo struct {
 	deactivateCalled int
@@ -98,14 +113,20 @@ func newTestGLEIFSvc(
 	elfRepo repository.GLEIFEntityLegalFormRepository,
 	roleRepo repository.GLEIFOrganizationalRoleRepository,
 	jurRepo repository.GLEIFLegalJurisdictionRepository,
+	auditRepo ...repository.GLEIFEntityLegalFormAuditRepository,
 ) *gleifReferenceService {
+	elfAuditRepo := repository.GLEIFEntityLegalFormAuditRepository(&stubELFAuditRepo{})
+	if len(auditRepo) > 0 && auditRepo[0] != nil {
+		elfAuditRepo = auditRepo[0]
+	}
 	return &gleifReferenceService{
-		raRepo:   raRepo,
-		elfRepo:  elfRepo,
-		roleRepo: roleRepo,
-		jurRepo:  jurRepo,
-		client:   client,
-		urls:     DefaultGLEIFReferenceURLs(),
+		raRepo:       raRepo,
+		elfRepo:      elfRepo,
+		elfAuditRepo: elfAuditRepo,
+		roleRepo:     roleRepo,
+		jurRepo:      jurRepo,
+		client:       client,
+		urls:         DefaultGLEIFReferenceURLs(),
 	}
 }
 
@@ -605,5 +626,61 @@ func TestFetchRegistrationAuthoritiesFromAPI_PaginatesAndMaps(t *testing.T) {
 	}
 	if records[1].OrganizationName != "Org 2" {
 		t.Fatalf("expected fallback organization name Org 2, got %q", records[1].OrganizationName)
+	}
+}
+
+func TestSyncEntityLegalForms_WritesAuditForCreateUpdateAndDecommission(t *testing.T) {
+	elfCSV := "ELF Code\tCountry\tSubdivision\tLegalFormName\tAbbreviation\tStatus\n" +
+		"2HBR\tDE\t\tGesellschaft mit beschrankter Haftung\tGmbH\tACTIVE\n" +
+		"9ZZZ\tUS\t\tLimited Liability Company\tLLC\tACTIVE\n"
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(elfCSV))
+	}))
+	defer srv.Close()
+
+	elfRepo := &stubELFRepo{findAllForSync: []*domain.GLEIFEntityLegalForm{
+		{ELFCode: "2HBR", CountryOfFormation: "DE", EntityLegalFormName: "GmbH", Status: "ACTIVE"},
+		{ELFCode: "7AAA", CountryOfFormation: "GB", EntityLegalFormName: "Old Form", Status: "ACTIVE"},
+	}}
+	auditRepo := &stubELFAuditRepo{}
+
+	svc := newTestGLEIFSvc(srv.Client(), &stubRARepo{}, elfRepo, &stubRoleRepo{}, &stubJurRepo{}, auditRepo)
+	svc.urls.EntityLegalForms = srv.URL
+
+	err := svc.SyncEntityLegalForms()
+	if err != nil {
+		t.Fatalf("expected nil error, got: %v", err)
+	}
+	if elfRepo.deactivateCalled != 1 {
+		t.Fatalf("expected deactivate called once, got %d", elfRepo.deactivateCalled)
+	}
+	if len(elfRepo.upserted) != 2 {
+		t.Fatalf("expected 2 upserted records, got %d", len(elfRepo.upserted))
+	}
+	// With key=(elf_code, language_code, country_subdivision_of_formation):
+	// - 2HBR matches pre-sync record → UPDATE (entity_legal_form_name changed)
+	// - 9ZZZ is new → CREATE
+	// - 7AAA was in pre-sync but absent from CSV → UPDATE (decommission)
+	if len(auditRepo.upserted) != 3 {
+		t.Fatalf("expected 3 audit records (1 update + 1 create + 1 decommission), got %d", len(auditRepo.upserted))
+	}
+
+	createCount := 0
+	updateCount := 0
+	for _, audit := range auditRepo.upserted {
+		switch audit.Action {
+		case "CREATE":
+			createCount++
+		case "UPDATE":
+			updateCount++
+		}
+	}
+	if createCount != 1 {
+		t.Fatalf("expected one CREATE audit record (9ZZZ), got %d", createCount)
+	}
+	if updateCount != 2 {
+		t.Fatalf("expected two UPDATE audit records (2HBR field change + 7AAA decommission), got %d", updateCount)
 	}
 }

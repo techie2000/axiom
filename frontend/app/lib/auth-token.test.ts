@@ -1,6 +1,31 @@
-// @vitest-environment jsdom
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { getAuthToken, isAuthenticated, normalizeAuthToken } from './auth-token'
+
+function createStorageMock() {
+  const store = new Map<string, string>()
+
+  return {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      store.set(key, String(value))
+    },
+    removeItem: (key: string) => {
+      store.delete(key)
+    },
+    clear: () => {
+      store.clear()
+    },
+  }
+}
+
+beforeEach(() => {
+  vi.stubGlobal('window', {})
+  vi.stubGlobal('localStorage', createStorageMock())
+})
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
 
 describe('normalizeAuthToken', () => {
   it('returns null for null input', () => {

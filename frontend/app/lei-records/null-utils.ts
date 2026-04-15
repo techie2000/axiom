@@ -1,3 +1,5 @@
+import { formatDateOnlyDisplay, isPlaceholderDateValue } from '../lib/date-display'
+
 export function isNullLikeValue(value: unknown): value is string {
   return typeof value === 'string' && value.trim().toLowerCase() === 'null'
 }
@@ -16,7 +18,7 @@ export function normalizeRecordNullLikeValues<T extends object>(record: T): T {
 }
 
 export function formatLEIDisplayValue(value: unknown): string {
-  if (!value || isNullLikeValue(value) || value === '0001-01-01T00:00:00Z') {
+  if (!value || isNullLikeValue(value) || isPlaceholderDateValue(value)) {
     return '-'
   }
 
@@ -55,12 +57,7 @@ export function formatLEICellValue(value: unknown, key: string): string {
   }
 
   if (key.includes('date') && typeof value === 'string') {
-    try {
-      const date = new Date(value)
-      return date.toISOString().split('T')[0]
-    } catch {
-      return baseDisplayValue
-    }
+    return formatDateOnlyDisplay(value, baseDisplayValue)
   }
 
   return baseDisplayValue

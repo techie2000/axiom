@@ -1,3 +1,5 @@
+import { isPlaceholderDateValue } from '../lib/date-display'
+
 export interface RelativeTimeInfo {
   days: number
   isOverdue: boolean
@@ -24,7 +26,7 @@ export type RelativeTimeTranslationKey =
 
 export function getRelativeTimeInfo(dateString: string, now: Date = new Date()): RelativeTimeInfo {
   const trimmedDate = (dateString || '').trim()
-  if (!trimmedDate || trimmedDate.startsWith('0001-')) {
+  if (isPlaceholderDateValue(trimmedDate)) {
     return {
       days: 0,
       isOverdue: false,

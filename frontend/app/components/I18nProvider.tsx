@@ -11,6 +11,7 @@
 
 import { useEffect } from 'react'
 import { I18nextProvider } from 'react-i18next'
+import { getApiBaseUrl } from '../lib/api-base'
 import i18n, { isRtlLanguage } from '../lib/i18n'
 import I18nMissingTranslationsDevTool from './I18nMissingTranslationsDevTool'
 
@@ -22,7 +23,7 @@ export default function I18nProvider({ children }: I18nProviderProps) {
   useEffect(() => {
     if (typeof window === 'undefined') return
 
-    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080'
+    const API_BASE_URL = getApiBaseUrl()
     let cancelled = false
     const approvedKeysByLanguage = new Map<string, Set<string>>()
 
