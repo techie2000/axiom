@@ -1755,7 +1755,7 @@ export default function LEIRecordsPage() {
                               key={String(column.key)}
                               className={`${column.key === 'lei' ? 'px-2' : 'px-4'} py-3 text-sm ${column.key === 'lei' ? 'font-mono' : ''} ${column.key.includes('date') || column.key === 'lei' ? 'whitespace-nowrap' : ''} ${
                                 column.key === 'lei' || column.key === 'legal_name'
-                                  ? "relative bg-[rgb(var(--surface-soft-rgb))] dark:bg-[rgb(var(--surface-rgb))] group-hover:bg-[rgb(var(--surface-muted-rgb))] dark:group-hover:bg-[rgb(var(--surface-muted-rgb))] shadow-[inset_-1px_0_0_0_rgba(203,213,225,1)] dark:shadow-[inset_-1px_0_0_0_rgba(55,65,81,1)] overflow-hidden text-ellipsis"
+                                  ? "relative bg-[rgb(var(--surface-soft-rgb))] dark:bg-[rgb(var(--surface-rgb))] group-hover:bg-[rgb(var(--surface-muted-rgb))] dark:group-hover:bg-[rgb(var(--surface-muted-rgb))] shadow-[inset_-1px_0_0_0_rgba(203,213,225,1)] dark:shadow-[inset_-1px_0_0_0_rgba(55,65,81,1)] border-b border-[rgb(var(--border-rgb)/0.7)] overflow-hidden text-ellipsis"
                                   : ''
                               }`}
                               style={(() => {
