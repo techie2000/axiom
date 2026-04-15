@@ -327,7 +327,10 @@ function SnapshotValue({ fieldKey, value, snapshot, showCodes = true, countryByC
       muted: 'theme-subtle',
     }
     return (
-      <span className={`inline-block px-2 py-1 text-xs rounded ${variantStyles[regStatusPresentation.variant]}`}>
+      <span
+        title={regStatusPresentation.tooltip}
+        className={`inline-block whitespace-nowrap px-2 py-1 text-xs rounded ${variantStyles[regStatusPresentation.variant]}`}
+      >
         {regStatusPresentation.label}
       </span>
     )
