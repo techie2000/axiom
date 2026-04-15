@@ -78,7 +78,7 @@ describe('getRegistrationStatusBadgePresentation', () => {
   it('returns green badge for ISSUED status', () => {
     const result = getRegistrationStatusBadgePresentation('ISSUED')
     expect(result).toEqual({
-      label: 'ISSUED',
+      label: 'Issued',
       tooltip: 'Registration is active and valid',
       variant: 'success',
     })
@@ -150,7 +150,7 @@ describe('getRegistrationStatusBadgePresentation', () => {
   it('handles lowercase input correctly', () => {
     const result = getRegistrationStatusBadgePresentation('issued')
     expect(result).toEqual({
-      label: 'ISSUED',
+      label: 'Issued',
       tooltip: 'Registration is active and valid',
       variant: 'success',
     })
