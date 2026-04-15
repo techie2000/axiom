@@ -79,6 +79,7 @@ describe('getRegistrationStatusBadgePresentation', () => {
     const result = getRegistrationStatusBadgePresentation('ISSUED')
     expect(result).toEqual({
       label: 'ISSUED',
+      tooltip: 'Registration is active and valid',
       variant: 'success',
     })
   })
@@ -87,6 +88,7 @@ describe('getRegistrationStatusBadgePresentation', () => {
     const result = getRegistrationStatusBadgePresentation('LAPSED')
     expect(result).toEqual({
       label: 'Lapsed',
+      tooltip: 'Renewal is overdue — this registration is no longer active',
       variant: 'destructive',
     })
   })
@@ -95,6 +97,7 @@ describe('getRegistrationStatusBadgePresentation', () => {
     const result = getRegistrationStatusBadgePresentation('RETIRED')
     expect(result).toEqual({
       label: 'Retired',
+      tooltip: 'Registration has been permanently retired',
       variant: 'destructive',
     })
   })
@@ -103,6 +106,7 @@ describe('getRegistrationStatusBadgePresentation', () => {
     const result = getRegistrationStatusBadgePresentation('ANNULLED')
     expect(result).toEqual({
       label: 'Annulled',
+      tooltip: 'Registration has been annulled and is considered invalid',
       variant: 'destructive',
     })
   })
@@ -111,6 +115,7 @@ describe('getRegistrationStatusBadgePresentation', () => {
     const result = getRegistrationStatusBadgePresentation('DUPLICATE')
     expect(result).toEqual({
       label: 'Duplicate',
+      tooltip: 'A duplicate superseded by another active registration',
       variant: 'destructive',
     })
   })
@@ -119,6 +124,7 @@ describe('getRegistrationStatusBadgePresentation', () => {
     const result = getRegistrationStatusBadgePresentation('PENDING_TRANSFER')
     expect(result).toEqual({
       label: 'Pending Transfer',
+      tooltip: 'Registration is being transferred to another operator',
       variant: 'warning',
     })
   })
@@ -127,6 +133,7 @@ describe('getRegistrationStatusBadgePresentation', () => {
     const result = getRegistrationStatusBadgePresentation('PENDING_ARCHIVAL')
     expect(result).toEqual({
       label: 'Pending Archival',
+      tooltip: 'Registration is pending archival',
       variant: 'warning',
     })
   })
@@ -135,6 +142,7 @@ describe('getRegistrationStatusBadgePresentation', () => {
     const result = getRegistrationStatusBadgePresentation('UNKNOWN_STATUS')
     expect(result).toEqual({
       label: 'Unknown Status',
+      tooltip: 'Unknown registration status',
       variant: 'muted',
     })
   })
@@ -143,6 +151,7 @@ describe('getRegistrationStatusBadgePresentation', () => {
     const result = getRegistrationStatusBadgePresentation('issued')
     expect(result).toEqual({
       label: 'ISSUED',
+      tooltip: 'Registration is active and valid',
       variant: 'success',
     })
   })
@@ -150,10 +159,12 @@ describe('getRegistrationStatusBadgePresentation', () => {
   it('handles empty string', () => {
     const result = getRegistrationStatusBadgePresentation('')
     expect(result.variant).toBe('muted')
+    expect(result.tooltip).toBe('Unknown registration status')
   })
 
   it('handles null value', () => {
     const result = getRegistrationStatusBadgePresentation(null)
     expect(result.variant).toBe('muted')
+    expect(result.tooltip).toBe('Unknown registration status')
   })
 })

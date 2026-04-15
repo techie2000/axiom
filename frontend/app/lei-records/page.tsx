@@ -1935,7 +1935,10 @@ export default function LEIRecordsPage() {
                                     muted: 'theme-subtle',
                                   }
                                   return (
-                                    <span className={`px-2 py-1 text-xs rounded ${variantStyles[regStatusPresentation.variant]}`}>
+                                    <span
+                                      title={regStatusPresentation.tooltip}
+                                      className={`inline-block whitespace-nowrap px-2 py-1 text-xs rounded ${variantStyles[regStatusPresentation.variant]}`}
+                                    >
                                       {regStatusPresentation.label}
                                     </span>
                                   )
@@ -2488,9 +2491,14 @@ export default function LEIRecordsPage() {
                         muted: 'theme-subtle',
                       }
                       return (
-                        <span className={`inline-block mt-1 px-2 py-1 text-xs rounded ${variantStyles[regStatusPresentation.variant]}`}>
-                          {regStatusPresentation.label}
-                        </span>
+                        <p className="mt-1">
+                          <span
+                            title={regStatusPresentation.tooltip}
+                            className={`inline-block whitespace-nowrap px-2 py-1 text-xs rounded ${variantStyles[regStatusPresentation.variant]}`}
+                          >
+                            {regStatusPresentation.label}
+                          </span>
+                        </p>
                       )
                     })()}
                   </div>

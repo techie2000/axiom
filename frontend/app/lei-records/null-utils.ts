@@ -48,15 +48,27 @@ export function getStatusBadgePresentation(value: unknown): { label: string; isA
 
 export type RegistrationStatusVariant = 'success' | 'destructive' | 'warning' | 'muted'
 
+const REGISTRATION_STATUS_TOOLTIPS: Record<string, string> = {
+  ISSUED: 'Registration is active and valid',
+  LAPSED: 'Renewal is overdue — this registration is no longer active',
+  RETIRED: 'Registration has been permanently retired',
+  ANNULLED: 'Registration has been annulled and is considered invalid',
+  DUPLICATE: 'A duplicate superseded by another active registration',
+  PENDING_TRANSFER: 'Registration is being transferred to another operator',
+  PENDING_ARCHIVAL: 'Registration is pending archival',
+}
+
 export function getRegistrationStatusBadgePresentation(value: unknown): {
   label: string
+  tooltip: string
   variant: RegistrationStatusVariant
 } {
   const rawValue = String(value || '').toUpperCase().trim()
+  const tooltip = REGISTRATION_STATUS_TOOLTIPS[rawValue] ?? 'Unknown registration status'
 
   // Active status
   if (rawValue === 'ISSUED') {
-    return { label: 'ISSUED', variant: 'success' }
+    return { label: 'ISSUED', tooltip, variant: 'success' }
   }
 
   // Invalid/lapsed statuses
@@ -66,16 +78,16 @@ export function getRegistrationStatusBadgePresentation(value: unknown): {
     rawValue === 'ANNULLED' ||
     rawValue === 'DUPLICATE'
   ) {
-    return { label: formatEnumDisplayValue(rawValue), variant: 'destructive' }
+    return { label: formatEnumDisplayValue(rawValue), tooltip, variant: 'destructive' }
   }
 
   // In-transition statuses
   if (rawValue === 'PENDING_TRANSFER' || rawValue === 'PENDING_ARCHIVAL') {
-    return { label: formatEnumDisplayValue(rawValue), variant: 'warning' }
+    return { label: formatEnumDisplayValue(rawValue), tooltip, variant: 'warning' }
   }
 
   // Unknown/future values - defensive fallback
-  return { label: formatEnumDisplayValue(rawValue), variant: 'muted' }
+  return { label: formatEnumDisplayValue(rawValue), tooltip, variant: 'muted' }
 }
 
 export function formatLEICellValue(value: unknown, key: string): string {
