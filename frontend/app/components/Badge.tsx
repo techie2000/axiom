@@ -9,7 +9,6 @@ interface BadgeProps {
   shape?: BadgeShape
   mono?: boolean
   className?: string
-  title?: string
 }
 
 const variantClasses: Record<BadgeVariant, string> = {
@@ -34,11 +33,9 @@ export default function Badge({
   shape = 'rounded',
   mono = false,
   className = '',
-  title,
 }: BadgeProps) {
   return (
     <span
-      title={title}
       className={[
         'px-2 py-1 text-xs font-medium',
         variantClasses[variant],
