@@ -4,6 +4,12 @@
     "open": "Open navigation panel",
     "close": "Close navigation panel",
     "toggle": "Toggle navigation panel",
+    "favoritesOnly": "Show favourites only",
+    "addFavorite": "Add {{page}} to favourites",
+    "removeFavorite": "Remove {{page}} from favourites",
+    "favoritesEmptyTitle": "No favourite pages yet",
+    "favoritesEmptyDescription": "Star pages from the navigation list to quickly access them here.",
+    "showAllPages": "Show all pages",
     "sections": {
       "publicData": "Public Reference Data",
       "masterData": "Master Data Management",
@@ -109,6 +115,8 @@
     "noThanks": "No thanks",
     "buttonEmoji": "Button labels",
     "buttonEmojiDescription": "Choose how emoji icons appear on page action buttons.",
+    "favoritesOnlyNavigation": "Navigation favourites filter",
+    "favoritesOnlyNavigationDescription": "Show only your favourite pages in the left navigation menu.",
     "buttonEmojiMode": {
       "both": "Both",
       "text": "Text",
@@ -545,7 +553,8 @@
       "overdueByMonth_other": "Overdue by {{count}} months",
       "overdueByYear": "Overdue by {{count}} years",
       "overdueByYear_one": "Overdue by {{count}} year",
-      "overdueByYear_other": "Overdue by {{count}} years"
+      "overdueByYear_other": "Overdue by {{count}} years",
+      "${key}": "leiRecords.relativeTime.${key}"
     },
     "noDataMatchesFilters": "No LEI data matches the selected filters.",
     "columns": {

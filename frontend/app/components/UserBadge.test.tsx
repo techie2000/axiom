@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react'
-import { render, waitFor } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { cleanup, fireEvent, render, waitFor } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import UserBadge from './UserBadge'
 
 (globalThis as { React?: typeof React }).React = React
@@ -11,9 +11,11 @@ const mocks = vi.hoisted(() => ({
   applyDarkMode: vi.fn(),
   replace: vi.fn(),
   setMapProvider: vi.fn(),
+  setFavoritesOnlyNavigation: vi.fn(),
   setEnglishTooltipsPreferenceEnabled: vi.fn(),
   setEmojiMode: vi.fn(),
   mapProvider: 'openstreetmap',
+  favoritesOnlyNavigation: 'false',
   theme: 'default',
   darkMode: 'dark',
   user: {
@@ -64,6 +66,9 @@ vi.mock('../lib/useUserPreference', () => ({
     if (prefKey === 'dark_mode') {
       return [mocks.darkMode, vi.fn(), false] as const
     }
+    if (prefKey === 'nav_favorites_only') {
+      return [mocks.favoritesOnlyNavigation, mocks.setFavoritesOnlyNavigation, false] as const
+    }
     return [defaultValue, vi.fn(), false] as const
   },
 }))
@@ -90,14 +95,18 @@ vi.mock('./LanguageSelector', () => ({
 }))
 
 describe('UserBadge theme bootstrapping', () => {
+  afterEach(() => cleanup())
+
   beforeEach(() => {
     mocks.applyTheme.mockReset()
     mocks.applyDarkMode.mockReset()
     mocks.replace.mockReset()
     mocks.setMapProvider.mockReset()
+    mocks.setFavoritesOnlyNavigation.mockReset()
     mocks.setEnglishTooltipsPreferenceEnabled.mockReset()
     mocks.setEmojiMode.mockReset()
     mocks.mapProvider = 'openstreetmap'
+    mocks.favoritesOnlyNavigation = 'false'
     mocks.theme = 'default'
     mocks.darkMode = 'dark'
   })
@@ -119,5 +128,15 @@ describe('UserBadge theme bootstrapping', () => {
       expect(mocks.applyTheme).toHaveBeenCalledWith('supabase')
       expect(mocks.applyDarkMode).toHaveBeenCalledWith(false)
     })
+  })
+
+  it('updates favourites-only navigation preference from user menu', async () => {
+    const { getAllByRole, getByRole } = render(<UserBadge />)
+    fireEvent.click(getAllByRole('button', { name: /Test User/i })[0])
+
+    const checkbox = getByRole('checkbox', { name: 'preferences.favoritesOnlyNavigation' })
+    fireEvent.click(checkbox)
+
+    expect(mocks.setFavoritesOnlyNavigation).toHaveBeenCalledWith('true')
   })
 })

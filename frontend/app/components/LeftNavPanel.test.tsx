@@ -10,6 +10,14 @@ const mocks = vi.hoisted(() => ({
   pathname: '/countries',
   token: null as string | null,
   user: null as { role: string } | null,
+  favoriteHrefs: '[]',
+  favoritesOnly: 'false',
+  setFavoriteHrefs: vi.fn((value: string) => {
+    mocks.favoriteHrefs = value
+  }),
+  setFavoritesOnly: vi.fn((value: string) => {
+    mocks.favoritesOnly = value
+  }),
 }))
 
 vi.mock('next/navigation', () => ({
@@ -38,6 +46,18 @@ vi.mock('../lib/stored-user', () => ({
   readStoredUser: () => mocks.user,
 }))
 
+vi.mock('../lib/useUserPreference', () => ({
+  useUserPreference: (_pageKey: string, prefKey: string, defaultValue: string) => {
+    if (prefKey === 'nav_favorites') {
+      return [mocks.favoriteHrefs, mocks.setFavoriteHrefs, false] as const
+    }
+    if (prefKey === 'nav_favorites_only') {
+      return [mocks.favoritesOnly, mocks.setFavoritesOnly, false] as const
+    }
+    return [defaultValue, vi.fn(), false] as const
+  },
+}))
+
 describe('LeftNavPanel', () => {
   afterEach(() => cleanup())
 
@@ -45,6 +65,10 @@ describe('LeftNavPanel', () => {
     mocks.pathname = '/countries'
     mocks.token = null
     mocks.user = null
+    mocks.favoriteHrefs = '[]'
+    mocks.favoritesOnly = 'false'
+    mocks.setFavoriteHrefs.mockClear()
+    mocks.setFavoritesOnly.mockClear()
   })
 
   it('renders the trigger button', () => {
@@ -178,5 +202,38 @@ describe('LeftNavPanel', () => {
       const nav = container.querySelector('[role="navigation"]')
       expect(nav?.className).toContain('-translate-x-full')
     })
+  })
+
+  it('saves favourite href when starring a navigation item', async () => {
+    const { container } = render(<LeftNavPanel />)
+    const favoriteButtons = container.querySelectorAll('button[aria-label="leftNav.addFavorite"]')
+    expect(favoriteButtons.length).toBeGreaterThan(0)
+
+    fireEvent.click(favoriteButtons[0])
+
+    expect(mocks.setFavoriteHrefs).toHaveBeenCalled()
+    const latestCall = mocks.setFavoriteHrefs.mock.calls.at(-1)?.[0] as string
+    const parsed = JSON.parse(latestCall) as string[]
+    expect(parsed.length).toBeGreaterThan(0)
+  })
+
+  it('filters navigation items when favourites-only is enabled', () => {
+    mocks.favoritesOnly = 'true'
+    mocks.favoriteHrefs = '["/languages"]'
+
+    const { queryByText, getByText } = render(<LeftNavPanel />)
+    expect(getByText('leftNav.items.languages')).toBeTruthy()
+    expect(queryByText('leftNav.items.countries')).toBeNull()
+  })
+
+  it('shows empty-state and resets to all pages when no favourites are visible', () => {
+    mocks.favoritesOnly = 'true'
+    mocks.favoriteHrefs = '[]'
+
+    const { getByText } = render(<LeftNavPanel />)
+    expect(getByText('leftNav.favoritesEmptyTitle')).toBeTruthy()
+
+    fireEvent.click(getByText('leftNav.showAllPages'))
+    expect(mocks.setFavoritesOnly).toHaveBeenCalledWith('false')
   })
 })
