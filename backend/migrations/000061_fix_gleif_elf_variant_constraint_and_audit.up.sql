@@ -19,6 +19,15 @@ CREATE INDEX IF NOT EXISTS idx_gleif_elf_audit_elf_code
 CREATE INDEX IF NOT EXISTS idx_gleif_elf_audit_created_at
     ON lei_raw.gleif_entity_legal_forms_audit (created_at DESC);
 
+CREATE INDEX IF NOT EXISTS idx_gleif_elf_audit_elf_variant_id
+    ON lei_raw.gleif_entity_legal_forms_audit (elf_variant_id);
+
+CREATE INDEX IF NOT EXISTS idx_gleif_elf_audit_action
+    ON lei_raw.gleif_entity_legal_forms_audit (action);
+
+CREATE INDEX IF NOT EXISTS idx_gleif_elf_audit_variant_action_created_at
+    ON lei_raw.gleif_entity_legal_forms_audit (elf_variant_id, action, created_at DESC);
+
 COMMENT ON TABLE lei_raw.gleif_entity_legal_forms_audit IS
 'Full audit history for lei_raw.gleif_entity_legal_forms lifecycle changes. Records CREATE/UPDATE transitions with JSONB snapshot and changed-fields diff.';
 

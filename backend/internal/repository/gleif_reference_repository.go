@@ -155,7 +155,7 @@ func (r *gleifEntityLegalFormAuditRepository) UpsertAuditRecords(records []*doma
 	if len(records) == 0 {
 		return nil
 	}
-	return r.db.Create(records).Error
+	return r.db.CreateInBatches(records, 500).Error
 }
 
 // GLEIFOrganizationalRoleRepository defines data access for GLEIF organizational roles.

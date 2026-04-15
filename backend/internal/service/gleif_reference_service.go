@@ -679,16 +679,24 @@ func (s *gleifReferenceService) SyncEntityLegalForms() error {
 		auditRecords = append(auditRecords, buildELFAuditRecord(existing, &decommissioned, "UPDATE"))
 	}
 
+	// Build a deduplicated upsert slice from incomingByKey so that two CSV rows
+	// sharing the same 3-col key cannot land in the same batch and trigger
+	// "ON CONFLICT DO UPDATE command cannot affect row a second time".
+	upsertRecords := make([]*domain.GLEIFEntityLegalForm, 0, len(incomingByKey))
+	for _, rec := range incomingByKey {
+		upsertRecords = append(upsertRecords, rec)
+	}
+
 	if err := s.elfRepo.DeactivateAll(); err != nil {
 		return fmt.Errorf("deactivate entity legal forms: %w", err)
 	}
 
-	for i := 0; i < len(records); i += gleifBatchSize {
+	for i := 0; i < len(upsertRecords); i += gleifBatchSize {
 		end := i + gleifBatchSize
-		if end > len(records) {
-			end = len(records)
+		if end > len(upsertRecords) {
+			end = len(upsertRecords)
 		}
-		if err := s.elfRepo.Upsert(records[i:end]); err != nil {
+		if err := s.elfRepo.Upsert(upsertRecords[i:end]); err != nil {
 			return fmt.Errorf("upsert entity legal forms batch: %w", err)
 		}
 	}
@@ -1231,10 +1239,16 @@ func elfVariantKey(record *domain.GLEIFEntityLegalForm) string {
 	if record == nil {
 		return ""
 	}
+	// Prefer subdivision; fall back to country to avoid empty middle segment collapsing
+	// unrelated variants onto the same key when subdivision is absent in the source CSV.
+	subdivision := strings.ToUpper(strings.TrimSpace(record.CountrySubdivisionOfFormation))
+	if subdivision == "" {
+		subdivision = strings.ToUpper(strings.TrimSpace(record.CountryOfFormation))
+	}
 	return strings.Join([]string{
 		strings.TrimSpace(record.ELFCode),
 		strings.ToLower(strings.TrimSpace(record.LanguageCode)),
-		strings.ToUpper(strings.TrimSpace(record.CountrySubdivisionOfFormation)),
+		subdivision,
 	}, "|")
 }
 
