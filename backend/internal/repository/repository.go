@@ -25,6 +25,7 @@ type Repositories struct {
 	UITranslation              UITranslationRepository
 	GLEIFRegistrationAuthority GLEIFRegistrationAuthorityRepository
 	GLEIFEntityLegalForm       GLEIFEntityLegalFormRepository
+	GLEIFEntityLegalFormAudit  GLEIFEntityLegalFormAuditRepository
 	GLEIFOrganizationalRole    GLEIFOrganizationalRoleRepository
 	GLEIFLegalJurisdiction     GLEIFLegalJurisdictionRepository
 }
@@ -48,6 +49,7 @@ func NewRepositories(db *gorm.DB) *Repositories {
 		UITranslation:              NewUITranslationRepository(db),
 		GLEIFRegistrationAuthority: NewGLEIFRegistrationAuthorityRepository(db),
 		GLEIFEntityLegalForm:       NewGLEIFEntityLegalFormRepository(db),
+		GLEIFEntityLegalFormAudit:  NewGLEIFEntityLegalFormAuditRepository(db),
 		GLEIFOrganizationalRole:    NewGLEIFOrganizationalRoleRepository(db),
 		GLEIFLegalJurisdiction:     NewGLEIFLegalJurisdictionRepository(db),
 	}

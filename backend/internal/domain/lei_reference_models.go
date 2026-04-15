@@ -53,6 +53,23 @@ func (GLEIFEntityLegalForm) TableName() string {
 	return "lei_raw.gleif_entity_legal_forms"
 }
 
+// GLEIFEntityLegalFormAudit records lifecycle changes for ELF variants.
+type GLEIFEntityLegalFormAudit struct {
+	ID             uuid.UUID   `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	ELFVariantID   *uuid.UUID  `gorm:"type:uuid;index" json:"elf_variant_id"`
+	ELFCode        string      `gorm:"column:elf_code;size:10;not null;index" json:"elf_code"`
+	Action         string      `gorm:"size:20;not null" json:"action"`
+	RecordSnapshot JSONBString `gorm:"type:jsonb;not null" json:"record_snapshot"`
+	ChangedFields  JSONBString `gorm:"type:jsonb" json:"changed_fields"`
+	ChangedBy      string      `gorm:"size:100;not null;default:'system'" json:"changed_by"`
+	CreatedAt      time.Time   `json:"created_at"`
+}
+
+// TableName sets the GORM table name.
+func (GLEIFEntityLegalFormAudit) TableName() string {
+	return "lei_raw.gleif_entity_legal_forms_audit"
+}
+
 // GLEIFOrganizationalRole represents an ISO 5009 Official Organizational Role reference record.
 // Source: GLEIF organizational roles code list (CSV).
 // Resolves role codes in LEI Level 2 data to human-readable role names.

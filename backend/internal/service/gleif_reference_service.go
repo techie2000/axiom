@@ -103,15 +103,16 @@ func DefaultGLEIFReferenceURLs() GLEIFReferenceURLs {
 }
 
 type gleifReferenceService struct {
-	raRepo    repository.GLEIFRegistrationAuthorityRepository
-	elfRepo   repository.GLEIFEntityLegalFormRepository
-	roleRepo  repository.GLEIFOrganizationalRoleRepository
-	jurRepo   repository.GLEIFLegalJurisdictionRepository
-	client    *http.Client
-	urls      GLEIFReferenceURLs
-	dataDir   string
-	statsMu   sync.RWMutex
-	lastStats GLEIFSyncStats
+	raRepo       repository.GLEIFRegistrationAuthorityRepository
+	elfRepo      repository.GLEIFEntityLegalFormRepository
+	elfAuditRepo repository.GLEIFEntityLegalFormAuditRepository
+	roleRepo     repository.GLEIFOrganizationalRoleRepository
+	jurRepo      repository.GLEIFLegalJurisdictionRepository
+	client       *http.Client
+	urls         GLEIFReferenceURLs
+	dataDir      string
+	statsMu      sync.RWMutex
+	lastStats    GLEIFSyncStats
 }
 
 // NewGLEIFReferenceService creates a new GLEIFReferenceService using the production GLEIF URLs.
@@ -120,30 +121,33 @@ type gleifReferenceService struct {
 func NewGLEIFReferenceService(
 	raRepo repository.GLEIFRegistrationAuthorityRepository,
 	elfRepo repository.GLEIFEntityLegalFormRepository,
+	elfAuditRepo repository.GLEIFEntityLegalFormAuditRepository,
 	roleRepo repository.GLEIFOrganizationalRoleRepository,
 	jurRepo repository.GLEIFLegalJurisdictionRepository,
 	leiDataDir string,
 ) GLEIFReferenceService {
-	return NewGLEIFReferenceServiceWithURLs(raRepo, elfRepo, roleRepo, jurRepo, leiDataDir, DefaultGLEIFReferenceURLs())
+	return NewGLEIFReferenceServiceWithURLs(raRepo, elfRepo, elfAuditRepo, roleRepo, jurRepo, leiDataDir, DefaultGLEIFReferenceURLs())
 }
 
 // NewGLEIFReferenceServiceWithURLs creates a new GLEIFReferenceService with explicit CSV source URLs.
 func NewGLEIFReferenceServiceWithURLs(
 	raRepo repository.GLEIFRegistrationAuthorityRepository,
 	elfRepo repository.GLEIFEntityLegalFormRepository,
+	elfAuditRepo repository.GLEIFEntityLegalFormAuditRepository,
 	roleRepo repository.GLEIFOrganizationalRoleRepository,
 	jurRepo repository.GLEIFLegalJurisdictionRepository,
 	leiDataDir string,
 	urls GLEIFReferenceURLs,
 ) GLEIFReferenceService {
 	return &gleifReferenceService{
-		raRepo:   raRepo,
-		elfRepo:  elfRepo,
-		roleRepo: roleRepo,
-		jurRepo:  jurRepo,
-		client:   &http.Client{Timeout: gleifHTTPTimeout},
-		urls:     urls,
-		dataDir:  filepath.Join(leiDataDir, "gleif-reference"),
+		raRepo:       raRepo,
+		elfRepo:      elfRepo,
+		elfAuditRepo: elfAuditRepo,
+		roleRepo:     roleRepo,
+		jurRepo:      jurRepo,
+		client:       &http.Client{Timeout: gleifHTTPTimeout},
+		urls:         urls,
+		dataDir:      filepath.Join(leiDataDir, "gleif-reference"),
 	}
 }
 
@@ -619,6 +623,62 @@ func (s *gleifReferenceService) SyncEntityLegalForms() error {
 		log.Info().Int("collapsed_rows", dropped).Int("affected_codes", len(dupCodes)).Strs("sample_codes", sampleKeys(dupCodes, 25)).Msg("Collapsed exact duplicate entity legal form rows before upsert")
 	}
 
+	existingRecords, err := s.elfRepo.FindAllForSync()
+	if err != nil {
+		return fmt.Errorf("load existing entity legal forms: %w", err)
+	}
+	existingByKey := make(map[string]*domain.GLEIFEntityLegalForm, len(existingRecords))
+	for _, existing := range existingRecords {
+		if existing == nil {
+			continue
+		}
+		key := elfVariantKey(existing)
+		if key == "" {
+			continue
+		}
+		if current, found := existingByKey[key]; !found || shouldPreferELFRecord(existing, current) {
+			existingByKey[key] = existing
+		}
+	}
+
+	incomingByKey := make(map[string]*domain.GLEIFEntityLegalForm, len(records))
+	for _, rec := range records {
+		if rec == nil {
+			continue
+		}
+		key := elfVariantKey(rec)
+		if key == "" {
+			continue
+		}
+		if current, found := incomingByKey[key]; !found || shouldPreferELFRecord(rec, current) {
+			incomingByKey[key] = rec
+		}
+	}
+
+	auditRecords := make([]*domain.GLEIFEntityLegalFormAudit, 0, len(records))
+	for key, incoming := range incomingByKey {
+		existing, found := existingByKey[key]
+		if !found {
+			auditRecords = append(auditRecords, buildELFAuditRecord(nil, incoming, "CREATE"))
+			continue
+		}
+		if changedFields := buildELFChangedFields(existing, incoming); changedFields != "{}" {
+			auditRecords = append(auditRecords, buildELFAuditRecord(existing, incoming, "UPDATE"))
+		}
+	}
+
+	for key, existing := range existingByKey {
+		if _, found := incomingByKey[key]; found {
+			continue
+		}
+		if strings.EqualFold(strings.TrimSpace(existing.Status), "DECOMMISSIONED") {
+			continue
+		}
+		decommissioned := *existing
+		decommissioned.Status = "DECOMMISSIONED"
+		auditRecords = append(auditRecords, buildELFAuditRecord(existing, &decommissioned, "UPDATE"))
+	}
+
 	if err := s.elfRepo.DeactivateAll(); err != nil {
 		return fmt.Errorf("deactivate entity legal forms: %w", err)
 	}
@@ -630,6 +690,12 @@ func (s *gleifReferenceService) SyncEntityLegalForms() error {
 		}
 		if err := s.elfRepo.Upsert(records[i:end]); err != nil {
 			return fmt.Errorf("upsert entity legal forms batch: %w", err)
+		}
+	}
+
+	if s.elfAuditRepo != nil {
+		if err := s.elfAuditRepo.UpsertAuditRecords(auditRecords); err != nil {
+			return fmt.Errorf("write entity legal form audit records: %w", err)
 		}
 	}
 
@@ -1159,6 +1225,95 @@ func dedupeLegalJurisdictions(records []*domain.GLEIFLegalJurisdiction) ([]*doma
 		result = append(result, record)
 	}
 	return result, dropped, sortedKeys(duplicateKeys)
+}
+
+func elfVariantKey(record *domain.GLEIFEntityLegalForm) string {
+	if record == nil {
+		return ""
+	}
+	return strings.Join([]string{
+		strings.TrimSpace(record.ELFCode),
+		strings.ToLower(strings.TrimSpace(record.LanguageCode)),
+		strings.ToUpper(strings.TrimSpace(record.CountrySubdivisionOfFormation)),
+	}, "|")
+}
+
+func shouldPreferELFRecord(candidate, current *domain.GLEIFEntityLegalForm) bool {
+	if current == nil {
+		return true
+	}
+	candidateActive := strings.EqualFold(strings.TrimSpace(candidate.Status), "ACTIVE")
+	currentActive := strings.EqualFold(strings.TrimSpace(current.Status), "ACTIVE")
+	if candidateActive != currentActive {
+		return candidateActive
+	}
+	if !candidate.UpdatedAt.Equal(current.UpdatedAt) {
+		return candidate.UpdatedAt.After(current.UpdatedAt)
+	}
+	return candidate.CreatedAt.After(current.CreatedAt)
+}
+
+func buildELFChangedFields(oldRecord, newRecord *domain.GLEIFEntityLegalForm) domain.JSONBString {
+	changes := make(map[string]map[string]string)
+	if oldRecord == nil {
+		return "{}"
+	}
+
+	add := func(field, oldValue, newValue string) {
+		if strings.TrimSpace(oldValue) == strings.TrimSpace(newValue) {
+			return
+		}
+		changes[field] = map[string]string{"old": oldValue, "new": newValue}
+	}
+
+	add("entity_legal_form_name", oldRecord.EntityLegalFormName, newRecord.EntityLegalFormName)
+	add("abbreviations", oldRecord.Abbreviations, newRecord.Abbreviations)
+	add("language_code", oldRecord.LanguageCode, newRecord.LanguageCode)
+	add("country_of_formation", oldRecord.CountryOfFormation, newRecord.CountryOfFormation)
+	add("country_subdivision_of_formation", oldRecord.CountrySubdivisionOfFormation, newRecord.CountrySubdivisionOfFormation)
+	add("status", oldRecord.Status, newRecord.Status)
+
+	if len(changes) == 0 {
+		return "{}"
+	}
+	body, err := json.Marshal(changes)
+	if err != nil {
+		return "{}"
+	}
+	return domain.JSONBString(string(body))
+}
+
+func buildELFAuditRecord(oldRecord, newRecord *domain.GLEIFEntityLegalForm, action string) *domain.GLEIFEntityLegalFormAudit {
+	audit := &domain.GLEIFEntityLegalFormAudit{
+		ELFCode:        strings.TrimSpace(newRecord.ELFCode),
+		Action:         action,
+		RecordSnapshot: marshalELFRecordSnapshot(newRecord),
+		ChangedFields:  buildELFChangedFields(oldRecord, newRecord),
+		ChangedBy:      "gleif_sync",
+	}
+	if oldRecord != nil {
+		audit.ELFVariantID = &oldRecord.ID
+	}
+	if oldRecord == nil {
+		audit.ChangedFields = "{}"
+	}
+	return audit
+}
+
+func marshalELFRecordSnapshot(record *domain.GLEIFEntityLegalForm) domain.JSONBString {
+	body, err := json.Marshal(map[string]string{
+		"elf_code":                         strings.TrimSpace(record.ELFCode),
+		"entity_legal_form_name":           strings.TrimSpace(record.EntityLegalFormName),
+		"abbreviations":                    strings.TrimSpace(record.Abbreviations),
+		"language_code":                    strings.TrimSpace(record.LanguageCode),
+		"country_of_formation":             strings.TrimSpace(record.CountryOfFormation),
+		"country_subdivision_of_formation": strings.TrimSpace(record.CountrySubdivisionOfFormation),
+		"status":                           strings.ToUpper(strings.TrimSpace(record.Status)),
+	})
+	if err != nil {
+		return "{}"
+	}
+	return domain.JSONBString(string(body))
 }
 
 func firstNonEmpty(values ...string) string {
