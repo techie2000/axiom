@@ -1,3 +1,10 @@
+export const REGISTRATION_STATUS_BADGE_VARIANT: Record<RegistrationStatusVariant, 'green' | 'red' | 'yellow' | 'gray'> = {
+  success: 'green',
+  destructive: 'red',
+  warning: 'yellow',
+  muted: 'gray',
+}
+
 import { formatDateOnlyDisplay, isPlaceholderDateValue } from '../lib/date-display'
 
 export function isNullLikeValue(value: unknown): value is string {
@@ -68,7 +75,7 @@ export function getRegistrationStatusBadgePresentation(value: unknown): {
 
   // Active status
   if (rawValue === 'ISSUED') {
-    return { label: 'ISSUED', tooltip, variant: 'success' }
+    return { label: formatEnumDisplayValue(rawValue), tooltip, variant: 'success' }
   }
 
   // Invalid/lapsed statuses
