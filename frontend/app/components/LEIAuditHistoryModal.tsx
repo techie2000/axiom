@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import CountryFlag from './CountryFlag'
 import { useButtonEmojiMode } from '../lib/useButtonEmojiMode'
+import { getRegistrationStatusBadgePresentation } from '../lei-records/null-utils'
 
 export interface LEIAuditEntry {
   id: string
@@ -314,6 +315,20 @@ function SnapshotValue({ fieldKey, value, snapshot, showCodes = true, countryByC
       <span className="inline-flex items-center gap-1.5">
         <CountryFlag countryCode={code} />
         <span>{displayText}</span>
+      </span>
+    )
+  }
+  if (fieldKey === 'registration_status' && typeof value === 'string' && value.trim().length > 0) {
+    const regStatusPresentation = getRegistrationStatusBadgePresentation(value)
+    const variantStyles = {
+      success: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+      destructive: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+      warning: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
+      muted: 'theme-subtle',
+    }
+    return (
+      <span className={`inline-block px-2 py-1 text-xs rounded ${variantStyles[regStatusPresentation.variant]}`}>
+        {regStatusPresentation.label}
       </span>
     )
   }
