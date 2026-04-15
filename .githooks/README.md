@@ -25,7 +25,7 @@ blocked.
 
 #### 2. Markdown linting
 
-Runs `npx --yes markdownlint-cli2` against every staged `.md` file using the project rules in
+Runs `npx --no-install markdownlint-cli2` against every staged `.md` file using the project rules in
 `.markdownlint.yaml`.
 
 **Rules enforced:**
@@ -155,5 +155,5 @@ git config --unset core.hooksPath
 
 | Tool | Purpose | Install |
 | ---- | ------- | ------- |
-| `npx` with `markdownlint-cli2` | Markdown linting (pre-commit) | Install Node.js/npm, then run `npx --yes markdownlint-cli2 --version` |
+| `npx` with `markdownlint-cli2` | Markdown linting (pre-commit) | Install Node.js/npm and project tools, then run `npx --no-install markdownlint-cli2 --version` |
 | `pwsh` (PowerShell 7+) | VS Code settings + RA URL sorting (pre-commit, pre-push) | [Install PowerShell](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell) |

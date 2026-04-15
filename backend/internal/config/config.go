@@ -111,9 +111,15 @@ func Load() (*Config, error) {
 
 	// Bind user-friendly env var names for Playwright testing configuration.
 	// These override the default TESTING_* prefix that AutomaticEnv would produce.
-	_ = viper.BindEnv("testing.playwrightseeduser", "PLAYWRIGHT_SEED_USER")
-	_ = viper.BindEnv("testing.playwrightuseremail", "PLAYWRIGHT_USER_EMAIL")
-	_ = viper.BindEnv("testing.playwrightuserpassword", "PLAYWRIGHT_USER_PASSWORD")
+	if err := viper.BindEnv("testing.playwrightseeduser", "PLAYWRIGHT_SEED_USER"); err != nil {
+		return nil, err
+	}
+	if err := viper.BindEnv("testing.playwrightuseremail", "PLAYWRIGHT_USER_EMAIL"); err != nil {
+		return nil, err
+	}
+	if err := viper.BindEnv("testing.playwrightuserpassword", "PLAYWRIGHT_USER_PASSWORD"); err != nil {
+		return nil, err
+	}
 
 	var config Config
 	if err := viper.Unmarshal(&config); err != nil {

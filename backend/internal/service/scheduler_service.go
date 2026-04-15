@@ -461,9 +461,11 @@ func (s *schedulerService) initializeNextRunTimes() {
 	// Ensure GLEIF_REFERENCE_SYNC exists and is chained after MASTER_DATA_SYNC.
 	if gleifStatus, gleifErr := s.leiService.GetProcessingStatus("GLEIF_REFERENCE_SYNC"); gleifErr != nil {
 		now := time.Now()
+		nextRun := s.calculateNextDailyFullRun()
 		newGLEIF := &domain.FileProcessingStatus{
 			JobType:          "GLEIF_REFERENCE_SYNC",
 			Status:           "IDLE",
+			NextRunAt:        nextRun,
 			DependsOnJobType: "MASTER_DATA_SYNC",
 			CreatedAt:        now,
 			UpdatedAt:        now,
@@ -473,10 +475,21 @@ func (s *schedulerService) initializeNextRunTimes() {
 		} else {
 			log.Info().Msg("GLEIF_REFERENCE_SYNC job status row created")
 		}
-	} else if gleifStatus.DependsOnJobType != "MASTER_DATA_SYNC" {
-		gleifStatus.DependsOnJobType = "MASTER_DATA_SYNC"
-		if updateErr := s.leiService.UpdateProcessingStatus(gleifStatus); updateErr != nil {
-			log.Error().Err(updateErr).Msg("Failed to set depends_on_job_type on GLEIF_REFERENCE_SYNC")
+	} else {
+		targetNextRun := s.calculateNextDailyFullRun()
+		needsUpdate := false
+		if gleifStatus.DependsOnJobType != "MASTER_DATA_SYNC" {
+			gleifStatus.DependsOnJobType = "MASTER_DATA_SYNC"
+			needsUpdate = true
+		}
+		if gleifStatus.NextRunAt == nil || !gleifStatus.NextRunAt.Equal(*targetNextRun) {
+			gleifStatus.NextRunAt = targetNextRun
+			needsUpdate = true
+		}
+		if needsUpdate {
+			if updateErr := s.leiService.UpdateProcessingStatus(gleifStatus); updateErr != nil {
+				log.Error().Err(updateErr).Msg("Failed to normalize GLEIF_REFERENCE_SYNC status metadata")
+			}
 		}
 	}
 
@@ -1788,11 +1801,9 @@ func (s *schedulerService) runGLEIFReferenceSyncIfConfigured(context string) err
 	if s.gleifReferenceService == nil {
 		return nil
 	}
-	s.gleifSyncMu.Lock()
-	defer s.gleifSyncMu.Unlock()
 
 	log.Info().Str("context", context).Msg("Running GLEIF reference sync before LEI ingest")
-	if err := s.gleifReferenceService.SyncAll(); err != nil {
+	if err := s.RunGLEIFReferenceSync(); err != nil {
 		return fmt.Errorf("GLEIF reference sync failed before %s: %w", context, err)
 	}
 	return nil
@@ -1826,8 +1837,8 @@ func (s *schedulerService) RunGLEIFReferenceSync() error {
 
 	status.Status = "RUNNING"
 	status.ErrorMessage = ""
-	now := time.Now()
-	status.LastRunAt = &now
+	startedAt := time.Now()
+	status.LastRunAt = &startedAt
 	if updateErr := s.leiService.UpdateProcessingStatus(status); updateErr != nil {
 		log.Error().Err(updateErr).Msg("Failed to update GLEIF reference sync status")
 	}
@@ -1842,12 +1853,19 @@ func (s *schedulerService) RunGLEIFReferenceSync() error {
 
 	if syncErr != nil {
 		status.Status = "FAILED"
+		status.NextRunAt = s.calculateNextDailyFullRun()
 		status.ErrorMessage = syncErr.Error()
 		log.Error().Err(syncErr).Msg("GLEIF reference sync failed")
 	} else {
-		status.Status = "COMPLETED"
+		completedAt := time.Now()
+		// GLEIF reference sync uses IDLE as its post-run terminal state (not COMPLETED) because it
+		// is a recurring background maintenance job without a discrete "completed" lifecycle.
+		// UpdateProcessingStatus preserves ProgressMessage for GLEIF_REFERENCE_SYNC regardless of
+		// status via shouldPreserveProgressMessage, so the stats JSON written above is retained.
+		status.Status = "IDLE"
+		status.NextRunAt = s.calculateNextDailyFullRun()
 		status.ErrorMessage = ""
-		status.LastSuccessAt = &now
+		status.LastSuccessAt = &completedAt
 		log.Info().Msg("GLEIF reference sync completed")
 	}
 

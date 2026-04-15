@@ -135,6 +135,25 @@ After pushing all fixes and individual resolution comments, **automatically post
 gh pr comment {pr_number} --body "[Generated summary from Step 5 below]"
 ```
 
+## Step 4.5: Mirror Updates To Linked Issues After Each Push
+
+After each push where you post PR status or resolution comments, automatically post concise status updates on each
+linked underlying issue (for example `Fixes #123`, `Closes #123`, or issues referenced in the PR body). Do not wait
+until the final PR summary comment.
+
+**Post on each linked issue after each relevant push:**
+
+```bash
+gh issue comment {issue_number} --repo {owner}/{repo} --body "[Status update with testing guidance]"
+```
+
+Include:
+
+- implementation status,
+- validation/test results,
+- user/UAT testing guidance,
+- direct PR link.
+
 ## Step 5: Generate Comprehensive Summary
 
 **Structure:**
@@ -205,6 +224,7 @@ If any comments are deferred for later:
 
 - **Individual resolutions**: Reply directly to the Copilot comment thread using `--reply-to {comment_id}`
 - **Summary comment**: Post as standalone comment on the PR using `gh pr comment`
+- **Issue updates**: Post concise mirrored updates on linked underlying issues using `gh issue comment`
 - **Never duplicate**: Don't post the same resolution in multiple places
 
 ## Error Handling

@@ -5,9 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/techie2000/axiom/internal/domain"
@@ -248,6 +251,108 @@ func TestLEICodeValue(t *testing.T) {
 	if got := leiCodeValue(&value); got != value {
 		t.Fatalf("expected %q, got %q", value, got)
 	}
+}
+
+func TestCleanupOldFiles_RetainsLevel2FullFilesUsingFullRetentionRule(t *testing.T) {
+	tmpDir := t.TempDir()
+	svc := &leiService{dataDir: tmpDir}
+
+	writeFileWithModTime := func(name string, modTime time.Time) {
+		t.Helper()
+		path := filepath.Join(tmpDir, name)
+		if err := os.WriteFile(path, []byte(name), 0o644); err != nil {
+			t.Fatalf("WriteFile(%s): %v", name, err)
+		}
+		if err := os.Chtimes(path, modTime, modTime); err != nil {
+			t.Fatalf("Chtimes(%s): %v", name, err)
+		}
+	}
+
+	now := time.Now()
+	writeFileWithModTime("lei-FULL-20260413-120000.json.zip", now.Add(-1*time.Hour))
+	writeFileWithModTime("gleif-level2-rr_full-20260413-110000.zip", now.Add(-2*time.Hour))
+	writeFileWithModTime("gleif-level2-repex_full-20260413-100000.zip", now.Add(-3*time.Hour))
+	writeFileWithModTime("lei-DELTA-20260413-090000.json.zip", now.Add(-4*time.Hour))
+
+	if err := svc.CleanupOldFiles(2, 1); err != nil {
+		t.Fatalf("CleanupOldFiles returned error: %v", err)
+	}
+
+	assertExists := func(name string) {
+		t.Helper()
+		if _, err := os.Stat(filepath.Join(tmpDir, name)); err != nil {
+			t.Fatalf("expected %s to exist, got error: %v", name, err)
+		}
+	}
+
+	assertMissing := func(name string) {
+		t.Helper()
+		if _, err := os.Stat(filepath.Join(tmpDir, name)); !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("expected %s to be removed, got err=%v", name, err)
+		}
+	}
+
+	assertExists("lei-FULL-20260413-120000.json.zip")
+	assertExists("gleif-level2-rr_full-20260413-110000.zip")
+	assertExists("lei-DELTA-20260413-090000.json.zip")
+	assertMissing("gleif-level2-repex_full-20260413-100000.zip")
+}
+
+func TestCleanupOldFiles_PrunesGLEIFReferenceSnapshotsUsingFullRetentionRule(t *testing.T) {
+	tmpDir := t.TempDir()
+	svc := &leiService{dataDir: tmpDir}
+	listDir := filepath.Join(tmpDir, "gleif-reference", "entity_legal_forms")
+	if err := os.MkdirAll(listDir, 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+
+	writeSnapshotPair := func(baseName string, modTime time.Time) {
+		t.Helper()
+		payloadPath := filepath.Join(listDir, baseName+".csv")
+		metaPath := filepath.Join(listDir, baseName+".meta.json")
+		if err := os.WriteFile(payloadPath, []byte(baseName), 0o644); err != nil {
+			t.Fatalf("WriteFile payload %s: %v", payloadPath, err)
+		}
+		if err := os.WriteFile(metaPath, []byte(`{"payload":"`+baseName+`.csv"}`), 0o644); err != nil {
+			t.Fatalf("WriteFile meta %s: %v", metaPath, err)
+		}
+		if err := os.Chtimes(payloadPath, modTime, modTime); err != nil {
+			t.Fatalf("Chtimes payload %s: %v", payloadPath, err)
+		}
+		if err := os.Chtimes(metaPath, modTime, modTime); err != nil {
+			t.Fatalf("Chtimes meta %s: %v", metaPath, err)
+		}
+	}
+
+	now := time.Now()
+	writeSnapshotPair("20260413-120000_csv", now.Add(-1*time.Hour))
+	writeSnapshotPair("20260413-110000_csv", now.Add(-2*time.Hour))
+	writeSnapshotPair("20260413-100000_csv", now.Add(-3*time.Hour))
+
+	if err := svc.CleanupOldFiles(2, 1); err != nil {
+		t.Fatalf("CleanupOldFiles returned error: %v", err)
+	}
+
+	assertExists := func(relativePath string) {
+		t.Helper()
+		if _, err := os.Stat(filepath.Join(tmpDir, relativePath)); err != nil {
+			t.Fatalf("expected %s to exist, got error: %v", relativePath, err)
+		}
+	}
+
+	assertMissing := func(relativePath string) {
+		t.Helper()
+		if _, err := os.Stat(filepath.Join(tmpDir, relativePath)); !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("expected %s to be removed, got err=%v", relativePath, err)
+		}
+	}
+
+	assertExists(filepath.Join("gleif-reference", "entity_legal_forms", "20260413-120000_csv.csv"))
+	assertExists(filepath.Join("gleif-reference", "entity_legal_forms", "20260413-120000_csv.meta.json"))
+	assertExists(filepath.Join("gleif-reference", "entity_legal_forms", "20260413-110000_csv.csv"))
+	assertExists(filepath.Join("gleif-reference", "entity_legal_forms", "20260413-110000_csv.meta.json"))
+	assertMissing(filepath.Join("gleif-reference", "entity_legal_forms", "20260413-100000_csv.csv"))
+	assertMissing(filepath.Join("gleif-reference", "entity_legal_forms", "20260413-100000_csv.meta.json"))
 }
 
 func TestResolveProgressTotalRecords(t *testing.T) {
@@ -541,6 +646,10 @@ func (s *processRecordsRepoStub) UpdateSourceFile(file *domain.SourceFile) error
 }
 
 func (s *processRecordsRepoStub) CreateProcessingFailure(failure *domain.LEILevel2ProcessingFailure) error {
+	return nil
+}
+
+func (s *processRecordsRepoStub) UpdateProcessingProgressMessageByJobType(_ string, _ string) error {
 	return nil
 }
 
