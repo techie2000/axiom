@@ -239,6 +239,60 @@ func TestUpdateProcessingStatus_Level1JobPreservesMessageWhenCompleted(t *testin
 	}
 }
 
+func TestUpdateProcessingStatus_Level2IdleWithEmptyMessageKeepsExistingProgress(t *testing.T) {
+	stub := &progressMsgRepoStub{
+		statusToReturn: &domain.FileProcessingStatus{
+			ID:              uuid.New(),
+			JobType:         "LEVEL2_RR",
+			Status:          "RUNNING",
+			ProgressMessage: `{"kind":"level2-progress","evaluated":470868,"upserted":1464,"unchanged":469400,"failed":4,"total":470868}`,
+		},
+	}
+	svc := newProgressMsgService(stub)
+
+	status := &domain.FileProcessingStatus{
+		ID:              uuid.New(),
+		JobType:         "LEVEL2_RR",
+		Status:          "IDLE",
+		ProgressMessage: "",
+		ErrorMessage:    "",
+	}
+
+	if err := svc.UpdateProcessingStatus(status); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(stub.capturedMessage, `"kind":"level2-progress"`) {
+		t.Fatalf("expected existing level2 progress message to be preserved, got %q", stub.capturedMessage)
+	}
+}
+
+func TestUpdateProcessingStatus_Level1IdleWithErrorDoesNotReuseExistingProgress(t *testing.T) {
+	stub := &progressMsgRepoStub{
+		statusToReturn: &domain.FileProcessingStatus{
+			ID:              uuid.New(),
+			JobType:         "DAILY_FULL",
+			Status:          "RUNNING",
+			ProgressMessage: `{"kind":"level1-progress","evaluated":1000,"upserted":200,"unchanged":800,"failed":0,"total":1000}`,
+		},
+	}
+	svc := newProgressMsgService(stub)
+
+	status := &domain.FileProcessingStatus{
+		ID:              uuid.New(),
+		JobType:         "DAILY_FULL",
+		Status:          "FAILED",
+		ProgressMessage: "",
+		ErrorMessage:    "network timeout",
+	}
+
+	if err := svc.UpdateProcessingStatus(status); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if stub.capturedMessage != "" {
+		t.Fatalf("FAILED update with error should not reuse previous progress payload, got %q", stub.capturedMessage)
+	}
+}
+
 func TestBuildLevel1ProgressMessage(t *testing.T) {
 	raw := buildLevel1ProgressMessage(470651, 470651, 116, 4)
 	if raw == "" {

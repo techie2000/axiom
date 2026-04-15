@@ -1695,6 +1695,10 @@ func (s *leiService) GetProcessingStatus(jobType string) (*domain.FileProcessing
 // UpdateProcessingStatus updates processing status
 func (s *leiService) UpdateProcessingStatus(status *domain.FileProcessingStatus) error {
 	if status != nil {
+		trimmedJobType := strings.TrimSpace(status.JobType)
+		trimmedProgressMessage := strings.TrimSpace(status.ProgressMessage)
+		trimmedErrorMessage := strings.TrimSpace(status.ErrorMessage)
+
 		if status.JobType != "" {
 			status.JobLabel = domain.JobTypeDisplayName(status.JobType)
 		}
@@ -1706,6 +1710,21 @@ func (s *leiService) UpdateProcessingStatus(status *domain.FileProcessingStatus)
 		if status.CurrentSourceFileID == nil {
 			status.CurrentSourceFile = nil
 		}
+
+		// Callers often update terminal state (IDLE/COMPLETED) using a status struct that
+		// does not carry ProgressMessage, which would otherwise overwrite persisted
+		// per-run JSON stats with an empty value.
+		// Preserve the existing message for successful terminal updates of jobs that opt in.
+		if status.Status != "RUNNING" && trimmedJobType != "" && trimmedProgressMessage == "" && trimmedErrorMessage == "" && shouldPreserveProgressMessage(trimmedJobType) {
+			existing, err := s.repo.FindProcessingStatus(trimmedJobType)
+			if err == nil && existing != nil {
+				existingProgressMessage := strings.TrimSpace(existing.ProgressMessage)
+				if existingProgressMessage != "" {
+					status.ProgressMessage = existingProgressMessage
+				}
+			}
+		}
+
 		// Some jobs persist machine-readable post-completion stats in ProgressMessage.
 		// Preserve these payloads outside RUNNING so UI can render accurate final summaries.
 		if status.Status != "RUNNING" && !shouldPreserveProgressMessage(status.JobType) {

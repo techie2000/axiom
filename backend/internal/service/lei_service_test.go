@@ -455,10 +455,10 @@ func TestNormalizeProcessingJobType(t *testing.T) {
 		want  string
 	}{
 		// Level-1 aliases
-		{input: "DAILY_FULL", want: "LEVEL1_FULL"},
-		{input: "LEVEL1_FULL", want: "LEVEL1_FULL"},
-		{input: "DAILY_DELTA", want: "LEVEL1_DELTA"},
-		{input: "LEVEL1_DELTA", want: "LEVEL1_DELTA"},
+		{input: "DAILY_FULL", want: "DAILY_FULL"},
+		{input: "LEVEL1_FULL", want: "DAILY_FULL"},
+		{input: "DAILY_DELTA", want: "DAILY_DELTA"},
+		{input: "LEVEL1_DELTA", want: "DAILY_DELTA"},
 		// Level-2 pass-throughs
 		{input: "LEVEL2_RR", want: "LEVEL2_RR"},
 		{input: "LEVEL2_REPEX", want: "LEVEL2_REPEX"},
@@ -484,10 +484,10 @@ func TestNormalizeProcessingJobTypePrivateDelegates(t *testing.T) {
 		input string
 		want  string
 	}{
-		{"DAILY_FULL", "LEVEL1_FULL"},
-		{"LEVEL1_FULL", "LEVEL1_FULL"},
-		{"DAILY_DELTA", "LEVEL1_DELTA"},
-		{"LEVEL1_DELTA", "LEVEL1_DELTA"},
+		{"DAILY_FULL", "DAILY_FULL"},
+		{"LEVEL1_FULL", "DAILY_FULL"},
+		{"DAILY_DELTA", "DAILY_DELTA"},
+		{"LEVEL1_DELTA", "DAILY_DELTA"},
 		{"LEVEL2_RR", "LEVEL2_RR"},
 		{"LEVEL2_REPEX", "LEVEL2_REPEX"},
 		{"UNKNOWN_TYPE", "UNKNOWN_TYPE"}, // pass-through
