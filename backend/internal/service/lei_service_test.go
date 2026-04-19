@@ -454,11 +454,11 @@ func TestNormalizeProcessingJobType(t *testing.T) {
 		input string
 		want  string
 	}{
-		// Level-1 aliases
-		{input: "DAILY_FULL", want: "LEVEL1_FULL"},
-		{input: "LEVEL1_FULL", want: "LEVEL1_FULL"},
-		{input: "DAILY_DELTA", want: "LEVEL1_DELTA"},
-		{input: "LEVEL1_DELTA", want: "LEVEL1_DELTA"},
+		// Status-row aliases
+		{input: "DAILY_FULL", want: "DAILY_FULL"},
+		{input: "LEVEL1_FULL", want: "DAILY_FULL"},
+		{input: "DAILY_DELTA", want: "DAILY_DELTA"},
+		{input: "LEVEL1_DELTA", want: "DAILY_DELTA"},
 		// Level-2 pass-throughs
 		{input: "LEVEL2_RR", want: "LEVEL2_RR"},
 		{input: "LEVEL2_REPEX", want: "LEVEL2_REPEX"},
@@ -477,9 +477,61 @@ func TestNormalizeProcessingJobType(t *testing.T) {
 	}
 }
 
+func TestNormalizeProcessingFailureJobType(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		// Failure-row aliases
+		{input: "DAILY_FULL", want: "LEVEL1_FULL"},
+		{input: "LEVEL1_FULL", want: "LEVEL1_FULL"},
+		{input: "DAILY_DELTA", want: "LEVEL1_DELTA"},
+		{input: "LEVEL1_DELTA", want: "LEVEL1_DELTA"},
+		// Level-2 pass-throughs
+		{input: "LEVEL2_RR", want: "LEVEL2_RR"},
+		{input: "LEVEL2_REPEX", want: "LEVEL2_REPEX"},
+		// Unknown types → empty string
+		{input: "UNKNOWN", want: ""},
+		{input: "", want: ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := NormalizeProcessingFailureJobType(tt.input)
+			if got != tt.want {
+				t.Fatalf("NormalizeProcessingFailureJobType(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestNormalizeProcessingJobTypePrivateDelegates(t *testing.T) {
-	// The private function must map the same known aliases as the exported one
-	// and pass unknown / Level-2 types through unchanged.
+	// The private function must map the same known aliases as the exported status
+	// normalizer and pass unknown / Level-2 types through unchanged.
+	cases := []struct {
+		input string
+		want  string
+	}{
+		{"DAILY_FULL", "DAILY_FULL"},
+		{"LEVEL1_FULL", "DAILY_FULL"},
+		{"DAILY_DELTA", "DAILY_DELTA"},
+		{"LEVEL1_DELTA", "DAILY_DELTA"},
+		{"LEVEL2_RR", "LEVEL2_RR"},
+		{"LEVEL2_REPEX", "LEVEL2_REPEX"},
+		{"UNKNOWN_TYPE", "UNKNOWN_TYPE"}, // pass-through
+		{"", ""},                         // empty → empty
+	}
+	for _, c := range cases {
+		got := normalizeProcessingJobType(c.input)
+		if got != c.want {
+			t.Errorf("normalizeProcessingJobType(%q) = %q, want %q", c.input, got, c.want)
+		}
+	}
+}
+
+func TestNormalizeProcessingFailureJobTypePrivateDelegates(t *testing.T) {
+	// The private function must map the same known aliases as the exported
+	// failure normalizer and pass unknown / Level-2 types through unchanged.
 	cases := []struct {
 		input string
 		want  string
@@ -494,9 +546,9 @@ func TestNormalizeProcessingJobTypePrivateDelegates(t *testing.T) {
 		{"", ""},                         // empty → empty
 	}
 	for _, c := range cases {
-		got := normalizeProcessingJobType(c.input)
+		got := normalizeProcessingFailureJobType(c.input)
 		if got != c.want {
-			t.Errorf("normalizeProcessingJobType(%q) = %q, want %q", c.input, got, c.want)
+			t.Errorf("normalizeProcessingFailureJobType(%q) = %q, want %q", c.input, got, c.want)
 		}
 	}
 }
@@ -571,7 +623,7 @@ func TestBatchResolveOpenProcessingFailures_Service_ValidKeys(t *testing.T) {
 	if stub.callCount != 1 {
 		t.Fatalf("expected exactly 1 repo call, got %d", stub.callCount)
 	}
-	// Job type must be normalised (DAILY_FULL → LEVEL1_FULL).
+	// Failure job type must keep the Level-1 category.
 	if stub.calledJobType != "LEVEL1_FULL" {
 		t.Errorf("expected calledJobType LEVEL1_FULL, got %q", stub.calledJobType)
 	}

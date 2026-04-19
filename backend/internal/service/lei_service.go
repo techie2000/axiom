@@ -829,7 +829,8 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 	var totalUpdated int
 	shouldProcess := resumeFromLEI == ""
 	var lastProcessedLEI string
-	jobType := normalizeProcessingJobType(sourceFile.JobType)
+	statusJobType := normalizeProcessingJobType(sourceFile.JobType)
+	failureJobType := normalizeProcessingFailureJobType(sourceFile.JobType)
 
 	// Track checkpoint value separately from session progress
 	checkpointProcessed := 0
@@ -952,7 +953,7 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 				Str("last_lei", batch[len(batch)-1].LEI).
 				Msg("CRITICAL: Failed to batch upsert LEI records")
 			batchErr := fmt.Errorf("batch upsert of %d LEI records failed: %w", len(batch), err)
-			s.recordProcessingFailure(jobType, &sourceFile.ID, "UPSERT", "", nil, batchErr)
+			s.recordProcessingFailure(failureJobType, &sourceFile.ID, "UPSERT", "", nil, batchErr)
 			failedRecords += len(batch)
 			// Return error to stop processing
 			return fmt.Errorf("batch upsert failed: %w", err)
@@ -961,7 +962,7 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 			for _, r := range batch {
 				naturalKeys = append(naturalKeys, r.LEI)
 			}
-			s.batchResolveOpenProcessingFailures(jobType, naturalKeys, &sourceFile.ID)
+			s.batchResolveOpenProcessingFailures(failureJobType, naturalKeys, &sourceFile.ID)
 
 			// Accumulate actual DB write outcomes.
 			totalCreated += created
@@ -996,7 +997,7 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 			}
 
 			totalUpserted := totalCreated + totalUpdated
-			s.persistLevel1ProgressMessage(jobType, progressTotalRecords, cumulativeProcessed, totalUpserted, failedRecords)
+			s.persistLevel1ProgressMessage(statusJobType, progressTotalRecords, cumulativeProcessed, totalUpserted, failedRecords)
 
 			log.Info().
 				Int("total_scanned", scannedRecords).
@@ -1025,13 +1026,12 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 		recordCount++
 		var jsonRecord LEIJSONRecord
 		if err := decoder.Decode(&jsonRecord); err != nil {
-			jobType := normalizeProcessingJobType(sourceFile.JobType)
 			if isTerminalJSONDecodeError(err) {
 				log.Error().
 					Err(err).
 					Int("record_number", recordCount).
 					Msg("Terminating LEI JSON processing due to malformed or truncated JSON payload")
-				s.recordProcessingFailure(jobType, &sourceFile.ID, "DECODE", "", nil, err)
+				s.recordProcessingFailure(failureJobType, &sourceFile.ID, "DECODE", "", nil, err)
 				return fmt.Errorf("terminal JSON decode error at record %d: %w", recordCount, err)
 			}
 
@@ -1039,7 +1039,7 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 				Err(err).
 				Int("record_number", recordCount).
 				Msg("Failed to decode LEI JSON record")
-			s.recordProcessingFailure(jobType, &sourceFile.ID, "DECODE", "", nil, err)
+			s.recordProcessingFailure(failureJobType, &sourceFile.ID, "DECODE", "", nil, err)
 			failedRecords++
 			continue
 		}
@@ -1072,7 +1072,7 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 				Str("invalid_lei", record.LEI).
 				Int("record_number", recordCount).
 				Msg("Skipping record with invalid LEI code")
-			s.recordProcessingFailure(normalizeProcessingJobType(sourceFile.JobType), &sourceFile.ID, "MAP", record.LEI, &jsonRecord, fmt.Errorf("invalid LEI code: %s", record.LEI))
+			s.recordProcessingFailure(failureJobType, &sourceFile.ID, "MAP", record.LEI, &jsonRecord, fmt.Errorf("invalid LEI code: %s", record.LEI))
 			failedRecords++
 			continue
 		}
@@ -1110,7 +1110,7 @@ func (s *leiService) processRecordsArray(decoder *json.Decoder, sourceFile *doma
 	}
 
 	totalUpserted := totalCreated + totalUpdated
-	s.persistLevel1ProgressMessage(jobType, progressTotalRecords, cumulativeProcessed, totalUpserted, failedRecords)
+	s.persistLevel1ProgressMessage(statusJobType, progressTotalRecords, cumulativeProcessed, totalUpserted, failedRecords)
 
 	if processedRecords > 0 && totalCreated == 0 && totalUpdated == 0 && failedRecords == 0 {
 		log.Warn().
@@ -1191,7 +1191,7 @@ func (s *leiService) recordProcessingFailure(
 ) {
 	persistProcessingFailure(
 		s.repo,
-		normalizeProcessingJobType(jobType),
+		normalizeProcessingFailureJobType(jobType),
 		sourceFileID,
 		failureStage,
 		normalizeLEICodeValue(naturalKey),
@@ -1695,6 +1695,10 @@ func (s *leiService) GetProcessingStatus(jobType string) (*domain.FileProcessing
 // UpdateProcessingStatus updates processing status
 func (s *leiService) UpdateProcessingStatus(status *domain.FileProcessingStatus) error {
 	if status != nil {
+		trimmedJobType := strings.TrimSpace(status.JobType)
+		trimmedProgressMessage := strings.TrimSpace(status.ProgressMessage)
+		trimmedErrorMessage := strings.TrimSpace(status.ErrorMessage)
+
 		if status.JobType != "" {
 			status.JobLabel = domain.JobTypeDisplayName(status.JobType)
 		}
@@ -1706,6 +1710,21 @@ func (s *leiService) UpdateProcessingStatus(status *domain.FileProcessingStatus)
 		if status.CurrentSourceFileID == nil {
 			status.CurrentSourceFile = nil
 		}
+
+		// Callers often update terminal state (IDLE/COMPLETED) using a status struct that
+		// does not carry ProgressMessage, which would otherwise overwrite persisted
+		// per-run JSON stats with an empty value.
+		// Preserve the existing message for successful terminal updates of jobs that opt in.
+		if status.Status != "RUNNING" && trimmedJobType != "" && trimmedProgressMessage == "" && trimmedErrorMessage == "" && shouldPreserveProgressMessage(trimmedJobType) {
+			existing, err := s.repo.FindProcessingStatus(trimmedJobType)
+			if err == nil && existing != nil {
+				existingProgressMessage := strings.TrimSpace(existing.ProgressMessage)
+				if existingProgressMessage != "" {
+					status.ProgressMessage = existingProgressMessage
+				}
+			}
+		}
+
 		// Some jobs persist machine-readable post-completion stats in ProgressMessage.
 		// Preserve these payloads outside RUNNING so UI can render accurate final summaries.
 		if status.Status != "RUNNING" && !shouldPreserveProgressMessage(status.JobType) {

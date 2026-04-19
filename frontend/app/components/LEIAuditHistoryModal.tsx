@@ -2,8 +2,10 @@
 
 import React, { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import Badge from './Badge'
 import CountryFlag from './CountryFlag'
 import { useButtonEmojiMode } from '../lib/useButtonEmojiMode'
+import { getRegistrationStatusBadgePresentation, REGISTRATION_STATUS_BADGE_VARIANT } from '../lei-records/null-utils'
 
 export interface LEIAuditEntry {
   id: string
@@ -315,6 +317,18 @@ function SnapshotValue({ fieldKey, value, snapshot, showCodes = true, countryByC
         <CountryFlag countryCode={code} />
         <span>{displayText}</span>
       </span>
+    )
+  }
+  if (fieldKey === 'registration_status' && typeof value === 'string' && value.trim().length > 0) {
+    const regStatusPresentation = getRegistrationStatusBadgePresentation(value)
+    return (
+      <Badge
+        title={regStatusPresentation.tooltip}
+        className="inline-block whitespace-nowrap"
+        variant={REGISTRATION_STATUS_BADGE_VARIANT[regStatusPresentation.variant]}
+      >
+        {regStatusPresentation.label}
+      </Badge>
     )
   }
   if (LEI_CODE_FIELDS.has(fieldKey) && typeof value === 'string' && value.trim().length > 0) {

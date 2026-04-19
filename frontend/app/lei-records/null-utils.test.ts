@@ -4,6 +4,7 @@ import {
   formatLEICellValue,
   formatLEIDisplayValue,
   getStatusBadgePresentation,
+  getRegistrationStatusBadgePresentation,
   isNullLikeValue,
   normalizeRecordNullLikeValues,
 } from './null-utils'
@@ -70,5 +71,100 @@ describe('LEI null-like value helpers', () => {
     expect(formatLEICellValue('BRANCH', 'entity_sub_category')).toBe('Branch')
     expect(formatLEICellValue('NOT_AVAILABLE', 'registration_status')).toBe('Not Available')
     expect(formatLEICellValue('NULL', 'entity_category')).toBe('-')
+  })
+})
+
+describe('getRegistrationStatusBadgePresentation', () => {
+  it('returns green badge for ISSUED status', () => {
+    const result = getRegistrationStatusBadgePresentation('ISSUED')
+    expect(result).toEqual({
+      label: 'Issued',
+      tooltip: 'Registration is active and valid',
+      variant: 'success',
+    })
+  })
+
+  it('returns red badge for LAPSED status', () => {
+    const result = getRegistrationStatusBadgePresentation('LAPSED')
+    expect(result).toEqual({
+      label: 'Lapsed',
+      tooltip: 'Renewal is overdue — this registration is no longer active',
+      variant: 'destructive',
+    })
+  })
+
+  it('returns red badge for RETIRED status', () => {
+    const result = getRegistrationStatusBadgePresentation('RETIRED')
+    expect(result).toEqual({
+      label: 'Retired',
+      tooltip: 'Registration has been permanently retired',
+      variant: 'destructive',
+    })
+  })
+
+  it('returns red badge for ANNULLED status', () => {
+    const result = getRegistrationStatusBadgePresentation('ANNULLED')
+    expect(result).toEqual({
+      label: 'Annulled',
+      tooltip: 'Registration has been annulled and is considered invalid',
+      variant: 'destructive',
+    })
+  })
+
+  it('returns red badge for DUPLICATE status', () => {
+    const result = getRegistrationStatusBadgePresentation('DUPLICATE')
+    expect(result).toEqual({
+      label: 'Duplicate',
+      tooltip: 'A duplicate superseded by another active registration',
+      variant: 'destructive',
+    })
+  })
+
+  it('returns amber badge for PENDING_TRANSFER status', () => {
+    const result = getRegistrationStatusBadgePresentation('PENDING_TRANSFER')
+    expect(result).toEqual({
+      label: 'Pending Transfer',
+      tooltip: 'Registration is being transferred to another operator',
+      variant: 'warning',
+    })
+  })
+
+  it('returns amber badge for PENDING_ARCHIVAL status', () => {
+    const result = getRegistrationStatusBadgePresentation('PENDING_ARCHIVAL')
+    expect(result).toEqual({
+      label: 'Pending Archival',
+      tooltip: 'Registration is pending archival',
+      variant: 'warning',
+    })
+  })
+
+  it('returns grey badge for unknown status', () => {
+    const result = getRegistrationStatusBadgePresentation('UNKNOWN_STATUS')
+    expect(result).toEqual({
+      label: 'Unknown Status',
+      tooltip: 'Unknown registration status',
+      variant: 'muted',
+    })
+  })
+
+  it('handles lowercase input correctly', () => {
+    const result = getRegistrationStatusBadgePresentation('issued')
+    expect(result).toEqual({
+      label: 'Issued',
+      tooltip: 'Registration is active and valid',
+      variant: 'success',
+    })
+  })
+
+  it('handles empty string', () => {
+    const result = getRegistrationStatusBadgePresentation('')
+    expect(result.variant).toBe('muted')
+    expect(result.tooltip).toBe('Unknown registration status')
+  })
+
+  it('handles null value', () => {
+    const result = getRegistrationStatusBadgePresentation(null)
+    expect(result.variant).toBe('muted')
+    expect(result.tooltip).toBe('Unknown registration status')
   })
 })

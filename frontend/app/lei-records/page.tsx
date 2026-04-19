@@ -3,6 +3,7 @@
 import { MouseEvent as ReactMouseEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import Alert from '../components/Alert'
+import Badge from '../components/Badge'
 import CountryFlag from '../components/CountryFlag'
 import LEIOtherNamesList from '../components/LEIOtherNamesList'
 import PageHeader from '../components/PageHeader'
@@ -24,7 +25,14 @@ import { useUserPreference } from '../lib/useUserPreference'
 import { useSearchFocusShortcut } from '../lib/useSearchFocusShortcut'
 import MapLink from '../components/MapLink'
 import { getRelativeTimeInfo, getRelativeTimeTranslationKey } from './date-utils'
-import { formatEnumDisplayValue, formatLEICellValue, getStatusBadgePresentation, normalizeRecordNullLikeValues } from './null-utils'
+import {
+  formatEnumDisplayValue,
+  formatLEICellValue,
+  getStatusBadgePresentation,
+  getRegistrationStatusBadgePresentation,
+  normalizeRecordNullLikeValues,
+  REGISTRATION_STATUS_BADGE_VARIANT,
+} from './null-utils'
 import { formatStatusFilterLabel, LEI_STATUS_FILTER_OPTIONS, normalizeStatusFilterForAPI } from './status-filter'
 import { computeShowingEnd, formatCurrentPageStatValue } from './stats-format'
 import { useTranslation } from 'react-i18next'
@@ -1723,7 +1731,7 @@ export default function LEIRecordsPage() {
                         data-row-index={index}
                         onClick={() => handleRecordClick(record)}
                         onContextMenu={(e) => handleRowContextMenu(e, record)}
-                        className="group theme-table-row-hover transition-colors cursor-pointer"
+                        className="group theme-table-row-hover transition-[background-color] cursor-pointer"
                         style={{ height: 'auto', minHeight: '48px' }}
                       >
                         {visibleColumnsInOrder.map((column) => {
@@ -1747,7 +1755,7 @@ export default function LEIRecordsPage() {
                               key={String(column.key)}
                               className={`${column.key === 'lei' ? 'px-2' : 'px-4'} py-3 text-sm ${column.key === 'lei' ? 'font-mono' : ''} ${column.key.includes('date') || column.key === 'lei' ? 'whitespace-nowrap' : ''} ${
                                 column.key === 'lei' || column.key === 'legal_name'
-                                  ? "relative bg-[rgb(var(--surface-soft-rgb))] dark:bg-[rgb(var(--surface-rgb))] group-hover:bg-[rgb(var(--surface-muted-rgb))] dark:group-hover:bg-[rgb(var(--surface-muted-rgb))] shadow-[inset_-1px_0_0_0_rgba(203,213,225,1)] dark:shadow-[inset_-1px_0_0_0_rgba(55,65,81,1)] overflow-hidden text-ellipsis"
+                                  ? "relative bg-[rgb(var(--surface-soft-rgb))] dark:bg-[rgb(var(--surface-rgb))] group-hover:bg-[rgb(var(--surface-muted-rgb))] dark:group-hover:bg-[rgb(var(--surface-muted-rgb))] shadow-[inset_-1px_0_0_0_rgba(203,213,225,1)] dark:shadow-[inset_-1px_0_0_0_rgba(55,65,81,1)] border-b border-[rgb(var(--border-rgb)/0.7)] overflow-hidden text-ellipsis"
                                   : ''
                               }`}
                               style={(() => {
@@ -1926,7 +1934,18 @@ export default function LEIRecordsPage() {
                                   )
                                 })()
                               ) : isRegistrationStatus ? (
-                                formatEnumDisplayValue(value)
+                                (() => {
+                                  const regStatusPresentation = getRegistrationStatusBadgePresentation(value)
+                                  return (
+                                    <Badge
+                                      title={regStatusPresentation.tooltip}
+                                      className="inline-block whitespace-nowrap"
+                                      variant={REGISTRATION_STATUS_BADGE_VARIANT[regStatusPresentation.variant]}
+                                    >
+                                      {regStatusPresentation.label}
+                                    </Badge>
+                                  )
+                                })()
                               ) : isNextRenewalDate ? (
                                 (() => {
                                   const dateValue = String(value || '')
@@ -2466,7 +2485,20 @@ export default function LEIRecordsPage() {
                   </div>
                   <div>
                     <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">{t('leiRecords.columns.labels.registrationStatus')}</span>
-                    <p className="text-sm text-[rgb(var(--foreground-rgb))] mt-1">{formatEnumDisplayValue(selectedRecord.registration_status)}</p>
+                    {(() => {
+                      const regStatusPresentation = getRegistrationStatusBadgePresentation(selectedRecord.registration_status)
+                      return (
+                        <p className="mt-1">
+                                  <Badge
+                                    title={regStatusPresentation.tooltip}
+                                    className="inline-block whitespace-nowrap"
+                                    variant={REGISTRATION_STATUS_BADGE_VARIANT[regStatusPresentation.variant]}
+                                  >
+                            {regStatusPresentation.label}
+                                  </Badge>
+                        </p>
+                      )
+                    })()}
                   </div>
                   <div>
                     <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">Next Renewal</span>
