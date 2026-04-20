@@ -13,7 +13,7 @@ RUN apk add --no-cache --upgrade libssl3
 WORKDIR /app
 
 # Install dependencies and ca-certificates for TLS
-RUN apk add --no-cache git=2.47.3-r0 make=4.4.1-r2 ca-certificates=20250911-r0 && update-ca-certificates
+RUN apk add --no-cache git=2.47.3-r0 make=4.4.1-r2 ca-certificates && update-ca-certificates
 
 # Copy go mod files
 COPY go.mod ./
