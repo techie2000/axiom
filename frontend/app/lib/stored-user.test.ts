@@ -26,6 +26,7 @@ beforeEach(() => {
 describe('readStoredUser', () => {
   afterEach(() => {
     localStorage.clear()
+    vi.unstubAllGlobals()
     vi.restoreAllMocks()
   })
 

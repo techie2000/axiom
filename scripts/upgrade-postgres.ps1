@@ -29,7 +29,18 @@ $ErrorActionPreference = "Stop"
 $TargetPgVersion = 17
 $BackupDir = ".\backups"
 
-$root = Split-Path -Parent $PSScriptRoot
+$gitCommonDir = ""
+try {
+    $gitCommonDir = (& git rev-parse --path-format=absolute --git-common-dir 2>$null).Trim()
+} catch {
+    $gitCommonDir = ""
+}
+
+if ([string]::IsNullOrEmpty($gitCommonDir)) {
+    $root = Split-Path -Parent $PSScriptRoot
+} else {
+    $root = Split-Path -Parent $gitCommonDir
+}
 Set-Location $root
 
 function Write-Info    { param($msg) Write-Host "ℹ  $msg" -ForegroundColor Cyan }
@@ -73,7 +84,15 @@ $PostgresDataDir = $envMap['POSTGRES_DATA_DIR']
 # If POSTGRES_DATA_DIR is set in the env file the environment uses a host bind mount.
 $UseBindMount = -not [string]::IsNullOrEmpty($PostgresDataDir)
 if ($UseBindMount) {
-    $DataSrc = $PostgresDataDir
+    if ([System.IO.Path]::IsPathRooted($PostgresDataDir)) {
+        $DataSrc = $PostgresDataDir
+    } else {
+        $relativeDataPath = $PostgresDataDir
+        if ($relativeDataPath.StartsWith('./')) {
+            $relativeDataPath = $relativeDataPath.Substring(2)
+        }
+        $DataSrc = Join-Path $root $relativeDataPath
+    }
 } else {
     $DataSrc = $VolumeName
 }

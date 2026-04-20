@@ -8,8 +8,7 @@ if [[ $# -eq 0 ]]; then
   set -- ps
 fi
 
-git_common_dir="$(git rev-parse --path-format=absolute --git-common-dir)"
-if [[ -z "$git_common_dir" ]]; then
+if ! git_common_dir="$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)"; then
   echo "Unable to resolve git common dir. Run this script inside the repository or one of its worktrees." >&2
   exit 1
 fi
