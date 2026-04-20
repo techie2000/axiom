@@ -52,6 +52,21 @@ jobs:
           # This matches the DOCS_BASE path used in the VitePress build
           mkdir -p _site/docs-user
           cp -R docs-user/.vitepress/dist/* _site/docs-user/
+          # Add root redirect so https://<owner>.github.io/<repo>/ doesn't return 404
+          cat > _site/index.html << 'REDIRECT_EOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8">
+            <meta http-equiv="refresh" content="0; url=docs-user/">
+            <link rel="canonical" href="docs-user/">
+            <title>Axiom Documentation</title>
+          </head>
+          <body>
+            <p>Redirecting to <a href="docs-user/">Axiom documentation</a>…</p>
+          </body>
+          </html>
+          REDIRECT_EOF
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
@@ -67,7 +82,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.deployment.outputs.page_url }}docs-user/
     steps:
       - name: Deploy
         id: deployment
