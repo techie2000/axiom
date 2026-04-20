@@ -2,10 +2,10 @@
 ARG DOCKER_LIBRARY=public.ecr.aws/docker/library
 FROM ${DOCKER_LIBRARY}/node:22-alpine3.21 AS builder
 
-# Security: Upgrade libssl3 to address CVE vulnerabilities (Alert #117)
-# Version 3.3.6-r0 addresses critical SSL/TLS vulnerabilities
+# Security: keep OpenSSL patched using latest package available in Alpine repo.
 # security-scan-managed
-RUN apk add --no-cache --upgrade libssl3=3.3.6-r0
+# hadolint ignore=DL3018
+RUN apk add --no-cache --upgrade libssl3
 
 WORKDIR /app
 
@@ -28,10 +28,10 @@ RUN npm run build
 # Runtime stage
 FROM ${DOCKER_LIBRARY}/node:22-alpine3.21
 
-# Security: Upgrade libssl3 to address CVE vulnerabilities (Alert #117)
-# Version 3.3.6-r0 addresses critical SSL/TLS vulnerabilities
+# Security: keep OpenSSL patched using latest package available in Alpine repo.
 # security-scan-managed
-RUN apk add --no-cache --upgrade libssl3=3.3.6-r0
+# hadolint ignore=DL3018
+RUN apk add --no-cache --upgrade libssl3
 
 WORKDIR /app
 

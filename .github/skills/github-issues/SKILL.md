@@ -90,7 +90,8 @@ State values: `open`, `closed`
 - When work starts on a linked issue, replace `status: triage` with `status: in progress`
 - When the linked PR merges, replace `status: in progress` with `status: done`
 - If work stops and the linked PR closes without merge, move the issue back to `status: triage`
-- Preserve category labels such as `bug`, `enhancement`, `documentation`, `security`, and `performance`
+- Preserve category labels such as `bug`, `enhancement`, `security`, and `performance`
+- For documentation-focused work, use `area:docs` instead of adding a duplicate `documentation` label
 
 ## Examples
 
@@ -134,7 +135,6 @@ Use these standard labels when applicable:
 | --- | --- |
 | `bug` | Something isn't working |
 | `enhancement` | New feature or improvement |
-| `documentation` | Documentation updates |
 | `good first issue` | Good for newcomers |
 | `help wanted` | Extra attention needed |
 | `question` | Further information requested |
@@ -180,12 +180,13 @@ apply others manually.
 
 ## PR Issue Link and Override
 
-PRs should reference a linked issue using a closing keyword in the PR description.
+PRs should reference a linked issue in the PR description. Prefer `Refs #N` by default.
+Use closing keywords only when `#N` is confirmed to be an issue (not a pull request).
 
 ```text
-Closes #123
-Fixes #42
 Refs #7
+Closes #123  (issue only)
+Fixes #42    (issue only)
 ```
 
 If no backing issue exists, check the **No linked issue** box in the PR template and

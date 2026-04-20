@@ -63,6 +63,23 @@ docker compose --env-file .env.prod -f docker-compose.prod.yml logs -f backend
 docker exec axiom-dev-backend ps aux
 ```
 
+### Dockerfile Sync Guardrail
+
+When you change package versions, security patches, or install lines in one Axiom Dockerfile, you must review and
+sync equivalent lines in related Dockerfiles in the same change.
+
+Required sync set:
+
+- `docker/Dockerfile.backend` and `docker/Dockerfile.backend.clean`
+
+Rules:
+
+- Do not leave one file pinned while the paired file is unpinned for the same package unless explicitly documented.
+- Prefer unpinned `ca-certificates` on Alpine (for example `ca-certificates`, not `ca-certificates=<version>`) to
+  avoid repo drift breakages.
+- After Dockerfile edits, run a no-cache local build for each affected image variant to verify reproducibility.
+- If a deliberate divergence is required, add an inline comment explaining why and reference the related issue/ADR.
+
 ## Core Principles of Containerization
 
 ### **1. Immutability**
