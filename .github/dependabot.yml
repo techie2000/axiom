@@ -18,7 +18,6 @@ updates:
     assignees:
       - "techie2000"
     labels:
-      - "dependencies"
       - "security"
       - "area:infra"
       - "area:dependencies"
@@ -43,7 +42,6 @@ updates:
     assignees:
       - "techie2000"
     labels:
-      - "dependencies"
       - "go"
       - "area:backend"
       - "area:dependencies"
@@ -78,7 +76,6 @@ updates:
     assignees:
       - "techie2000"
     labels:
-      - "dependencies"
       - "area:frontend"
       - "area:dependencies"
       - "no-issue-needed"
