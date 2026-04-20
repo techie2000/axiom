@@ -6,13 +6,11 @@ import { useTranslation } from 'react-i18next'
 import '../lib/i18n'
 import ThemeToggle from '../components/ThemeToggle'
 import LanguageSelector from '../components/LanguageSelector'
+import { getApiBaseUrl } from '../lib/api-base'
 import { useEnglishTooltips } from '../lib/useEnglishTooltips'
 import { resolveHydrationSafeLabel } from '../lib/hydrationSafeLabel'
 
-const API_BASE_URL =
-  typeof window !== 'undefined'
-    ? process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080'
-    : 'http://backend:8080'
+const API_BASE_URL = getApiBaseUrl()
 
 export default function RegisterPage() {
   const { t } = useTranslation('common')

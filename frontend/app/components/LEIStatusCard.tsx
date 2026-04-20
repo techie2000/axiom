@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
+import { getApiBaseUrl } from '../lib/api-base'
+import { getLeiAutoRefreshIntervalMs } from '../lib/leiStatusRefresh'
 import { formatStatusLabel } from '../lib/status-label'
 
 interface LEIStatus {
@@ -79,8 +81,7 @@ export default function LEIStatusCard() {
     }
 
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
-      const res = await fetch(`${API_URL}/api/v1/lei/count`, { cache: 'no-store' })
+      const res = await fetch(`${getApiBaseUrl()}/api/v1/lei/count`, { cache: 'no-store' })
       if (res.ok) {
         const { count } = (await res.json()) as { count: number }
         setLeiEntityCount(count)
@@ -96,6 +97,15 @@ export default function LEIStatusCard() {
     }
   }
 
+  const autoRefreshIntervalMs = getLeiAutoRefreshIntervalMs([
+    masterDataStatus,
+    fullStatus,
+    deltaStatus,
+    rrStatus,
+    repexStatus,
+    gleifStatus,
+  ])
+
   useEffect(() => {
     // Seed from sessionStorage immediately so the card isn't blank on first paint
     const cached = readCountCache()
@@ -106,15 +116,13 @@ export default function LEIStatusCard() {
 
     const fetchStatus = async () => {
       try {
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
-
         const [mdRes, fullRes, deltaRes, rrRes, repexRes, gleifRes] = await Promise.all([
-          fetch(`${API_URL}/api/v1/lei/status/MASTER_DATA_SYNC`, { cache: 'no-store' }),
-          fetch(`${API_URL}/api/v1/lei/status/DAILY_FULL`, { cache: 'no-store' }),
-          fetch(`${API_URL}/api/v1/lei/status/DAILY_DELTA`, { cache: 'no-store' }),
-          fetch(`${API_URL}/api/v1/lei/status/LEVEL2_RR`, { cache: 'no-store' }),
-          fetch(`${API_URL}/api/v1/lei/status/LEVEL2_REPEX`, { cache: 'no-store' }),
-          fetch(`${API_URL}/api/v1/lei/status/GLEIF_REFERENCE_SYNC`, { cache: 'no-store' }),
+          fetch(`${getApiBaseUrl()}/api/v1/lei/status/MASTER_DATA_SYNC`, { cache: 'no-store' }),
+          fetch(`${getApiBaseUrl()}/api/v1/lei/status/DAILY_FULL`, { cache: 'no-store' }),
+          fetch(`${getApiBaseUrl()}/api/v1/lei/status/DAILY_DELTA`, { cache: 'no-store' }),
+          fetch(`${getApiBaseUrl()}/api/v1/lei/status/LEVEL2_RR`, { cache: 'no-store' }),
+          fetch(`${getApiBaseUrl()}/api/v1/lei/status/LEVEL2_REPEX`, { cache: 'no-store' }),
+          fetch(`${getApiBaseUrl()}/api/v1/lei/status/GLEIF_REFERENCE_SYNC`, { cache: 'no-store' }),
         ])
 
         if (mdRes.ok) setMasterDataStatus(await mdRes.json())
@@ -139,10 +147,10 @@ export default function LEIStatusCard() {
     }
 
     fetchStatus()
-    const interval = setInterval(fetchStatus, 5000)
+    const interval = setInterval(fetchStatus, autoRefreshIntervalMs)
 
     return () => clearInterval(interval)
-  }, [])
+  }, [autoRefreshIntervalMs])
 
   const getHealthIndicator = (status: LEIStatus | null) => {
     if (!status) return { color: 'bg-gray-400', label: t('leiStatus.card.status.unknown'), icon: '❓' }

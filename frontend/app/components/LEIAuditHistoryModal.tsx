@@ -2,8 +2,10 @@
 
 import React, { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import Badge from './Badge'
 import CountryFlag from './CountryFlag'
 import { useButtonEmojiMode } from '../lib/useButtonEmojiMode'
+import { getRegistrationStatusBadgePresentation, REGISTRATION_STATUS_BADGE_VARIANT } from '../lei-records/null-utils'
 
 export interface LEIAuditEntry {
   id: string
@@ -32,6 +34,18 @@ const COUNTRY_CODE_FIELDS = new Set(['legal_address_country', 'hq_address_countr
 const ALPHA2_RE = /^[A-Z]{2}$/
 /** Fields whose values are LEI codes — rendered with monospace primary styling + optional click. */
 const LEI_CODE_FIELDS = new Set(['managing_lou', 'successor_lei'])
+/**
+ * Fields whose values are enum strings with underscores (e.g. FULLY_CORROBORATED).
+ * In the snapshot view these are displayed with underscores replaced by spaces so they read
+ * naturally (e.g. "FULLY CORROBORATED") without altering the stored value.
+ */
+const ENUM_DISPLAY_FIELDS = new Set([
+  'validation_sources',
+  'registration_status',
+  'entity_status',
+  'entity_category',
+  'entity_sub_category',
+])
 /** Border colour that uses the theme token at 75% opacity. Used in column-selector group rows. */
 const GROUP_BORDER_STYLE: React.CSSProperties = { borderColor: 'rgb(var(--border-rgb) / 0.75)' }
 
@@ -155,7 +169,7 @@ function formatNameEntry(obj: Record<string, unknown>): string {
   return `${name}${typePart}${langPart}`
 }
 
-function formatSnapshotValue(value: unknown): string {
+export function formatSnapshotValue(value: unknown): string {
   if (value === null || value === undefined || value === '') return '—'
   if (typeof value === 'string') {
     if (value.startsWith('0001-') || value.toLowerCase() === 'null') return '—'
@@ -197,9 +211,43 @@ function formatSnapshotValue(value: unknown): string {
       .join('\n')
   }
   if (typeof value === 'object') {
+    // An empty plain object (e.g. validation_sources stored as JSONB `{}`) means "no value".
+    if (Object.keys(value as Record<string, unknown>).length === 0) return '—'
     return JSON.stringify(value)
   }
   return String(value)
+}
+
+export function formatEnumDisplayText(fieldKey: string, value: unknown, formattedText: string): string {
+  if (!ENUM_DISPLAY_FIELDS.has(fieldKey)) return formattedText
+  if (formattedText === '—') return formattedText
+
+  if (Array.isArray(value) && value.every((item) => typeof item === 'string')) {
+    return (value as string[]).map((item) => item.replace(/_/g, ' ')).join('\n')
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      try {
+        const parsed = JSON.parse(trimmed)
+        if (Array.isArray(parsed) && parsed.every((item) => typeof item === 'string')) {
+          return (parsed as string[]).map((item) => item.replace(/_/g, ' ')).join('\n')
+        }
+      } catch {
+        // Fall through to plain enum string handling.
+      }
+    }
+
+    if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+      return formattedText
+    }
+
+    return formattedText.replace(/_/g, ' ')
+  }
+
+  return formattedText
 }
 
 interface SnapshotValueProps {
@@ -221,7 +269,8 @@ interface SnapshotValueProps {
 /** Renders a value with optional country flag, names/codes display mode, and LEI code links. */
 function SnapshotValue({ fieldKey, value, snapshot, showCodes = true, countryByCode, onLeiClick, linkedLeiNames, registrationAuthorityNameByCode, registrationAuthorityFallback }: SnapshotValueProps) {
   const text = formatSnapshotValue(value)
-  if (text === '—') return <span className="theme-text-muted">—</span>
+  const displayText = formatEnumDisplayText(fieldKey, value, text)
+  if (displayText === '—') return <span className="theme-text-muted">—</span>
   if (fieldKey === 'registration_authority' && typeof value === 'string') {
     const raCode = value.trim()
     const snapshotRaCode = typeof snapshot?.registration_authority === 'string'
@@ -270,6 +319,18 @@ function SnapshotValue({ fieldKey, value, snapshot, showCodes = true, countryByC
       </span>
     )
   }
+  if (fieldKey === 'registration_status' && typeof value === 'string' && value.trim().length > 0) {
+    const regStatusPresentation = getRegistrationStatusBadgePresentation(value)
+    return (
+      <Badge
+        title={regStatusPresentation.tooltip}
+        className="inline-block whitespace-nowrap"
+        variant={REGISTRATION_STATUS_BADGE_VARIANT[regStatusPresentation.variant]}
+      >
+        {regStatusPresentation.label}
+      </Badge>
+    )
+  }
   if (LEI_CODE_FIELDS.has(fieldKey) && typeof value === 'string' && value.trim().length > 0) {
     const lei = value.trim()
     const entityName = linkedLeiNames?.get(lei) || ''
@@ -295,16 +356,16 @@ function SnapshotValue({ fieldKey, value, snapshot, showCodes = true, countryByC
     return leiEl
   }
   // Multi-line values (e.g. other_names with multiple entries)
-  if (text.includes('\n')) {
+  if (displayText.includes('\n')) {
     return (
       <span className="flex flex-col gap-0.5">
-        {text.split('\n').map((line, i) => (
+        {displayText.split('\n').map((line, i) => (
           <span key={i}>{line}</span>
         ))}
       </span>
     )
   }
-  return <>{text}</>
+  return <>{displayText}</>
 }
 
 /** Compute changed fields by diffing two snapshots — used for arbitrary version pairs. */

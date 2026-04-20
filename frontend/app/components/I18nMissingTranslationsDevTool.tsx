@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
+import { getApiBaseUrl } from '../lib/api-base'
+import { getAuthToken } from '../lib/auth-token'
 import i18n from '../lib/i18n'
 
 type MissingTranslationDraft = {
@@ -15,10 +17,7 @@ type MissingTranslationDraft = {
   error: string
 }
 
-const API_BASE_URL =
-  typeof window !== 'undefined'
-    ? process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080'
-    : 'http://backend:8080'
+const API_BASE_URL = getApiBaseUrl()
 
 const normalizeLanguageCode = (languageCode: string): string =>
   String(languageCode || '').trim().toLowerCase().split('-')[0]
@@ -471,8 +470,7 @@ export default function I18nMissingTranslationsDevTool() {
       return
     }
 
-    const tokenRaw = typeof window !== 'undefined' ? localStorage.getItem('axiom_token') : null
-    const token = tokenRaw?.replace(/^Bearer\s+/i, '').trim() ?? ''
+    const token = getAuthToken() ?? ''
     if (!token) {
       setEntryField(entry.key, {
         error: 'Sign in first so this translation can be submitted.',

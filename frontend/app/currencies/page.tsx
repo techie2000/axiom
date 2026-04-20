@@ -8,11 +8,14 @@ import Badge from '../components/Badge'
 import LoadingSpinner from '../components/LoadingSpinner'
 import PageHeader from '../components/PageHeader'
 import PreferenceSavePrompt from '../components/PreferenceSavePrompt'
+import ReferencePageHeaderActions from '../components/ReferencePageHeaderActions'
 import SearchInputWithOverflowTooltip from '../components/SearchInputWithOverflowTooltip'
 import SortableHeaderCell from '../components/SortableHeaderCell'
 import StatCard from '../components/StatCard'
 import SyncedWideTable from '../components/SyncedWideTable'
 import ThemedSelect from '../components/ThemedSelect'
+import { getApiBaseUrl } from '../lib/api-base'
+import { getAuthToken } from '../lib/auth-token'
 import { useDeferredBooleanPreference } from '../lib/useDeferredBooleanPreference'
 import { buildDocsUrl } from '../lib/docsLinks'
 import { useEnglishTooltips } from '../lib/useEnglishTooltips'
@@ -68,14 +71,10 @@ export default function CurrenciesPage() {
     setHasHydrated(true)
   }, [])
 
-  const API_BASE_URL = typeof window !== 'undefined'
-    ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080')
-    : 'http://backend:8080'
+  const API_BASE_URL = getApiBaseUrl()
 
   useEffect(() => {
-    const rawToken = localStorage.getItem('axiom_token')
-    const normalizedToken = rawToken?.replace(/^Bearer\s+/i, '').trim() ?? ''
-    setIsLoggedIn(normalizedToken !== '' && normalizedToken !== 'undefined' && normalizedToken !== 'null')
+    setIsLoggedIn(getAuthToken() !== null)
   }, [])
 
   const fetchCurrencies = useCallback(async () => {
@@ -234,25 +233,19 @@ export default function CurrenciesPage() {
           backHref={backHref}
           docsHref={buildDocsUrl('workflows/currencies/')}
           actions={
-            <>
-              <button
-                onClick={expandedWidthPreference.toggle}
-                className="theme-header-action rounded-lg theme-btn-neutral theme-focus"
-                title={effectiveExpandedWidth ? getEnglishTooltip('referenceLayout.normalButton') : getEnglishTooltip('referenceLayout.expandButton')}
-                aria-label={effectiveExpandedWidth ? t('referenceLayout.normalButton') : t('referenceLayout.expandButton')}
-              >
-                {effectiveExpandedWidth ? formatLabel(t('referenceLayout.normalButton')) : formatLabel(t('referenceLayout.expandButton'))}
-              </button>
-              {expandedWidthPreference.hasUnsavedChanges && (
-                <button
-                  onClick={expandedWidthPreference.saveCurrentValue}
-                  className="theme-header-action rounded-lg theme-btn-primary theme-focus"
-                  title={getEnglishTooltip('referenceLayout.savePageWidthDefault')}
-                >
-                  {formatLabel('💾 Save width')}
-                </button>
-              )}
-            </>
+            <ReferencePageHeaderActions
+              effectiveExpandedWidth={effectiveExpandedWidth}
+              normalTitle={getEnglishTooltip('referenceLayout.normalButton')}
+              expandTitle={getEnglishTooltip('referenceLayout.expandButton')}
+              normalLabel={t('referenceLayout.normalButton')}
+              expandLabel={t('referenceLayout.expandButton')}
+              saveWidthTitle={getEnglishTooltip('referenceLayout.savePageWidthDefault')}
+              saveWidthLabel={`💾 ${t('referenceLayout.savePageWidthDefault')}`}
+              hasUnsavedWidthChanges={expandedWidthPreference.hasUnsavedChanges}
+              onToggleExpandedWidth={expandedWidthPreference.toggle}
+              onSaveExpandedWidth={expandedWidthPreference.saveCurrentValue}
+              formatLabel={formatLabel}
+            />
           }
         />
 

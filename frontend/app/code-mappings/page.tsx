@@ -8,6 +8,7 @@ import LoadingSpinner from '../components/LoadingSpinner'
 import PageHeader from '../components/PageHeader'
 import SearchInputWithOverflowTooltip from '../components/SearchInputWithOverflowTooltip'
 import StatCard from '../components/StatCard'
+import { getApiBaseUrl } from '../lib/api-base'
 import { useEnglishTooltips } from '../lib/useEnglishTooltips'
 import { useSearchFocusShortcut } from '../lib/useSearchFocusShortcut'
 
@@ -37,9 +38,7 @@ export default function CodeMappingsPage() {
   const [errorKind, setErrorKind] = useState<'noneConfigured' | 'authRequired' | 'apiError' | 'networkError' | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
 
-  const API_BASE_URL = typeof window !== 'undefined'
-    ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080')
-    : 'http://backend:8080'
+  const API_BASE_URL = getApiBaseUrl()
 
   const fetchMappings = useCallback(async () => {
     try {

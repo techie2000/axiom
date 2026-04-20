@@ -30,7 +30,13 @@ export default function UserBadge() {
     'map_provider',
     'openstreetmap',
   )
+  const [favoritesOnlyNavigation, setFavoritesOnlyNavigation] = useUserPreference(
+    'global',
+    'nav_favorites_only',
+    'false',
+  )
   const normalizedMapProviderId = getMapProvider(storedMapProvider).id
+  const favoritesOnlyEnabled = favoritesOnlyNavigation === 'true'
 
   // Eagerly apply theme and dark-mode preferences from the server as soon as
   // they are loaded into the cache (#267).  ThemeSelector / ThemeToggle are
@@ -168,6 +174,19 @@ export default function UserBadge() {
                 checked={englishTooltipsPreferenceEnabled}
                 onChange={(event) => setEnglishTooltipsPreferenceEnabled(event.target.checked)}
                 className="mt-1 h-4 w-4 rounded border-[rgb(var(--border-rgb))] text-[rgb(var(--primary-rgb))] focus:ring-[rgb(var(--ring-rgb))]"
+              />
+            </label>
+            <label className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <span className="block text-sm theme-text-muted">{t('preferences.favoritesOnlyNavigation')}</span>
+                <span className="block text-xs theme-text-muted">{t('preferences.favoritesOnlyNavigationDescription')}</span>
+              </div>
+              <input
+                type="checkbox"
+                checked={favoritesOnlyEnabled}
+                onChange={(event) => setFavoritesOnlyNavigation(String(event.target.checked))}
+                className="mt-1 h-4 w-4 rounded border-[rgb(var(--border-rgb))] text-[rgb(var(--primary-rgb))] focus:ring-[rgb(var(--ring-rgb))]"
+                aria-label={t('preferences.favoritesOnlyNavigation')}
               />
             </label>
             <div className="flex items-start justify-between gap-3">
