@@ -138,7 +138,8 @@ gh pr comment {pr_number} --body "[Generated summary from Step 5 below]"
 ## Step 4.5: Mirror Updates To Linked Issues After Each Push
 
 After each push where you post PR status or resolution comments, automatically post concise status updates on each
-linked underlying issue (for example `Fixes #123`, `Closes #123`, or issues referenced in the PR body). Do not wait
+linked underlying issue (for example `Refs #123`, or `Fixes/Closes #123` when `#123` is confirmed to be an issue and
+not a pull request). Do not wait
 until the final PR summary comment.
 
 **Post on each linked issue after each relevant push:**
