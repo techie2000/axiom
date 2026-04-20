@@ -19,7 +19,7 @@
 
 ## Linked Work
 
-- Issue(s): <!-- Closes #N  |  Fixes #N  |  Refs #N -->
+- Issue(s): <!-- Refs #N (preferred) | Closes/Fixes #N (ISSUES ONLY, never PRs) -->
 - ADR(s):
 
 <!-- No backing issue? Check the box and briefly explain. Bot-authored PRs are exempt automatically. -->
