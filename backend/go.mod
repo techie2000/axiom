@@ -3,7 +3,7 @@ module github.com/techie2000/axiom
 go 1.25.1
 
 require (
-	github.com/gin-gonic/gin v1.11.0
+	github.com/gin-gonic/gin v1.12.0
 	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/google/uuid v1.6.0
 	github.com/rs/zerolog v1.31.0
@@ -12,8 +12,8 @@ require (
 	github.com/swaggo/gin-swagger v1.6.0
 	golang.org/x/crypto v0.48.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
-	gorm.io/driver/postgres v1.5.4
-	gorm.io/gorm v1.25.5
+	gorm.io/driver/postgres v1.6.0
+	gorm.io/gorm v1.25.10
 )
 
 require (
@@ -67,8 +67,8 @@ require (
 	github.com/swaggo/swag v1.16.2 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.3.1 // indirect
+	go.mongodb.org/mongo-driver/v2 v2.5.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
-	go.uber.org/mock v0.6.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
 	golang.org/x/arch v0.24.0 // indirect
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
