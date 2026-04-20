@@ -1,4 +1,5 @@
 @import "tailwindcss";
+/* Preserve class-based dark mode behavior previously configured in Tailwind v3. */
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
