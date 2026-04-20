@@ -107,45 +107,78 @@ docker-logs: ## Show logs from all services (default/legacy)
 	docker-compose logs -f
 
 docker-main-down: ## Stop main branch environment
-	docker-compose --env-file .env.main -f docker-compose.main.yml down
+	@if command -v bash >/dev/null 2>&1; then \
+		bash scripts/run-main-compose.sh down; \
+	elif command -v pwsh >/dev/null 2>&1; then \
+		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/run-main-compose.ps1 down; \
+	else \
+		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run main compose wrapper."; \
+		exit 1; \
+	fi
 
 docker-main-rebuild-safe: ## Gracefully rebuild main backend/frontend while reducing DB crash-recovery risk
 	@echo "Gracefully stopping app services first (frontend/backend)..."
-	docker-compose --env-file .env.main -f docker-compose.main.yml stop -t 45 frontend backend
+	@if command -v bash >/dev/null 2>&1; then \
+		bash scripts/run-main-compose.sh stop -t 45 frontend backend; \
+	elif command -v pwsh >/dev/null 2>&1; then \
+		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/run-main-compose.ps1 stop -t 45 frontend backend; \
+	else \
+		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run main compose wrapper."; \
+		exit 1; \
+	fi
 	@echo "Stopping stateful services with extended timeout (postgres/rabbitmq)..."
-	docker-compose --env-file .env.main -f docker-compose.main.yml stop -t 120 postgres rabbitmq
+	@if command -v bash >/dev/null 2>&1; then \
+		bash scripts/run-main-compose.sh stop -t 120 postgres rabbitmq; \
+	elif command -v pwsh >/dev/null 2>&1; then \
+		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/run-main-compose.ps1 stop -t 120 postgres rabbitmq; \
+	else \
+		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run main compose wrapper."; \
+		exit 1; \
+	fi
 	@echo "Rebuilding and starting services..."
-	docker-compose --env-file .env.main -f docker-compose.main.yml up -d --build postgres rabbitmq backend frontend
+	@if command -v bash >/dev/null 2>&1; then \
+		bash scripts/run-main-compose.sh up -d --build postgres rabbitmq backend frontend; \
+	elif command -v pwsh >/dev/null 2>&1; then \
+		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/run-main-compose.ps1 up -d --build postgres rabbitmq backend frontend; \
+	else \
+		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run main compose wrapper."; \
+		exit 1; \
+	fi
 
 docker-main-logs: ## Show logs from main branch environment
-	docker-compose --env-file .env.main -f docker-compose.main.yml logs -f
+	@if command -v bash >/dev/null 2>&1; then \
+		bash scripts/run-main-compose.sh logs -f; \
+	elif command -v pwsh >/dev/null 2>&1; then \
+		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/run-main-compose.ps1 logs -f; \
+	else \
+		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run main compose wrapper."; \
+		exit 1; \
+	fi
 
 docker-main-restart: ## Restart main branch environment
 	@if command -v bash >/dev/null 2>&1; then \
-		bash scripts/ensure-bind-mounts.sh main; \
 		bash scripts/upgrade-postgres.sh main --yes; \
+		bash scripts/run-main-compose.sh restart; \
 	elif command -v pwsh >/dev/null 2>&1; then \
-		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/ensure-bind-mounts.ps1 -Environment main; \
 		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/upgrade-postgres.ps1 -Environment main -Yes; \
+		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/run-main-compose.ps1 restart; \
 	else \
-		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run bind-mount setup or PostgreSQL upgrade precheck."; \
+		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run main compose wrapper."; \
 		exit 1; \
 	fi
-	docker-compose --env-file .env.main -f docker-compose.main.yml restart
 
 # Main branch environment (intraday development/fixes)
 docker-main-up: ## Start main branch environment (ports: 48080, 43000, 45432)
 	@if command -v bash >/dev/null 2>&1; then \
-		bash scripts/ensure-bind-mounts.sh main; \
 		bash scripts/upgrade-postgres.sh main --yes; \
+		bash scripts/run-main-compose.sh up -d; \
 	elif command -v pwsh >/dev/null 2>&1; then \
-		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/ensure-bind-mounts.ps1 -Environment main; \
 		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/upgrade-postgres.ps1 -Environment main -Yes; \
+		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/run-main-compose.ps1 up -d; \
 	else \
-		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run bind-mount setup or PostgreSQL upgrade precheck."; \
+		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run main compose wrapper."; \
 		exit 1; \
 	fi
-	docker-compose --env-file .env.main -f docker-compose.main.yml up -d
 
 docker-prod-down: ## Stop production environment
 	docker-compose --env-file .env.prod -f docker-compose.prod.yml down
