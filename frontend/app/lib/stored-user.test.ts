@@ -1,10 +1,32 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { readStoredUser } from './stored-user'
+
+function createLocalStorageMock() {
+  const store = new Map<string, string>()
+
+  return {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      store.set(key, value)
+    },
+    removeItem: (key: string) => {
+      store.delete(key)
+    },
+    clear: () => {
+      store.clear()
+    },
+  }
+}
+
+beforeEach(() => {
+  vi.stubGlobal('localStorage', createLocalStorageMock())
+})
 
 describe('readStoredUser', () => {
   afterEach(() => {
     localStorage.clear()
+    vi.restoreAllMocks()
   })
 
   it('returns null when localStorage has no user entry', () => {
