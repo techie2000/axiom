@@ -14,6 +14,7 @@ RUN apk add --no-cache --upgrade libssl3
 WORKDIR /app
 
 # Install build dependencies and ca-certificates
+# hadolint ignore=DL3018
 RUN apk add --no-cache git=2.47.3-r0 make=4.4.1-r2 ca-certificates && update-ca-certificates
 
 # Copy go mod files
