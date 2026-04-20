@@ -108,6 +108,7 @@ services:
     environment:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
       NEXT_PUBLIC_ENVIRONMENT: ${NEXT_PUBLIC_ENVIRONMENT}
+      INTERNAL_API_PROXY_TARGET: http://backend:8080
       NODE_ENV: development
     ports:
       - "${FRONTEND_PORT}:3000"
