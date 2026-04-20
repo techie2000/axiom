@@ -42,9 +42,9 @@ jobs:
 
             const body = pr.body || ''
 
-            // Closing keywords: closes/fixes/resolves/refs/relates to + #N
-            // Also support GitHub-accepted `Fixes: #123` style.
-            const hasClosingKeyword = /\b(closes?|fixes?|resolves?|refs?|relates?\s+to)(?:\s+|:\s*)#\d+/i.test(body)
+            // Issue-reference keywords: closes/fixes/resolves/refs/relates to + #N
+            // Also support GitHub-accepted colon forms such as `Fixes: #123`.
+            const hasIssueReferenceKeyword = /\b(closes?|fixes?|resolves?|refs?|relates?\s+to)(?:\s+|:\s*)#\d+/i.test(body)
 
             // Guardrail: closing keywords must target ISSUES, never PULL REQUESTS.
             // (Refs/Relates do not auto-close and are not blocked.)
@@ -110,7 +110,7 @@ jobs:
             // Template override checkbox checked
             const noIssueChecked = /- \[x\] no linked issue/i.test(body)
 
-            if (hasClosingKeyword || hasLinkedClosingIssue || noIssueChecked) {
+            if (hasIssueReferenceKeyword || hasLinkedClosingIssue || noIssueChecked) {
               core.info('Issue link or override found')
               return
             }

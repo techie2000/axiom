@@ -82,7 +82,6 @@
     "println": true,
     "psql": true,
     "Push-Location": true,
-    "select": true,
     "Set-Content": true,
     "sqlfluff": true,
     "Start-Process": true,

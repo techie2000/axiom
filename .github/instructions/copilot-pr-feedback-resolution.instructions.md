@@ -249,6 +249,10 @@ If you cannot locate a Copilot comment ID:
 
 - Post individual resolutions **immediately after pushing each fix**
 - Post comprehensive summary **after all fixes are pushed and CI has started**
+- Do not merge or close PRs until review completion is verified:
+  - all review threads resolved,
+  - no pending reviewer feedback for the latest commit,
+  - and no unaddressed Copilot comments remain.
 
 ### Clarity
 
