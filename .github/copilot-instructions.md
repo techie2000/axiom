@@ -626,12 +626,12 @@ This repository configuration is designed to make AI coding agents immediately p
 When an AI agent creates a pull request, it should complete standard PR hygiene automatically **without asking for confirmation**:
 
 1. Add appropriate labels following the three-namespace taxonomy:
-   - **Category** (required, if applicable): `bug`, `enhancement`, `documentation`, `security`, `performance`, or `question` — only when distinct from area labels
+   - **Category** (optional, max one): `bug`, `enhancement`, `security`, `performance`, or `question` — add only when it conveys information not already implied by Area
    - **Area** (required, exactly one): `area:backend`, `area:frontend`, `area:database`, `area:docs`,
      `area:infra`, `area:ci`, `area:lei`, or `area:dependencies` — infer from the files touched OR let CI workflow auto-apply
    - **Type** (optional secondary, one or two): `type:tests`, `type:refactor`, `type:chore`
    - Add `automated` to mark AI-created items and `no-issue-needed` for PRs with no backing issue
-   - **Note**: The CI workflow (`auto-label-prs.yml`) automatically applies Area labels based on file paths. Do not manually add Area labels unless the auto-detection fails. Category labels are only needed when the category is not implicit in the Area (e.g., `area:backend` change that is also a `security` fix should add `security` category).
+   - **Note**: The CI workflow (`auto-label-prs.yml`) automatically applies Area labels based on file paths. Do not manually add Area labels unless the auto-detection fails. Avoid duplicate semantics: do not add `documentation` when `area:docs` is present. Category labels are only needed when they are orthogonal to Area (e.g., `area:backend` change that is also a `security` fix should add `security`).
 2. Request a reviewer (prefer `copilot-pull-request-reviewer` when available).
 3. Post a concise verification checklist comment relevant to the changed files.
 4. After each commit push to the PR branch, post a concise implementation summary comment that includes:
