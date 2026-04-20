@@ -180,12 +180,13 @@ apply others manually.
 
 ## PR Issue Link and Override
 
-PRs should reference a linked issue using a closing keyword in the PR description.
+PRs should reference a linked issue in the PR description. Prefer `Refs #N` by default.
+Use closing keywords only when `#N` is confirmed to be an issue (not a pull request).
 
 ```text
-Closes #123
-Fixes #42
 Refs #7
+Closes #123  (issue only)
+Fixes #42    (issue only)
 ```
 
 If no backing issue exists, check the **No linked issue** box in the PR template and
