@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
   pull-requests: write
 
 jobs:
@@ -42,12 +43,13 @@ jobs:
             const body = pr.body || ''
 
             // Closing keywords: closes/fixes/resolves/refs/relates to + #N
-            const hasClosingKeyword = /\b(closes?|fixes?|resolves?|refs?|relates?\s+to)\s+#\d+/i.test(body)
+            // Also support GitHub-accepted `Fixes: #123` style.
+            const hasClosingKeyword = /\b(closes?|fixes?|resolves?|refs?|relates?\s+to)(?:\s+|:\s*)#\d+/i.test(body)
 
             // Guardrail: closing keywords must target ISSUES, never PULL REQUESTS.
             // (Refs/Relates do not auto-close and are not blocked.)
             const closingKeywordMatches = [
-              ...body.matchAll(/\b(closes?|fixes?|resolves?)\s+#(\d+)\b/gi),
+              ...body.matchAll(/\b(closes?|fixes?|resolves?)(?:\s+|:\s*)#(\d+)\b/gi),
             ]
             const closingTargets = [...new Set(closingKeywordMatches.map((m) => Number(m[2])))]
 
@@ -64,7 +66,12 @@ jobs:
                   closingTargetsThatArePRs.push(targetNumber)
                 }
               } catch (error) {
-                // If target cannot be fetched, ignore here and continue.
+                const details = error?.status ? `status ${error.status}` : String(error)
+                core.setFailed(
+                  `Unable to verify closing keyword target #${targetNumber} (${details}). ` +
+                    'Do not use Closes/Fixes/Resolves until target verification succeeds.'
+                )
+                return
               }
             }
 
