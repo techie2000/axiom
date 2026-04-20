@@ -16,10 +16,10 @@ WORKDIR /app
 # Install build dependencies and ca-certificates
 # hadolint ignore=DL3018
 RUN apk add --no-cache \
-	ca-certificates \
-	git=2.47.3-r0 \
-	make=4.4.1-r2 \
-	&& update-ca-certificates
+    ca-certificates \
+    git=2.47.3-r0 \
+    make=4.4.1-r2 \
+    && update-ca-certificates
 
 # Copy go mod files
 COPY go.mod ./

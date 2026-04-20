@@ -90,7 +90,8 @@ State values: `open`, `closed`
 - When work starts on a linked issue, replace `status: triage` with `status: in progress`
 - When the linked PR merges, replace `status: in progress` with `status: done`
 - If work stops and the linked PR closes without merge, move the issue back to `status: triage`
-- Preserve category labels such as `bug`, `enhancement`, `documentation`, `security`, and `performance`
+- Preserve category labels such as `bug`, `enhancement`, `security`, and `performance`
+- For documentation-focused work, use `area:docs` instead of adding a duplicate `documentation` label
 
 ## Examples
 
@@ -134,7 +135,6 @@ Use these standard labels when applicable:
 | --- | --- |
 | `bug` | Something isn't working |
 | `enhancement` | New feature or improvement |
-| `documentation` | Documentation updates |
 | `good first issue` | Good for newcomers |
 | `help wanted` | Extra attention needed |
 | `question` | Further information requested |
