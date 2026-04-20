@@ -39,9 +39,12 @@ Once merge is confirmed:
 
 ```bash
 # Delete branch matching PR number
-git branch -D pr-{NUMBER}
+git branch -d pr-{NUMBER}
 
 # OR delete specific fix/feature branches
+git branch -d {branch-name}
+
+# If branch is intentionally local-only and you want to discard commits
 git branch -D {branch-name}
 ```
 
@@ -55,6 +58,9 @@ git worktree list
 git worktree remove {worktree-path} --force
 
 # Delete associated branch
+git branch -d {branch-name}
+
+# Use -D only when intentionally discarding unmerged local commits
 git branch -D {branch-name}
 ```
 
@@ -88,7 +94,7 @@ git fetch origin --prune
 
 **Cleanup:**
 
-```bash
+```powershell
 foreach ($pr in @(155, 220, 272)) {
     gh api repos/techie2000/axiom/pulls/$pr --jq '{number, merged}'
 }
@@ -126,12 +132,15 @@ After cleanup:
 
 - [ ] Check remaining branches: `git branch -v`
 - [ ] Verify no orphaned worktree directories in `worktrees/`
-- [ ] Confirm remote refs pruned: `git branch -r | wc -l`
+- [ ] Confirm no stale remote refs remain: `git remote prune origin --dry-run`
+- [ ] PowerShell alternative (optional): `git remote prune origin --dry-run | Measure-Object -Line`
 - [ ] On main with latest: `git status` should show "up to date with origin/main"
 
 ## Notes
 
 - **Always verify PR is merged** before deleting local branches (use `gh api`)
-- **Use `--force` flag** only for worktrees; safe for branches
+- **`--force` applies to worktree removal** (`git worktree remove --force`);
+    for branches prefer `git branch -d` and use `git branch -D` only when
+    intentionally discarding local-only commits
 - **Single source of truth**: GitHub is authoritative; local branches are ephemeral
 - **Batch deletions** when multiple PRs merge (more efficient)
