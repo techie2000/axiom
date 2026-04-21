@@ -161,6 +161,22 @@ jobs:
               }
             }
 
+            // area:dependencies supercedes area-specific labels when ONLY dependency files changed.
+            // Dependency bumps across multiple areas (frontend/ backend/) should be labeled area:dependencies,
+            // not area:frontend + area:backend, since the semantic content is "dependency updates," not "backend work" or "frontend work."
+            if (matchedAreas.has('area:dependencies')) {
+              const isDependencyOnly = allFiles.every((f) =>
+                /^(go\.(mod|sum)|frontend\/package(-lock)?\.json|.*\.lock)$/.test(f)
+              )
+              if (isDependencyOnly) {
+                matchedAreas.delete('area:backend')
+                matchedAreas.delete('area:frontend')
+                matchedAreas.delete('area:database')
+                matchedAreas.delete('area:infra')
+                matchedAreas.delete('area:ci')
+              }
+            }
+
             // Type label inference
             const isTestFile = (p) => /(_test\.go|\.test\.[jt]sx?|\.spec\.[jt]sx?)$/.test(p)
             const allTest = allFiles.length > 0 && allFiles.every(isTestFile)
