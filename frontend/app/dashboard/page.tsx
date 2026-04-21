@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 import LEIStatusCard from '../components/LEIStatusCard'
@@ -18,6 +18,26 @@ import { buildDocsUrl } from '../lib/docsLinks'
 import { getDashboardSectionById } from '../lib/dashboard-sections'
 
 export default function DashboardPage() {
+  return (
+    <Suspense fallback={<DashboardPageFallback />}>
+      <DashboardPageContent />
+    </Suspense>
+  )
+}
+
+function DashboardPageFallback() {
+  const { t } = useTranslation('common')
+
+  return (
+    <main className="min-h-screen p-8">
+      <div className="max-w-7xl mx-auto text-sm theme-text-muted">
+        {t('dashboard.redirecting')}
+      </div>
+    </main>
+  )
+}
+
+function DashboardPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { t } = useTranslation('common')
