@@ -18,9 +18,8 @@ updates:
     assignees:
       - "techie2000"
     labels:
-      - "dependencies"
-      - "docker"
       - "security"
+      - "area:infra"
       - "area:dependencies"
       - "no-issue-needed"
     commit-message:
@@ -43,9 +42,8 @@ updates:
     assignees:
       - "techie2000"
     labels:
-      - "dependencies"
       - "go"
-      - "backend"
+      - "area:backend"
       - "area:dependencies"
       - "no-issue-needed"
     commit-message:
@@ -78,14 +76,20 @@ updates:
     assignees:
       - "techie2000"
     labels:
-      - "dependencies"
-      - "npm"
-      - "frontend"
+      - "area:frontend"
       - "area:dependencies"
       - "no-issue-needed"
     commit-message:
       prefix: "build(npm)"
       include: "scope"
+    # NOTE: eslint-config-next is intentionally pinned to the 15.x range.
+    # 16.x exports flat-config objects that break FlatCompat (circular JSON
+    # in @eslint/eslintrc config validator). Remove this ignore rule once
+    # eslint-config-next 16.x+ publishes a legacy-compatible export or the
+    # project migrates away from FlatCompat in eslint.config.mjs.
+    ignore:
+      - dependency-name: "eslint-config-next"
+        versions: [">=16"]
     # Group npm updates by type
     groups:
       npm-framework:
