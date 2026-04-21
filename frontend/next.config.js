@@ -19,6 +19,10 @@ const nextConfig = {
         source: '/api/:path*',
         destination: `${internalApiProxyTarget}/api/:path*`,
       },
+      {
+        source: '/version',
+        destination: `${internalApiProxyTarget}/version`,
+      },
     ]
   },
   env: {
