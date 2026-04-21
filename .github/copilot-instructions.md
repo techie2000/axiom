@@ -649,6 +649,17 @@ When an AI agent creates a pull request, it should complete standard PR hygiene 
    - PR link.
 6. Do not ask whether to post the summary/checklist/issue-update comments; post them by default.
 
+### Merge/Close Review Gate (REQUIRED)
+
+Before merging a PR, closing a linked PR, or announcing readiness to merge:
+
+1. Confirm no unresolved review threads remain.
+2. Confirm required reviews are complete and nothing is pending for the latest commit.
+3. Confirm no new reviewer/Copilot comments were added after the latest fix without a reply.
+
+This is a high-visibility reminder; execution details are defined in
+[`instructions/copilot-pr-feedback-resolution.instructions.md`](instructions/copilot-pr-feedback-resolution.instructions.md).
+
 Only ask follow-up questions if required metadata cannot be applied (for example, reviewer handle is unavailable).
 
 ## GitHub Comment Formatting (REQUIRED)
