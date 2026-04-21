@@ -10,7 +10,7 @@ import { RefObject, useEffect } from 'react'
  *
  * @param inputRef - A React ref pointing to the search `<input>` element.
  */
-export function useSearchFocusShortcut(inputRef: RefObject<HTMLInputElement>) {
+export function useSearchFocusShortcut(inputRef: RefObject<HTMLInputElement | null>) {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
