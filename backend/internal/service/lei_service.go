@@ -136,6 +136,9 @@ type leiService struct {
 	dataDir     string // Directory to store downloaded files
 
 	lookupCacheMu              sync.RWMutex
+	leiCount                   int64
+	leiCountCached             bool
+	leiCountCachedAt           time.Time
 	distinctCategories         []string
 	distinctCategoriesCachedAt time.Time
 	distinctRegions            []string
@@ -160,6 +163,15 @@ func cloneStringSlice(values []string) []string {
 	cloned := make([]string, len(values))
 	copy(cloned, values)
 	return cloned
+}
+
+func isLevel1CountMutatingJob(jobType string) bool {
+	switch strings.ToUpper(strings.TrimSpace(jobType)) {
+	case "LEVEL1_FULL", "LEVEL1_DELTA":
+		return true
+	default:
+		return false
+	}
 }
 
 func statusJobTypeFromFileType(fileType string) string {
@@ -599,6 +611,7 @@ func (s *leiService) ProcessSourceFileWithResume(sourceFileID uuid.UUID, resumeF
 	if err := s.repo.UpdateSourceFile(sourceFile); err != nil {
 		return fmt.Errorf("failed to update source file status: %w", err)
 	}
+	s.refreshLEICountCacheForJob(sourceFile.JobType)
 
 	log.Info().
 		Str("source_file_id", sourceFileID.String()).
@@ -608,6 +621,30 @@ func (s *leiService) ProcessSourceFileWithResume(sourceFileID uuid.UUID, resumeF
 		Msg("File processing completed")
 
 	return nil
+}
+
+func (s *leiService) refreshLEICountCache() error {
+	count, err := s.repo.CountLEIRecords()
+	if err != nil {
+		return err
+	}
+
+	s.lookupCacheMu.Lock()
+	s.leiCount = count
+	s.leiCountCached = true
+	s.lookupCacheMu.Unlock()
+
+	return nil
+}
+
+func (s *leiService) refreshLEICountCacheForJob(jobType string) {
+	if !isLevel1CountMutatingJob(jobType) {
+		return
+	}
+
+	if err := s.refreshLEICountCache(); err != nil {
+		log.Warn().Err(err).Str("job_type", jobType).Msg("Failed to refresh cached LEI count after Level 1 processing")
+	}
 }
 
 // extractZipFile extracts the JSON file from a ZIP archive
@@ -1565,7 +1602,23 @@ func (s *leiService) GetAllLEIWithFilters(limit, offset int, search, status, cat
 
 // CountLEIRecords returns the total count of LEI records
 func (s *leiService) CountLEIRecords() (int64, error) {
-	return s.repo.CountLEIRecords()
+	s.lookupCacheMu.RLock()
+	if s.leiCountCached {
+		cachedCount := s.leiCount
+		s.lookupCacheMu.RUnlock()
+		return cachedCount, nil
+	}
+	s.lookupCacheMu.RUnlock()
+
+	if err := s.refreshLEICountCache(); err != nil {
+		return 0, err
+	}
+
+	s.lookupCacheMu.RLock()
+	cachedCount := s.leiCount
+	s.lookupCacheMu.RUnlock()
+
+	return cachedCount, nil
 }
 
 // GetLegalNamesByLEICodes returns a map of LEI code → legal name for a batch of codes.
