@@ -22,9 +22,20 @@ Manage GitHub issues using the `@modelcontextprotocol/server-github` MCP server.
 
 1. **Determine action**: Create, update, or query?
 2. **Gather context**: Get repo info, existing labels, milestones if needed
-3. **Structure content**: Use appropriate template from [references/templates.md](references/templates.md)
-4. **Execute**: Call the appropriate MCP tool
-5. **Confirm**: Report the issue URL to user
+3. **Check for duplicates before create**:
+  Search recent open issues for the same feature, bug, or wording before opening a new one
+4. **Structure content**: Use appropriate template from [references/templates.md](references/templates.md)
+5. **Execute**: Call the appropriate MCP tool
+6. **Confirm**: Report the issue URL to user
+
+## Duplicate Check
+
+Before creating a new issue:
+
+- Search open issues for the main nouns and verbs from the request
+- Compare against issues created earlier in the same session when the topic is closely related
+- If a matching issue already exists, prefer updating or referencing it instead of creating a new one
+- If you intentionally create a follow-on issue, explicitly reference the parent or predecessor issue in the body
 
 ## Creating Issues
 
