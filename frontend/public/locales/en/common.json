@@ -32,6 +32,7 @@
     }
   },
   "nav": {
+    "breadcrumbs": "Breadcrumbs",
     "backToHome": "← Back to Home",
     "backToDashboard": "← Back to Dashboard",
     "backToLogin": "← Back to Login",
