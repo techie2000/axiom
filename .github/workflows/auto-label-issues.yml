@@ -206,8 +206,23 @@ jobs:
 
             const inferredCategoryLabels = []
             for (const rule of labelRules) {
-              const hasPositiveMatch = rule.patterns.some((pattern) => pattern.test(text))
-              const hasNegativeMatch = (rule.negativePatterns || []).some((pattern) => pattern.test(text))
+              let hasPositiveMatch = rule.patterns.some((pattern) => pattern.test(text))
+              let hasNegativeMatch = (rule.negativePatterns || []).some((pattern) => pattern.test(text))
+
+              if (rule.label === 'bug') {
+                const hasDirectBugSignal = [
+                  /\bbug\b/,
+                  /\berror\b/,
+                  /\bfail(?:ed|ure)?\b/,
+                  /\bbroken\b/
+                ].some((pattern) => pattern.test(text))
+                const hasRegressionSignal = /\bregression\b/.test(text)
+                const suppressRegressionSignal = (rule.negativePatterns || []).some((pattern) => pattern.test(text))
+
+                // Keep bug inference from direct bug words, and only suppress the regression-specific signal.
+                hasPositiveMatch = hasDirectBugSignal || (hasRegressionSignal && !suppressRegressionSignal)
+                hasNegativeMatch = false
+              }
 
               if (hasPositiveMatch && !hasNegativeMatch) {
                 inferredCategoryLabels.push(rule.label)
