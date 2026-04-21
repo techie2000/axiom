@@ -138,7 +138,6 @@ type leiService struct {
 	lookupCacheMu              sync.RWMutex
 	leiCount                   int64
 	leiCountCached             bool
-	leiCountCachedAt           time.Time
 	distinctCategories         []string
 	distinctCategoriesCachedAt time.Time
 	distinctRegions            []string
