@@ -65,7 +65,7 @@ export default function PageHeader({
       <div>
         {dashboardPageSection && (
           <nav
-            aria-label={t('leftNav.title')}
+            aria-label={t('nav.breadcrumbs', 'Breadcrumbs')}
             className="mb-3 overflow-x-auto"
           >
             <ol className="flex min-w-max items-center gap-2 text-xs sm:text-sm theme-text-muted">

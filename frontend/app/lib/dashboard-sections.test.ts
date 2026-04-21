@@ -12,6 +12,18 @@ describe('getDashboardSectionById', () => {
   it('returns null for unknown section ids', () => {
     expect(getDashboardSectionById('unknown')).toBeNull()
   })
+
+  it('normalizes leading/trailing whitespace in the id', () => {
+    const section = getDashboardSectionById('  master-data-management  ')
+
+    expect(section?.id).toBe('master-data-management')
+  })
+
+  it('normalizes mixed-case ids', () => {
+    const section = getDashboardSectionById('Master-Data-Management')
+
+    expect(section?.id).toBe('master-data-management')
+  })
 })
 
 describe('getDashboardPageSection', () => {
