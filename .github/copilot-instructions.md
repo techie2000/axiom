@@ -645,6 +645,7 @@ When an AI agent creates a pull request, it should complete standard PR hygiene 
    - what changed,
    - what validation/tests were run,
    - any follow-up actions or known limitations.
+   - If a push has no meaningful reviewer-facing delta, do not post a new summary comment.
 5. For each linked underlying issue (prefer `Refs #123`; use `Fixes/Closes #123` only when `#123` is confirmed to be
    an issue and not a pull request),
    post a concise issue update comment after each PR push (same per-push trigger as
@@ -699,6 +700,8 @@ When posting PR/issue comments, checklists, PR descriptions, or review summaries
    - `gh api ... --method PATCH/POST -f "body=..."` where the body variable already contains real newlines.
 4. Immediately verify the posted body (for example with `gh api ... --jq .body` or `gh pr view --comments`) and fix in-place if formatting is not human-readable.
 5. For checklist comments, keep concise one-line bullets and avoid shell-escaped artifacts in the final rendered text.
+6. Keep comments actionable: include decisions, code/test results, or explicit next actions.
+7. Do not add non-actionable filler such as "checks are in progress" or equivalent queue/waiting notes in public comments.
 
 ### Comment Deduplication Guardrail (REQUIRED)
 
