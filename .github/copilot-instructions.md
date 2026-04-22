@@ -700,6 +700,25 @@ When posting PR/issue comments, checklists, PR descriptions, or review summaries
 4. Immediately verify the posted body (for example with `gh api ... --jq .body` or `gh pr view --comments`) and fix in-place if formatting is not human-readable.
 5. For checklist comments, keep concise one-line bullets and avoid shell-escaped artifacts in the final rendered text.
 
+### Comment Deduplication Guardrail (REQUIRED)
+
+Before posting any PR/issue comment from an AI agent, perform a dedupe check to avoid duplicate comments.
+
+Workflow:
+1. Read recent comments first:
+   - `gh pr view <pr> --repo <owner>/<repo> --comments`
+   - `gh issue view <issue> --repo <owner>/<repo> --comments`
+2. Compare the planned comment against the latest same-author comments for semantic equivalence
+   (same checklist/summary intent, even if wording differs slightly).
+3. If an equivalent comment already exists, do not post a new one. If needed, edit the existing
+   comment in place or post only the delta.
+4. If terminal output is delayed, do not assume failure and repost. First verify whether a comment
+   URL was returned or whether the new comment appears in `--comments` output.
+
+Rules:
+- Never post the same checklist/summary twice on the same PR/issue.
+- Prefer one canonical checklist comment per PR and update it, rather than posting replacements.
+
 ## Markdown Authoring Guardrail (REQUIRED)
 
 When creating or editing markdown in `.github/` (especially `*.instructions.md`):
