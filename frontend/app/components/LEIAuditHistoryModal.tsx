@@ -314,7 +314,7 @@ function SnapshotValue({ fieldKey, value, snapshot, showCodes = true, countryByC
     const displayText = (!showCodes && countryByCode) ? (countryByCode.get(code) ?? code) : code
     return (
       <span className="inline-flex items-center gap-1.5">
-        <CountryFlag countryCode={code} />
+        <CountryFlag countryCode={code} className="h-4 w-6 rounded-sm border border-[rgb(var(--border-rgb))]" />
         <span>{displayText}</span>
       </span>
     )
