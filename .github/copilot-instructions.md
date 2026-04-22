@@ -632,6 +632,13 @@ When an AI agent creates a pull request, it should complete standard PR hygiene 
    - **Type** (optional secondary, one or two): `type:tests`, `type:refactor`, `type:chore`
    - Add `automated` to mark AI-created items and `no-issue-needed` for PRs with no backing issue
    - **Note**: The CI workflow (`auto-label-prs.yml`) automatically applies Area labels based on file paths. Do not manually add Area labels unless the auto-detection fails. Avoid duplicate semantics: do not add `documentation` when `area:docs` is present. Category labels are only needed when they are orthogonal to Area (e.g., `area:backend` change that is also a `security` fix should add `security`).
+   - **Replacement promotion PRs** (e.g., conflict-resolution branches like `fix/sync-dev-from-main-*` or
+     `fix/sync-uat-from-dev-*` that target `dev` or `uat` but do not originate from the required source branch):
+     apply `hotfix` **and** `no-issue-needed` at PR creation time — not reactively after CI flags them.
+     This is required because `Check Environment Branch Flow` blocks non-`main` branches targeting `dev`
+     unless the `hotfix` or `emergency` label is present, and `Check PR Issue Link` blocks PRs with no
+     issue reference unless `no-issue-needed` is present. Both checks will show
+     `Expected — Waiting for status to be reported` until the labels are applied and a commit is pushed.
 2. Request a reviewer (prefer `copilot-pull-request-reviewer` when available).
 3. Post a concise verification checklist comment relevant to the changed files.
 4. After each commit push to the PR branch, post a concise implementation summary comment that includes:
@@ -651,14 +658,14 @@ When an AI agent creates a pull request, it should complete standard PR hygiene 
 
 ### Merge/Close Review Gate (REQUIRED)
 
-Before merging a PR, closing a linked PR, or announcing readiness to merge:
+Before merging a PR, closing a linked PR, or announcing a PR as ready to merge, the agent must verify review completion:
 
-1. Confirm no unresolved review threads remain.
-2. Confirm required reviews are complete and nothing is pending for the latest commit.
-3. Confirm no new reviewer/Copilot comments were added after the latest fix without a reply.
+1. Confirm no unresolved review threads remain on the target PR.
+2. Confirm all required reviews are complete and no review is pending for the latest commit.
+3. Confirm no new Copilot/reviewer comments were added after the latest fix commit without a corresponding reply.
+4. If any of the above checks fail, do not merge or close; address feedback first and re-check.
 
-This is a high-visibility reminder; execution details are defined in
-[`instructions/copilot-pr-feedback-resolution.instructions.md`](instructions/copilot-pr-feedback-resolution.instructions.md).
+Use this gate even when checks are green. CI success alone is not sufficient for merge/close decisions.
 
 Only ask follow-up questions if required metadata cannot be applied (for example, reviewer handle is unavailable).
 
