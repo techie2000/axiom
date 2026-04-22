@@ -33,6 +33,17 @@ describe('CountryFlag', () => {
     expect(html).toContain('height:auto')
   })
 
+  it('preserves aspect ratio when only height is constrained', () => {
+    const html = renderToStaticMarkup(
+      React.createElement(CountryFlag, {
+        countryCode: 'SE',
+        className: 'h-4 rounded-sm',
+      })
+    )
+
+    expect(html).toContain('width:auto')
+  })
+
   it('renders fallback span for invalid country code', () => {
     const html = renderToStaticMarkup(
       React.createElement(CountryFlag, {

@@ -72,7 +72,6 @@
     "git hash-object": true,
     "git ls-tree": true,
     "git merge": true,
-    "git pull": true,
     "git push": true,
     "git remote": true,
     "git restore": true,

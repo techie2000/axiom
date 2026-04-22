@@ -1,7 +1,7 @@
 'use client'
 
-import React from 'react'
 import { useState } from 'react'
+import type { CSSProperties } from 'react'
 import { getCountryFlagEmoji } from '../lib/country-flag'
 
 interface CountryFlagProps {
@@ -18,7 +18,7 @@ const toFlagImageUrl = (countryCode: string, width: number = 20) => {
 
 type FlagSizing = {
   className?: string
-  style?: React.CSSProperties
+  style?: CSSProperties
 }
 
 const widthClassPattern = /^(?:[a-z0-9-]+:)*!?w-(?!auto\b)\S+$/i
