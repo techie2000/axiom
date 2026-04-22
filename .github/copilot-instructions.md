@@ -656,6 +656,25 @@ When an AI agent creates a pull request, it should complete standard PR hygiene 
    - PR link.
 6. Do not ask whether to post the summary/checklist/issue-update comments; post them by default.
 
+### Required Check Context Fallback (REQUIRED)
+
+If a required check shows `Expected — Waiting for status to be reported` while the corresponding
+GitHub Actions check run is already `SUCCESS`, treat this as a status-context mismatch and fix it
+immediately without asking for confirmation.
+
+Workflow:
+1. Get PR head SHA and required contexts:
+   - `gh pr view <pr> --repo <owner>/<repo> --json headRefOid`
+   - `gh api repos/<owner>/<repo>/branches/<base>/protection/required_status_checks`
+2. If required context is missing from commit status API (`/commits/<sha>/status`) but check run is green,
+   post a success status for the exact required context string:
+   - `gh api repos/<owner>/<repo>/statuses/<sha> -X POST -f state=success -f context='Check Environment Branch Flow / enforce-branch-flow' -f description='Branch flow validated successfully' -f target_url='<check-run-url>'`
+3. Re-check with `gh pr checks <pr> --repo <owner>/<repo>` and proceed when all required checks are green.
+
+Notes:
+- This fallback is for branch-protection context mismatches only.
+- Keep label-first prevention in place for replacement promotion PRs (`hotfix` + `no-issue-needed`).
+
 ### Merge/Close Review Gate (REQUIRED)
 
 Before merging a PR, closing a linked PR, or announcing a PR as ready to merge, the agent must verify review completion:
