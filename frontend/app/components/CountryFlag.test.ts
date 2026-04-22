@@ -16,7 +16,21 @@ describe('CountryFlag', () => {
 
     expect(html).toContain('<img')
     expect(html).toContain('src="https://flagcdn.com/w20/gb.png"')
+    expect(html).toContain('srcSet="https://flagcdn.com/w20/gb.png 1x, https://flagcdn.com/w40/gb.png 2x, https://flagcdn.com/w80/gb.png 4x"')
     expect(html).toContain('alt="GB flag"')
+    expect(html).toContain('class="h-4 w-6"')
+    expect(html).toContain('object-fit:cover')
+  })
+
+  it('preserves aspect ratio when only width is constrained', () => {
+    const html = renderToStaticMarkup(
+      React.createElement(CountryFlag, {
+        countryCode: 'SE',
+        className: 'w-6 rounded-sm',
+      })
+    )
+
+    expect(html).toContain('height:auto')
   })
 
   it('renders fallback span for invalid country code', () => {
