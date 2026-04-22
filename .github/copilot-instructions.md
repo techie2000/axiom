@@ -651,14 +651,14 @@ When an AI agent creates a pull request, it should complete standard PR hygiene 
 
 ### Merge/Close Review Gate (REQUIRED)
 
-Before merging a PR, closing a linked PR, or announcing a PR as ready to merge, the agent must verify review completion:
+Before merging a PR, closing a linked PR, or announcing readiness to merge:
 
-1. Confirm no unresolved review threads remain on the target PR.
-2. Confirm all required reviews are complete and no review is pending for the latest commit.
-3. Confirm no new Copilot/reviewer comments were added after the latest fix commit without a corresponding reply.
-4. If any of the above checks fail, do not merge or close; address feedback first and re-check.
+1. Confirm no unresolved review threads remain.
+2. Confirm required reviews are complete and nothing is pending for the latest commit.
+3. Confirm no new reviewer/Copilot comments were added after the latest fix without a reply.
 
-Use this gate even when checks are green. CI success alone is not sufficient for merge/close decisions.
+This is a high-visibility reminder; execution details are defined in
+[`instructions/copilot-pr-feedback-resolution.instructions.md`](instructions/copilot-pr-feedback-resolution.instructions.md).
 
 Only ask follow-up questions if required metadata cannot be applied (for example, reviewer handle is unavailable).
 
