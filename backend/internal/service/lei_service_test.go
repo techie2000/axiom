@@ -783,3 +783,102 @@ func TestProcessRecordsArray_FinalUpdatePersistsLastProcessedLEIForSmallFiles(t 
 		t.Fatalf("expected LastProcessedLEI %q, got %q", wantLastLEI, *finalSnapshot.LastProcessedLEI)
 	}
 }
+
+type leiCountRepoStub struct {
+	repository.LEIRepository
+	counts    []int64
+	callCount int
+}
+
+func (s *leiCountRepoStub) CountLEIRecords() (int64, error) {
+	s.callCount++
+	if len(s.counts) == 0 {
+		return 0, nil
+	}
+
+	idx := s.callCount - 1
+	if idx >= len(s.counts) {
+		idx = len(s.counts) - 1
+	}
+
+	return s.counts[idx], nil
+}
+
+func TestCountLEIRecords_UsesCachedValueUntilExplicitRefresh(t *testing.T) {
+	repoStub := &leiCountRepoStub{counts: []int64{123, 999}}
+	svc := &leiService{repo: repoStub}
+
+	first, err := svc.CountLEIRecords()
+	if err != nil {
+		t.Fatalf("first CountLEIRecords returned error: %v", err)
+	}
+
+	second, err := svc.CountLEIRecords()
+	if err != nil {
+		t.Fatalf("second CountLEIRecords returned error: %v", err)
+	}
+
+	if first != 123 {
+		t.Fatalf("expected first count to be 123, got %d", first)
+	}
+	if second != 123 {
+		t.Fatalf("expected second count to use cached value 123, got %d", second)
+	}
+	if repoStub.callCount != 1 {
+		t.Fatalf("expected repository count to be called once, got %d", repoStub.callCount)
+	}
+}
+
+func TestRefreshLEICountCacheForJob_Level1JobUpdatesCachedValue(t *testing.T) {
+	repoStub := &leiCountRepoStub{counts: []int64{123, 456}}
+	svc := &leiService{repo: repoStub}
+
+	first, err := svc.CountLEIRecords()
+	if err != nil {
+		t.Fatalf("first CountLEIRecords returned error: %v", err)
+	}
+
+	svc.refreshLEICountCacheForJob("LEVEL1_FULL")
+
+	second, err := svc.CountLEIRecords()
+	if err != nil {
+		t.Fatalf("second CountLEIRecords returned error: %v", err)
+	}
+
+	if first != 123 {
+		t.Fatalf("expected first count to be 123, got %d", first)
+	}
+	if second != 456 {
+		t.Fatalf("expected refreshed count to be 456 after Level 1 refresh, got %d", second)
+	}
+	if repoStub.callCount != 2 {
+		t.Fatalf("expected repository count to be called twice, got %d", repoStub.callCount)
+	}
+}
+
+func TestRefreshLEICountCacheForJob_NonLevel1JobDoesNotUpdateCachedValue(t *testing.T) {
+	repoStub := &leiCountRepoStub{counts: []int64{123, 456}}
+	svc := &leiService{repo: repoStub}
+
+	first, err := svc.CountLEIRecords()
+	if err != nil {
+		t.Fatalf("first CountLEIRecords returned error: %v", err)
+	}
+
+	svc.refreshLEICountCacheForJob("LEVEL2_RR")
+
+	second, err := svc.CountLEIRecords()
+	if err != nil {
+		t.Fatalf("second CountLEIRecords returned error: %v", err)
+	}
+
+	if first != 123 {
+		t.Fatalf("expected first count to be 123, got %d", first)
+	}
+	if second != 123 {
+		t.Fatalf("expected cached count to remain 123 for non-Level 1 jobs, got %d", second)
+	}
+	if repoStub.callCount != 1 {
+		t.Fatalf("expected repository count to be called once, got %d", repoStub.callCount)
+	}
+}
