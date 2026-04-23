@@ -19,6 +19,9 @@ jobs:
             const title = (issue.title || '').toLowerCase()
             const body = (issue.body || '').toLowerCase()
             const text = `${title}\n${body}`
+            const currentLabelNames = (issue.labels || []).map((label) =>
+              typeof label === 'string' ? label : label.name
+            )
 
             const statusLabels = [
               {
@@ -49,6 +52,12 @@ jobs:
                   /\bfail(?:ed|ure)?\b/,
                   /\bbroken\b/,
                   /\bregression\b/
+                ],
+                negativePatterns: [
+                  /\bno regression\b/,
+                  /\bwithout regression\b/,
+                  /\bavoid regression\b/,
+                  /\bprevent regression\b/
                 ]
               },
               {
@@ -61,16 +70,6 @@ jobs:
                   /\bimprovement\b/,
                   /\bproposal\b/,
                   /\brequest\b/
-                ]
-              },
-              {
-                label: 'documentation',
-                color: '0075ca',
-                description: 'Documentation related',
-                patterns: [
-                  /\bdoc(?:s|umentation)?\b/,
-                  /\breadme\b/,
-                  /\bguide\b/
                 ]
               },
               {
@@ -102,17 +101,30 @@ jobs:
                 description: 'Further information is requested',
                 patterns: [
                   /\bquestion\b/,
-                  /\bhow\b/,
-                  /\bwhy\b/,
-                  /\bhelp\b/
+                  /\?/
                 ]
               }
+            ]
+
+            const actionIntentPatterns = [
+              /\badd\b/,
+              /\bimplement\b/,
+              /\bcreate\b/,
+              /\benable\b/,
+              /\ballow\b/,
+              /\bupdate\b/,
+              /\brefactor\b/,
+              /\bmigrate\b/,
+              /\bremove\b/,
+              /\bimprove\b/,
+              /\bintroduce\b/,
+              /\badd support\b/,
+              /\bsupport for\b/
             ]
 
             const titlePrefixes = {
               bug: '[Bug]',
               enhancement: '[Feature]',
-              documentation: '[Docs]',
               security: '[Security]',
               performance: '[Performance]',
               question: '[Question]'
@@ -190,23 +202,80 @@ jobs:
               return value.charAt(0).toUpperCase() + value.slice(1)
             }
 
-            const labelsToApply = []
+            const categoryLabelNames = labelRules.map((rule) => rule.label)
+            const explicitCategoryLabels = currentLabelNames.filter((label) =>
+              categoryLabelNames.includes(label)
+            )
+            const categoryPriority = ['bug', 'security', 'performance', 'enhancement', 'question']
+
+            const inferredCategoryLabels = []
             for (const rule of labelRules) {
-              if (rule.patterns.some((pattern) => pattern.test(text))) {
-                labelsToApply.push(rule.label)
+              let hasPositiveMatch = rule.patterns.some((pattern) => pattern.test(text))
+              let hasNegativeMatch = (rule.negativePatterns || []).some((pattern) => pattern.test(text))
+
+              if (rule.label === 'bug') {
+                const hasDirectBugSignal = [
+                  /\bbug\b/,
+                  /\berror\b/,
+                  /\bfail(?:ed|ure)?\b/,
+                  /\bbroken\b/
+                ].some((pattern) => pattern.test(text))
+                const hasRegressionSignal = /\bregression\b/.test(text)
+                const suppressRegressionSignal = (rule.negativePatterns || []).some((pattern) => pattern.test(text))
+
+                // Keep bug inference from direct bug words, and only suppress the regression-specific signal.
+                hasPositiveMatch = hasDirectBugSignal || (hasRegressionSignal && !suppressRegressionSignal)
+                hasNegativeMatch = false
+              }
+
+              if (rule.label === 'question') {
+                const hasQuestionMark = /\?/.test(issue.title || '') || /\n##\s*question\b/i.test(issue.body || '')
+                const hasQuestionKeyword = /\bquestion\b/.test(text)
+                const hasActionIntent = actionIntentPatterns.some((pattern) => pattern.test(text))
+
+                // Avoid classifying feature/task requests as questions unless they explicitly look like Q&A.
+                hasPositiveMatch = (hasQuestionMark || hasQuestionKeyword) && !hasActionIntent
+                hasNegativeMatch = false
+              }
+
+              if (hasPositiveMatch && !hasNegativeMatch) {
+                inferredCategoryLabels.push(rule.label)
               }
             }
 
-            if (labelsToApply.length === 0) {
-              labelsToApply.push('question')
-            }
+            const labelsToApply = explicitCategoryLabels.length > 0
+              ? [...explicitCategoryLabels]
+              : inferredCategoryLabels
+
+            labelsToApply.sort((a, b) => {
+              const aRank = categoryPriority.indexOf(a)
+              const bRank = categoryPriority.indexOf(b)
+              return (aRank === -1 ? Number.MAX_SAFE_INTEGER : aRank) - (bRank === -1 ? Number.MAX_SAFE_INTEGER : bRank)
+            })
 
             const primaryLabel = labelsToApply[0]
             const currentTitle = (issue.title || '').trim()
             const existingPrefixMatch = currentTitle.match(/^\[[^\]]+\]\s*/)
             const existingPrefix = existingPrefixMatch ? existingPrefixMatch[0].trim() : ''
-            const desiredPrefix = titlePrefixes[primaryLabel] || '[Task]'
-            const hasExplicitTypedPrefix = /^\[(bug|feature|task|docs|security|performance|question)\]\s+/i.test(currentTitle)
+            const desiredPrefix = primaryLabel ? (titlePrefixes[primaryLabel] || '[Task]') : ''
+            const effectivePrefix = desiredPrefix || existingPrefix
+            const explicitTypedPrefixMatch = currentTitle.match(/^\[(bug|feature|task|docs|security|performance|question)\]\s+/i)
+            const hasExplicitTypedPrefix = Boolean(explicitTypedPrefixMatch)
+            const existingTypedPrefix = explicitTypedPrefixMatch ? explicitTypedPrefixMatch[1].toLowerCase() : ''
+            const typedPrefixCategoryMap = {
+              bug: 'bug',
+              feature: 'enhancement',
+              security: 'security',
+              performance: 'performance',
+              question: 'question'
+            }
+            const existingTypedCategory = typedPrefixCategoryMap[existingTypedPrefix] || ''
+            const hasStaleDocsPrefix = existingTypedPrefix === 'docs' && Boolean(desiredPrefix)
+            const hasStaleTaskPrefix = existingTypedPrefix === 'task' && Boolean(desiredPrefix)
+            const hasStaleTypedCategoryPrefix =
+              hasStaleDocsPrefix ||
+              hasStaleTaskPrefix ||
+              (Boolean(existingTypedCategory) && !labelsToApply.includes(existingTypedCategory) && Boolean(desiredPrefix))
             const bodyCandidate = extractCandidateTitleFromBody(issue.body || '')
             const rawStrippedTitle = currentTitle.replace(/^\[[^\]]+\]\s*/, '').trim()
             const baseTitle = isWeakTitle(currentTitle)
@@ -215,10 +284,11 @@ jobs:
             const normalizedBaseTitle = toSentenceCase(baseTitle)
             const needsRewrite = isWeakTitle(currentTitle)
             const needsPrefix = !existingPrefix && normalizedBaseTitle.length > 0
-            const allowPrefixOverride = !hasExplicitTypedPrefix || needsRewrite
+            const allowPrefixOverride = !hasExplicitTypedPrefix || needsRewrite || hasStaleTypedCategoryPrefix
+            const shouldAdjustPrefix = desiredPrefix && existingPrefix !== desiredPrefix && allowPrefixOverride
 
-            if ((needsRewrite || (needsPrefix && allowPrefixOverride) || (existingPrefix !== desiredPrefix && allowPrefixOverride)) && normalizedBaseTitle) {
-              const nextTitle = `${desiredPrefix} ${normalizedBaseTitle}`.trim()
+            if ((needsRewrite || (needsPrefix && allowPrefixOverride) || shouldAdjustPrefix) && normalizedBaseTitle) {
+              const nextTitle = `${effectivePrefix} ${normalizedBaseTitle}`.trim()
               if (nextTitle !== issue.title) {
                 await github.rest.issues.update({
                   owner: context.repo.owner,
@@ -249,9 +319,9 @@ jobs:
 
             const areaKeywordRules = [
               { label: 'area:lei',          patterns: [/\blei\b/, /\bgleif\b/, /\blevel[- ]?2\b/, /\brelationship record\b/, /\breporting exception\b/] },
-              { label: 'area:database',     patterns: [/\bmigration\b/, /\bpostgres\b/, /\bschema\b/] },
-              { label: 'area:infra',        patterns: [/\bdocker\b/, /\bcontainer\b/, /\bcompose\b/, /\bnginx\b/] },
               { label: 'area:ci',           patterns: [/\bgithub actions\b/, /\bworkflow\b/, /\bci\/cd\b/] },
+              { label: 'area:database',     patterns: [/\b(?:db|database|sql|schema|postgres(?:ql)?)\s+migrations?\b/, /\bmigrations?\s+table\b/, /\bpostgres\b/, /\bschema\b/] },
+              { label: 'area:infra',        patterns: [/\bdocker\b/, /\bcontainer\b/, /\bcompose\b/, /\bnginx\b/] },
               { label: 'area:frontend',     patterns: [/\breact\b/, /\bnext\.?js\b/, /\btailwind\b/, /\bi18n\b/] },
               { label: 'area:backend',      patterns: [/\bgolang\b/, /\bgo service\b/, /\bgorm\b/] },
               { label: 'area:dependencies', patterns: [/\bdependabot\b/, /\bdependency\b/, /\bgo\.mod\b/, /\bpackage\.json\b/] },
@@ -263,10 +333,6 @@ jobs:
               { label: 'type:refactor', patterns: [/\brefactor\b/, /\bclean[- ]?up\b/] },
               { label: 'type:chore',    patterns: [/\bchore\b/, /\bmaintenance\b/, /\btooling\b/] },
             ]
-
-            const currentLabelNames = (issue.labels || []).map((l) =>
-              typeof l === 'string' ? l : l.name
-            )
 
             // Infer only the FIRST matching area label (enforce single primary area per issue)
             const areaMatch = areaKeywordRules.find((r) => r.patterns.some((p) => p.test(text)))
