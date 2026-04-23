@@ -138,6 +138,7 @@
     "cusip",
     "Datenservice",
     "dbname",
+    "dedupe",
     "deltasyncinterval",
     "deque",
     "distroless",
