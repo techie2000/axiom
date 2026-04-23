@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-const categoryPriority = ['bug', 'security', 'performance', 'enhancement', 'documentation', 'question']
+const categoryPriority = ['bug', 'security', 'performance', 'enhancement', 'question']
 
 function getPrimaryCategory(categories) {
   return [...categories]
@@ -13,8 +13,8 @@ function getPrimaryCategory(categories) {
     .at(0)
 }
 
-test('prefers security over documentation when both categories are present', () => {
-  const primary = getPrimaryCategory(['documentation', 'security'])
+test('prefers security over enhancement when both categories are present', () => {
+  const primary = getPrimaryCategory(['enhancement', 'security'])
   assert.equal(primary, 'security')
 })
 

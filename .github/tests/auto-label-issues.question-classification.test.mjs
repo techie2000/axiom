@@ -12,10 +12,6 @@ const labelRules = [
     patterns: [/\bfeature\b/, /\benhancement\b/, /\bimprovement\b/, /\bproposal\b/, /\brequest\b/]
   },
   {
-    label: 'documentation',
-    patterns: [/\bdoc(?:s|umentation)?\b/, /\breadme\b/, /\bguide\b/]
-  },
-  {
     label: 'security',
     patterns: [/\bsecurity\b/, /\bvulnerab(?:ility|le)\b/, /\bcve\b/, /\bauth(?:entication|orization)?\b/]
   },
@@ -41,7 +37,8 @@ const actionIntentPatterns = [
   /\bremove\b/,
   /\bimprove\b/,
   /\bintroduce\b/,
-  /\bsupport\b/
+  /\badd support\b/,
+  /\bsupport for\b/
 ]
 
 function inferCategoryLabels({ title, body }) {
@@ -95,6 +92,15 @@ test('does infer question for explicit question-mark title', () => {
   const labels = inferCategoryLabels({
     title: 'How should we handle stale LEI records?',
     body: 'Need guidance on whether to archive or soft-delete.'
+  })
+
+  assert.equal(labels.includes('question'), true)
+})
+
+test('does infer question when support is used as a question verb', () => {
+  const labels = inferCategoryLabels({
+    title: 'Does the system support SSO?',
+    body: 'Need to understand if this is already available.'
   })
 
   assert.equal(labels.includes('question'), true)

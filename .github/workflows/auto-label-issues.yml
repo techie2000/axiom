@@ -118,7 +118,8 @@ jobs:
               /\bremove\b/,
               /\bimprove\b/,
               /\bintroduce\b/,
-              /\bsupport\b/
+              /\badd support\b/,
+              /\bsupport for\b/
             ]
 
             const titlePrefixes = {
@@ -270,7 +271,11 @@ jobs:
             }
             const existingTypedCategory = typedPrefixCategoryMap[existingTypedPrefix] || ''
             const hasStaleDocsPrefix = existingTypedPrefix === 'docs' && Boolean(desiredPrefix)
-            const hasStaleTypedCategoryPrefix = hasStaleDocsPrefix || (Boolean(existingTypedCategory) && !labelsToApply.includes(existingTypedCategory) && Boolean(desiredPrefix))
+            const hasStaleTaskPrefix = existingTypedPrefix === 'task' && Boolean(desiredPrefix)
+            const hasStaleTypedCategoryPrefix =
+              hasStaleDocsPrefix ||
+              hasStaleTaskPrefix ||
+              (Boolean(existingTypedCategory) && !labelsToApply.includes(existingTypedCategory) && Boolean(desiredPrefix))
             const bodyCandidate = extractCandidateTitleFromBody(issue.body || '')
             const rawStrippedTitle = currentTitle.replace(/^\[[^\]]+\]\s*/, '').trim()
             const baseTitle = isWeakTitle(currentTitle)
