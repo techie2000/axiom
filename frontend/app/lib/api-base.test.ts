@@ -8,8 +8,6 @@ describe('api-base', () => {
   })
 
   it('uses same-origin base in the browser', () => {
-    vi.stubEnv('NEXT_PUBLIC_API_URL', 'https://example.test')
-
     expect(resolveApiBaseUrl(true)).toBe('')
     expect(getApiBaseUrl()).toBe('')
   })

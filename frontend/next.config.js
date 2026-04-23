@@ -1,7 +1,7 @@
 const path = require('path')
 const internalApiProxyTarget = process.env.INTERNAL_API_PROXY_TARGET || 'http://localhost:18080'
 const allowedDevOrigins = process.env.NEXT_DEV_ALLOWED_ORIGINS
-  ? process.env.NEXT_DEV_ALLOWED_ORIGINS.split(',')
+  ? process.env.NEXT_DEV_ALLOWED_ORIGINS.split(',').map((origin) => origin.trim()).filter(Boolean)
   : []
 
 /** @type {import('next').NextConfig} */
