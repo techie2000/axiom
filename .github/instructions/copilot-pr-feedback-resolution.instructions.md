@@ -71,10 +71,21 @@ $body = @'
 '@
 
 Set-Content -Path $bodyPath -Value $body -Encoding utf8
-gh pr comment 261 --reply-to {comment_id} --body-file "$bodyPath"
 
-# Verify stored body immediately
-gh api repos/{owner}/{repo}/pulls/comments/{new_comment_id} --jq .body
+# Prefer the safe helper to post + verify body fidelity and receive a stable URL.
+$commentUrl = pwsh ./scripts/post-gh-comment-safe.ps1 `
+  -Repo "{owner}/{repo}" `
+  -TargetType pr `
+  -PrNumber 261 `
+  -BodyFile "$bodyPath"
+
+Write-Host "Posted resolution comment: $commentUrl"
+
+# If posting a reply with gh directly, verify with issues/comments endpoint
+# because gh pr comment --reply-to creates an issue comment in the PR timeline.
+# $replyUrl = gh pr comment 261 --reply-to {comment_id} --body-file "$bodyPath"
+# $newCommentId = [regex]::Match(($replyUrl | Select-Object -Last 1), 'issuecomment-(\d+)$').Groups[1].Value
+# gh api repos/{owner}/{repo}/issues/comments/$newCommentId --jq .body
 ```
 
 ### Comment Template by Issue Type

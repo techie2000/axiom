@@ -43,6 +43,20 @@ function Normalize-Text {
     return ($Text -replace "`r`n", "`n").TrimEnd("`n")
 }
 
+function Convert-CommandOutputToString {
+    param($Value)
+
+    if ($null -eq $Value) {
+        return ''
+    }
+
+    if ($Value -is [System.Array]) {
+        return [string]::Join("`n", @($Value | ForEach-Object { [string]$_ }))
+    }
+
+    return [string]$Value
+}
+
 function Get-CommentIdFromUrl {
     param([string]$CommentUrl)
 
@@ -65,7 +79,7 @@ function Get-LatestIssueComment {
         [string]$ViewerLogin
     )
 
-    $raw = gh api "repos/$Repository/issues/$Number/comments" --paginate
+    $raw = gh api "repos/$Repository/issues/$Number/comments" --paginate --slurp --jq 'add'
     $comments = $raw | ConvertFrom-Json
     if ($null -eq $comments) {
         return $null
@@ -94,7 +108,7 @@ if ($PSCmdlet.ParameterSetName -like '*ByFile' -and -not (Test-Path -LiteralPath
 $resolvedBodyFile = if ($PSCmdlet.ParameterSetName -like '*ByFile') {
     (Resolve-Path -LiteralPath $BodyFile).Path
 } else {
-    Join-Path $env:TEMP ("gh-comment-{0}.md" -f ([Guid]::NewGuid().ToString('N')))
+    Join-Path ([System.IO.Path]::GetTempPath()) ("gh-comment-{0}.md" -f ([Guid]::NewGuid().ToString('N')))
 }
 
 $createdTemp = $false
@@ -140,7 +154,8 @@ try {
         $commentId = [int64]$fallback.id
         $verifiedBody = [string]$fallback.body
     } else {
-        $verifiedBody = gh api "repos/$Repo/issues/comments/$commentId" --jq .body
+        $verifiedBodyRaw = gh api "repos/$Repo/issues/comments/$commentId" --jq .body
+        $verifiedBody = Convert-CommandOutputToString -Value $verifiedBodyRaw
     }
 
     $verifiedNormalized = Normalize-Text -Text $verifiedBody
@@ -148,7 +163,8 @@ try {
     if ($verifiedNormalized -ne $expectedNormalized) {
         Write-Host '[safe-comment] mismatch detected, patching same comment in place...' -ForegroundColor Yellow
         gh api "repos/$Repo/issues/comments/$commentId" --method PATCH -F "body=@$resolvedBodyFile" | Out-Null
-        $patchedBody = gh api "repos/$Repo/issues/comments/$commentId" --jq .body
+        $patchedBodyRaw = gh api "repos/$Repo/issues/comments/$commentId" --jq .body
+        $patchedBody = Convert-CommandOutputToString -Value $patchedBodyRaw
         $patchedNormalized = Normalize-Text -Text $patchedBody
 
         if ($patchedNormalized -ne $expectedNormalized) {

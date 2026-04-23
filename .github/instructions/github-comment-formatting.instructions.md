@@ -27,20 +27,20 @@ Ensure PR/issue comments are human-readable Markdown on first post, especially c
 Use the repository helper to post, verify, and patch in-place automatically:
 
 ```powershell
-pwsh ./scripts/post-gh-comment-safe.ps1 \
-   -Repo <owner>/<repo> \
-   -TargetType pr \
-   -PrNumber <pr-number> \
+pwsh ./scripts/post-gh-comment-safe.ps1 `
+   -Repo <owner>/<repo> `
+   -TargetType pr `
+   -PrNumber <pr-number> `
    -BodyFile <path-to-markdown-body>
 ```
 
 For issue comments:
 
 ```powershell
-pwsh ./scripts/post-gh-comment-safe.ps1 \
-   -Repo <owner>/<repo> \
-   -TargetType issue \
-   -IssueNumber <issue-number> \
+pwsh ./scripts/post-gh-comment-safe.ps1 `
+   -Repo <owner>/<repo> `
+   -TargetType issue `
+   -IssueNumber <issue-number> `
    -BodyFile <path-to-markdown-body>
 ```
 
