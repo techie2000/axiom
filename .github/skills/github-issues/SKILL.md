@@ -216,6 +216,74 @@ Do not apply these manually unless correcting an incorrect state.
 | `status: in progress`   | Linked PR is open and active       |
 | `status: done`          | Linked PR merged                   |
 
+## Comment Body Safety (REQUIRED)
+
+When posting or updating issue/PR comments from terminal commands, always use real
+multiline Markdown bodies and verify the stored comment text immediately.
+
+Required workflow:
+
+1. Build body text with real newlines.
+2. Prefer writing the body to a UTF-8 markdown file and pass it with `--body-file`.
+3. If you must use a variable, use a PowerShell here-string with real newlines.
+4. Verify stored body immediately using `gh api ... --jq .body`.
+5. If malformed (escaped newlines/control chars), patch the same comment in place.
+6. Do not post a replacement duplicate unless explicitly requested.
+
+Preferred PowerShell pattern (most reliable):
+
+```powershell
+$commentPath = Join-Path $env:TEMP "gh-comment-body.md"
+$body = @'
+## Update
+
+- Item one
+- Item two
+'@
+
+Set-Content -Path $commentPath -Value $body -Encoding utf8
+gh issue comment 123 --repo owner/repo --body-file "$commentPath"
+
+# Verify final stored body
+gh issue view 123 --repo owner/repo --comments
+```
+
+Alternative pattern (allowed):
+
+```powershell
+$body = @'
+## Update
+
+- Item one
+- Item two
+'@
+
+gh issue comment 123 --repo owner/repo --body "$body"
+gh api repos/owner/repo/issues/comments/<comment_id> --jq .body
+```
+
+If verification finds visible escape sequences (for example `\\n`) or control-character artifacts,
+patch the same comment immediately using a verified clean body file:
+
+```powershell
+gh api repos/owner/repo/issues/comments/<comment_id> --method PATCH -F "body=@$commentPath"
+gh api repos/owner/repo/issues/comments/<comment_id> --jq .body
+```
+
+Never proceed without verification when posting reviewer-facing summaries or checklists.
+
+Forbid these patterns:
+
+- Inline escaped bodies such as `--body "line1\\nline2"`
+- Posting and moving on without verification
+- Creating duplicate replacement comments when an in-place patch is possible
+
+Troubleshooting notes:
+
+- If VS Code restarts and context is lost, re-run the verification command for the latest comment
+  before posting any follow-up comment.
+- Prefer `--body-file` over inline `--body` when content includes checklists, code blocks, or many lines.
+
 ## Tips
 
 - Always confirm the repository context before creating issues

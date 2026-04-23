@@ -56,8 +56,10 @@ For each Copilot comment:
 
 **For each Copilot comment you've addressed**, automatically post a reply to that specific comment thread:
 
-```bash
-gh pr comment 261 --reply-to {comment_id} --body "✅ **RESOLVED**: [Brief explanation of fix]
+```powershell
+$bodyPath = Join-Path $env:TEMP "copilot-resolution-comment.md"
+$body = @'
+✅ **RESOLVED**: [Brief explanation of fix]
 
 **What changed:**
 - [Specific code change or reordering]
@@ -65,7 +67,14 @@ gh pr comment 261 --reply-to {comment_id} --body "✅ **RESOLVED**: [Brief expla
 
 **Validation:**
 - [How you validated the fix]
-- [Tests run or checks performed]"
+- [Tests run or checks performed]
+'@
+
+Set-Content -Path $bodyPath -Value $body -Encoding utf8
+gh pr comment 261 --reply-to {comment_id} --body-file "$bodyPath"
+
+# Verify stored body immediately
+gh api repos/{owner}/{repo}/pulls/comments/{new_comment_id} --jq .body
 ```
 
 ### Comment Template by Issue Type
@@ -131,8 +140,13 @@ gh pr comment 261 --reply-to {comment_id} --body "✅ **RESOLVED**: [Brief expla
 
 After pushing all fixes and individual resolution comments, **automatically post a comprehensive summary** on the main PR:
 
-```bash
-gh pr comment {pr_number} --body "[Generated summary from Step 5 below]"
+```powershell
+$summaryPath = Join-Path $env:TEMP "copilot-resolution-summary.md"
+Set-Content -Path $summaryPath -Value $summaryBody -Encoding utf8
+gh pr comment {pr_number} --body-file "$summaryPath"
+
+# Verify stored body immediately
+gh pr view {pr_number} --repo {owner}/{repo} --comments
 ```
 
 ## Step 4.5: Mirror Updates To Linked Issues After Each Push
@@ -144,8 +158,13 @@ until the final PR summary comment.
 
 **Post on each linked issue after each relevant push:**
 
-```bash
-gh issue comment {issue_number} --repo {owner}/{repo} --body "[Status update with testing guidance]"
+```powershell
+$issuePath = Join-Path $env:TEMP "copilot-issue-status.md"
+Set-Content -Path $issuePath -Value $issueUpdateBody -Encoding utf8
+gh issue comment {issue_number} --repo {owner}/{repo} --body-file "$issuePath"
+
+# Verify stored body immediately
+gh api repos/{owner}/{repo}/issues/comments/{new_comment_id} --jq .body
 ```
 
 Include:
@@ -218,8 +237,10 @@ If any comments are deferred for later:
 ### Use Proper Markdown Formatting
 
 - Follow [github-comment-formatting.instructions.md](github-comment-formatting.instructions.md)
-- Use real multiline Markdown, not escaped `\n`
+- Prefer `pwsh ./scripts/post-gh-comment-safe.ps1` for PR/issue comments to auto-verify and patch in place
+- Use real multiline Markdown with UTF-8 files and `--body-file`
 - Test with `gh api ... --jq .body` to verify rendering before submitting
+- If malformed, patch the same comment in place; do not create duplicate replacement comments
 
 ### Comment in Correct Scope
 
@@ -281,7 +302,7 @@ If you cannot locate a Copilot comment ID:
 
 **Resolution Comment Posted:**
 
-```text
+```markdown
 ✅ **RESOLVED**: Transaction safety - Audit after UPDATE
 
 **Change**: Reordered audit write to occur after successful UPDATE
@@ -299,7 +320,7 @@ If you cannot locate a Copilot comment ID:
 
 **Resolution Comment Posted:**
 
-```text
+```markdown
 ✅ **RESOLVED**: Performance - Eliminated N+1 queries
 
 **Change**: Batch-load existing records into in-memory map
