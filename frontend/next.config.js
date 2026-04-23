@@ -1,8 +1,13 @@
 const path = require('path')
+const internalApiProxyTarget = process.env.INTERNAL_API_PROXY_TARGET || 'http://localhost:18080'
+const allowedDevOrigins = process.env.NEXT_DEV_ALLOWED_ORIGINS
+  ? process.env.NEXT_DEV_ALLOWED_ORIGINS.split(',').map((origin) => origin.trim()).filter(Boolean)
+  : []
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  allowedDevOrigins,
   outputFileTracingRoot: path.join(__dirname, '..'),
   images: {
     remotePatterns: [
@@ -12,8 +17,20 @@ const nextConfig = {
       },
     ],
   },
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: `${internalApiProxyTarget}/api/:path*`,
+      },
+      {
+        source: '/version',
+        destination: `${internalApiProxyTarget}/version`,
+      },
+    ]
+  },
   env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080',
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || '',
     NEXT_PUBLIC_ENVIRONMENT: process.env.NEXT_PUBLIC_ENVIRONMENT,
   },
 }

@@ -7,22 +7,20 @@ describe('api-base', () => {
     vi.unstubAllEnvs()
   })
 
-  it('uses NEXT_PUBLIC_API_URL in the browser when configured', () => {
-    vi.stubEnv('NEXT_PUBLIC_API_URL', 'https://example.test')
-
-    expect(resolveApiBaseUrl(true)).toBe('https://example.test')
-    expect(getApiBaseUrl()).toBe('https://example.test')
+  it('uses same-origin base in the browser', () => {
+    expect(resolveApiBaseUrl(true)).toBe('')
+    expect(getApiBaseUrl()).toBe('')
   })
 
-  it('falls back to the local browser default when NEXT_PUBLIC_API_URL is unset', () => {
-    vi.stubEnv('NEXT_PUBLIC_API_URL', '')
-
-    expect(resolveApiBaseUrl(true)).toBe('http://localhost:18080')
-  })
-
-  it('uses the internal backend host for server-side calls', () => {
-    vi.stubEnv('NEXT_PUBLIC_API_URL', 'https://example.test')
+  it('uses INTERNAL_API_PROXY_TARGET for server-side calls when configured', () => {
+    vi.stubEnv('INTERNAL_API_PROXY_TARGET', 'http://backend:8080')
 
     expect(resolveApiBaseUrl(false)).toBe('http://backend:8080')
+  })
+
+  it('falls back to localhost target for server-side calls when INTERNAL_API_PROXY_TARGET is unset', () => {
+    vi.stubEnv('INTERNAL_API_PROXY_TARGET', '')
+
+    expect(resolveApiBaseUrl(false)).toBe('http://localhost:18080')
   })
 })

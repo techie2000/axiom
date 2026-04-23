@@ -9,6 +9,9 @@ RUN apk add --no-cache --upgrade libssl3
 
 WORKDIR /app
 
+ARG INTERNAL_API_PROXY_TARGET=http://localhost:18080
+ENV INTERNAL_API_PROXY_TARGET=${INTERNAL_API_PROXY_TARGET}
+
 # Security: Upgrade npm to address npm bundled dependency CVEs (tar/minimatch family)
 # security-scan-managed
 RUN npm install -g npm@11.12.0
