@@ -30,7 +30,12 @@ export const DEFAULT_CODE_MAPPING_FILTERS: CodeMappingColumnFilters = {
   status: '',
 }
 
-const normalized = (value: string): string => value.trim().toLowerCase()
+const normalizeFilterValue = (value: string): string => {
+  if (!value) {
+    return ''
+  }
+  return value.trim().toLowerCase()
+}
 
 export function countActiveCodeMappingFilters(filters: CodeMappingColumnFilters): number {
   return Object.values(filters).filter((value) => value !== '').length
@@ -44,7 +49,7 @@ export function getCodeMappingFilterOptions(mappings: CodeMapping[]): { fromSyst
 }
 
 function matchesSearch(mapping: CodeMapping, searchTerm: string): boolean {
-  const search = normalized(searchTerm)
+  const search = normalizeFilterValue(searchTerm)
   if (!search) {
     return true
   }
@@ -73,16 +78,16 @@ function matchesFilters(mapping: CodeMapping, filters: CodeMappingColumnFilters)
   if (filters.status === 'inactive' && mapping.active) {
     return false
   }
-  if (filters.fromType && !mapping.from_code_type.toLowerCase().includes(normalized(filters.fromType))) {
+  if (filters.fromType && !mapping.from_code_type.toLowerCase().includes(normalizeFilterValue(filters.fromType))) {
     return false
   }
-  if (filters.toType && !mapping.to_code_type.toLowerCase().includes(normalized(filters.toType))) {
+  if (filters.toType && !mapping.to_code_type.toLowerCase().includes(normalizeFilterValue(filters.toType))) {
     return false
   }
-  if (filters.fromCode && !mapping.from_code.toLowerCase().includes(normalized(filters.fromCode))) {
+  if (filters.fromCode && !mapping.from_code.toLowerCase().includes(normalizeFilterValue(filters.fromCode))) {
     return false
   }
-  if (filters.toCode && !mapping.to_code.toLowerCase().includes(normalized(filters.toCode))) {
+  if (filters.toCode && !mapping.to_code.toLowerCase().includes(normalizeFilterValue(filters.toCode))) {
     return false
   }
   return true

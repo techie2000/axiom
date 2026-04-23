@@ -273,15 +273,15 @@ export function alignMultilineDiffRows(fieldKey: string, oldValue: unknown, newV
     return []
   }
 
-  const lcs: number[][] = Array.from({ length: oldLines.length + 1 }, () =>
+  const longestCommonSubsequence: number[][] = Array.from({ length: oldLines.length + 1 }, () =>
     Array<number>(newLines.length + 1).fill(0)
   )
 
   for (let oldIndex = oldLines.length - 1; oldIndex >= 0; oldIndex -= 1) {
     for (let newIndex = newLines.length - 1; newIndex >= 0; newIndex -= 1) {
-      lcs[oldIndex][newIndex] = oldLines[oldIndex] === newLines[newIndex]
-        ? lcs[oldIndex + 1][newIndex + 1] + 1
-        : Math.max(lcs[oldIndex + 1][newIndex], lcs[oldIndex][newIndex + 1])
+      longestCommonSubsequence[oldIndex][newIndex] = oldLines[oldIndex] === newLines[newIndex]
+        ? longestCommonSubsequence[oldIndex + 1][newIndex + 1] + 1
+        : Math.max(longestCommonSubsequence[oldIndex + 1][newIndex], longestCommonSubsequence[oldIndex][newIndex + 1])
     }
   }
 
@@ -307,7 +307,10 @@ export function alignMultilineDiffRows(fieldKey: string, oldValue: unknown, newV
 
     if (
       newIndex < newLines.length &&
-      (oldIndex === oldLines.length || lcs[oldIndex][newIndex + 1] >= lcs[oldIndex + 1][newIndex])
+      (
+        oldIndex === oldLines.length ||
+        longestCommonSubsequence[oldIndex][newIndex + 1] >= longestCommonSubsequence[oldIndex + 1][newIndex]
+      )
     ) {
       rows.push({
         oldLine: null,

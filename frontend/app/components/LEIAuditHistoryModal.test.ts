@@ -173,4 +173,20 @@ describe('alignMultilineDiffRows', () => {
   it('returns empty output for single-line values', () => {
     expect(alignMultilineDiffRows('legal_name', 'Old Name', 'New Name')).toEqual([])
   })
+
+  it('handles mixed insertions and removals while keeping common lines aligned', () => {
+    const rows = alignMultilineDiffRows(
+      'other_names',
+      'Line A\nLine B\nLine D',
+      'Line A\nLine C\nLine D\nLine E'
+    )
+
+    expect(rows).toEqual([
+      { oldLine: 'Line A', newLine: 'Line A', state: 'unchanged' },
+      { oldLine: null, newLine: 'Line C', state: 'added' },
+      { oldLine: 'Line B', newLine: null, state: 'removed' },
+      { oldLine: 'Line D', newLine: 'Line D', state: 'unchanged' },
+      { oldLine: null, newLine: 'Line E', state: 'added' },
+    ])
+  })
 })

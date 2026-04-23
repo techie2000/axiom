@@ -6,7 +6,6 @@ import Alert from '../components/Alert'
 import Badge from '../components/Badge'
 import LoadingSpinner from '../components/LoadingSpinner'
 import PageHeader from '../components/PageHeader'
-import ReferencePageHeaderActions from '../components/ReferencePageHeaderActions'
 import SearchInputWithOverflowTooltip from '../components/SearchInputWithOverflowTooltip'
 import StatCard from '../components/StatCard'
 import { getApiBaseUrl } from '../lib/api-base'
@@ -117,18 +116,16 @@ export default function CodeMappingsPage() {
           subtitleTooltip={getEnglishTooltip('codeMappings.subtitle')}
           backHref="/dashboard"
           actions={
-            <ReferencePageHeaderActions
-              effectiveExpandedWidth={expandedWidth}
-              normalTitle={getEnglishTooltip('codeMappings.widthNormalBtn')}
-              expandTitle={getEnglishTooltip('codeMappings.widthExpandBtn')}
-              normalLabel={t('codeMappings.widthNormalBtn')}
-              expandLabel={t('codeMappings.widthExpandBtn')}
-              saveWidthLabel=""
-              hasUnsavedWidthChanges={false}
-              onToggleExpandedWidth={() => setExpandedWidth((previous) => !previous)}
-              onSaveExpandedWidth={() => undefined}
-              formatLabel={formatLabel}
-            >
+            <>
+              <button
+                type="button"
+                onClick={() => setExpandedWidth((previous) => !previous)}
+                className="theme-header-action rounded-lg theme-btn-neutral theme-focus"
+                aria-label={expandedWidth ? t('codeMappings.widthNormalBtn') : t('codeMappings.widthExpandBtn')}
+                title={expandedWidth ? getEnglishTooltip('codeMappings.widthNormalBtn') : getEnglishTooltip('codeMappings.widthExpandBtn')}
+              >
+                {expandedWidth ? formatLabel(t('codeMappings.widthNormalBtn')) : formatLabel(t('codeMappings.widthExpandBtn'))}
+              </button>
               <button
                 type="button"
                 onClick={() => setShowInlineDocs((previous) => !previous)}
@@ -138,7 +135,7 @@ export default function CodeMappingsPage() {
               >
                 {formatLabel(t('codeMappings.docsToggle'))}
               </button>
-            </ReferencePageHeaderActions>
+            </>
           }
         />
 
