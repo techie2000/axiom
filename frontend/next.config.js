@@ -1,9 +1,13 @@
 const path = require('path')
 const internalApiProxyTarget = process.env.INTERNAL_API_PROXY_TARGET || 'http://localhost:18080'
+const allowedDevOrigins = process.env.NEXT_DEV_ALLOWED_ORIGINS
+  ? process.env.NEXT_DEV_ALLOWED_ORIGINS.split(',')
+  : []
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  allowedDevOrigins,
   outputFileTracingRoot: path.join(__dirname, '..'),
   images: {
     remotePatterns: [
