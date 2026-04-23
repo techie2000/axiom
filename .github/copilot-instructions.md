@@ -638,8 +638,8 @@ When an AI agent creates a pull request, it should complete standard PR hygiene 
      This is required because `Check Environment Branch Flow` blocks non-`main` branches targeting `dev`
      unless the `hotfix` or `emergency` label is present, and `Check PR Issue Link` blocks PRs with no
      issue reference unless `no-issue-needed` is present. Both checks will show
-   `Expected — Waiting for status to be reported` until the labels are applied, which triggers the
-   relevant workflows against the current PR head SHA without requiring an extra commit push.
+     `Expected — Waiting for status to be reported` until the labels are applied, which triggers the
+     relevant workflows against the current PR head SHA without requiring an extra commit push.
 2. Request a reviewer (prefer `copilot-pull-request-reviewer` when available).
 3. Post a concise verification checklist comment relevant to the changed files.
 4. After each commit push to the PR branch, post a concise implementation summary comment that includes:
@@ -665,6 +665,7 @@ GitHub Actions check run is already `SUCCESS`, treat this as a status-context mi
 immediately without asking for confirmation.
 
 Workflow:
+
 1. Get the exact PR head SHA and the required context name(s) configured by branch protection:
    - `gh pr view <pr> --repo <owner>/<repo> --json headRefOid`
    - `gh api repos/<owner>/<repo>/branches/<base>/protection/required_status_checks`
@@ -672,19 +673,20 @@ Workflow:
    head SHA is already `SUCCESS` and capture that check run URL.
 3. If a required context returned by branch protection is missing from the commit status API
    (`/commits/<sha>/status`) but the matching check run for the same `<sha>` is verified `SUCCESS`,
-   post a success status only for the exact required context string copied from branch protection and
-   set `target_url` to the verified matching check run URL:
-
-   ```bash
-   gh api repos/<owner>/<repo>/statuses/<sha> -X POST \
-     -f state=success \
-     -f context='<exact-required-context-from-branch-protection>' \
-     -f description='Branch protection context reconciled after verified successful check run' \
-     -f target_url='<verified-matching-check-run-url>'
-   ```
-
-1. Re-check with `gh pr checks <pr> --repo <owner>/<repo>` and proceed only when all required checks
+   post a success status only for the exact required context string copied from branch protection
+   and set `target_url` to the verified matching check run URL (example command below).
+4. Re-check with `gh pr checks <pr> --repo <owner>/<repo>` and proceed only when all required checks
    are green.
+
+Example status reconciliation command:
+
+```bash
+gh api repos/<owner>/<repo>/statuses/<sha> -X POST \
+  -f state=success \
+  -f context='<exact-required-context-from-branch-protection>' \
+  -f description='Branch protection context reconciled after verified successful check run' \
+  -f target_url='<verified-matching-check-run-url>'
+```
 
 Notes:
 
@@ -723,7 +725,8 @@ When posting PR/issue comments, checklists, PR descriptions, or review summaries
    `gh pr view --comments`) and fix in-place if formatting is not human-readable.
 5. For checklist comments, keep concise one-line bullets and avoid shell-escaped artifacts in the final rendered text.
 6. Keep comments actionable: include decisions, code/test results, or explicit next actions.
-7. Do not add non-actionable filler such as "checks are in progress" or equivalent queue/waiting notes in public comments.
+7. Do not add non-actionable filler such as "checks are in progress" or equivalent
+   queue/waiting notes in public comments.
 
 ### Comment Deduplication Guardrail (REQUIRED)
 
