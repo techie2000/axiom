@@ -10,7 +10,6 @@ describe('useCollectionCount', () => {
   })
 
   it('counts array responses from the requested endpoint', async () => {
-    vi.stubEnv('NEXT_PUBLIC_API_URL', 'https://example.test')
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => [{ id: 1 }, { id: 2 }, { id: 3 }],
@@ -24,12 +23,11 @@ describe('useCollectionCount', () => {
       expect(result.current.count).toBe(3)
     })
 
-    expect(fetchMock).toHaveBeenCalledWith('https://example.test/api/v1/countries', { cache: 'no-store' })
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/countries', { cache: 'no-store' })
     unmount()
   })
 
   it('falls back to zero for non-array responses', async () => {
-    vi.stubEnv('NEXT_PUBLIC_API_URL', 'https://example.test')
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({ count: 99 }),
@@ -46,7 +44,6 @@ describe('useCollectionCount', () => {
   })
 
   it('sets count to null on non-OK response', async () => {
-    vi.stubEnv('NEXT_PUBLIC_API_URL', 'https://example.test')
     const fetchMock = vi.fn().mockResolvedValue({
       ok: false,
       status: 500,
