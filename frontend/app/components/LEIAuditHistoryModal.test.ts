@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  alignMultilineDiffRows,
   computeChangedFields,
   formatEnumDisplayText,
   formatSnapshotValue,
@@ -137,5 +138,39 @@ describe('computeChangedFields', () => {
         field_name: 'legal_name',
       },
     })
+  })
+})
+
+describe('alignMultilineDiffRows', () => {
+  it('aligns unchanged lines and marks inserted lines in newer value', () => {
+    const rows = alignMultilineDiffRows(
+      'other_names',
+      'Line B\nLine C',
+      'Line A\nLine B\nLine C'
+    )
+
+    expect(rows).toEqual([
+      { oldLine: null, newLine: 'Line A', state: 'added' },
+      { oldLine: 'Line B', newLine: 'Line B', state: 'unchanged' },
+      { oldLine: 'Line C', newLine: 'Line C', state: 'unchanged' },
+    ])
+  })
+
+  it('marks removed lines from the older value', () => {
+    const rows = alignMultilineDiffRows(
+      'other_names',
+      'Line A\nLine B\nLine C',
+      'Line B\nLine C'
+    )
+
+    expect(rows).toEqual([
+      { oldLine: 'Line A', newLine: null, state: 'removed' },
+      { oldLine: 'Line B', newLine: 'Line B', state: 'unchanged' },
+      { oldLine: 'Line C', newLine: 'Line C', state: 'unchanged' },
+    ])
+  })
+
+  it('returns empty output for single-line values', () => {
+    expect(alignMultilineDiffRows('legal_name', 'Old Name', 'New Name')).toEqual([])
   })
 })
