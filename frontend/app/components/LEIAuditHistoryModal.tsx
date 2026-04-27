@@ -250,6 +250,90 @@ export function formatEnumDisplayText(fieldKey: string, value: unknown, formatte
   return formattedText
 }
 
+export interface AlignedDiffRow {
+  oldLine: string | null
+  newLine: string | null
+  state: 'unchanged' | 'added' | 'removed'
+}
+
+function splitDisplayLines(fieldKey: string, value: unknown): string[] {
+  const formattedText = formatEnumDisplayText(fieldKey, value, formatSnapshotValue(value))
+  if (formattedText === '—') {
+    return []
+  }
+  return formattedText.split('\n')
+}
+
+export function alignMultilineDiffRows(fieldKey: string, oldValue: unknown, newValue: unknown): AlignedDiffRow[] {
+  const oldLines = splitDisplayLines(fieldKey, oldValue)
+  const newLines = splitDisplayLines(fieldKey, newValue)
+  const shouldAlign = oldLines.length > 1 || newLines.length > 1
+
+  if (!shouldAlign) {
+    return []
+  }
+
+  const longestCommonSubsequence: number[][] = Array.from({ length: oldLines.length + 1 }, () =>
+    Array<number>(newLines.length + 1).fill(0)
+  )
+
+  for (let oldIndex = oldLines.length - 1; oldIndex >= 0; oldIndex -= 1) {
+    for (let newIndex = newLines.length - 1; newIndex >= 0; newIndex -= 1) {
+      longestCommonSubsequence[oldIndex][newIndex] = oldLines[oldIndex] === newLines[newIndex]
+        ? longestCommonSubsequence[oldIndex + 1][newIndex + 1] + 1
+        : Math.max(longestCommonSubsequence[oldIndex + 1][newIndex], longestCommonSubsequence[oldIndex][newIndex + 1])
+    }
+  }
+
+  const rows: AlignedDiffRow[] = []
+  let oldIndex = 0
+  let newIndex = 0
+
+  while (oldIndex < oldLines.length || newIndex < newLines.length) {
+    if (
+      oldIndex < oldLines.length &&
+      newIndex < newLines.length &&
+      oldLines[oldIndex] === newLines[newIndex]
+    ) {
+      rows.push({
+        oldLine: oldLines[oldIndex],
+        newLine: newLines[newIndex],
+        state: 'unchanged',
+      })
+      oldIndex += 1
+      newIndex += 1
+      continue
+    }
+
+    if (
+      newIndex < newLines.length &&
+      (
+        oldIndex === oldLines.length ||
+        longestCommonSubsequence[oldIndex][newIndex + 1] >= longestCommonSubsequence[oldIndex + 1][newIndex]
+      )
+    ) {
+      rows.push({
+        oldLine: null,
+        newLine: newLines[newIndex],
+        state: 'added',
+      })
+      newIndex += 1
+      continue
+    }
+
+    if (oldIndex < oldLines.length) {
+      rows.push({
+        oldLine: oldLines[oldIndex],
+        newLine: null,
+        state: 'removed',
+      })
+      oldIndex += 1
+    }
+  }
+
+  return rows
+}
+
 interface SnapshotValueProps {
   fieldKey: string
   value: unknown
@@ -568,6 +652,8 @@ function CompareTable({
             const olderValue = isChanged && change ? change.old_value : olderSnapshot[col.key]
             // Newer value: use new_value from changedFields if available, else newer snapshot
             const newerValue = isChanged && change ? change.new_value : newerSnapshot[col.key]
+            const alignedRows = isChanged ? alignMultilineDiffRows(col.key, olderValue, newerValue) : []
+            const useAlignedRows = alignedRows.length > 0
             const isNewGroup = i === 0 || col.groupKey !== columns[i - 1].groupKey
             return (
               <React.Fragment key={col.key}>
@@ -594,22 +680,57 @@ function CompareTable({
                     {isChanged && <span className="mr-1" aria-hidden="true">🚩</span>}
                     {label}
                   </td>
-                  {/* Older (previous) value — red */}
-                  <td
-                    className={`px-3 py-2 break-words ${
-                      isChanged ? 'text-red-600 dark:text-red-400' : 'theme-text-muted'
-                    }`}
-                  >
-                    <SnapshotValue fieldKey={col.key} value={olderValue} snapshot={olderSnapshot} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} registrationAuthorityNameByCode={registrationAuthorityNameByCode} registrationAuthorityFallback={registrationAuthorityFallback} />
-                  </td>
-                  {/* Newer (current) value — green */}
-                  <td
-                    className={`px-3 py-2 break-words ${
-                      isChanged ? 'text-green-700 dark:text-green-400 font-semibold' : ''
-                    }`}
-                  >
-                    <SnapshotValue fieldKey={col.key} value={newerValue} snapshot={newerSnapshot} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} registrationAuthorityNameByCode={registrationAuthorityNameByCode} registrationAuthorityFallback={registrationAuthorityFallback} />
-                  </td>
+                  {useAlignedRows ? (
+                    <td colSpan={2} className="px-3 py-2">
+                      <div className="grid gap-1" style={{ gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)' }}>
+                        {alignedRows.map((row, rowIndex) => (
+                          <React.Fragment key={`${col.key}-aligned-${rowIndex}`}>
+                            <div
+                              className={`px-2 py-1 rounded whitespace-pre-wrap break-words ${
+                                row.state === 'removed'
+                                  ? 'bg-red-100/70 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                                  : row.state === 'unchanged'
+                                    ? 'theme-text-muted'
+                                    : 'theme-text-muted opacity-70'
+                              }`}
+                            >
+                              {row.oldLine ?? '—'}
+                            </div>
+                            <div
+                              className={`px-2 py-1 rounded whitespace-pre-wrap break-words ${
+                                row.state === 'added'
+                                  ? 'bg-green-100/70 dark:bg-green-900/30 text-green-800 dark:text-green-300 font-semibold'
+                                  : row.state === 'unchanged'
+                                    ? 'theme-text-muted'
+                                    : 'theme-text-muted opacity-70'
+                              }`}
+                            >
+                              {row.newLine ?? '—'}
+                            </div>
+                          </React.Fragment>
+                        ))}
+                      </div>
+                    </td>
+                  ) : (
+                    <>
+                      {/* Older (previous) value — red */}
+                      <td
+                        className={`px-3 py-2 break-words ${
+                          isChanged ? 'text-red-600 dark:text-red-400' : 'theme-text-muted'
+                        }`}
+                      >
+                        <SnapshotValue fieldKey={col.key} value={olderValue} snapshot={olderSnapshot} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} registrationAuthorityNameByCode={registrationAuthorityNameByCode} registrationAuthorityFallback={registrationAuthorityFallback} />
+                      </td>
+                      {/* Newer (current) value — green */}
+                      <td
+                        className={`px-3 py-2 break-words ${
+                          isChanged ? 'text-green-700 dark:text-green-400 font-semibold' : ''
+                        }`}
+                      >
+                        <SnapshotValue fieldKey={col.key} value={newerValue} snapshot={newerSnapshot} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} registrationAuthorityNameByCode={registrationAuthorityNameByCode} registrationAuthorityFallback={registrationAuthorityFallback} />
+                      </td>
+                    </>
+                  )}
                 </tr>
               </React.Fragment>
             )
@@ -1317,6 +1438,8 @@ export default function LEIAuditHistoryModal({
                             const group = columnGroupMap.get(field)
                             const prevGroup = i > 0 ? columnGroupMap.get(sortedChangedFieldEntries[i - 1][0]) : undefined
                             const showGroupHeader = group && group !== prevGroup
+                            const alignedRows = alignMultilineDiffRows(field, change.old_value, change.new_value)
+                            const useAlignedRows = alignedRows.length > 0
                             return (
                               <React.Fragment key={field}>
                                 {showGroupHeader && (
@@ -1324,20 +1447,58 @@ export default function LEIAuditHistoryModal({
                                     {t(group)}
                                   </div>
                                 )}
-                                <div
-                                  className="grid gap-2 text-xs"
-                                  style={{ gridTemplateColumns: '11rem minmax(0, 1fr) minmax(0, 1fr)' }}
-                                >
-                                  <span className="font-medium text-[rgb(var(--foreground-rgb))]">
-                                    {labelMap.get(field) ?? formatFieldLabel(field)}
-                                  </span>
-                                  <span className="text-red-600 dark:text-red-400 break-words">
-                                    <SnapshotValue fieldKey={field} value={change.old_value} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} registrationAuthorityNameByCode={registrationAuthorityNameByCode} registrationAuthorityFallback={registrationAuthorityFallback} />
-                                  </span>
-                                  <span className="text-green-600 dark:text-green-400 font-medium break-words">
-                                    <SnapshotValue fieldKey={field} value={change.new_value} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} registrationAuthorityNameByCode={registrationAuthorityNameByCode} registrationAuthorityFallback={registrationAuthorityFallback} />
-                                  </span>
-                                </div>
+                                {useAlignedRows ? (
+                                  <div className="space-y-1">
+                                    {alignedRows.map((row, rowIndex) => (
+                                      <div
+                                        key={`${field}-aligned-${rowIndex}`}
+                                        className="grid gap-2 text-xs"
+                                        style={{ gridTemplateColumns: '11rem minmax(0, 1fr) minmax(0, 1fr)' }}
+                                      >
+                                        <span className="font-medium text-[rgb(var(--foreground-rgb))]">
+                                          {rowIndex === 0 ? (labelMap.get(field) ?? formatFieldLabel(field)) : ''}
+                                        </span>
+                                        <div
+                                          className={`px-2 py-1 rounded whitespace-pre-wrap break-words ${
+                                            row.state === 'removed'
+                                              ? 'bg-red-100/70 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                                              : row.state === 'unchanged'
+                                                ? 'theme-text-muted'
+                                                : 'theme-text-muted opacity-70'
+                                          }`}
+                                        >
+                                          {row.oldLine ?? '—'}
+                                        </div>
+                                        <div
+                                          className={`px-2 py-1 rounded whitespace-pre-wrap break-words ${
+                                            row.state === 'added'
+                                              ? 'bg-green-100/70 dark:bg-green-900/30 text-green-800 dark:text-green-300 font-medium'
+                                              : row.state === 'unchanged'
+                                                ? 'theme-text-muted'
+                                                : 'theme-text-muted opacity-70'
+                                          }`}
+                                        >
+                                          {row.newLine ?? '—'}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <div
+                                    className="grid gap-2 text-xs"
+                                    style={{ gridTemplateColumns: '11rem minmax(0, 1fr) minmax(0, 1fr)' }}
+                                  >
+                                    <span className="font-medium text-[rgb(var(--foreground-rgb))]">
+                                      {labelMap.get(field) ?? formatFieldLabel(field)}
+                                    </span>
+                                    <span className="text-red-600 dark:text-red-400 break-words">
+                                      <SnapshotValue fieldKey={field} value={change.old_value} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} registrationAuthorityNameByCode={registrationAuthorityNameByCode} registrationAuthorityFallback={registrationAuthorityFallback} />
+                                    </span>
+                                    <span className="text-green-600 dark:text-green-400 font-medium break-words">
+                                      <SnapshotValue fieldKey={field} value={change.new_value} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} registrationAuthorityNameByCode={registrationAuthorityNameByCode} registrationAuthorityFallback={registrationAuthorityFallback} />
+                                    </span>
+                                  </div>
+                                )}
                               </React.Fragment>
                             )
                           })}

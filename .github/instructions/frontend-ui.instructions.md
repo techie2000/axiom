@@ -245,6 +245,10 @@ EVERY visual change:
 - Provide a `Clear Filters` action whenever a page has two or more filters (search counts as a filter).
 - Show `Clear Filters` only when at least one filter is active (LEI Records behavior).
 - `Clear Filters` should reset all filter inputs to default values in one click.
+- For paired transformation filters (for example `From *` and `To *` groups), align paired fields on
+  the same row (`From System` with `To System`, etc.) to improve scannability.
+- Reserve accent/border emphasis for actionable cards only (cards that toggle a filter). Avoid
+  accent styling on informational, non-clickable cards.
 - For dark mode readability, all `<select>` controls must style both the `<select>` and each `<option>` explicitly.
 - Search inputs with long placeholder guidance must show a tooltip when placeholder text is clipped.
 - Use shared component `frontend/app/components/SearchInputWithOverflowTooltip.tsx` for search/filter text inputs.
@@ -428,6 +432,7 @@ step-by-step guide and integration checklist.
   so horizontally scrolled cells cannot bleed through divider boundaries.
 - Use the **same seam rendering technique** for both frozen header (`th`) and body (`td`) cells;
   do not mix different seam primitives between header and body.
+
 - Prefer an **inset right-edge seam** (for example an inset box-shadow) rendered inside frozen cells
   over offset pseudo-elements.
 - Avoid negative-offset pseudo-element seams (`right: -1px` style patterns) on frozen cells because
