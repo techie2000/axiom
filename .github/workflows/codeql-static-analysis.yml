@@ -1,4 +1,4 @@
-name: CodeQL
+name: CodeQL Static Code Analysis
 
 on:
   push:
@@ -47,7 +47,7 @@ jobs:
 
       - name: Set up Go
         if: matrix.language == 'go'
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
