@@ -331,19 +331,19 @@ export default function CodeMappingsPage() {
                       <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-center">
                         <Badge variant="orange" mono>{mapping.from_system}</Badge>
                       </td>
-                      <td className={`px-4 text-sm theme-text-muted font-mono text-xs ${expandedWidth ? 'py-4 whitespace-normal break-words' : 'py-3 whitespace-nowrap'}`}>
+                      <td className={`px-4 text-sm theme-text-muted font-mono text-xs ${effectiveExpandedWidth ? 'py-4 whitespace-normal break-words' : 'py-3 whitespace-nowrap'}`}>
                         {mapping.from_code_type}
                       </td>
-                      <td className={`px-4 text-sm text-center ${expandedWidth ? 'py-4 whitespace-normal break-words' : 'py-3 whitespace-nowrap'}`}>
+                      <td className={`px-4 text-sm text-center ${effectiveExpandedWidth ? 'py-4 whitespace-normal break-words' : 'py-3 whitespace-nowrap'}`}>
                         <Badge variant="red" mono>{mapping.from_code}</Badge>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-center">
                         <Badge variant="blue" mono>{mapping.to_system}</Badge>
                       </td>
-                      <td className={`px-4 text-sm theme-text-muted font-mono text-xs ${expandedWidth ? 'py-4 whitespace-normal break-words' : 'py-3 whitespace-nowrap'}`}>
+                      <td className={`px-4 text-sm theme-text-muted font-mono text-xs ${effectiveExpandedWidth ? 'py-4 whitespace-normal break-words' : 'py-3 whitespace-nowrap'}`}>
                         {mapping.to_code_type}
                       </td>
-                      <td className={`px-4 text-sm text-center ${expandedWidth ? 'py-4 whitespace-normal break-words' : 'py-3 whitespace-nowrap'}`}>
+                      <td className={`px-4 text-sm text-center ${effectiveExpandedWidth ? 'py-4 whitespace-normal break-words' : 'py-3 whitespace-nowrap'}`}>
                         <Badge variant="green" mono>{mapping.to_code}</Badge>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
@@ -353,7 +353,7 @@ export default function CodeMappingsPage() {
                           </span>
                         </Badge>
                       </td>
-                      <td className={`px-4 text-sm theme-text-muted max-w-xl ${expandedWidth ? 'py-4 whitespace-normal break-words' : 'py-3 truncate'}`}>
+                      <td className={`px-4 text-sm theme-text-muted max-w-xl ${effectiveExpandedWidth ? 'py-4 whitespace-normal break-words' : 'py-3 truncate'}`}>
                         {mapping.description || t('codeMappings.emptyDescription')}
                       </td>
                     </tr>
