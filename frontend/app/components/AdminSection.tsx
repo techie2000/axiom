@@ -49,6 +49,18 @@ export default function AdminSection() {
           description="Review community-contributed UI translations, approve or reject pending strings, and add new translations"
           icon="🌐"
         />
+        <AdminLandingCard
+          href="/admin/provisional-lei"
+          title="Provisional LEI Records"
+          description="Issue and manage Axiom-assigned provisional LEI codes for entities not yet registered with GLEIF, and link them to official LEIs when available"
+          icon="🔖"
+        />
+        <AdminLandingCard
+          href="/admin/user-entity-links"
+          title="User–Entity Links"
+          description="Grant and revoke entity-scoped access links that associate users with specific LEI entities and roles"
+          icon="🔗"
+        />
       </div>
     </section>
   )

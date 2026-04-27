@@ -28,7 +28,9 @@
       "codeMappings": "Code Mappings",
       "syncTriggers": "Sync Triggers",
       "adminUsers": "User Management",
-      "adminTranslations": "Translations"
+      "adminTranslations": "Translations",
+      "provisionalLei": "Provisional LEIs",
+      "userEntityLinks": "User–Entity Links"
     }
   },
   "nav": {
@@ -1024,6 +1026,112 @@
       "google": "Google Maps",
       "bing": "Bing Maps",
       "apple": "Apple Maps"
+    }
+  },
+  "provisionalLei": {
+    "title": "Provisional LEI Records",
+    "subtitle": "Issue and manage Axiom-assigned provisional LEI codes for entities without official GLEIF identifiers",
+    "loading": "Loading provisional LEI records…",
+    "empty": "No provisional LEI records found.",
+    "totalCount": "{{count}} record(s)",
+    "badge": "PROVISIONAL",
+    "columns": {
+      "lei": "LEI",
+      "legalName": "Legal Name",
+      "source": "Source",
+      "status": "Status",
+      "successorLei": "Successor LEI",
+      "created": "Created",
+      "actions": "Actions"
+    },
+    "form": {
+      "createTitle": "Issue New Provisional LEI",
+      "editTitle": "Edit Provisional LEI Record",
+      "succeedTitle": "Link to Official LEI",
+      "succeedHint": "Enter the official GLEIF LEI that will succeed the provisional record {{lei}} ({{name}}).",
+      "legalName": "Legal Name",
+      "legalNamePlaceholder": "Full legal entity name",
+      "provisioningSource": "Source",
+      "provisioningSourcePlaceholder": "e.g. onboarding, counterparty",
+      "country": "Country (ISO 2)",
+      "city": "City",
+      "jurisdiction": "Jurisdiction",
+      "entityStatus": "Entity Status",
+      "officialLEI": "Official LEI (20 characters)",
+      "notes": "Notes",
+      "notesPlaceholder": "Optional internal notes"
+    },
+    "actions": {
+      "create": "+ New Provisional LEI",
+      "edit": "Edit",
+      "save": "Save",
+      "succeed": "Link to Official LEI"
+    },
+    "success": {
+      "created": "Provisional LEI issued successfully.",
+      "updated": "Record updated.",
+      "succeeded": "Provisional LEI linked to official LEI."
+    },
+    "errors": {
+      "loadFailed": "Failed to load provisional LEI records.",
+      "createFailed": "Failed to issue provisional LEI.",
+      "updateFailed": "Failed to update record.",
+      "succeedFailed": "Failed to link to official LEI.",
+      "network": "Network error — please try again."
+    }
+  },
+  "userEntityLinks": {
+    "title": "User–Entity Links",
+    "subtitle": "Grant and manage entity-scoped access links associating users with LEI entities",
+    "loading": "Loading user–entity links…",
+    "empty": "No links found.",
+    "columns": {
+      "userId": "User ID",
+      "lei": "LEI",
+      "role": "Role",
+      "children": "Children",
+      "grantedAt": "Granted",
+      "expiresAt": "Expires",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "filters": {
+      "byUser": "Filter by User ID…",
+      "byLEI": "Filter by LEI…",
+      "clear": "Clear",
+      "activeOnly": "Active only"
+    },
+    "form": {
+      "grantTitle": "Grant Entity Access",
+      "editTitle": "Edit Link",
+      "userId": "User ID",
+      "lei": "LEI",
+      "role": "Role",
+      "expiresAt": "Expires At (optional)",
+      "notes": "Notes",
+      "includeChildren": "Include child entities"
+    },
+    "status": {
+      "active": "active",
+      "revoked": "revoked"
+    },
+    "actions": {
+      "grant": "+ Grant Access",
+      "grantSave": "Grant",
+      "edit": "Edit",
+      "revoke": "Revoke"
+    },
+    "success": {
+      "granted": "Access granted.",
+      "updated": "Link updated.",
+      "revoked": "Link revoked."
+    },
+    "errors": {
+      "loadFailed": "Failed to load user–entity links.",
+      "grantFailed": "Failed to grant access.",
+      "updateFailed": "Failed to update link.",
+      "revokeFailed": "Failed to revoke link.",
+      "network": "Network error — please try again."
     }
   }
 }

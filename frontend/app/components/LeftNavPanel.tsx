@@ -39,6 +39,20 @@ const ADMIN_ITEMS: NavItem[] = [
     requiresAuth: true,
     requiresAdmin: true,
   },
+  {
+    href: '/admin/provisional-lei',
+    icon: '🔖',
+    labelKey: 'leftNav.items.provisionalLei',
+    requiresAuth: true,
+    requiresAdmin: true,
+  },
+  {
+    href: '/admin/user-entity-links',
+    icon: '🔗',
+    labelKey: 'leftNav.items.userEntityLinks',
+    requiresAuth: true,
+    requiresAdmin: true,
+  },
 ]
 
 const NAV_SECTIONS: NavSection[] = [
