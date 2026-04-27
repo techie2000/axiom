@@ -127,7 +127,7 @@ export default function CodeMappingsPage() {
           titleTooltip={getEnglishTooltip('codeMappings.title')}
           subtitleTooltip={getEnglishTooltip('codeMappings.subtitle')}
           backHref="/dashboard"
-          docsHref={buildDocsUrl('workflows/')}
+          docsHref={buildDocsUrl('workflows/code-mappings/')}
           actions={
             <ReferencePageHeaderActions
               effectiveExpandedWidth={effectiveExpandedWidth}
