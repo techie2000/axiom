@@ -223,7 +223,7 @@ For your primary main stack, use the wrapper command (or `make docker-main-up`) 
 The wrapper pins `POSTGRES_DATA_DIR` to the canonical root path so main never starts against a
 worktree-local empty database directory.
 
-## Works from repo root or any git worktree
+#### Works from repo root or any git worktree
 
 **Windows / PowerShell:**
 
