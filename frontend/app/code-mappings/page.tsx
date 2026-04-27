@@ -44,6 +44,9 @@ export default function CodeMappingsPage() {
     defaultValue: false,
   })
   const [hasHydrated, setHasHydrated] = useState(false)
+  useEffect(() => {
+    setHasHydrated(true)
+  }, [])
 
   const API_BASE_URL = getApiBaseUrl()
 
@@ -85,10 +88,6 @@ export default function CodeMappingsPage() {
     }
   }, [fetchMappings])
 
-  useEffect(() => {
-    setHasHydrated(true)
-  }, [])
-
   const filteredMappings = useMemo(
     () => filterCodeMappings(mappings, searchTerm, filters),
     [mappings, searchTerm, filters]
@@ -103,8 +102,8 @@ export default function CodeMappingsPage() {
     () => getCodeMappingFilterOptions(mappings),
     [mappings]
   )
-  const effectiveExpandedWidth = hasHydrated ? expandedWidthPreference.value : false
   const hasActiveFiltersOrSearch = searchTerm.trim().length > 0 || activeFilterCount > 0
+  const effectiveExpandedWidth = hasHydrated ? expandedWidthPreference.value : false
 
   const setFilter = useCallback((key: keyof CodeMappingColumnFilters, value: string) => {
     setFilters((previous) => ({ ...previous, [key]: value as CodeMappingColumnFilters[typeof key] }))
