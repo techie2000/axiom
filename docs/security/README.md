@@ -34,6 +34,12 @@ directly (the token has no `security_events` scope), and documents three approac
 bridge this gap: paste-as-context, the weekly `security-report.yml` workflow, and a
 fine-grained PAT stored as a repository secret.
 
+### [CodeQL Workflow](../../.github/workflows/codeql.yml)
+
+Advanced CodeQL configuration for this monorepo layout. The Go analysis runs from the
+`backend/` module with an explicit build step (`go mod download && go build ./...`)
+because GitHub default setup does not correctly process nested Go modules from repo root.
+
 ## Quick Reference
 
 For a high-level summary of security updates, see [SECURITY_UPDATE_SUMMARY.md](SECURITY_UPDATE_SUMMARY.md).
@@ -47,6 +53,7 @@ The project now includes a comprehensive automated security update system:
 - **Consolidated PRs** - Single PR with all security fixes
 - **Version tracking** - Audit trail in `.github/security-versions.yml`
 - **Dependabot integration** - Base image updates
+- **CodeQL advanced setup** - Go scanning builds from `backend/` instead of repo root
 
 See [AUTOMATED_UPDATES.md](AUTOMATED_UPDATES.md) for complete documentation.
 
@@ -57,5 +64,7 @@ See [AUTOMATED_UPDATES.md](AUTOMATED_UPDATES.md) for complete documentation.
 - [Docker Best Practices](../../.github/instructions/containerization-docker-best-practices.instructions.md) -
   Container security guidelines
 - [Security Scan Enhanced Workflow](../../.github/workflows/security-scan-enhanced.yml) - Automated security scanning
+- [CodeQL Workflow](../../.github/workflows/codeql.yml) - Advanced CodeQL analysis for Go, JavaScript/TypeScript,
+  and GitHub Actions
 - [Dependabot Configuration](../../.github/dependabot.yml) - Dependency monitoring
 - [Security Version Tracking](../../.github/security-versions.yml) - Pinned versions audit trail
