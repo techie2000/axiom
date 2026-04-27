@@ -101,7 +101,139 @@ jobs:
             })
 
             const pullRequest = result.repository.pullRequest
-            const linkedIssues = pullRequest.closingIssuesReferences.nodes || []
+            const closingIssues = pullRequest.closingIssuesReferences.nodes || []
+
+            // Collect issue references from PR title/body so `Refs #N` and plain `#N`
+            // references are tracked, not only auto-closing keywords.
+            const prText = `${pr.title || ''}\n${pr.body || ''}`
+            const explicitRefRegex = /\b(?:closes?|fixes?|resolves?|refs?|relates?\s+to)(?:\s+|:\s*)#(\d+)\b/gi
+            const anyIssueRefRegex = /(^|[^\w])#(\d+)\b/gm
+
+            const referencedIssueNumbers = new Set(
+              closingIssues.map((issue) => issue.number).filter((n) => Number.isInteger(n))
+            )
+
+            const explicitRefMatches = [...prText.matchAll(explicitRefRegex)]
+            for (const match of explicitRefMatches) {
+              const number = Number(match[1])
+              if (Number.isInteger(number)) {
+                referencedIssueNumbers.add(number)
+              }
+            }
+
+            const genericRefMatches = [...prText.matchAll(anyIssueRefRegex)]
+            for (const match of genericRefMatches) {
+              const number = Number(match[2])
+              if (Number.isInteger(number)) {
+                referencedIssueNumbers.add(number)
+              }
+            }
+
+            // Ignore self-references to the PR number.
+            referencedIssueNumbers.delete(prNumber)
+
+            // Resolve references to issues only (not pull requests), and include one-hop
+            // child/sub-issues declared in task lists or parent/children fields.
+            const linkedIssueByNumber = new Map()
+
+            function extractChildIssueNumbers(bodyText) {
+              const numbers = new Set()
+              if (!bodyText) {
+                return numbers
+              }
+
+              const taskListRefs = [...bodyText.matchAll(/-\s*\[[ xX]\]\s*(?:[^\n#]*?)#(\d+)\b/gm)]
+              for (const match of taskListRefs) {
+                const number = Number(match[1])
+                if (Number.isInteger(number)) {
+                  numbers.add(number)
+                }
+              }
+
+              const parentChildRefs = [...bodyText.matchAll(/\b(?:child(?:ren)?|sub-issues?)\s*:\s*([^\n]+)/gi)]
+              for (const match of parentChildRefs) {
+                const line = match[1] || ''
+                const inlineRefs = [...line.matchAll(/#(\d+)\b/g)]
+                for (const ref of inlineRefs) {
+                  const number = Number(ref[1])
+                  if (Number.isInteger(number)) {
+                    numbers.add(number)
+                  }
+                }
+              }
+
+              return numbers
+            }
+
+            for (const issueNumber of referencedIssueNumbers) {
+              try {
+                const { data } = await github.rest.issues.get({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNumber
+                })
+
+                if (data.pull_request) {
+                  continue
+                }
+
+                linkedIssueByNumber.set(data.number, {
+                  number: data.number,
+                  state: data.state,
+                  labels: {
+                    nodes: (data.labels || []).map((label) => ({
+                      name: typeof label === 'string' ? label : label.name
+                    }))
+                  }
+                })
+
+                const childIssueNumbers = extractChildIssueNumbers(data.body || '')
+                for (const childNumber of childIssueNumbers) {
+                  referencedIssueNumbers.add(childNumber)
+                }
+              } catch (error) {
+                if (error.status === 404) {
+                  core.info(`Referenced target #${issueNumber} not found; skipping.`)
+                  continue
+                }
+
+                throw error
+              }
+            }
+
+            for (const issueNumber of referencedIssueNumbers) {
+              if (linkedIssueByNumber.has(issueNumber) || issueNumber === prNumber) {
+                continue
+              }
+
+              try {
+                const { data } = await github.rest.issues.get({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNumber
+                })
+
+                if (data.pull_request) {
+                  continue
+                }
+
+                linkedIssueByNumber.set(data.number, {
+                  number: data.number,
+                  state: data.state,
+                  labels: {
+                    nodes: (data.labels || []).map((label) => ({
+                      name: typeof label === 'string' ? label : label.name
+                    }))
+                  }
+                })
+              } catch (error) {
+                if (error.status !== 404) {
+                  throw error
+                }
+              }
+            }
+
+            const linkedIssues = [...linkedIssueByNumber.values()]
 
             if (linkedIssues.length === 0) {
               core.info('No linked issues found for this pull request.')
