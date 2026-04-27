@@ -169,32 +169,44 @@ docker-main-restart: ## Restart main branch environment
 	fi
 
 docker-main-frontend-reset: ## Reset main frontend node_modules/.next volumes and recreate the frontend service
-ifeq ($(OS),Windows_NT)
-	pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/reset-frontend-state.ps1 -Environment main
-else
-	bash scripts/reset-frontend-state.sh main
-endif
+	@if command -v bash >/dev/null 2>&1; then \
+		bash scripts/reset-frontend-state.sh main; \
+	elif command -v pwsh >/dev/null 2>&1; then \
+		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/reset-frontend-state.ps1 -Environment main; \
+	else \
+		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot reset main frontend state."; \
+		exit 1; \
+	fi
 
 docker-dev-frontend-reset: ## Reset dev frontend node_modules/.next volumes and recreate the frontend service
-ifeq ($(OS),Windows_NT)
-	pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/reset-frontend-state.ps1 -Environment dev
-else
-	bash scripts/reset-frontend-state.sh dev
-endif
+	@if command -v bash >/dev/null 2>&1; then \
+		bash scripts/reset-frontend-state.sh dev; \
+	elif command -v pwsh >/dev/null 2>&1; then \
+		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/reset-frontend-state.ps1 -Environment dev; \
+	else \
+		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot reset dev frontend state."; \
+		exit 1; \
+	fi
 
 docker-uat-frontend-reset: ## Recreate UAT frontend service with a fresh image
-ifeq ($(OS),Windows_NT)
-	pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/reset-frontend-state.ps1 -Environment uat
-else
-	bash scripts/reset-frontend-state.sh uat
-endif
+	@if command -v bash >/dev/null 2>&1; then \
+		bash scripts/reset-frontend-state.sh uat; \
+	elif command -v pwsh >/dev/null 2>&1; then \
+		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/reset-frontend-state.ps1 -Environment uat; \
+	else \
+		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot reset uat frontend state."; \
+		exit 1; \
+	fi
 
 docker-prod-frontend-reset: ## Recreate prod frontend service with a fresh image
-ifeq ($(OS),Windows_NT)
-	pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/reset-frontend-state.ps1 -Environment prod
-else
-	bash scripts/reset-frontend-state.sh prod
-endif
+	@if command -v bash >/dev/null 2>&1; then \
+		bash scripts/reset-frontend-state.sh prod; \
+	elif command -v pwsh >/dev/null 2>&1; then \
+		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/reset-frontend-state.ps1 -Environment prod; \
+	else \
+		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot reset prod frontend state."; \
+		exit 1; \
+	fi
 
 # Main branch environment (intraday development/fixes)
 docker-main-up: ## Start main branch environment (ports: 48080, 43000, 45432)

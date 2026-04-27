@@ -31,25 +31,24 @@ RUN npm run build
 # Runtime stage
 FROM ${DOCKER_LIBRARY}/node:22-alpine3.21
 
-# Security: keep OpenSSL patched using latest package available in Alpine repo.
+# Security: keep OpenSSL patched using latest package available in Alpine repo
+# and install the patched npm CLI in the runtime image.
 # security-scan-managed
 # hadolint ignore=DL3018
-RUN apk add --no-cache --upgrade libssl3
-
-# Install the patched npm directly in the runtime image so maintenance commands
-# like `npm install` work reliably when the container is bind-mounted for local dev.
-RUN npm install -g npm@11.12.0
+RUN apk add --no-cache --upgrade libssl3 \
+	&& npm install -g npm@11.12.0
 
 WORKDIR /app
 
-# Copy package files and node_modules from builder (no reinstall - faster, avoids npm registry timeouts)
+# Copy package files and application dependencies from the builder for reproducibility
+# and to avoid a second install of app dependencies in the runtime stage.
+# Note: the runtime image still fetches the patched npm CLI above via `npm install -g`.
 COPY package*.json ./
 COPY --from=builder /app/node_modules ./node_modules
 
 # Copy build output
 COPY --from=builder /app/.next ./.next
-# Only copy public if it exists
-RUN if [ -d /app/public ]; then cp -r /app/public ./public; fi
+COPY --from=builder /app/public ./public
 
 EXPOSE 3000
 
