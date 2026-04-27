@@ -39,7 +39,7 @@
     "react-dom": "^19.2.5",
     "react-i18next": "^17.0.4",
     "tailwind-merge": "^2.2.0",
-    "tailwindcss": "^4.2.2"
+    "tailwindcss": "^4.2.4"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.5",
