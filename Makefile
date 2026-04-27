@@ -6,6 +6,22 @@
 .PHONY: lint lint-docs lint-docs-fix docs-check docs-check-fix lint-all install-hooks settings-sort settings-sort-check
 .PHONY: smoke-api smoke-ssi cleanup-stale-translations docs-user-install docs-user-ci-install docs-user-build docs-user-check docs-user-dev
 
+ifeq ($(OS),Windows_NT)
+MAIN_COMPOSE_WRAPPER := pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/run-main-compose.ps1
+MAIN_PG_UPGRADE := pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/upgrade-postgres.ps1 -Environment main -Yes
+else
+MAIN_COMPOSE_WRAPPER := $(shell if command -v bash >/dev/null 2>&1; then echo "bash scripts/run-main-compose.sh"; elif command -v pwsh >/dev/null 2>&1; then echo "pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/run-main-compose.ps1"; else echo ""; fi)
+MAIN_PG_UPGRADE := $(shell if command -v bash >/dev/null 2>&1; then echo "bash scripts/upgrade-postgres.sh main --yes"; elif command -v pwsh >/dev/null 2>&1; then echo "pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/upgrade-postgres.ps1 -Environment main -Yes"; else echo ""; fi)
+
+ifeq ($(strip $(MAIN_COMPOSE_WRAPPER)),)
+$(error Neither 'bash' nor 'pwsh' was found. Cannot run main compose wrapper.)
+endif
+
+ifeq ($(strip $(MAIN_PG_UPGRADE)),)
+$(error Neither 'bash' nor 'pwsh' was found. Cannot run PostgreSQL upgrade precheck.)
+endif
+endif
+
 build: ## Build the backend application
 	cd backend && go build -o bin/api cmd/api/main.go
 
@@ -107,78 +123,27 @@ docker-logs: ## Show logs from all services (default/legacy)
 	docker-compose logs -f
 
 docker-main-down: ## Stop main branch environment
-	@if command -v bash >/dev/null 2>&1; then \
-		bash scripts/run-main-compose.sh down; \
-	elif command -v pwsh >/dev/null 2>&1; then \
-		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/run-main-compose.ps1 down; \
-	else \
-		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run main compose wrapper."; \
-		exit 1; \
-	fi
+	@$(MAIN_COMPOSE_WRAPPER) down
 
 docker-main-rebuild-safe: ## Gracefully rebuild main backend/frontend while reducing DB crash-recovery risk
 	@echo "Gracefully stopping app services first (frontend/backend)..."
-	@if command -v bash >/dev/null 2>&1; then \
-		bash scripts/run-main-compose.sh stop -t 45 frontend backend; \
-	elif command -v pwsh >/dev/null 2>&1; then \
-		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/run-main-compose.ps1 stop -t 45 frontend backend; \
-	else \
-		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run main compose wrapper."; \
-		exit 1; \
-	fi
+	@$(MAIN_COMPOSE_WRAPPER) stop -t 45 frontend backend
 	@echo "Stopping stateful services with extended timeout (postgres/rabbitmq)..."
-	@if command -v bash >/dev/null 2>&1; then \
-		bash scripts/run-main-compose.sh stop -t 120 postgres rabbitmq; \
-	elif command -v pwsh >/dev/null 2>&1; then \
-		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/run-main-compose.ps1 stop -t 120 postgres rabbitmq; \
-	else \
-		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run main compose wrapper."; \
-		exit 1; \
-	fi
+	@$(MAIN_COMPOSE_WRAPPER) stop -t 120 postgres rabbitmq
 	@echo "Rebuilding and starting services..."
-	@if command -v bash >/dev/null 2>&1; then \
-		bash scripts/run-main-compose.sh up -d --build postgres rabbitmq backend frontend; \
-	elif command -v pwsh >/dev/null 2>&1; then \
-		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/run-main-compose.ps1 up -d --build postgres rabbitmq backend frontend; \
-	else \
-		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run main compose wrapper."; \
-		exit 1; \
-	fi
+	@$(MAIN_COMPOSE_WRAPPER) up -d --build postgres rabbitmq backend frontend
 
 docker-main-logs: ## Show logs from main branch environment
-	@if command -v bash >/dev/null 2>&1; then \
-		bash scripts/run-main-compose.sh logs -f; \
-	elif command -v pwsh >/dev/null 2>&1; then \
-		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/run-main-compose.ps1 logs -f; \
-	else \
-		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run main compose wrapper."; \
-		exit 1; \
-	fi
+	@$(MAIN_COMPOSE_WRAPPER) logs -f
 
 docker-main-restart: ## Restart main branch environment
-	@if command -v bash >/dev/null 2>&1; then \
-		bash scripts/upgrade-postgres.sh main --yes; \
-		bash scripts/run-main-compose.sh restart; \
-	elif command -v pwsh >/dev/null 2>&1; then \
-		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/upgrade-postgres.ps1 -Environment main -Yes; \
-		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/run-main-compose.ps1 restart; \
-	else \
-		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run main compose wrapper."; \
-		exit 1; \
-	fi
+	@$(MAIN_PG_UPGRADE)
+	@$(MAIN_COMPOSE_WRAPPER) restart
 
 # Main branch environment (intraday development/fixes)
 docker-main-up: ## Start main branch environment (ports: 48080, 43000, 45432)
-	@if command -v bash >/dev/null 2>&1; then \
-		bash scripts/upgrade-postgres.sh main --yes; \
-		bash scripts/run-main-compose.sh up -d; \
-	elif command -v pwsh >/dev/null 2>&1; then \
-		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/upgrade-postgres.ps1 -Environment main -Yes; \
-		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/run-main-compose.ps1 up -d; \
-	else \
-		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run main compose wrapper."; \
-		exit 1; \
-	fi
+	@$(MAIN_PG_UPGRADE)
+	@$(MAIN_COMPOSE_WRAPPER) up -d
 
 docker-prod-down: ## Stop production environment
 	docker-compose --env-file .env.prod -f docker-compose.prod.yml down
