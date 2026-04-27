@@ -3,6 +3,7 @@
 .PHONY: help build run test clean migrate-up migrate-down docker-up docker-down
 .PHONY: docker-main-up docker-main-down docker-main-rebuild-safe docker-dev-up docker-dev-down docker-dev-rebuild-safe docker-uat-up docker-uat-down docker-uat-rebuild-safe docker-prod-up docker-prod-down docker-prod-rebuild-safe
 .PHONY: docker-all-up docker-all-down docker-all-status validate-env
+.PHONY: docker-main-frontend-reset docker-dev-frontend-reset docker-uat-frontend-reset docker-prod-frontend-reset
 .PHONY: lint lint-docs lint-docs-fix docs-check docs-check-fix lint-all install-hooks settings-sort settings-sort-check
 .PHONY: smoke-api smoke-ssi cleanup-stale-translations docs-user-install docs-user-ci-install docs-user-build docs-user-check docs-user-dev
 
@@ -166,6 +167,34 @@ docker-main-restart: ## Restart main branch environment
 		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run main compose wrapper."; \
 		exit 1; \
 	fi
+
+docker-main-frontend-reset: ## Reset main frontend node_modules/.next volumes and recreate the frontend service
+ifeq ($(OS),Windows_NT)
+	pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/reset-frontend-state.ps1 -Environment main
+else
+	bash scripts/reset-frontend-state.sh main
+endif
+
+docker-dev-frontend-reset: ## Reset dev frontend node_modules/.next volumes and recreate the frontend service
+ifeq ($(OS),Windows_NT)
+	pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/reset-frontend-state.ps1 -Environment dev
+else
+	bash scripts/reset-frontend-state.sh dev
+endif
+
+docker-uat-frontend-reset: ## Recreate UAT frontend service with a fresh image
+ifeq ($(OS),Windows_NT)
+	pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/reset-frontend-state.ps1 -Environment uat
+else
+	bash scripts/reset-frontend-state.sh uat
+endif
+
+docker-prod-frontend-reset: ## Recreate prod frontend service with a fresh image
+ifeq ($(OS),Windows_NT)
+	pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/reset-frontend-state.ps1 -Environment prod
+else
+	bash scripts/reset-frontend-state.sh prod
+endif
 
 # Main branch environment (intraday development/fixes)
 docker-main-up: ## Start main branch environment (ports: 48080, 43000, 45432)

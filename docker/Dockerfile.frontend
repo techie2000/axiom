@@ -36,14 +36,15 @@ FROM ${DOCKER_LIBRARY}/node:22-alpine3.21
 # hadolint ignore=DL3018
 RUN apk add --no-cache --upgrade libssl3
 
+# Install the patched npm directly in the runtime image so maintenance commands
+# like `npm install` work reliably when the container is bind-mounted for local dev.
+RUN npm install -g npm@11.12.0
+
 WORKDIR /app
 
 # Copy package files and node_modules from builder (no reinstall - faster, avoids npm registry timeouts)
 COPY package*.json ./
 COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /usr/local/bin/npm /usr/local/bin/npm
-COPY --from=builder /usr/local/bin/npx /usr/local/bin/npx
-COPY --from=builder /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/npm
 
 # Copy build output
 COPY --from=builder /app/.next ./.next
