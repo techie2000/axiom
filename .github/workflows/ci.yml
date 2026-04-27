@@ -33,6 +33,7 @@ jobs:
       has_migration_changes: ${{ steps.filter.outputs.migrations }}
       has_calm_changes: ${{ steps.filter.outputs.calm }}
       has_docs_user_changes: ${{ steps.filter.outputs.docs_user }}
+      has_issue_labeling_changes: ${{ steps.filter.outputs.issue_labeling }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -59,6 +60,26 @@ jobs:
               - 'docs/architecture-as-code/**'
             docs_user:
               - 'docs-user/**'
+            issue_labeling:
+              - '.github/workflows/auto-label-issues.yml'
+              - '.github/tests/auto-label-issues*.test.mjs'
+
+  test-issue-auto-labeling:
+    name: Issue Auto-labeling Tests
+    runs-on: ubuntu-latest
+    needs: [detect-file-changes]
+    if: ${{ needs.detect-file-changes.outputs.has_issue_labeling_changes == 'true' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+
+      - name: Run auto-labeling regression tests
+        run: node --test .github/tests/auto-label-issues*.test.mjs
 
   detect-environment:
     name: Detect Target Environment

@@ -22,9 +22,20 @@ Manage GitHub issues using the `@modelcontextprotocol/server-github` MCP server.
 
 1. **Determine action**: Create, update, or query?
 2. **Gather context**: Get repo info, existing labels, milestones if needed
-3. **Structure content**: Use appropriate template from [references/templates.md](references/templates.md)
-4. **Execute**: Call the appropriate MCP tool
-5. **Confirm**: Report the issue URL to user
+3. **Check for duplicates before create**:
+  Search recent open issues for the same feature, bug, or wording before opening a new one
+4. **Structure content**: Use appropriate template from [references/templates.md](references/templates.md)
+5. **Execute**: Call the appropriate MCP tool
+6. **Confirm**: Report the issue URL to user
+
+## Duplicate Check
+
+Before creating a new issue:
+
+- Search open issues for the main nouns and verbs from the request
+- Compare against issues created earlier in the same session when the topic is closely related
+- If a matching issue already exists, prefer updating or referencing it instead of creating a new one
+- If you intentionally create a follow-on issue, explicitly reference the parent or predecessor issue in the body
 
 ## Creating Issues
 
@@ -90,7 +101,8 @@ State values: `open`, `closed`
 - When work starts on a linked issue, replace `status: triage` with `status: in progress`
 - When the linked PR merges, replace `status: in progress` with `status: done`
 - If work stops and the linked PR closes without merge, move the issue back to `status: triage`
-- Preserve category labels such as `bug`, `enhancement`, `documentation`, `security`, and `performance`
+- Preserve category labels such as `bug`, `enhancement`, `security`, and `performance`
+- For documentation-focused work, use `area:docs` instead of adding a duplicate `documentation` label
 
 ## Examples
 
@@ -134,7 +146,6 @@ Use these standard labels when applicable:
 | --- | --- |
 | `bug` | Something isn't working |
 | `enhancement` | New feature or improvement |
-| `documentation` | Documentation updates |
 | `good first issue` | Good for newcomers |
 | `help wanted` | Extra attention needed |
 | `question` | Further information requested |
@@ -180,12 +191,13 @@ apply others manually.
 
 ## PR Issue Link and Override
 
-PRs should reference a linked issue using a closing keyword in the PR description.
+PRs should reference a linked issue in the PR description. Prefer `Refs #N` by default.
+Use closing keywords only when `#N` is confirmed to be an issue (not a pull request).
 
 ```text
-Closes #123
-Fixes #42
 Refs #7
+Closes #123  (issue only)
+Fixes #42    (issue only)
 ```
 
 If no backing issue exists, check the **No linked issue** box in the PR template and
@@ -203,6 +215,74 @@ Do not apply these manually unless correcting an incorrect state.
 | `status: triage`        | Needs initial review               |
 | `status: in progress`   | Linked PR is open and active       |
 | `status: done`          | Linked PR merged                   |
+
+## Comment Body Safety (REQUIRED)
+
+When posting or updating issue/PR comments from terminal commands, always use real
+multiline Markdown bodies and verify the stored comment text immediately.
+
+Required workflow:
+
+1. Build body text with real newlines.
+2. Prefer writing the body to a UTF-8 markdown file and pass it with `--body-file`.
+3. If you must use a variable, use a PowerShell here-string with real newlines.
+4. Verify stored body immediately using `gh api ... --jq .body`.
+5. If malformed (escaped newlines/control chars), patch the same comment in place.
+6. Do not post a replacement duplicate unless explicitly requested.
+
+Preferred PowerShell pattern (most reliable):
+
+```powershell
+$commentPath = Join-Path $env:TEMP "gh-comment-body.md"
+$body = @'
+## Update
+
+- Item one
+- Item two
+'@
+
+Set-Content -Path $commentPath -Value $body -Encoding utf8
+gh issue comment 123 --repo owner/repo --body-file "$commentPath"
+
+# Verify final stored body
+gh issue view 123 --repo owner/repo --comments
+```
+
+Alternative pattern (allowed):
+
+```powershell
+$body = @'
+## Update
+
+- Item one
+- Item two
+'@
+
+gh issue comment 123 --repo owner/repo --body "$body"
+gh api repos/owner/repo/issues/comments/<comment_id> --jq .body
+```
+
+If verification finds visible escape sequences (for example `\\n`) or control-character artifacts,
+patch the same comment immediately using a verified clean body file:
+
+```powershell
+gh api repos/owner/repo/issues/comments/<comment_id> --method PATCH -F "body=@$commentPath"
+gh api repos/owner/repo/issues/comments/<comment_id> --jq .body
+```
+
+Never proceed without verification when posting reviewer-facing summaries or checklists.
+
+Forbid these patterns:
+
+- Inline escaped bodies such as `--body "line1\\nline2"`
+- Posting and moving on without verification
+- Creating duplicate replacement comments when an in-place patch is possible
+
+Troubleshooting notes:
+
+- If VS Code restarts and context is lost, re-run the verification command for the latest comment
+  before posting any follow-up comment.
+- Prefer `--body-file` over inline `--body` when content includes checklists, code blocks, or many lines.
 
 ## Tips
 

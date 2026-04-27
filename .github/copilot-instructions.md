@@ -626,19 +626,29 @@ This repository configuration is designed to make AI coding agents immediately p
 When an AI agent creates a pull request, it should complete standard PR hygiene automatically **without asking for confirmation**:
 
 1. Add appropriate labels following the three-namespace taxonomy:
-   - **Category** (required, if applicable): `bug`, `enhancement`, `documentation`, `security`, `performance`, or `question` — only when distinct from area labels
+   - **Category** (optional, max one): `bug`, `enhancement`, `security`, `performance`, or `question` — add only when it conveys information not already implied by Area
    - **Area** (required, exactly one): `area:backend`, `area:frontend`, `area:database`, `area:docs`,
      `area:infra`, `area:ci`, `area:lei`, or `area:dependencies` — infer from the files touched OR let CI workflow auto-apply
    - **Type** (optional secondary, one or two): `type:tests`, `type:refactor`, `type:chore`
    - Add `automated` to mark AI-created items and `no-issue-needed` for PRs with no backing issue
-   - **Note**: The CI workflow (`auto-label-prs.yml`) automatically applies Area labels based on file paths. Do not manually add Area labels unless the auto-detection fails. Category labels are only needed when the category is not implicit in the Area (e.g., `area:backend` change that is also a `security` fix should add `security` category).
+   - **Note**: The CI workflow (`auto-label-prs.yml`) automatically applies Area labels based on file paths. Do not manually add Area labels unless the auto-detection fails. Avoid duplicate semantics: do not add `documentation` when `area:docs` is present. Category labels are only needed when they are orthogonal to Area (e.g., `area:backend` change that is also a `security` fix should add `security`).
+   - **Replacement promotion PRs** (e.g., conflict-resolution branches like `fix/sync-dev-from-main-*` or
+     `fix/sync-uat-from-dev-*` that target `dev` or `uat` but do not originate from the required source branch):
+     apply `hotfix` **and** `no-issue-needed` at PR creation time — not reactively after CI flags them.
+     This is required because `Check Environment Branch Flow` blocks non-`main` branches targeting `dev`
+     unless the `hotfix` or `emergency` label is present, and `Check PR Issue Link` blocks PRs with no
+     issue reference unless `no-issue-needed` is present. Both checks will show
+     `Expected — Waiting for status to be reported` until the labels are applied, which triggers the
+     relevant workflows against the current PR head SHA without requiring an extra commit push.
 2. Request a reviewer (prefer `copilot-pull-request-reviewer` when available).
 3. Post a concise verification checklist comment relevant to the changed files.
 4. After each commit push to the PR branch, post a concise implementation summary comment that includes:
    - what changed,
    - what validation/tests were run,
    - any follow-up actions or known limitations.
-5. For each linked underlying issue (for example `Fixes #123`, `Closes #123`, or issue references in PR description),
+   - If a push has no meaningful reviewer-facing delta, do not post a new summary comment.
+5. For each linked underlying issue (prefer `Refs #123`; use `Fixes/Closes #123` only when `#123` is confirmed to be
+   an issue and not a pull request),
    post a concise issue update comment after each PR push (same per-push trigger as
    [`instructions/copilot-pr-feedback-resolution.instructions.md`](instructions/copilot-pr-feedback-resolution.instructions.md))
    that includes:
@@ -648,26 +658,104 @@ When an AI agent creates a pull request, it should complete standard PR hygiene 
    - PR link.
 6. Do not ask whether to post the summary/checklist/issue-update comments; post them by default.
 
+### Required Check Context Fallback (REQUIRED)
+
+If a required check shows `Expected — Waiting for status to be reported` while the corresponding
+GitHub Actions check run is already `SUCCESS`, treat this as a status-context mismatch and fix it
+immediately without asking for confirmation.
+
+Workflow:
+
+1. Get the exact PR head SHA and the required context name(s) configured by branch protection:
+   - `gh pr view <pr> --repo <owner>/<repo> --json headRefOid`
+   - `gh api repos/<owner>/<repo>/branches/<base>/protection/required_status_checks`
+2. Repo-admin only: before posting any manual status, verify that the matching check run for that exact
+   head SHA is already `SUCCESS` and capture that check run URL.
+3. If a required context returned by branch protection is missing from the commit status API
+   (`/commits/<sha>/status`) but the matching check run for the same `<sha>` is verified `SUCCESS`,
+   post a success status only for the exact required context string copied from branch protection
+   and set `target_url` to the verified matching check run URL (example command below).
+4. Re-check with `gh pr checks <pr> --repo <owner>/<repo>` and proceed only when all required checks
+   are green.
+
+Example status reconciliation command:
+
+```bash
+gh api repos/<owner>/<repo>/statuses/<sha> -X POST \
+  -f state=success \
+  -f context='<exact-required-context-from-branch-protection>' \
+  -f description='Branch protection context reconciled after verified successful check run' \
+  -f target_url='<verified-matching-check-run-url>'
+```
+
+Notes:
+
+- This fallback is for branch-protection context mismatches only.
+- Do not hardcode or guess status contexts; copy the required context name(s) exactly from the
+  branch-protection API.
+- Never use this fallback unless the verified matching check run for the same head SHA already succeeded.
+- Keep label-first prevention in place for replacement promotion PRs (`hotfix` + `no-issue-needed`).
+
+### Merge/Close Review Gate (REQUIRED)
+
+Before merging a PR, closing a linked PR, or announcing a PR as ready to merge,
+the agent must verify review completion:
+
+1. Confirm no unresolved review threads remain on the target PR.
+2. Confirm all required reviews are complete and no review is pending for the latest commit.
+3. Confirm no new Copilot/reviewer comments were added after the latest fix commit
+   without a corresponding reply.
+4. If any of the above checks fail, do not merge or close; address feedback first and re-check.
+
+Use this gate even when checks are green. CI success alone is not sufficient for merge/close decisions.
+
 Only ask follow-up questions if required metadata cannot be applied (for example, reviewer handle is unavailable).
 
 ## GitHub Comment Formatting (REQUIRED)
 
 When posting PR/issue comments, checklists, PR descriptions, or review summaries via CLI/API:
 
-1. Use **real multiline Markdown**, not escaped newline text. The rendered comment must show bullets and checkboxes on separate lines.
+1. Use **real multiline Markdown**, not escaped newline text. The rendered comment must
+   show bullets and checkboxes on separate lines.
 2. **Do not post literal escape sequences** like `\\n`, `\\t`, or JSON-escaped text into comment bodies.
 3. Prefer safe body construction patterns:
    - PowerShell here-strings with actual line breaks, or
    - `gh api ... --method PATCH/POST -f "body=..."` where the body variable already contains real newlines.
-4. Immediately verify the posted body (for example with `gh api ... --jq .body` or `gh pr view --comments`) and fix in-place if formatting is not human-readable.
+4. Immediately verify the posted body (for example with `gh api ... --jq .body` or
+   `gh pr view --comments`) and fix in-place if formatting is not human-readable.
 5. For checklist comments, keep concise one-line bullets and avoid shell-escaped artifacts in the final rendered text.
+6. Keep comments actionable: include decisions, code/test results, or explicit next actions.
+7. Do not add non-actionable filler such as "checks are in progress" or equivalent
+   queue/waiting notes in public comments.
+
+### Comment Deduplication Guardrail (REQUIRED)
+
+Before posting any PR/issue comment from an AI agent, perform a dedupe check to avoid duplicate comments.
+
+Workflow:
+
+1. Read recent comments first:
+   - `gh pr view <pr> --repo <owner>/<repo> --comments`
+   - `gh issue view <issue> --repo <owner>/<repo> --comments`
+2. Compare the planned comment against the latest same-author comments for semantic equivalence
+   (same checklist/summary intent, even if wording differs slightly).
+3. If an equivalent comment already exists, do not post a new one. If needed, edit the existing
+   comment in place or post only the delta.
+4. If terminal output is delayed, do not assume failure and repost. First verify whether a comment
+   URL was returned or whether the new comment appears in `--comments` output.
+
+Rules:
+
+- Never post the same checklist/summary twice on the same PR/issue.
+- Prefer one canonical checklist comment per PR and update it, rather than posting replacements.
 
 ## Markdown Authoring Guardrail (REQUIRED)
 
 When creating or editing markdown in `.github/` (especially `*.instructions.md`):
 
 1. Keep lines within markdownlint line-length limits (MD013, currently 120 chars).
-2. Always add explicit language tags to fenced code blocks (MD040), for example `bash`, `powershell`, `json`, `yaml`, `markdown`, or `text`.
+2. Always add explicit language tags to fenced code blocks (MD040), for example `bash`,
+   `powershell`, `json`, `yaml`, `markdown`, or `text`.
 3. Keep required blank lines around headings, lists, and fenced blocks (MD022/MD031/MD032).
 4. Before pushing, run `make docs-check-fix` then `make docs-check`; if lint still fails, fix manually until clean.
 

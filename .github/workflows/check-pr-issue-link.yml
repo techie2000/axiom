@@ -13,7 +13,10 @@ on:
 permissions:
   contents: read
   issues: write
-  pull-requests: write
+  pull-requests: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 jobs:
   check-issue-link:
@@ -42,8 +45,61 @@ jobs:
 
             const body = pr.body || ''
 
-            // Closing keywords: closes/fixes/resolves/refs/relates to + #N
-            const hasClosingKeyword = /\b(closes?|fixes?|resolves?|refs?|relates?\s+to)\s+#\d+/i.test(body)
+            // Issue-reference keywords: closes/fixes/resolves/refs/relates to + #N
+            // Also support GitHub-accepted colon forms such as `Fixes: #123`.
+            const hasIssueReferenceKeyword = /\b(closes?|fixes?|resolves?|refs?|relates?\s+to)(?:\s+|:\s*)#\d+/i.test(body)
+
+            // Guardrail: closing keywords must target ISSUES, never PULL REQUESTS.
+            // (Refs/Relates do not auto-close and are not blocked.)
+            const closingKeywordMatches = [
+              ...body.matchAll(/\b(closes?|fixes?|resolves?)(?:\s+|:\s*)#(\d+)\b/gi),
+            ]
+            const closingTargets = [...new Set(closingKeywordMatches.map((m) => Number(m[2])))]
+
+            const closingTargetsThatArePRs = []
+            for (const targetNumber of closingTargets) {
+              try {
+                const issue = await github.rest.issues.get({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: targetNumber,
+                })
+
+                if (issue?.data?.pull_request) {
+                  closingTargetsThatArePRs.push(targetNumber)
+                }
+              } catch (error) {
+                const status = error?.status
+                const details = status ? `status ${status}` : String(error)
+
+                // In restricted contexts (often forks), GITHUB_TOKEN cannot access issue metadata.
+                // Don't block the PR solely because target verification is unavailable.
+                if (
+                  status === 403 &&
+                  /Resource not accessible by integration/i.test(String(error?.message || error))
+                ) {
+                  core.warning(
+                    `Skipping verification of closing keyword target #${targetNumber} (${details}) due to token restrictions.`
+                  )
+                  continue
+                }
+
+                core.setFailed(
+                  `Unable to verify closing keyword target #${targetNumber} (${details}). ` +
+                    'Do not use Closes/Fixes/Resolves until target verification succeeds.'
+                )
+                return
+              }
+            }
+
+            if (closingTargetsThatArePRs.length > 0) {
+              const list = closingTargetsThatArePRs.map((n) => `#${n}`).join(', ')
+              core.setFailed(
+                `Invalid closing keyword target: ${list} is a pull request. ` +
+                  'Use `Refs #N` for PR references, or use `Closes/Fixes #N` only for issues.'
+              )
+              return
+            }
 
             // GitHub-recognized closing references (may come from commits or timeline links)
             const query = `
@@ -71,7 +127,7 @@ jobs:
             // Template override checkbox checked
             const noIssueChecked = /- \[x\] no linked issue/i.test(body)
 
-            if (hasClosingKeyword || hasLinkedClosingIssue || noIssueChecked) {
+            if (hasIssueReferenceKeyword || hasLinkedClosingIssue || noIssueChecked) {
               core.info('Issue link or override found')
               return
             }
@@ -112,8 +168,9 @@ jobs:
                 '<!-- pr-issue-link-advisory -->',
                 '> [!TIP]',
                 '> This PR does not appear to reference a linked issue.',
-                '> If one exists, add a closing keyword to the PR description, for example:',
-                '> `Closes #123`',
+                '> If one exists, add an issue reference in the PR description, for example:',
+                '> `Refs #123` (preferred)',
+                '> `Closes #123` (issue only; do not use for pull requests)',
                 '>',
                 '> If this PR does not need a backing issue (hotfix, chore, Dependabot),',
                 '> check the **No linked issue** box in the PR description and add a brief reason.',

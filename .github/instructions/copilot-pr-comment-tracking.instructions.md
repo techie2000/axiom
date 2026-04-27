@@ -117,10 +117,14 @@ gh api repos/techie2000/axiom/pulls/261/comments \
 
 **Then post to each:**
 
-```bash
-while IFS= read -r comment_id; do
-  gh pr comment 261 --reply-to "$comment_id" --body "✅ **RESOLVED**: [Your resolution message]"
-done < /tmp/copilot_comment_ids.txt
+```powershell
+$bodyPath = Join-Path $env:TEMP "copilot-batch-reply.md"
+Set-Content -Path $bodyPath -Value "✅ **RESOLVED**: [Your resolution message]" -Encoding utf8
+
+Get-Content /tmp/copilot_comment_ids.txt | ForEach-Object {
+  $commentId = $_.Trim()
+  gh pr comment 261 --reply-to "$commentId" --body-file "$bodyPath"
+}
 ```
 
 ### Organize Comments by Type
@@ -228,27 +232,35 @@ gh api repos/techie2000/axiom/pulls/261/comments \
 
 ### Step 3: Post Replies Using IDs
 
-```bash
+```powershell
 # After implementing fix and committing:
 
+$replyPath = Join-Path $env:TEMP "copilot-reply.md"
+
 # Reply to comment 3045230708
-gh pr comment 261 --reply-to 3045230708 --body "✅ **RESOLVED**: Reordered audit to after UPDATE
+Set-Content -Path $replyPath -Value @'
+✅ **RESOLVED**: Reordered audit to after UPDATE
 
 **Change**: Moved s.createCurrencyAudit() to occur AFTER successful database update
 - Now UPDATE executes first
 - Then audit write only if update succeeds
 - Prevents invalid audit on failure
 
-**Validation**: Tests pass, behavior maintained"
+**Validation**: Tests pass, behavior maintained
+'@ -Encoding utf8
+gh pr comment 261 --reply-to 3045230708 --body-file "$replyPath"
 
 # Reply to comment 3045230751
-gh pr comment 261 --reply-to 3045230751 --body "✅ **RESOLVED**: Reordered audit to after DELETE
+Set-Content -Path $replyPath -Value @'
+✅ **RESOLVED**: Reordered audit to after DELETE
 
 **Change**: Moved s.createContinentAudit() to occur AFTER successful database deletion
 - Now DELETE executes first
 - Then audit write only if delete succeeds
 
-**Validation**: Tests pass, audit consistency verified"
+**Validation**: Tests pass, audit consistency verified
+'@ -Encoding utf8
+gh pr comment 261 --reply-to 3045230751 --body-file "$replyPath"
 ```
 
 ### Step 4: Verify All Replied

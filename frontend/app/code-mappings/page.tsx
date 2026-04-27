@@ -9,6 +9,7 @@ import PageHeader from '../components/PageHeader'
 import SearchInputWithOverflowTooltip from '../components/SearchInputWithOverflowTooltip'
 import StatCard from '../components/StatCard'
 import { getApiBaseUrl } from '../lib/api-base'
+import { buildCodeMappingsHeaders } from './request'
 import { useEnglishTooltips } from '../lib/useEnglishTooltips'
 import { useSearchFocusShortcut } from '../lib/useSearchFocusShortcut'
 
@@ -43,9 +44,7 @@ export default function CodeMappingsPage() {
   const fetchMappings = useCallback(async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/v1/code-mappings?limit=100`, {
-        headers: {
-          'Accept': 'application/json'
-        }
+        headers: buildCodeMappingsHeaders(),
       })
 
       if (response.ok) {

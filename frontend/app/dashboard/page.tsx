@@ -2,8 +2,8 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useEffect, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 import LEIStatusCard from '../components/LEIStatusCard'
 import LEIRecordsCard from '../components/LEIRecordsCard'
@@ -15,13 +15,41 @@ import AdminSection from '../components/AdminSection'
 import { getAuthToken } from '../lib/auth-token'
 import { useEnglishTooltips } from '../lib/useEnglishTooltips'
 import { buildDocsUrl } from '../lib/docsLinks'
+import { getDashboardSectionById } from '../lib/dashboard-sections'
 
 export default function DashboardPage() {
+  return (
+    <Suspense fallback={<DashboardPageFallback />}>
+      <DashboardPageContent />
+    </Suspense>
+  )
+}
+
+function DashboardPageFallback() {
+  const { t } = useTranslation('common')
+
+  return (
+    <main className="min-h-screen p-8">
+      <div className="max-w-7xl mx-auto text-sm theme-text-muted">
+        {t('dashboard.redirecting')}
+      </div>
+    </main>
+  )
+}
+
+function DashboardPageContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { t } = useTranslation('common')
   const { getEnglishTooltip } = useEnglishTooltips()
   const [mounted, setMounted] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const activeSection = getDashboardSectionById(searchParams.get('section'))
+
+  const showPublicReferenceData = !activeSection || activeSection.id === 'public-reference-data'
+  const showMasterData = !activeSection || activeSection.id === 'master-data-management'
+  const showDataAcquisition = !activeSection || activeSection.id === 'data-acquisition-processing'
+  const showAdministration = !activeSection || activeSection.id === 'administration'
 
   useEffect(() => {
     setMounted(true)
@@ -93,9 +121,27 @@ export default function DashboardPage() {
 
         <section className="mb-8">
           <h2 className="text-3xl font-bold mb-2" title={getEnglishTooltip('dashboard.moduleCatalog.title')}>{t('dashboard.moduleCatalog.title')}</h2>
-          <p className="theme-text-muted" title={getEnglishTooltip('dashboard.moduleCatalog.subtitle')}>{t('dashboard.moduleCatalog.subtitle')}</p>
+          {!activeSection && (
+            <p className="theme-text-muted" title={getEnglishTooltip('dashboard.moduleCatalog.subtitle')}>
+              {t('dashboard.moduleCatalog.subtitle')}
+            </p>
+          )}
+          {activeSection && (
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <p className="theme-text-muted">
+                {t(activeSection.titleKey)}
+              </p>
+              <Link
+                href="/dashboard"
+                className="inline-flex items-center rounded-md theme-btn-neutral px-3 py-1.5 text-xs font-medium"
+              >
+                {t('nav.backToDashboard')}
+              </Link>
+            </div>
+          )}
         </section>
 
+        {showPublicReferenceData && (
         <section className="mb-12">
           <div className="flex items-center mb-6">
             <span className="text-2xl mr-3">🌍</span>
@@ -111,7 +157,9 @@ export default function DashboardPage() {
             <LEIRecordsCard />
           </div>
         </section>
+        )}
 
+        {showMasterData && (
         <section className="mb-12">
           <div className="flex items-center mb-6">
             <span className="text-2xl mr-3">📊</span>
@@ -158,7 +206,9 @@ export default function DashboardPage() {
             />
           </div>
         </section>
+        )}
 
+        {showDataAcquisition && (
         <section className="mb-12">
           <div className="flex items-center mb-6">
             <span className="text-2xl mr-3">📡</span>
@@ -188,8 +238,9 @@ export default function DashboardPage() {
             </div>
           </div>
         </section>
+        )}
 
-        <AdminSection />
+        {showAdministration && <AdminSection />}
       </div>
     </main>
   )
