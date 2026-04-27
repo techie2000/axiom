@@ -174,6 +174,13 @@ export default function CodeMappingsPage() {
           </Alert>
         )}
 
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <StatCard title={t('codeMappings.stats.totalMappings')} titleTooltip={getEnglishTooltip('codeMappings.stats.totalMappings')} value={mappings.length} />
+          <StatCard title={t('codeMappings.stats.activeMappings')} titleTooltip={getEnglishTooltip('codeMappings.stats.activeMappings')} value={activeMappings.length} />
+          <StatCard title={t('codeMappings.stats.filteredResults')} titleTooltip={getEnglishTooltip('codeMappings.stats.filteredResults')} value={filteredMappings.length} />
+        </div>
+
         {/* Search */}
         <div className="mb-6">
           <SearchInputWithOverflowTooltip
@@ -185,13 +192,6 @@ export default function CodeMappingsPage() {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full px-4 py-2 border rounded-lg theme-input"
           />
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <StatCard title={t('codeMappings.stats.totalMappings')} titleTooltip={getEnglishTooltip('codeMappings.stats.totalMappings')} value={mappings.length} />
-          <StatCard title={t('codeMappings.stats.activeMappings')} titleTooltip={getEnglishTooltip('codeMappings.stats.activeMappings')} value={activeMappings.length} />
-          <StatCard title={t('codeMappings.stats.filteredResults')} titleTooltip={getEnglishTooltip('codeMappings.stats.filteredResults')} value={filteredMappings.length} />
         </div>
 
         <div className="mb-6 theme-panel border-2 backdrop-blur-sm rounded-lg p-6">
