@@ -10,9 +10,17 @@
 ifeq ($(OS),Windows_NT)
 MAIN_COMPOSE_WRAPPER := pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/run-main-compose.ps1
 MAIN_PG_UPGRADE := pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/upgrade-postgres.ps1 -Environment main -Yes
+FRONTEND_RESET_MAIN := pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/reset-frontend-state.ps1 -Environment main
+FRONTEND_RESET_DEV := pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/reset-frontend-state.ps1 -Environment dev
+FRONTEND_RESET_UAT := pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/reset-frontend-state.ps1 -Environment uat
+FRONTEND_RESET_PROD := pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/reset-frontend-state.ps1 -Environment prod
 else
 MAIN_COMPOSE_WRAPPER := $(shell if command -v bash >/dev/null 2>&1; then echo "bash scripts/run-main-compose.sh"; elif command -v pwsh >/dev/null 2>&1; then echo "pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/run-main-compose.ps1"; else echo ""; fi)
 MAIN_PG_UPGRADE := $(shell if command -v bash >/dev/null 2>&1; then echo "bash scripts/upgrade-postgres.sh main --yes"; elif command -v pwsh >/dev/null 2>&1; then echo "pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/upgrade-postgres.ps1 -Environment main -Yes"; else echo ""; fi)
+FRONTEND_RESET_MAIN := $(shell if command -v bash >/dev/null 2>&1; then echo "bash scripts/reset-frontend-state.sh main"; elif command -v pwsh >/dev/null 2>&1; then echo "pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/reset-frontend-state.ps1 -Environment main"; else echo ""; fi)
+FRONTEND_RESET_DEV := $(shell if command -v bash >/dev/null 2>&1; then echo "bash scripts/reset-frontend-state.sh dev"; elif command -v pwsh >/dev/null 2>&1; then echo "pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/reset-frontend-state.ps1 -Environment dev"; else echo ""; fi)
+FRONTEND_RESET_UAT := $(shell if command -v bash >/dev/null 2>&1; then echo "bash scripts/reset-frontend-state.sh uat"; elif command -v pwsh >/dev/null 2>&1; then echo "pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/reset-frontend-state.ps1 -Environment uat"; else echo ""; fi)
+FRONTEND_RESET_PROD := $(shell if command -v bash >/dev/null 2>&1; then echo "bash scripts/reset-frontend-state.sh prod"; elif command -v pwsh >/dev/null 2>&1; then echo "pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/reset-frontend-state.ps1 -Environment prod"; else echo ""; fi)
 
 ifeq ($(strip $(MAIN_COMPOSE_WRAPPER)),)
 $(error Neither 'bash' nor 'pwsh' was found. Cannot run main compose wrapper.)
@@ -20,6 +28,22 @@ endif
 
 ifeq ($(strip $(MAIN_PG_UPGRADE)),)
 $(error Neither 'bash' nor 'pwsh' was found. Cannot run PostgreSQL upgrade precheck.)
+endif
+
+ifeq ($(strip $(FRONTEND_RESET_MAIN)),)
+$(error Neither 'bash' nor 'pwsh' was found. Cannot reset main frontend state.)
+endif
+
+ifeq ($(strip $(FRONTEND_RESET_DEV)),)
+$(error Neither 'bash' nor 'pwsh' was found. Cannot reset dev frontend state.)
+endif
+
+ifeq ($(strip $(FRONTEND_RESET_UAT)),)
+$(error Neither 'bash' nor 'pwsh' was found. Cannot reset uat frontend state.)
+endif
+
+ifeq ($(strip $(FRONTEND_RESET_PROD)),)
+$(error Neither 'bash' nor 'pwsh' was found. Cannot reset prod frontend state.)
 endif
 endif
 
@@ -142,44 +166,16 @@ docker-main-restart: ## Restart main branch environment
 	@$(MAIN_COMPOSE_WRAPPER) restart
 
 docker-main-frontend-reset: ## Reset main frontend node_modules/.next volumes and recreate the frontend service
-	@if command -v bash >/dev/null 2>&1; then \
-		bash scripts/reset-frontend-state.sh main; \
-	elif command -v pwsh >/dev/null 2>&1; then \
-		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/reset-frontend-state.ps1 -Environment main; \
-	else \
-		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot reset main frontend state."; \
-		exit 1; \
-	fi
+	@$(FRONTEND_RESET_MAIN)
 
 docker-dev-frontend-reset: ## Reset dev frontend node_modules/.next volumes and recreate the frontend service
-	@if command -v bash >/dev/null 2>&1; then \
-		bash scripts/reset-frontend-state.sh dev; \
-	elif command -v pwsh >/dev/null 2>&1; then \
-		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/reset-frontend-state.ps1 -Environment dev; \
-	else \
-		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot reset dev frontend state."; \
-		exit 1; \
-	fi
+	@$(FRONTEND_RESET_DEV)
 
 docker-uat-frontend-reset: ## Recreate UAT frontend service with a fresh image
-	@if command -v bash >/dev/null 2>&1; then \
-		bash scripts/reset-frontend-state.sh uat; \
-	elif command -v pwsh >/dev/null 2>&1; then \
-		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/reset-frontend-state.ps1 -Environment uat; \
-	else \
-		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot reset uat frontend state."; \
-		exit 1; \
-	fi
+	@$(FRONTEND_RESET_UAT)
 
 docker-prod-frontend-reset: ## Recreate prod frontend service with a fresh image
-	@if command -v bash >/dev/null 2>&1; then \
-		bash scripts/reset-frontend-state.sh prod; \
-	elif command -v pwsh >/dev/null 2>&1; then \
-		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/reset-frontend-state.ps1 -Environment prod; \
-	else \
-		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot reset prod frontend state."; \
-		exit 1; \
-	fi
+	@$(FRONTEND_RESET_PROD)
 
 # Main branch environment (intraday development/fixes)
 docker-main-up: ## Start main branch environment (ports: 48080, 43000, 45432)
