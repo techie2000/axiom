@@ -69,7 +69,21 @@ jobs:
                   closingTargetsThatArePRs.push(targetNumber)
                 }
               } catch (error) {
-                const details = error?.status ? `status ${error.status}` : String(error)
+                const status = error?.status
+                const details = status ? `status ${status}` : String(error)
+
+                // In restricted contexts (often forks), GITHUB_TOKEN cannot access issue metadata.
+                // Don't block the PR solely because target verification is unavailable.
+                if (
+                  status === 403 &&
+                  /Resource not accessible by integration/i.test(String(error?.message || error))
+                ) {
+                  core.warning(
+                    `Skipping verification of closing keyword target #${targetNumber} (${details}) due to token restrictions.`
+                  )
+                  continue
+                }
+
                 core.setFailed(
                   `Unable to verify closing keyword target #${targetNumber} (${details}). ` +
                     'Do not use Closes/Fixes/Resolves until target verification succeeds.'

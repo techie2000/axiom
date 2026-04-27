@@ -23,7 +23,7 @@ describe('useCollectionCount', () => {
       expect(result.current.count).toBe(3)
     })
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/countries', { cache: 'no-store' })
+    expect(fetchMock).toHaveBeenCalledWith(`${window.location.origin}/api/v1/countries`, { cache: 'no-store' })
     unmount()
   })
 
