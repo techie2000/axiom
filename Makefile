@@ -3,6 +3,7 @@
 .PHONY: help build run test clean migrate-up migrate-down docker-up docker-down
 .PHONY: docker-main-up docker-main-down docker-main-rebuild-safe docker-dev-up docker-dev-down docker-dev-rebuild-safe docker-uat-up docker-uat-down docker-uat-rebuild-safe docker-prod-up docker-prod-down docker-prod-rebuild-safe
 .PHONY: docker-all-up docker-all-down docker-all-status validate-env
+.PHONY: docker-main-frontend-reset docker-dev-frontend-reset docker-uat-frontend-reset docker-prod-frontend-reset
 .PHONY: lint lint-docs lint-docs-fix docs-check docs-check-fix lint-all install-hooks settings-sort settings-sort-check
 .PHONY: smoke-api smoke-ssi cleanup-stale-translations docs-user-install docs-user-ci-install docs-user-build docs-user-check docs-user-dev
 
@@ -164,6 +165,46 @@ docker-main-restart: ## Restart main branch environment
 		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/run-main-compose.ps1 restart; \
 	else \
 		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run main compose wrapper."; \
+		exit 1; \
+	fi
+
+docker-main-frontend-reset: ## Reset main frontend node_modules/.next volumes and recreate the frontend service
+	@if command -v bash >/dev/null 2>&1; then \
+		bash scripts/reset-frontend-state.sh main; \
+	elif command -v pwsh >/dev/null 2>&1; then \
+		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/reset-frontend-state.ps1 -Environment main; \
+	else \
+		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot reset main frontend state."; \
+		exit 1; \
+	fi
+
+docker-dev-frontend-reset: ## Reset dev frontend node_modules/.next volumes and recreate the frontend service
+	@if command -v bash >/dev/null 2>&1; then \
+		bash scripts/reset-frontend-state.sh dev; \
+	elif command -v pwsh >/dev/null 2>&1; then \
+		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/reset-frontend-state.ps1 -Environment dev; \
+	else \
+		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot reset dev frontend state."; \
+		exit 1; \
+	fi
+
+docker-uat-frontend-reset: ## Recreate UAT frontend service with a fresh image
+	@if command -v bash >/dev/null 2>&1; then \
+		bash scripts/reset-frontend-state.sh uat; \
+	elif command -v pwsh >/dev/null 2>&1; then \
+		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/reset-frontend-state.ps1 -Environment uat; \
+	else \
+		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot reset uat frontend state."; \
+		exit 1; \
+	fi
+
+docker-prod-frontend-reset: ## Recreate prod frontend service with a fresh image
+	@if command -v bash >/dev/null 2>&1; then \
+		bash scripts/reset-frontend-state.sh prod; \
+	elif command -v pwsh >/dev/null 2>&1; then \
+		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/reset-frontend-state.ps1 -Environment prod; \
+	else \
+		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot reset prod frontend state."; \
 		exit 1; \
 	fi
 
