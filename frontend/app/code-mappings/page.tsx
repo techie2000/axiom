@@ -87,11 +87,11 @@ export default function CodeMappingsPage() {
   )
 
   const activeMappings = mappings.filter(m => m.active)
-  const uniqueSystems = [...new Set(mappings.map(m => m.from_system))]
   const { fromSystems, toSystems } = useMemo(
     () => getCodeMappingFilterOptions(mappings),
     [mappings]
   )
+  const hasActiveFiltersOrSearch = searchTerm.trim().length > 0 || activeFilterCount > 0
 
   const setFilter = useCallback((key: keyof CodeMappingColumnFilters, value: string) => {
     setFilters((previous) => ({ ...previous, [key]: value as CodeMappingColumnFilters[typeof key] }))
@@ -187,8 +187,15 @@ export default function CodeMappingsPage() {
           />
         </div>
 
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <StatCard title={t('codeMappings.stats.totalMappings')} titleTooltip={getEnglishTooltip('codeMappings.stats.totalMappings')} value={mappings.length} />
+          <StatCard title={t('codeMappings.stats.activeMappings')} titleTooltip={getEnglishTooltip('codeMappings.stats.activeMappings')} value={activeMappings.length} />
+          <StatCard title={t('codeMappings.stats.filteredResults')} titleTooltip={getEnglishTooltip('codeMappings.stats.filteredResults')} value={filteredMappings.length} />
+        </div>
+
         <div className="mb-6 theme-panel border-2 backdrop-blur-sm rounded-lg p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-2 theme-text-muted">{t('codeMappings.columns.fromSystem')}</label>
               <select
@@ -202,26 +209,6 @@ export default function CodeMappingsPage() {
                   <option key={value} value={value}>{value}</option>
                 ))}
               </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2 theme-text-muted">{t('codeMappings.columns.fromType')}</label>
-              <SearchInputWithOverflowTooltip
-                type="text"
-                value={filters.fromType}
-                onChange={(event) => setFilter('fromType', event.target.value)}
-                placeholder={t('codeMappings.filters.fromTypePlaceholder')}
-                className="w-full px-4 py-2 border rounded-lg theme-input"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2 theme-text-muted">{t('codeMappings.columns.fromCode')}</label>
-              <SearchInputWithOverflowTooltip
-                type="text"
-                value={filters.fromCode}
-                onChange={(event) => setFilter('fromCode', event.target.value)}
-                placeholder={t('codeMappings.filters.fromCodePlaceholder')}
-                className="w-full px-4 py-2 border rounded-lg theme-input"
-              />
             </div>
             <div>
               <label className="block text-sm font-medium mb-2 theme-text-muted">{t('codeMappings.columns.toSystem')}</label>
@@ -238,12 +225,32 @@ export default function CodeMappingsPage() {
               </select>
             </div>
             <div>
+              <label className="block text-sm font-medium mb-2 theme-text-muted">{t('codeMappings.columns.fromType')}</label>
+              <SearchInputWithOverflowTooltip
+                type="text"
+                value={filters.fromType}
+                onChange={(event) => setFilter('fromType', event.target.value)}
+                placeholder={t('codeMappings.filters.fromTypePlaceholder')}
+                className="w-full px-4 py-2 border rounded-lg theme-input"
+              />
+            </div>
+            <div>
               <label className="block text-sm font-medium mb-2 theme-text-muted">{t('codeMappings.columns.toType')}</label>
               <SearchInputWithOverflowTooltip
                 type="text"
                 value={filters.toType}
                 onChange={(event) => setFilter('toType', event.target.value)}
                 placeholder={t('codeMappings.filters.toTypePlaceholder')}
+                className="w-full px-4 py-2 border rounded-lg theme-input"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2 theme-text-muted">{t('codeMappings.columns.fromCode')}</label>
+              <SearchInputWithOverflowTooltip
+                type="text"
+                value={filters.fromCode}
+                onChange={(event) => setFilter('fromCode', event.target.value)}
+                placeholder={t('codeMappings.filters.fromCodePlaceholder')}
                 className="w-full px-4 py-2 border rounded-lg theme-input"
               />
             </div>
@@ -257,7 +264,8 @@ export default function CodeMappingsPage() {
                 className="w-full px-4 py-2 border rounded-lg theme-input"
               />
             </div>
-            <div>
+            <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_auto] gap-4 items-end">
+              <div>
               <label className="block text-sm font-medium mb-2 theme-text-muted">{t('codeMappings.columns.status')}</label>
               <select
                 className="w-full px-3 py-2 rounded-lg border theme-input"
@@ -270,14 +278,20 @@ export default function CodeMappingsPage() {
                 <option value="inactive">{t('codeMappings.status.inactive')}</option>
               </select>
             </div>
-            <div className="flex items-end">
-              <button
-                type="button"
-                onClick={resetFilters}
-                className="theme-header-action rounded-lg theme-btn-neutral theme-focus w-full md:w-auto"
-              >
-                {formatLabel(t('codeMappings.filters.clearAll'))}
-              </button>
+              {hasActiveFiltersOrSearch && (
+                <div className="flex items-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      resetFilters()
+                      setSearchTerm('')
+                    }}
+                    className="theme-header-action rounded-lg theme-btn-neutral theme-focus w-full md:w-auto"
+                  >
+                    {formatLabel(t('codeMappings.filters.clearAll'))}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -287,14 +301,6 @@ export default function CodeMappingsPage() {
             {t('codeMappings.filters.activeFilters', { count: activeFilterCount })}
           </div>
         )}
-
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <StatCard title={t('codeMappings.stats.totalMappings')} titleTooltip={getEnglishTooltip('codeMappings.stats.totalMappings')} value={mappings.length} />
-          <StatCard title={t('codeMappings.stats.activeMappings')} titleTooltip={getEnglishTooltip('codeMappings.stats.activeMappings')} value={activeMappings.length} accent="green" />
-          <StatCard title={t('codeMappings.stats.sourceSystems')} titleTooltip={getEnglishTooltip('codeMappings.stats.sourceSystems')} value={uniqueSystems.length} />
-          <StatCard title={t('codeMappings.stats.filteredResults')} titleTooltip={getEnglishTooltip('codeMappings.stats.filteredResults')} value={filteredMappings.length} />
-        </div>
 
         {/* Mappings Table */}
         <div className="theme-table-shell rounded-lg shadow overflow-hidden border-2">

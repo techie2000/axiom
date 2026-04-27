@@ -1448,12 +1448,17 @@ export default function LEIAuditHistoryModal({
                                   </div>
                                 )}
                                 {useAlignedRows ? (
-                                  <div className="grid gap-2 text-xs" style={{ gridTemplateColumns: '11rem minmax(0, 1fr) minmax(0, 1fr)' }}>
-                                    <span className="font-medium text-[rgb(var(--foreground-rgb))]">{labelMap.get(field) ?? formatFieldLabel(field)}</span>
-                                    <div className="space-y-1">
-                                      {alignedRows.map((row, rowIndex) => (
+                                  <div className="space-y-1">
+                                    {alignedRows.map((row, rowIndex) => (
+                                      <div
+                                        key={`${field}-aligned-${rowIndex}`}
+                                        className="grid gap-2 text-xs"
+                                        style={{ gridTemplateColumns: '11rem minmax(0, 1fr) minmax(0, 1fr)' }}
+                                      >
+                                        <span className="font-medium text-[rgb(var(--foreground-rgb))]">
+                                          {rowIndex === 0 ? (labelMap.get(field) ?? formatFieldLabel(field)) : ''}
+                                        </span>
                                         <div
-                                          key={`${field}-old-${rowIndex}`}
                                           className={`px-2 py-1 rounded whitespace-pre-wrap break-words ${
                                             row.state === 'removed'
                                               ? 'bg-red-100/70 dark:bg-red-900/30 text-red-700 dark:text-red-300'
@@ -1464,12 +1469,7 @@ export default function LEIAuditHistoryModal({
                                         >
                                           {row.oldLine ?? '—'}
                                         </div>
-                                      ))}
-                                    </div>
-                                    <div className="space-y-1">
-                                      {alignedRows.map((row, rowIndex) => (
                                         <div
-                                          key={`${field}-new-${rowIndex}`}
                                           className={`px-2 py-1 rounded whitespace-pre-wrap break-words ${
                                             row.state === 'added'
                                               ? 'bg-green-100/70 dark:bg-green-900/30 text-green-800 dark:text-green-300 font-medium'
@@ -1480,8 +1480,8 @@ export default function LEIAuditHistoryModal({
                                         >
                                           {row.newLine ?? '—'}
                                         </div>
-                                      ))}
-                                    </div>
+                                      </div>
+                                    ))}
                                   </div>
                                 ) : (
                                   <div
