@@ -628,3 +628,45 @@ type SSIAudit struct {
 func (SSIAudit) TableName() string {
 	return "ssis_audit"
 }
+
+// EntityRole represents the access role a user holds for a specific LEI entity.
+type EntityRole string
+
+const (
+EntityRoleViewer      EntityRole = "viewer"       // Read-only access to this entity's data.
+EntityRoleTrader      EntityRole = "trader"        // Read + trade instruction access.
+EntityRoleEntityAdmin EntityRole = "entity_admin"  // Can manage other users' links to this entity.
+)
+
+// UserEntityLink records the relationship between a system user and a LEI entity.
+// It forms the foundation for entity-scoped access control (see ADR-0018).
+type UserEntityLink struct {
+ID              uuid.UUID  `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+UserID          uuid.UUID  `gorm:"type:uuid;not null;index" json:"user_id"`
+LEI             string     `gorm:"column:lei;size:20;not null;index" json:"lei"`
+EntityRole      EntityRole `gorm:"type:varchar(50);not null;default:'viewer'" json:"entity_role"`
+IncludeChildren bool       `gorm:"column:include_children;not null;default:false" json:"include_children"`
+GrantedBy       uuid.UUID  `gorm:"type:uuid;not null" json:"granted_by"`
+GrantedAt       time.Time  `gorm:"column:granted_at;not null;default:now()" json:"granted_at"`
+ExpiresAt       *time.Time `gorm:"column:expires_at" json:"expires_at,omitempty"`
+RevokedAt       *time.Time `gorm:"column:revoked_at" json:"revoked_at,omitempty"`
+Notes           string     `gorm:"type:text" json:"notes,omitempty"`
+CreatedAt       time.Time  `json:"created_at"`
+UpdatedAt       time.Time  `json:"updated_at"`
+}
+
+// TableName overrides the table name for UserEntityLink.
+func (UserEntityLink) TableName() string {
+return "user_entity_links"
+}
+
+// IsActive reports whether the link is currently effective (not revoked and not expired).
+func (u *UserEntityLink) IsActive() bool {
+if u.RevokedAt != nil {
+return false
+}
+if u.ExpiresAt != nil && time.Now().After(*u.ExpiresAt) {
+return false
+}
+return true
+}

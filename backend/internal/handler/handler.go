@@ -26,6 +26,8 @@ type Handlers struct {
 	CodeMapping     *CodeMappingHandler
 	UserPreference  *UserPreferenceHandler
 	UITranslation   *UITranslationHandler
+	ProvisionalLEI  *ProvisionalLEIHandler
+	UserEntityLink  *UserEntityLinkHandler
 }
 
 // NewHandlers creates a new handlers instance
@@ -44,6 +46,8 @@ func NewHandlers(services *service.Services, schedulerService service.SchedulerS
 		CodeMapping:     NewCodeMappingHandler(services.CodeMapping),
 		UserPreference:  NewUserPreferenceHandler(services.UserPreference),
 		UITranslation:   NewUITranslationHandler(services.UITranslation),
+		ProvisionalLEI:  NewProvisionalLEIHandler(services.ProvisionalLEI),
+		UserEntityLink:  NewUserEntityLinkHandler(services.UserEntityLink),
 	}
 }
 

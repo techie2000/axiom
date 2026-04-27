@@ -431,6 +431,30 @@ func setupRouter(cfg *config.Config, h *handler.Handlers) *gin.Engine {
 				lei.POST("/source-file/:id/resume", h.LEI.ResumeProcessing)
 			}
 
+			// Provisional LEI management routes (admin-only)
+			provisionalLEI := protected.Group("/lei/provisional")
+			provisionalLEI.Use(middleware.AdminRequired())
+			{
+				provisionalLEI.GET("", h.ProvisionalLEI.List)
+				provisionalLEI.GET("/:lei", h.ProvisionalLEI.Get)
+				provisionalLEI.POST("", h.ProvisionalLEI.Create)
+				provisionalLEI.PUT("/:lei", h.ProvisionalLEI.Update)
+				provisionalLEI.POST("/:lei/succeed", h.ProvisionalLEI.Succeed)
+			}
+
+			// User–entity identity link routes (admin-only)
+			userEntityLinks := protected.Group("/user-entity-links")
+			userEntityLinks.Use(middleware.AdminRequired())
+			{
+				userEntityLinks.GET("", h.UserEntityLink.ListActive)
+				userEntityLinks.GET("/user/:user_id", h.UserEntityLink.ListByUser)
+				userEntityLinks.GET("/lei/:lei", h.UserEntityLink.ListByLEI)
+				userEntityLinks.GET("/:id", h.UserEntityLink.Get)
+				userEntityLinks.POST("", h.UserEntityLink.Grant)
+				userEntityLinks.PUT("/:id", h.UserEntityLink.Update)
+				userEntityLinks.POST("/:id/revoke", h.UserEntityLink.Revoke)
+			}
+
 			// Data acquisition routes
 			dataAcq := protected.Group("/data")
 			{

@@ -81,6 +81,12 @@ type LEIRecord struct {
 	CreatedBy     string      `gorm:"size:100;not null;default:'system'" json:"created_by"`
 	UpdatedBy     string      `gorm:"size:100;not null;default:'system'" json:"updated_by"`
 
+	// Provisional LEI fields (migration 000062)
+	// IsProvisional is TRUE for Axiom-issued provisional LEI records (AXIO prefix).
+	// FALSE for all GLEIF-ingested records. Defaults to FALSE.
+	IsProvisional     bool   `gorm:"column:is_provisional;not null;default:false" json:"is_provisional"`
+	ProvisioningSource string `gorm:"column:provisioning_source;size:50" json:"provisioning_source,omitempty"`
+
 	// Standard fields
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
