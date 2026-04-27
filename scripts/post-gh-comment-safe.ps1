@@ -111,21 +111,21 @@ $resolvedBodyFile = if ($PSCmdlet.ParameterSetName -like '*ByFile') {
     Join-Path ([System.IO.Path]::GetTempPath()) ("gh-comment-{0}.md" -f ([Guid]::NewGuid().ToString('N')))
 }
 
+$targetNumber = if ($TargetType -eq 'issue') { $IssueNumber } else { $PrNumber }
+if ($DryRun) {
+    Write-Host "[safe-comment] dry-run target=$TargetType number=$targetNumber repo=$Repo"
+    Write-Host "[safe-comment] body_file=$resolvedBodyFile"
+    return
+}
+
 $createdTemp = $false
 if ($PSCmdlet.ParameterSetName -like '*ByText') {
     [System.IO.File]::WriteAllText($resolvedBodyFile, $Body, [System.Text.UTF8Encoding]::new($false))
     $createdTemp = $true
 }
 
-$targetNumber = if ($TargetType -eq 'issue') { $IssueNumber } else { $PrNumber }
 $expectedRaw = Get-Content -LiteralPath $resolvedBodyFile -Raw
 $expectedNormalized = Normalize-Text -Text $expectedRaw
-
-if ($DryRun) {
-    Write-Host "[safe-comment] dry-run target=$TargetType number=$targetNumber repo=$Repo"
-    Write-Host "[safe-comment] body_file=$resolvedBodyFile"
-    exit 0
-}
 
 $viewer = gh api user --jq .login
 if ([string]::IsNullOrWhiteSpace($viewer)) {

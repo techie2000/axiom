@@ -8,8 +8,8 @@ describe('api-base', () => {
   })
 
   it('uses same-origin base in the browser', () => {
-    expect(resolveApiBaseUrl(true)).toBe('')
-    expect(getApiBaseUrl()).toBe('')
+    expect(resolveApiBaseUrl(true)).toBe(window.location.origin)
+    expect(getApiBaseUrl()).toBe(window.location.origin)
   })
 
   it('uses INTERNAL_API_PROXY_TARGET for server-side calls when configured', () => {
