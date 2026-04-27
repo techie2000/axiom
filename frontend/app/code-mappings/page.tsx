@@ -6,10 +6,14 @@ import Alert from '../components/Alert'
 import Badge from '../components/Badge'
 import LoadingSpinner from '../components/LoadingSpinner'
 import PageHeader from '../components/PageHeader'
+import PreferenceSavePrompt from '../components/PreferenceSavePrompt'
+import ReferencePageHeaderActions from '../components/ReferencePageHeaderActions'
 import SearchInputWithOverflowTooltip from '../components/SearchInputWithOverflowTooltip'
 import StatCard from '../components/StatCard'
 import { getApiBaseUrl } from '../lib/api-base'
 import { useButtonEmojiMode } from '../lib/useButtonEmojiMode'
+import { useDeferredBooleanPreference } from '../lib/useDeferredBooleanPreference'
+import { buildDocsUrl } from '../lib/docsLinks'
 import { buildCodeMappingsHeaders } from './request'
 import { useEnglishTooltips } from '../lib/useEnglishTooltips'
 import { useSearchFocusShortcut } from '../lib/useSearchFocusShortcut'
@@ -33,9 +37,13 @@ export default function CodeMappingsPage() {
   const [error, setError] = useState<string | null>(null)
   const [errorKind, setErrorKind] = useState<'noneConfigured' | 'authRequired' | 'apiError' | 'networkError' | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
-  const [expandedWidth, setExpandedWidth] = useState(false)
-  const [showInlineDocs, setShowInlineDocs] = useState(false)
   const [filters, setFilters] = useState<CodeMappingColumnFilters>(DEFAULT_CODE_MAPPING_FILTERS)
+  const expandedWidthPreference = useDeferredBooleanPreference({
+    pageKey: 'code-mappings',
+    preferenceKey: 'expanded_width',
+    defaultValue: false,
+  })
+  const [hasHydrated, setHasHydrated] = useState(false)
 
   const API_BASE_URL = getApiBaseUrl()
 
@@ -77,6 +85,10 @@ export default function CodeMappingsPage() {
     }
   }, [fetchMappings])
 
+  useEffect(() => {
+    setHasHydrated(true)
+  }, [])
+
   const filteredMappings = useMemo(
     () => filterCodeMappings(mappings, searchTerm, filters),
     [mappings, searchTerm, filters]
@@ -91,6 +103,7 @@ export default function CodeMappingsPage() {
     () => getCodeMappingFilterOptions(mappings),
     [mappings]
   )
+  const effectiveExpandedWidth = hasHydrated ? expandedWidthPreference.value : false
   const hasActiveFiltersOrSearch = searchTerm.trim().length > 0 || activeFilterCount > 0
 
   const setFilter = useCallback((key: keyof CodeMappingColumnFilters, value: string) => {
@@ -106,8 +119,8 @@ export default function CodeMappingsPage() {
   }
 
   return (
-    <div className="min-h-screen p-8">
-      <div className={`${expandedWidth ? 'max-w-full' : 'max-w-7xl'} mx-auto transition-all duration-300`}>
+    <div className="min-h-screen p-8 pb-14">
+      <div className={`${effectiveExpandedWidth ? 'max-w-full' : 'max-w-7xl'} mx-auto transition-all duration-300`}>
         {/* Header */}
         <PageHeader
           title={t('codeMappings.title')}
@@ -115,27 +128,21 @@ export default function CodeMappingsPage() {
           titleTooltip={getEnglishTooltip('codeMappings.title')}
           subtitleTooltip={getEnglishTooltip('codeMappings.subtitle')}
           backHref="/dashboard"
+          docsHref={buildDocsUrl('workflows/')}
           actions={
-            <>
-              <button
-                type="button"
-                onClick={() => setExpandedWidth((previous) => !previous)}
-                className="theme-header-action rounded-lg theme-btn-neutral theme-focus"
-                aria-label={expandedWidth ? t('codeMappings.widthNormalBtn') : t('codeMappings.widthExpandBtn')}
-                title={expandedWidth ? getEnglishTooltip('codeMappings.widthNormalBtn') : getEnglishTooltip('codeMappings.widthExpandBtn')}
-              >
-                {expandedWidth ? formatLabel(t('codeMappings.widthNormalBtn')) : formatLabel(t('codeMappings.widthExpandBtn'))}
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowInlineDocs((previous) => !previous)}
-                className="theme-header-action rounded-lg theme-btn-neutral theme-focus"
-                aria-label={t('codeMappings.docsToggleAria')}
-                title={getEnglishTooltip('codeMappings.docsToggle')}
-              >
-                {formatLabel(t('codeMappings.docsToggle'))}
-              </button>
-            </>
+            <ReferencePageHeaderActions
+              effectiveExpandedWidth={effectiveExpandedWidth}
+              normalTitle={getEnglishTooltip('referenceLayout.normalButton')}
+              expandTitle={getEnglishTooltip('referenceLayout.expandButton')}
+              normalLabel={t('referenceLayout.normalButton')}
+              expandLabel={t('referenceLayout.expandButton')}
+              saveWidthTitle={getEnglishTooltip('referenceLayout.savePageWidthDefault')}
+              saveWidthLabel={`💾 ${t('referenceLayout.savePageWidthDefault')}`}
+              hasUnsavedWidthChanges={expandedWidthPreference.hasUnsavedChanges}
+              onToggleExpandedWidth={expandedWidthPreference.toggle}
+              onSaveExpandedWidth={expandedWidthPreference.saveCurrentValue}
+              formatLabel={formatLabel}
+            />
           }
         />
 
@@ -146,22 +153,6 @@ export default function CodeMappingsPage() {
           <em>{t('codeMappings.fields.fromType')}</em>, <em>{t('codeMappings.fields.toType')}</em>,{' '}
           {t('codeMappings.about.bodySuffix')}
         </Alert>
-
-        {showInlineDocs && (
-          <Alert variant="info" title={t('codeMappings.docs.title')} className="mb-6">
-            <p className="mb-2">{t('codeMappings.docs.summary')}</p>
-            <ul className="list-disc pl-5 space-y-1 text-sm">
-              <li>{t('codeMappings.docs.fields.fromSystem')}</li>
-              <li>{t('codeMappings.docs.fields.toSystem')}</li>
-              <li>{t('codeMappings.docs.fields.fromCode')}</li>
-              <li>{t('codeMappings.docs.fields.toCode')}</li>
-              <li>{t('codeMappings.docs.fields.fromType')}</li>
-              <li>{t('codeMappings.docs.fields.toType')}</li>
-              <li>{t('codeMappings.docs.fields.status')}</li>
-            </ul>
-            <p className="mt-2">{t('codeMappings.docs.uniqueness')}</p>
-          </Alert>
-        )}
 
         {/* Error/Notice Alert */}
         {error && (
@@ -389,6 +380,19 @@ export default function CodeMappingsPage() {
           </p>
         </div>
       </div>
+
+      <PreferenceSavePrompt
+        visible={expandedWidthPreference.showPrompt}
+        resetKey={expandedWidthPreference.promptResetKey}
+        onSave={expandedWidthPreference.save}
+        onDismiss={expandedWidthPreference.dismiss}
+        label={t('referenceLayout.savePageWidthDefault')}
+        showUndo={expandedWidthPreference.showUndo}
+        undoResetKey={expandedWidthPreference.undoResetKey}
+        onUndo={expandedWidthPreference.undo}
+        onUndoDismiss={expandedWidthPreference.undoDismiss}
+        undoLabel={t('preferences.savedUndo')}
+      />
     </div>
   )
 }
