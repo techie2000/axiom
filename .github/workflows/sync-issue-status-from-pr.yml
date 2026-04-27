@@ -70,6 +70,15 @@ jobs:
             }
 
             const prNumber = pr.number
+            const { data: prDetails } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            })
+
+            const prTitle = prDetails?.title || pr?.title || ''
+            const prBody = prDetails?.body || pr?.body || ''
+
             const query = `
               query($owner: String!, $repo: String!, $number: Int!) {
                 repository(owner: $owner, name: $repo) {
@@ -103,7 +112,7 @@ jobs:
 
             // Collect issue references from PR title/body so `Refs #N` and plain `#N`
             // references are tracked, not only auto-closing keywords.
-            const prText = `${pr.title || ''}\n${pr.body || ''}`
+            const prText = `${prTitle}\n${prBody}`
             const explicitRefRegex = /\b(?:closes?|fixes?|resolves?|refs?|relates?\s+to)(?:\s+|:\s*)#(\d+)\b/gi
             const anyIssueRefRegex = /(^|[^\w])#(\d+)\b/gm
 
