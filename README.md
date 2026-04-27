@@ -225,7 +225,11 @@ worktree-local empty database directory.
 
 ```bash
 # Works from repo root or any git worktree
+# Windows / PowerShell
 ./scripts/run-main-compose.ps1 up -d --build
+
+# Linux / macOS
+./scripts/run-main-compose.sh up -d --build
 ```
 
 When testing PRs/worktrees against the `main` compose file, avoid reusing `.env.main` across multiple folders.
