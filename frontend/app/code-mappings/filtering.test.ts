@@ -71,6 +71,16 @@ describe('filterCodeMappings', () => {
 
     expect(result).toEqual([])
   })
+
+  it('ignores whitespace-only text filters', () => {
+    const result = filterCodeMappings(sampleMappings, '', {
+      ...DEFAULT_CODE_MAPPING_FILTERS,
+      fromType: '   ',
+      toCode: '  ',
+    })
+
+    expect(result).toEqual(sampleMappings)
+  })
 })
 
 describe('code mapping filter helpers', () => {
@@ -83,6 +93,17 @@ describe('code mapping filter helpers', () => {
     })
 
     expect(count).toBe(3)
+  })
+
+  it('does not count whitespace-only filters as active', () => {
+    const count = countActiveCodeMappingFilters({
+      ...DEFAULT_CODE_MAPPING_FILTERS,
+      fromSystem: '   ',
+      toCode: ' SEK ',
+      status: '',
+    })
+
+    expect(count).toBe(1)
   })
 
   it('returns sorted distinct dropdown options', () => {

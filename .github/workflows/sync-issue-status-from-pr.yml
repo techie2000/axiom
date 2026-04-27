@@ -139,8 +139,8 @@ jobs:
             // Ignore self-references to the PR number.
             referencedIssueNumbers.delete(prNumber)
 
-            // Resolve references to issues only (not pull requests), and include one-hop
-            // child/sub-issues declared in task lists or parent/children fields.
+            // Resolve references to issues only (not pull requests), and recursively include
+            // child/sub-issues discovered from task lists or parent/children fields.
             const linkedIssueByNumber = new Map()
 
             function extractChildIssueNumbers(bodyText) {

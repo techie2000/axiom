@@ -38,7 +38,31 @@ const normalizeFilterValue = (value: string): string => {
 }
 
 export function countActiveCodeMappingFilters(filters: CodeMappingColumnFilters): number {
-  return Object.values(filters).filter((value) => value !== '').length
+  let activeCount = 0
+
+  if (normalizeFilterValue(filters.fromSystem)) {
+    activeCount++
+  }
+  if (normalizeFilterValue(filters.fromType)) {
+    activeCount++
+  }
+  if (normalizeFilterValue(filters.fromCode)) {
+    activeCount++
+  }
+  if (normalizeFilterValue(filters.toSystem)) {
+    activeCount++
+  }
+  if (normalizeFilterValue(filters.toType)) {
+    activeCount++
+  }
+  if (normalizeFilterValue(filters.toCode)) {
+    activeCount++
+  }
+  if (filters.status.trim() !== '') {
+    activeCount++
+  }
+
+  return activeCount
 }
 
 export function getCodeMappingFilterOptions(mappings: CodeMapping[]): { fromSystems: string[]; toSystems: string[] } {
@@ -66,10 +90,17 @@ function matchesSearch(mapping: CodeMapping, searchTerm: string): boolean {
 }
 
 function matchesFilters(mapping: CodeMapping, filters: CodeMappingColumnFilters): boolean {
-  if (filters.fromSystem && mapping.from_system !== filters.fromSystem) {
+  const normalizedFromSystem = normalizeFilterValue(filters.fromSystem)
+  const normalizedToSystem = normalizeFilterValue(filters.toSystem)
+  const normalizedFromType = normalizeFilterValue(filters.fromType)
+  const normalizedToType = normalizeFilterValue(filters.toType)
+  const normalizedFromCode = normalizeFilterValue(filters.fromCode)
+  const normalizedToCode = normalizeFilterValue(filters.toCode)
+
+  if (normalizedFromSystem && normalizeFilterValue(mapping.from_system) !== normalizedFromSystem) {
     return false
   }
-  if (filters.toSystem && mapping.to_system !== filters.toSystem) {
+  if (normalizedToSystem && normalizeFilterValue(mapping.to_system) !== normalizedToSystem) {
     return false
   }
   if (filters.status === 'active' && !mapping.active) {
@@ -78,16 +109,16 @@ function matchesFilters(mapping: CodeMapping, filters: CodeMappingColumnFilters)
   if (filters.status === 'inactive' && mapping.active) {
     return false
   }
-  if (filters.fromType && !mapping.from_code_type.toLowerCase().includes(normalizeFilterValue(filters.fromType))) {
+  if (normalizedFromType && !mapping.from_code_type.toLowerCase().includes(normalizedFromType)) {
     return false
   }
-  if (filters.toType && !mapping.to_code_type.toLowerCase().includes(normalizeFilterValue(filters.toType))) {
+  if (normalizedToType && !mapping.to_code_type.toLowerCase().includes(normalizedToType)) {
     return false
   }
-  if (filters.fromCode && !mapping.from_code.toLowerCase().includes(normalizeFilterValue(filters.fromCode))) {
+  if (normalizedFromCode && !mapping.from_code.toLowerCase().includes(normalizedFromCode)) {
     return false
   }
-  if (filters.toCode && !mapping.to_code.toLowerCase().includes(normalizeFilterValue(filters.toCode))) {
+  if (normalizedToCode && !mapping.to_code.toLowerCase().includes(normalizedToCode)) {
     return false
   }
   return true

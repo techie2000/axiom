@@ -102,6 +102,7 @@ export default function CodeMappingsPage() {
     () => getCodeMappingFilterOptions(mappings),
     [mappings]
   )
+  const selectOptionClassName = 'bg-[rgb(var(--surface-rgb))] text-[rgb(var(--foreground-rgb))]'
   const hasActiveFiltersOrSearch = searchTerm.trim().length > 0 || activeFilterCount > 0
   const effectiveExpandedWidth = hasHydrated ? expandedWidthPreference.value : false
 
@@ -194,9 +195,9 @@ export default function CodeMappingsPage() {
                 onChange={(event) => setFilter('fromSystem', event.target.value)}
                 aria-label={t('codeMappings.filters.fromSystemAria')}
               >
-                <option value="">{t('codeMappings.filters.allFromSystems')}</option>
+                <option value="" className={selectOptionClassName}>{t('codeMappings.filters.allFromSystems')}</option>
                 {fromSystems.map((value) => (
-                  <option key={value} value={value}>{value}</option>
+                  <option key={value} value={value} className={selectOptionClassName}>{value}</option>
                 ))}
               </select>
             </div>
@@ -208,9 +209,9 @@ export default function CodeMappingsPage() {
                 onChange={(event) => setFilter('toSystem', event.target.value)}
                 aria-label={t('codeMappings.filters.toSystemAria')}
               >
-                <option value="">{t('codeMappings.filters.allToSystems')}</option>
+                <option value="" className={selectOptionClassName}>{t('codeMappings.filters.allToSystems')}</option>
                 {toSystems.map((value) => (
-                  <option key={value} value={value}>{value}</option>
+                  <option key={value} value={value} className={selectOptionClassName}>{value}</option>
                 ))}
               </select>
             </div>
@@ -263,9 +264,9 @@ export default function CodeMappingsPage() {
                 onChange={(event) => setFilter('status', event.target.value as CodeMappingColumnFilters['status'])}
                 aria-label={t('codeMappings.filters.statusAria')}
               >
-                <option value="">{t('codeMappings.filters.allStatuses')}</option>
-                <option value="active">{t('codeMappings.status.active')}</option>
-                <option value="inactive">{t('codeMappings.status.inactive')}</option>
+                <option value="" className={selectOptionClassName}>{t('codeMappings.filters.allStatuses')}</option>
+                <option value="active" className={selectOptionClassName}>{t('codeMappings.status.active')}</option>
+                <option value="inactive" className={selectOptionClassName}>{t('codeMappings.status.inactive')}</option>
               </select>
             </div>
               {hasActiveFiltersOrSearch && (
