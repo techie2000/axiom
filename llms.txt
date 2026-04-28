@@ -144,6 +144,8 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
   branches
 - [CI Workflow](.github/workflows/ci.yml): Unified CI pipeline keyed off branch names for
   environment detection (main, dev, uat, prod)
+- [CodeQL Workflow](.github/workflows/codeql.yml): Advanced CodeQL analysis; Go scanning builds from
+  `backend/` so nested-module extraction works reliably
 - [Nightly Promotion Workflow](.github/workflows/promote-main-to-dev.yml): Scheduled workflow that
   opens a promotion PR from main → dev each night to prevent branch drift
 - [Weekly Promotion Workflow](.github/workflows/promote-dev-to-uat.yml): Scheduled workflow that

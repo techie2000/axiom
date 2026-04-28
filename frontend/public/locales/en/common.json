@@ -365,12 +365,52 @@
     "loading": "Loading code mappings...",
     "title": "Code Mappings",
     "subtitle": "Cross-system code translation — map external codes (e.g., ALERT) to internal AXIOM identifiers",
+    "widthNormalBtn": "↔️ Normal",
+    "widthExpandBtn": "↕️ Expand",
+    "docsToggle": "📘 Documentation",
+    "docsToggleAria": "Toggle code mappings documentation",
     "about": {
-      "title": "💡 About Code Mappings:"
+      "title": "💡 About Code Mappings:",
+      "bodyPrefix": "This table maps codes from external systems to standardised AXIOM identifiers. The combination of",
+      "bodySuffix": "and from_code must be unique."
+    },
+    "docs": {
+      "title": "📘 Code Mappings Documentation",
+      "summary": "Use code mappings to translate source-system values into canonical destination-system values for downstream processing.",
+      "fields": {
+        "fromSystem": "from_system: source system that produced the incoming code.",
+        "toSystem": "to_system: target system that receives the translated code.",
+        "fromCode": "from_code: source value from the origin system.",
+        "toCode": "to_code: mapped destination value consumed by AXIOM or external integrations.",
+        "fromType": "from_code_type: source code domain (for example currency, country, instrument).",
+        "toType": "to_code_type: destination code domain after translation.",
+        "status": "status: Active mappings participate in translation; Inactive mappings are retained for audit history."
+      },
+      "uniqueness": "Uniqueness rule: from_system + to_system + from_code_type + to_code_type + from_code must be unique."
+    },
+    "fields": {
+      "fromSystem": "from_system",
+      "toSystem": "to_system",
+      "fromType": "from_code_type",
+      "toType": "to_code_type"
     },
     "noticeTitle": "$t(common.noticeTitle)",
     "errorTitle": "$t(common.errorTitle)",
     "searchPlaceholder": "Search by system, code type, or code value...",
+    "filters": {
+      "fromSystemAria": "Filter by source system",
+      "toSystemAria": "Filter by destination system",
+      "statusAria": "Filter by mapping status",
+      "allFromSystems": "All from systems",
+      "allToSystems": "All to systems",
+      "allStatuses": "All statuses",
+      "fromTypePlaceholder": "Filter from type...",
+      "fromCodePlaceholder": "Filter from code...",
+      "toTypePlaceholder": "Filter to type...",
+      "toCodePlaceholder": "Filter to code...",
+      "clearAll": "🧹 Clear filters",
+      "activeFilters": "🔍 Active column filters: {{count}}"
+    },
     "stats": {
       "totalMappings": "Total Mappings",
       "activeMappings": "Active Mappings",
