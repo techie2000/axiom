@@ -3,7 +3,6 @@ package repository
 import (
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/techie2000/axiom/internal/domain"
@@ -46,68 +45,72 @@ func (r *provisionalLEIRepository) Create(record *domain.LEIRecord) error {
 		return err
 	}
 
-	stmt, err := buildProvisionalLEIInsertStatement()
-	if err != nil {
-		return err
+	return r.db.Table("lei_raw.lei_records").Create(provisionalLEIInsertPayload(record)).Error
+}
+
+func provisionalLEIInsertPayload(record *domain.LEIRecord) map[string]interface{} {
+	return map[string]interface{}{
+		"id":                        record.ID,
+		"lei":                       record.LEI,
+		"legal_name":                record.LegalName,
+		"transliterated_legal_name": record.TransliteratedLegalName,
+		"other_names":               record.OtherNames,
+		"legal_address_line_1":      record.LegalAddressLine1,
+		"legal_address_line_2":      record.LegalAddressLine2,
+		"legal_address_line_3":      record.LegalAddressLine3,
+		"legal_address_line_4":      record.LegalAddressLine4,
+		"legal_address_city":        record.LegalAddressCity,
+		"legal_address_region":      record.LegalAddressRegion,
+		"legal_address_country":     nullableString(record.LegalAddressCountry),
+		"legal_address_postal_code": record.LegalAddressPostalCode,
+		"hq_address_line_1":         record.HQAddressLine1,
+		"hq_address_line_2":         record.HQAddressLine2,
+		"hq_address_line_3":         record.HQAddressLine3,
+		"hq_address_line_4":         record.HQAddressLine4,
+		"hq_address_city":           record.HQAddressCity,
+		"hq_address_region":         record.HQAddressRegion,
+		"hq_address_country":        nullableString(record.HQAddressCountry),
+		"hq_address_postal_code":    record.HQAddressPostalCode,
+		"registration_authority":    nullableString(record.RegistrationAuthority),
+		"registration_authority_id": record.RegistrationAuthorityID,
+		"registration_number":       record.RegistrationNumber,
+		"entity_category":           record.EntityCategory,
+		"entity_sub_category":       record.EntitySubCategory,
+		"entity_legal_form":         nullableString(record.EntityLegalForm),
+		"entity_status":             record.EntityStatus,
+		"legal_jurisdiction":        nullableString(record.LegalJurisdiction),
+		"registration_status":       record.RegistrationStatus,
+		"managing_lou":              nullableString(record.ManagingLOU),
+		"successor_lei":             nullableString(record.SuccessorLEI),
+		"initial_registration_date": record.InitialRegistrationDate,
+		"last_update_date":          record.LastUpdateDate,
+		"next_renewal_date":         record.NextRenewalDate,
+		"validation_sources":        record.ValidationSources,
+		"validation_authority":      nullableString(record.ValidationAuthority),
+		"source_file_id":            record.SourceFileID,
+		"changed_fields":            record.ChangedFields,
+		"created_by":                record.CreatedBy,
+		"updated_by":                record.UpdatedBy,
+		"is_provisional":            record.IsProvisional,
+		"provisioning_source":       record.ProvisioningSource,
+		"created_at":                record.CreatedAt,
+		"updated_at":                record.UpdatedAt,
+		"deleted_at":                nullableDeletedAt(record.DeletedAt),
 	}
-
-	err = r.db.Exec(stmt, provisionalLEIInsertArgs(record)...).Error
-	
-	return err
 }
 
-var provisionalLEIInsertColumns = []string{
-	"id", "lei", "legal_name", "transliterated_legal_name", "other_names",
-	"legal_address_line_1", "legal_address_line_2", "legal_address_line_3", "legal_address_line_4",
-	"legal_address_city", "legal_address_region", "legal_address_country", "legal_address_postal_code",
-	"hq_address_line_1", "hq_address_line_2", "hq_address_line_3", "hq_address_line_4",
-	"hq_address_city", "hq_address_region", "hq_address_country", "hq_address_postal_code",
-	"registration_authority", "registration_authority_id", "registration_number",
-	"entity_category", "entity_sub_category", "entity_legal_form", "entity_status", "legal_jurisdiction",
-	"registration_status", "managing_lou", "successor_lei", "initial_registration_date", "last_update_date",
-	"next_renewal_date", "validation_sources", "validation_authority", "source_file_id", "changed_fields",
-	"created_by", "updated_by", "is_provisional", "provisioning_source", "created_at", "updated_at", "deleted_at",
-}
-
-// Keep NULLIF on constrained optional text columns so empty string does not violate FK/domain constraints.
-var provisionalLEIInsertValues = []string{
-	"?", "?", "?", "?", "?",
-	"?", "?", "?", "?",
-	"?", "?", "NULLIF(?, '')", "?",
-	"?", "?", "?", "?",
-	"?", "?", "NULLIF(?, '')", "?",
-	"NULLIF(?, '')", "?", "?",
-	"?", "?", "NULLIF(?, '')", "?", "?",
-	"?", "NULLIF(?, '')", "NULLIF(?, '')", "?", "?",
-	"?", "?", "NULLIF(?, '')", "?", "?",
-	"?", "?", "?", "?", "?", "?", "?",
-}
-
-func buildProvisionalLEIInsertStatement() (string, error) {
-	if len(provisionalLEIInsertColumns) != len(provisionalLEIInsertValues) {
-		return "", fmt.Errorf("provisional LEI insert misconfigured: %d columns, %d values", len(provisionalLEIInsertColumns), len(provisionalLEIInsertValues))
+func nullableString(value string) interface{} {
+	if value == "" {
+		return nil
 	}
-
-	return fmt.Sprintf(
-		"INSERT INTO lei_raw.lei_records (%s) VALUES (%s)",
-		strings.Join(provisionalLEIInsertColumns, ", "),
-		strings.Join(provisionalLEIInsertValues, ", "),
-	), nil
+	return value
 }
 
-func provisionalLEIInsertArgs(record *domain.LEIRecord) []interface{} {
-	return []interface{}{
-		record.ID, record.LEI, record.LegalName, record.TransliteratedLegalName, record.OtherNames,
-		record.LegalAddressLine1, record.LegalAddressLine2, record.LegalAddressLine3, record.LegalAddressLine4,
-		record.LegalAddressCity, record.LegalAddressRegion, record.LegalAddressCountry, record.LegalAddressPostalCode,
-		record.HQAddressLine1, record.HQAddressLine2, record.HQAddressLine3, record.HQAddressLine4,
-		record.HQAddressCity, record.HQAddressRegion, record.HQAddressCountry, record.HQAddressPostalCode,
-		record.RegistrationAuthority, record.RegistrationAuthorityID, record.RegistrationNumber,
-		record.EntityCategory, record.EntitySubCategory, record.EntityLegalForm, record.EntityStatus, record.LegalJurisdiction,
-		record.RegistrationStatus, record.ManagingLOU, record.SuccessorLEI, record.InitialRegistrationDate, record.LastUpdateDate,
-		record.NextRenewalDate, record.ValidationSources, record.ValidationAuthority, record.SourceFileID, record.ChangedFields,
-		record.CreatedBy, record.UpdatedBy, record.IsProvisional, record.ProvisioningSource, record.CreatedAt, record.UpdatedAt, record.DeletedAt,
+func nullableDeletedAt(value gorm.DeletedAt) interface{} {
+	if !value.Valid {
+		return nil
 	}
+	return value.Time
 }
 
 func validateLEICode(lei string) error {

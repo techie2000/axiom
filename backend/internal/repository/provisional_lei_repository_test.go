@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"strings"
 	"testing"
 	"time"
 
@@ -9,25 +8,7 @@ import (
 	"github.com/techie2000/axiom/internal/domain"
 )
 
-func TestBuildProvisionalLEIInsertStatement_ColumnValueCountMatch(t *testing.T) {
-	t.Helper()
-
-	stmt, err := buildProvisionalLEIInsertStatement()
-	if err != nil {
-		t.Fatalf("buildProvisionalLEIInsertStatement returned error: %v", err)
-	}
-
-	if got, want := len(provisionalLEIInsertColumns), len(provisionalLEIInsertValues); got != want {
-		t.Fatalf("column/value expression mismatch: got %d columns and %d values", got, want)
-	}
-
-	placeholderCount := strings.Count(stmt, "?")
-	if placeholderCount != len(provisionalLEIInsertColumns) {
-		t.Fatalf("placeholder count mismatch: got %d placeholders, want %d", placeholderCount, len(provisionalLEIInsertColumns))
-	}
-}
-
-func TestProvisionalLEIInsertArgs_MatchesInsertShape(t *testing.T) {
+func TestProvisionalLEIInsertPayload_ContainsExpectedValues(t *testing.T) {
 	t.Helper()
 
 	now := time.Now().UTC()
@@ -48,14 +29,53 @@ func TestProvisionalLEIInsertArgs_MatchesInsertShape(t *testing.T) {
 		UpdatedAt:               now,
 	}
 
-	stmt, err := buildProvisionalLEIInsertStatement()
-	if err != nil {
-		t.Fatalf("buildProvisionalLEIInsertStatement returned error: %v", err)
+	payload := provisionalLEIInsertPayload(record)
+
+	if got := payload["lei"]; got != record.LEI {
+		t.Fatalf("payload lei = %v, want %v", got, record.LEI)
+	}
+	if got := payload["is_provisional"]; got != true {
+		t.Fatalf("payload is_provisional = %v, want true", got)
+	}
+	if got := payload["provisioning_source"]; got != record.ProvisioningSource {
+		t.Fatalf("payload provisioning_source = %v, want %v", got, record.ProvisioningSource)
+	}
+}
+
+func TestProvisionalLEIInsertPayload_ConvertsConstrainedEmptyStringsToNull(t *testing.T) {
+	t.Helper()
+
+	record := &domain.LEIRecord{
+		ID:   uuid.New(),
+		LEI:  "AXIOFBQ64ZKYWLW1PO76",
+		LegalName: "Null coercion test",
+		LegalAddressCountry: "",
+		HQAddressCountry: "",
+		RegistrationAuthority: "",
+		EntityLegalForm: "",
+		LegalJurisdiction: "",
+		ManagingLOU: "",
+		SuccessorLEI: "",
+		ValidationAuthority: "",
 	}
 
-	args := provisionalLEIInsertArgs(record)
-	if got, want := len(args), strings.Count(stmt, "?"); got != want {
-		t.Fatalf("arg count mismatch: got %d args, want %d", got, want)
+	payload := provisionalLEIInsertPayload(record)
+
+	keys := []string{
+		"legal_address_country",
+		"hq_address_country",
+		"registration_authority",
+		"entity_legal_form",
+		"legal_jurisdiction",
+		"managing_lou",
+		"successor_lei",
+		"validation_authority",
+	}
+
+	for _, key := range keys {
+		if payload[key] != nil {
+			t.Fatalf("expected %s to be nil when source value is empty string, got %v", key, payload[key])
+		}
 	}
 }
 
