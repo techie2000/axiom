@@ -499,7 +499,7 @@
       "message": "Results are sorted by most recent updates for fast browsing. Use search or filters to sort by name."
     },
     "filters": {
-      "search": "Search",
+      "search": "$t(common.search)",
       "searchPlaceholder": "LEI code, legal name, or other names...",
       "status": "Status",
       "allStatuses": "All Statuses",
@@ -827,7 +827,7 @@
       "progress": "Progress",
       "breakdown": "Breakdown",
       "errorCategory": "Error Category",
-      "error": "Error",
+      "error": "$t(common.error)",
       "changedNew": "changed/new",
       "noChangeLower": "no change",
       "failedLower": "failed",
@@ -899,7 +899,7 @@
       "inactive": "Inactive",
       "region": "Region",
       "regionChip": "Region: {{value}}",
-      "search": "Search",
+      "search": "$t(common.search)",
       "status": "Status",
       "statusChip": "Status: {{value}}",
       "${activeFilter}": "countries.filters.${activeFilter}"
@@ -984,7 +984,7 @@
       "directionChip": "Direction: {{value}}",
       "ltr": "LTR",
       "rtl": "RTL",
-      "search": "Search"
+      "search": "$t(common.search)"
     },
     "footer": "Language data source: ISO 639 and locale metadata",
     "loading": "Loading languages...",
@@ -1078,8 +1078,8 @@
     },
     "actions": {
       "create": "+ New Provisional LEI",
-      "edit": "Edit",
-      "save": "Save",
+      "edit": "$t(common.edit)",
+      "save": "$t(common.save)",
       "succeed": "Link to Official LEI"
     },
     "success": {
@@ -1113,7 +1113,7 @@
     "filters": {
       "byUser": "Filter by User ID…",
       "byLEI": "Filter by LEI…",
-      "clear": "Clear",
+      "clear": "$t(common.clear)",
       "activeOnly": "Active only"
     },
     "form": {
@@ -1133,7 +1133,7 @@
     "actions": {
       "grant": "+ Grant Access",
       "grantSave": "Grant",
-      "edit": "Edit",
+      "edit": "$t(common.edit)",
       "revoke": "Revoke"
     },
     "success": {
