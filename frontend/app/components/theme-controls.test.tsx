@@ -195,11 +195,11 @@ async function loadThemeToggle(options?: {
 
 afterEach(() => {
   vi.restoreAllMocks()
-  vi.unmock('react')
-  vi.unmock('react-i18next')
-  vi.unmock('../lib/useDeferredStringPreference')
-  vi.unmock('../lib/theme')
-  vi.unmock('./PreferenceSavePrompt')
+  vi.doUnmock('react')
+  vi.doUnmock('react-i18next')
+  vi.doUnmock('../lib/useDeferredStringPreference')
+  vi.doUnmock('../lib/theme')
+  vi.doUnmock('./PreferenceSavePrompt')
   delete (globalThis as { document?: unknown }).document
   delete (globalThis as { Node?: unknown }).Node
 })
