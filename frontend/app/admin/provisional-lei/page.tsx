@@ -8,12 +8,14 @@ import PageHeader from '../../components/PageHeader'
 import Alert from '../../components/Alert'
 import LoadingSpinner from '../../components/LoadingSpinner'
 import PreferenceSavePrompt from '../../components/PreferenceSavePrompt'
+import ThemedSelect from '../../components/ThemedSelect'
 import { getApiBaseUrl } from '../../lib/api-base'
 import { getAuthToken } from '../../lib/auth-token'
 import { buildDocsUrl } from '../../lib/docsLinks'
 import { useDeferredBooleanPreference } from '../../lib/useDeferredBooleanPreference'
 import { useEnglishTooltips } from '../../lib/useEnglishTooltips'
 import { useUserPreference } from '../../lib/useUserPreference'
+import { ensureLeadingEmoji, useButtonEmojiMode } from '../../lib/useButtonEmojiMode'
 
 const API_BASE_URL = getApiBaseUrl()
 
@@ -47,20 +49,29 @@ type ProvisionalColumnKey =
 interface ProvisionalColumn {
   key: ProvisionalColumnKey
   labelKey: string
+  groupKey: string
   defaultVisible: boolean
+  width: string
 }
 
 const PROVISIONAL_COLUMNS: ProvisionalColumn[] = [
-  { key: 'lei', labelKey: 'provisionalLei.columns.lei', defaultVisible: true },
-  { key: 'legal_name', labelKey: 'provisionalLei.columns.legalName', defaultVisible: true },
-  { key: 'provisioning_source', labelKey: 'provisionalLei.columns.source', defaultVisible: true },
-  { key: 'entity_status', labelKey: 'provisionalLei.columns.status', defaultVisible: true },
-  { key: 'successor_lei', labelKey: 'provisionalLei.columns.successorLei', defaultVisible: true },
-  { key: 'legal_address_country', labelKey: 'provisionalLei.columns.country', defaultVisible: true },
-  { key: 'legal_address_city', labelKey: 'provisionalLei.columns.city', defaultVisible: true },
-  { key: 'legal_jurisdiction', labelKey: 'provisionalLei.columns.jurisdiction', defaultVisible: true },
-  { key: 'created_at', labelKey: 'provisionalLei.columns.created', defaultVisible: true },
-  { key: 'updated_at', labelKey: 'provisionalLei.columns.updated', defaultVisible: false },
+  // Core fields
+  { key: 'lei', labelKey: 'provisionalLei.columns.lei', groupKey: 'provisionalLei.columns.groups.core', defaultVisible: true, width: 'w-44' },
+  { key: 'legal_name', labelKey: 'provisionalLei.columns.legalName', groupKey: 'provisionalLei.columns.groups.core', defaultVisible: true, width: 'min-w-96' },
+  { key: 'provisioning_source', labelKey: 'provisionalLei.columns.source', groupKey: 'provisionalLei.columns.groups.core', defaultVisible: true, width: 'w-32' },
+  { key: 'entity_status', labelKey: 'provisionalLei.columns.status', groupKey: 'provisionalLei.columns.groups.core', defaultVisible: true, width: 'w-32' },
+  
+  // Associated Entities
+  { key: 'successor_lei', labelKey: 'provisionalLei.columns.successorLei', groupKey: 'provisionalLei.columns.groups.associated', defaultVisible: true, width: 'w-44' },
+  
+  // Address
+  { key: 'legal_address_country', labelKey: 'provisionalLei.columns.country', groupKey: 'provisionalLei.columns.groups.address', defaultVisible: true, width: 'w-24' },
+  { key: 'legal_address_city', labelKey: 'provisionalLei.columns.city', groupKey: 'provisionalLei.columns.groups.address', defaultVisible: true, width: 'w-32' },
+  { key: 'legal_jurisdiction', labelKey: 'provisionalLei.columns.jurisdiction', groupKey: 'provisionalLei.columns.groups.address', defaultVisible: true, width: 'w-32' },
+  
+  // Dates
+  { key: 'created_at', labelKey: 'provisionalLei.columns.created', groupKey: 'provisionalLei.columns.groups.dates', defaultVisible: true, width: 'w-32' },
+  { key: 'updated_at', labelKey: 'provisionalLei.columns.updated', groupKey: 'provisionalLei.columns.groups.dates', defaultVisible: false, width: 'w-32' },
 ]
 
 const DEFAULT_VISIBLE_KEYS = PROVISIONAL_COLUMNS.filter((column) => column.defaultVisible)
@@ -94,6 +105,12 @@ const EMPTY_CREATE: CreateForm = {
   notes: '',
 }
 
+const ENTITY_STATUS_OPTIONS = [
+  { value: 'ACTIVE', label: 'ACTIVE' },
+  { value: 'INACTIVE', label: 'INACTIVE' },
+  { value: 'MERGED', label: 'MERGED' },
+]
+
 function statusBadge(status: string) {
   const cls =
     status?.toUpperCase() === 'ACTIVE'
@@ -111,6 +128,7 @@ function statusBadge(status: string) {
 function ProvisionalLEIContent() {
   const { t } = useTranslation('common')
   const { getEnglishTooltip } = useEnglishTooltips()
+  const { formatLabel } = useButtonEmojiMode()
   const router = useRouter()
 
   const [records, setRecords] = useState<ProvisionalLEI[]>([])
@@ -128,6 +146,7 @@ function ProvisionalLEIContent() {
   const [succeedTarget, setSucceedTarget] = useState<ProvisionalLEI | null>(null)
   const [officialLEI, setOfficialLEI] = useState('')
   const [showColumnSelector, setShowColumnSelector] = useState(false)
+  const columnSelectorRef = useRef<HTMLDivElement>(null)
 
   const [storedColumns, setStoredColumns] = useUserPreference('provisional-lei', 'visible_columns', DEFAULT_VISIBLE_KEYS)
   const expandedWidthPreference = useDeferredBooleanPreference({
@@ -138,8 +157,29 @@ function ProvisionalLEIContent() {
   const locationDisplayPreference = useDeferredBooleanPreference({
     pageKey: 'provisional-lei',
     preferenceKey: 'display_location_codes',
-    defaultValue: true,
+    defaultValue: false,
   })
+
+  // Close column selector on click-outside or Escape key
+  useEffect(() => {
+    if (!showColumnSelector) return
+    const handleClickOutside = (e: MouseEvent) => {
+      if (columnSelectorRef.current && !columnSelectorRef.current.contains(e.target as Node)) {
+        setShowColumnSelector(false)
+      }
+    }
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowColumnSelector(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleEscape)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [showColumnSelector])
 
   const visibleColumns = useMemo<Set<ProvisionalColumnKey>>(() => {
     if (!storedColumns) {
@@ -160,6 +200,22 @@ function ProvisionalLEIContent() {
   const isExpandedView = expandedWidthPreference.value
   const showCodes = locationDisplayPreference.value
   const showNames = !showCodes
+  const displayModeLabel = showNames
+    ? ensureLeadingEmoji(t('referenceLayout.displayNamesButton'), '🏷️')
+    : ensureLeadingEmoji(t('referenceLayout.displayCodesButton'), '🏷️')
+  const columnsButtonLabel = ensureLeadingEmoji(
+    t('buttons.columnsWithCount', { count: effectiveVisibleColumns.size }),
+    '⚙️',
+  )
+
+  const getColumnsByGroup = useCallback(() => {
+    const groups: Record<string, ProvisionalColumn[]> = {}
+    PROVISIONAL_COLUMNS.forEach((col) => {
+      if (!groups[col.groupKey]) groups[col.groupKey] = []
+      groups[col.groupKey].push(col)
+    })
+    return groups
+  }, [])
 
   const activeColumns = useMemo(
     () => PROVISIONAL_COLUMNS.filter((column) => effectiveVisibleColumns.has(column.key)),
@@ -440,6 +496,113 @@ function ProvisionalLEIContent() {
           subtitleTooltip={getEnglishTooltip('provisionalLei.subtitle')}
           backHref="/dashboard"
           docsHref={buildDocsUrl('admin/provisional-lei/')}
+          actions={
+            <>
+              <button
+                onClick={locationDisplayPreference.toggle}
+                className="h-9 px-3 rounded-lg theme-btn-neutral theme-focus text-sm font-medium"
+                title={showNames ? getEnglishTooltip('referenceLayout.displayNamesButton') : getEnglishTooltip('referenceLayout.displayCodesButton')}
+                aria-label={showNames ? t('referenceLayout.displayNamesButton') : t('referenceLayout.displayCodesButton')}
+              >
+                {formatLabel(displayModeLabel)}
+              </button>
+
+              <button
+                onClick={expandedWidthPreference.toggle}
+                className="h-9 px-3 rounded-lg theme-btn-neutral theme-focus text-sm font-medium"
+                title={isExpandedView ? getEnglishTooltip('referenceLayout.normalButton') : getEnglishTooltip('referenceLayout.expandButton')}
+                aria-label={isExpandedView ? t('referenceLayout.normalButton') : t('referenceLayout.expandButton')}
+              >
+                {formatLabel(isExpandedView ? t('referenceLayout.normalButton') : t('referenceLayout.expandButton'))}
+              </button>
+
+              <div className="relative" ref={columnSelectorRef}>
+                <button
+                  onClick={() => setShowColumnSelector(!showColumnSelector)}
+                  className="h-9 px-3 rounded-lg theme-btn-neutral theme-focus text-sm font-medium"
+                  title={getEnglishTooltip('common.columns')}
+                  aria-label={t('buttons.columnsWithCount', { count: effectiveVisibleColumns.size })}
+                >
+                  {formatLabel(columnsButtonLabel)}
+                </button>
+
+                {showColumnSelector && (
+                  <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto theme-scrollbar theme-dropdown rounded-lg shadow-xl z-50">
+                    <div className="sticky top-0 theme-dropdown border-b p-3">
+                      <div className="flex justify-between items-center mb-2">
+                        <h3 className="font-semibold">{t('provisionalLei.controls.chooseColumns')}</h3>
+                        <button
+                          onClick={() => setShowColumnSelector(false)}
+                          className="theme-text-muted hover:opacity-80"
+                          title={t('common.close')}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      <div className="flex gap-2 text-xs">
+                        <button
+                          onClick={() => handleSetVisibleColumns(new Set(PROVISIONAL_COLUMNS.map(c => c.key)))}
+                          className="px-2 py-1 theme-filterchip rounded"
+                          title={getEnglishTooltip('provisionalLei.controls.selectAll')}
+                        >
+                          {t('provisionalLei.controls.selectAll')}
+                        </button>
+                        <button
+                          onClick={() => handleSetVisibleColumns(new Set(PROVISIONAL_COLUMNS.filter(c => c.defaultVisible).map(c => c.key)))}
+                          className="px-2 py-1 theme-btn-neutral rounded"
+                          title={getEnglishTooltip('provisionalLei.controls.resetToDefault')}
+                        >
+                          {t('provisionalLei.controls.resetToDefault')}
+                        </button>
+                      </div>
+                    </div>
+
+                    {Object.entries(getColumnsByGroup()).map(([groupKey, columns]) => (
+                      <div key={groupKey} className="border-b last:border-b-0" style={{ borderColor: 'rgb(var(--border-rgb) / 0.75)' }}>
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault()
+                            const allGroupKeys = columns.map(c => c.key)
+                            const allSelected = allGroupKeys.every(key => effectiveVisibleColumns.has(key))
+                            const newSet = new Set(effectiveVisibleColumns)
+                            if (allSelected) {
+                              allGroupKeys.forEach(key => newSet.delete(key))
+                            } else {
+                              allGroupKeys.forEach(key => newSet.add(key))
+                            }
+                            handleSetVisibleColumns(newSet)
+                          }}
+                          className="w-full text-left px-3 py-2 text-xs font-semibold hover:theme-panel-hover"
+                          title={t(`${groupKey}.tooltip`, { defaultValue: '' })}
+                        >
+                          {t(groupKey)}
+                        </button>
+                        {columns.map((col) => (
+                          <label key={col.key} className="flex items-center gap-2 px-3 py-2 text-xs hover:theme-panel-hover cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={effectiveVisibleColumns.has(col.key)}
+                              onChange={() => toggleColumn(col.key)}
+                              className="rounded border-[rgb(var(--border-rgb))]"
+                            />
+                            <span>{t(col.labelKey)}</span>
+                          </label>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <button
+                onClick={() => { setShowCreate((v) => !v); setEditTarget(null); setSucceedTarget(null) }}
+                className="h-9 px-3 rounded-lg theme-btn-primary theme-focus text-sm font-medium"
+                title={getEnglishTooltip('provisionalLei.actions.create')}
+              >
+                {formatLabel(t('provisionalLei.actions.create'))}
+              </button>
+            </>
+          }
         />
 
         {error && <Alert variant="error" className="mb-4">{error}</Alert>}
@@ -449,56 +612,7 @@ function ProvisionalLEIContent() {
           <span className="text-sm theme-text-muted">
             {t('provisionalLei.totalCount', { count: total })}
           </span>
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <button
-              onClick={locationDisplayPreference.toggle}
-              className="px-3 py-2 rounded-md text-sm font-medium theme-btn-neutral"
-              title={getEnglishTooltip('provisionalLei.controls.displayMode')}
-            >
-              {showNames ? t('provisionalLei.controls.displayNames') : t('provisionalLei.controls.displayCodes')}
-            </button>
-            <button
-              onClick={expandedWidthPreference.toggle}
-              className="px-3 py-2 rounded-md text-sm font-medium theme-btn-neutral"
-              title={getEnglishTooltip('provisionalLei.controls.viewMode')}
-            >
-              {isExpandedView ? t('provisionalLei.controls.normalView') : t('provisionalLei.controls.expandedView')}
-            </button>
-            <button
-              onClick={() => setShowColumnSelector((value) => !value)}
-              className="px-3 py-2 rounded-md text-sm font-medium theme-btn-neutral"
-              title={getEnglishTooltip('provisionalLei.controls.columns')}
-            >
-              {t('provisionalLei.controls.columns')}
-            </button>
-            <button
-              onClick={() => { setShowCreate((v) => !v); setEditTarget(null); setSucceedTarget(null) }}
-              className="px-4 py-2 rounded-md text-sm font-medium theme-btn-primary"
-              title={getEnglishTooltip('provisionalLei.actions.create')}
-            >
-              {t('provisionalLei.actions.create')}
-            </button>
-          </div>
         </div>
-
-        {showColumnSelector && (
-          <div className="mb-4 p-4 rounded-lg theme-panel border border-[rgb(var(--border-rgb))]">
-            <p className="text-sm font-medium mb-3">{t('provisionalLei.controls.chooseColumns')}</p>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-              {PROVISIONAL_COLUMNS.map((column) => (
-                <label key={column.key} className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={effectiveVisibleColumns.has(column.key)}
-                    onChange={() => toggleColumn(column.key)}
-                    className="rounded border-[rgb(var(--border-rgb))]"
-                  />
-                  <span>{t(column.labelKey)}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-        )}
 
         {showCreate && (
           <div className="mb-6 p-5 rounded-lg theme-panel border border-[rgb(var(--border-rgb))]">
@@ -616,15 +730,13 @@ function ProvisionalLEIContent() {
                 <label className="block text-xs font-medium mb-1 theme-text-muted">
                   {t('provisionalLei.form.entityStatus')}
                 </label>
-                <select
+                <ThemedSelect
                   value={editForm.entity_status}
-                  onChange={(e) => setEditForm((f) => f ? { ...f, entity_status: e.target.value } : f)}
-                  className="w-full rounded-md border border-[rgb(var(--border-rgb))] bg-[rgb(var(--surface-rgb))] px-3 py-2 text-sm theme-focus"
-                >
-                  <option value="ACTIVE">ACTIVE</option>
-                  <option value="INACTIVE">INACTIVE</option>
-                  <option value="MERGED">MERGED</option>
-                </select>
+                  onChange={(value) => setEditForm((f) => f ? { ...f, entity_status: value } : f)}
+                  options={ENTITY_STATUS_OPTIONS}
+                  ariaLabel={t('provisionalLei.form.entityStatus')}
+                  className="w-full"
+                />
               </div>
               <div>
                 <label className="block text-xs font-medium mb-1 theme-text-muted">
@@ -737,11 +849,11 @@ function ProvisionalLEIContent() {
               <thead>
                 <tr className="theme-table-header border-b border-[rgb(var(--border-rgb))]">
                   {activeColumns.map((column) => (
-                    <th key={column.key} className="px-4 py-3 text-left font-medium theme-table-header-cell">
+                    <th key={column.key} className={`${column.width} px-4 py-3 text-left font-medium theme-table-header-cell`}>
                       <span title={getEnglishTooltip(column.labelKey)}>{t(column.labelKey)}</span>
                     </th>
                   ))}
-                  <th className="px-4 py-3 text-left font-medium theme-table-header-cell">
+                  <th className="px-4 py-3 text-left font-medium theme-table-header-cell min-w-[220px]">
                     <span title={getEnglishTooltip('provisionalLei.columns.actions')}>{t('provisionalLei.columns.actions')}</span>
                   </th>
                 </tr>
@@ -767,26 +879,28 @@ function ProvisionalLEIContent() {
                       return (
                         <td
                           key={`${record.id}-${column.key}`}
-                          className={`px-4 py-3 align-top ${isMonospace ? 'font-mono text-xs' : ''} ${isMuted ? 'theme-text-muted' : ''}`}
+                          className={`${column.width} px-4 py-3 align-top ${isMonospace ? 'font-mono text-xs' : ''} ${isMuted ? 'theme-text-muted' : ''}`}
                         >
                           {renderCell(record, column.key)}
                         </td>
                       )
                     })}
-                    <td className="px-4 py-3 align-top">
+                    <td className="px-4 py-3 align-top min-w-[220px]">
                       <div className="flex flex-wrap gap-2">
                         <button
                           onClick={() => openEdit(record)}
                           className="px-3 py-1 text-xs rounded theme-btn-neutral theme-focus"
+                          title={getEnglishTooltip('provisionalLei.actions.edit')}
                         >
-                          {t('provisionalLei.actions.edit')}
+                          {formatLabel(t('provisionalLei.actions.edit'))}
                         </button>
                         {!record.successor_lei && (
                           <button
                             onClick={() => openSucceed(record)}
                             className="px-3 py-1 text-xs rounded theme-btn-neutral theme-focus"
+                            title={getEnglishTooltip('provisionalLei.actions.succeed')}
                           >
-                            {t('provisionalLei.actions.succeed')}
+                            {formatLabel(t('provisionalLei.actions.succeed'))}
                           </button>
                         )}
                       </div>

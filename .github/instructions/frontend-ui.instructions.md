@@ -69,6 +69,26 @@ For numbers (not dates), using `.toLocaleString()` is acceptable for thousand se
 - Define interfaces for all props and data structures
 - Use `'use client'` directive when component needs client-side interactivity
 
+### Standard Component Reuse (Required)
+
+- Reuse existing shared components from `frontend/app/components/` before creating page-local UI.
+- Do not re-implement behavior already provided by standard components used on reference pages (especially `lei-records`).
+- If a suitable shared component exists, use it; do not copy/paste equivalent JSX with local styling variants.
+- Create a new shared component only when no existing component can satisfy the requirement without regressions.
+- When introducing a new shared component, place it under `frontend/app/components/` and migrate repeated page-local usages.
+
+Minimum baseline components to evaluate for list/data pages:
+
+- `PageHeader`
+- `Alert`
+- `PreferenceSavePrompt`
+- `SearchInputWithOverflowTooltip`
+- `ThemedSelect`
+- `SyncedWideTable`
+- `TablePaginationControls`
+
+Before merge, verify the page did not reinvent any of the above patterns locally.
+
 ### State Management
 
 - Use `useState` for local component state
@@ -298,6 +318,21 @@ for columns whose `labelKey` is already correct.
 2. Set the column's `labelKey` to that full dotted key path.
 3. Render via `t(column.labelKey)` (table) and `t('the.key')` (modal) — never a string literal.
 4. Run `npm run i18n:verify` to confirm no missing keys.
+
+### Shared Header Action Labels (Required)
+
+For page header action buttons, always reuse canonical translation keys before adding page-specific keys.
+
+Canonical key set:
+
+- `referenceLayout.displayNamesButton`
+- `referenceLayout.displayCodesButton`
+- `referenceLayout.expandButton`
+- `referenceLayout.normalButton`
+- `buttons.columnsWithCount`
+
+Do not introduce new page-local keys with equivalent meaning (for example `*.controls.displayNames`,
+`*.controls.displayCodes`, or `*.controls.columns`) unless the wording is intentionally different.
 
 ### Table Width Toggle Standard (Required)
 

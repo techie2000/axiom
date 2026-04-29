@@ -7,6 +7,8 @@ import { useTranslation } from 'react-i18next'
 import PageHeader from '../../components/PageHeader'
 import Alert from '../../components/Alert'
 import LoadingSpinner from '../../components/LoadingSpinner'
+import SearchInputWithOverflowTooltip from '../../components/SearchInputWithOverflowTooltip'
+import ThemedSelect from '../../components/ThemedSelect'
 import { getApiBaseUrl } from '../../lib/api-base'
 import { getAuthToken } from '../../lib/auth-token'
 import { useEnglishTooltips } from '../../lib/useEnglishTooltips'
@@ -45,6 +47,7 @@ interface EditForm {
 }
 
 const ROLES: EntityRole[] = ['viewer', 'trader', 'entity_admin']
+const ROLE_OPTIONS = ROLES.map((role) => ({ value: role, label: role }))
 
 const EMPTY_GRANT: GrantForm = {
   user_id: '',
@@ -271,7 +274,7 @@ function UserEntityLinksContent() {
 
         {/* Toolbar */}
         <div className="flex flex-wrap items-center gap-3 mb-4">
-          <input
+          <SearchInputWithOverflowTooltip
             type="text"
             value={filterUser}
             onChange={(e) => { setFilterUser(e.target.value); setFilterLEI('') }}
@@ -280,7 +283,7 @@ function UserEntityLinksContent() {
             placeholder={t('userEntityLinks.filters.byUser')}
             className="rounded-md border border-[rgb(var(--border-rgb))] bg-[rgb(var(--surface-rgb))] px-3 py-2 text-sm theme-focus w-72"
           />
-          <input
+          <SearchInputWithOverflowTooltip
             type="text"
             value={filterLEI}
             onChange={(e) => { setFilterLEI(e.target.value.toUpperCase()); setFilterUser('') }}
@@ -346,15 +349,13 @@ function UserEntityLinksContent() {
                 <label className="block text-xs font-medium mb-1 theme-text-muted">
                   {t('userEntityLinks.form.role')}
                 </label>
-                <select
+                <ThemedSelect
                   value={grantForm.entity_role}
-                  onChange={(e) => setGrantForm((f) => ({ ...f, entity_role: e.target.value as EntityRole }))}
-                  className="w-full rounded-md border border-[rgb(var(--border-rgb))] bg-[rgb(var(--surface-rgb))] px-3 py-2 text-sm theme-focus"
-                >
-                  {ROLES.map((r) => (
-                    <option key={r} value={r}>{r}</option>
-                  ))}
-                </select>
+                  onChange={(value) => setGrantForm((f) => ({ ...f, entity_role: value as EntityRole }))}
+                  options={ROLE_OPTIONS}
+                  ariaLabel={t('userEntityLinks.form.role')}
+                  className="w-full"
+                />
               </div>
               <div>
                 <label className="block text-xs font-medium mb-1 theme-text-muted">
@@ -420,15 +421,13 @@ function UserEntityLinksContent() {
                 <label className="block text-xs font-medium mb-1 theme-text-muted">
                   {t('userEntityLinks.form.role')}
                 </label>
-                <select
+                <ThemedSelect
                   value={editForm.entity_role}
-                  onChange={(e) => setEditForm((f) => f ? { ...f, entity_role: e.target.value as EntityRole } : f)}
-                  className="w-full rounded-md border border-[rgb(var(--border-rgb))] bg-[rgb(var(--surface-rgb))] px-3 py-2 text-sm theme-focus"
-                >
-                  {ROLES.map((r) => (
-                    <option key={r} value={r}>{r}</option>
-                  ))}
-                </select>
+                  onChange={(value) => setEditForm((f) => f ? { ...f, entity_role: value as EntityRole } : f)}
+                  options={ROLE_OPTIONS}
+                  ariaLabel={t('userEntityLinks.form.role')}
+                  className="w-full"
+                />
               </div>
               <div>
                 <label className="block text-xs font-medium mb-1 theme-text-muted">

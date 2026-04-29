@@ -858,9 +858,12 @@
   "actions": {
     "clearFilters": "$t(common.clearFilters)"
   },
+  "buttons": {
+    "columnsWithCount": "⚙️ Columns ({{count}})"
+  },
   "countries": {
     "actions": {
-      "columns": "⚙️ Columns ({{count}})",
+      "columns": "$t(buttons.columnsWithCount)",
       "reset": "Reset",
       "saveAsDefault": "Save as default",
       "selectAll": "Select All"
@@ -1047,15 +1050,23 @@
       "jurisdiction": "Jurisdiction",
       "created": "Created",
       "updated": "Updated",
-      "actions": "Actions"
+      "actions": "Actions",
+      "groups": {
+        "core": "Core Fields",
+        "associated": "Associated Entities",
+        "address": "Address",
+        "dates": "Dates"
+      }
     },
     "controls": {
-      "columns": "Columns",
+      "columns": "$t(buttons.columnsWithCount)",
       "chooseColumns": "Choose visible columns",
+      "selectAll": "Select All",
+      "resetToDefault": "Reset to Default",
       "expandedView": "Expanded View",
       "normalView": "Normal View",
-      "displayNames": "Display: Names",
-      "displayCodes": "Display: Codes",
+      "displayNames": "$t(referenceLayout.displayNamesButton)",
+      "displayCodes": "$t(referenceLayout.displayCodesButton)",
       "displayMode": "Toggle names or codes",
       "viewMode": "Toggle page width"
     },
