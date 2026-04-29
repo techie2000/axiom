@@ -11,6 +11,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
+    "i18n:alias-common": "node ./scripts/alias-common-i18n-values.mjs",
     "i18n:extract": "node ./scripts/extract-i18n-keys.mjs",
     "i18n:check": "node ./scripts/check-i18n-completeness.mjs",
     "i18n:verify": "npm run i18n:extract && npm run i18n:check && git diff --exit-code -- public/locales",
