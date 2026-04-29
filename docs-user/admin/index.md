@@ -11,6 +11,7 @@ contact your Axiom system administrator.
 
 | Workflow | Description |
 | --- | --- |
+| [Provisional LEI](./provisional-lei) | Issue, update, and link provisional LEI records to official LEIs |
 | [User Approvals](./user-approvals) | Review and approve new user registration requests |
 | [Translation Review](./translation-review) | Review and approve community-submitted translations |
 | [Sync Triggers](./sync-triggers) | Manually trigger data synchronisation for LEI or master data |
