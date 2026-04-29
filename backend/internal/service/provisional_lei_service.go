@@ -215,7 +215,7 @@ func generateProvisionalLEI() (string, error) {
 
 	check := iso17442CheckDigits(raw18)
 	result := raw18 + fmt.Sprintf("%02d", check)
-	
+
 	// Validate the final LEI matches the required pattern
 	if len(result) != 20 {
 		return "", fmt.Errorf("generated LEI has invalid length: %d (expected 20)", len(result))
@@ -233,7 +233,7 @@ func generateProvisionalLEI() (string, error) {
 			}
 		}
 	}
-	
+
 	log.Info().
 		Str("prefix", prefix).
 		Str("body", string(body)).
@@ -267,12 +267,12 @@ func iso17442CheckDigits(raw18 string) int {
 	numStr := sb.String()
 	mod := computeMod97(numStr)
 	result := (98 - mod) % 97
-	
+
 	// Ensure result is non-zero (ISO spec requires check digits to be 01-97, never 00)
 	if result == 0 {
 		result = 97
 	}
-	
+
 	log.Info().
 		Str("raw18", raw18).
 		Int("mod97", mod).

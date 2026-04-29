@@ -1,15 +1,19 @@
 'use client'
 
-import { useState, useEffect, useCallback, Suspense } from 'react'
+import { useState, useEffect, useCallback, Suspense, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 import PageHeader from '../../components/PageHeader'
 import Alert from '../../components/Alert'
 import LoadingSpinner from '../../components/LoadingSpinner'
+import PreferenceSavePrompt from '../../components/PreferenceSavePrompt'
 import { getApiBaseUrl } from '../../lib/api-base'
 import { getAuthToken } from '../../lib/auth-token'
+import { buildDocsUrl } from '../../lib/docsLinks'
+import { useDeferredBooleanPreference } from '../../lib/useDeferredBooleanPreference'
 import { useEnglishTooltips } from '../../lib/useEnglishTooltips'
+import { useUserPreference } from '../../lib/useUserPreference'
 
 const API_BASE_URL = getApiBaseUrl()
 
@@ -27,6 +31,41 @@ interface ProvisionalLEI {
   created_at: string
   updated_at: string
 }
+
+type ProvisionalColumnKey =
+  | 'lei'
+  | 'legal_name'
+  | 'provisioning_source'
+  | 'entity_status'
+  | 'successor_lei'
+  | 'legal_address_country'
+  | 'legal_address_city'
+  | 'legal_jurisdiction'
+  | 'created_at'
+  | 'updated_at'
+
+interface ProvisionalColumn {
+  key: ProvisionalColumnKey
+  labelKey: string
+  defaultVisible: boolean
+}
+
+const PROVISIONAL_COLUMNS: ProvisionalColumn[] = [
+  { key: 'lei', labelKey: 'provisionalLei.columns.lei', defaultVisible: true },
+  { key: 'legal_name', labelKey: 'provisionalLei.columns.legalName', defaultVisible: true },
+  { key: 'provisioning_source', labelKey: 'provisionalLei.columns.source', defaultVisible: true },
+  { key: 'entity_status', labelKey: 'provisionalLei.columns.status', defaultVisible: true },
+  { key: 'successor_lei', labelKey: 'provisionalLei.columns.successorLei', defaultVisible: true },
+  { key: 'legal_address_country', labelKey: 'provisionalLei.columns.country', defaultVisible: true },
+  { key: 'legal_address_city', labelKey: 'provisionalLei.columns.city', defaultVisible: true },
+  { key: 'legal_jurisdiction', labelKey: 'provisionalLei.columns.jurisdiction', defaultVisible: true },
+  { key: 'created_at', labelKey: 'provisionalLei.columns.created', defaultVisible: true },
+  { key: 'updated_at', labelKey: 'provisionalLei.columns.updated', defaultVisible: false },
+]
+
+const DEFAULT_VISIBLE_KEYS = PROVISIONAL_COLUMNS.filter((column) => column.defaultVisible)
+  .map((column) => column.key)
+  .join(',')
 
 interface CreateForm {
   legal_name: string
@@ -75,21 +114,57 @@ function ProvisionalLEIContent() {
   const router = useRouter()
 
   const [records, setRecords] = useState<ProvisionalLEI[]>([])
+  const [countryNameByCode, setCountryNameByCode] = useState<Map<string, string>>(new Map())
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
 
-  // Form state
   const [showCreate, setShowCreate] = useState(false)
   const [createForm, setCreateForm] = useState<CreateForm>(EMPTY_CREATE)
-
   const [editTarget, setEditTarget] = useState<ProvisionalLEI | null>(null)
   const [editForm, setEditForm] = useState<EditForm | null>(null)
-
   const [succeedTarget, setSucceedTarget] = useState<ProvisionalLEI | null>(null)
   const [officialLEI, setOfficialLEI] = useState('')
+  const [showColumnSelector, setShowColumnSelector] = useState(false)
+
+  const [storedColumns, setStoredColumns] = useUserPreference('provisional-lei', 'visible_columns', DEFAULT_VISIBLE_KEYS)
+  const expandedWidthPreference = useDeferredBooleanPreference({
+    pageKey: 'provisional-lei',
+    preferenceKey: 'expanded_width',
+    defaultValue: false,
+  })
+  const locationDisplayPreference = useDeferredBooleanPreference({
+    pageKey: 'provisional-lei',
+    preferenceKey: 'display_location_codes',
+    defaultValue: true,
+  })
+
+  const visibleColumns = useMemo<Set<ProvisionalColumnKey>>(() => {
+    if (!storedColumns) {
+      return new Set(PROVISIONAL_COLUMNS.filter((column) => column.defaultVisible).map((column) => column.key))
+    }
+    return new Set(storedColumns.split(',').filter(Boolean) as ProvisionalColumnKey[])
+  }, [storedColumns])
+
+  const [showColumnSavePrompt, setShowColumnSavePrompt] = useState(false)
+  const [columnSaveVersion, setColumnSaveVersion] = useState(0)
+  const pendingColumns = useRef<Set<ProvisionalColumnKey> | null>(null)
+  const previousColumns = useRef<string | null>(null)
+  const [localColumns, setLocalColumns] = useState<Set<ProvisionalColumnKey> | null>(null)
+  const [showColumnUndoToast, setShowColumnUndoToast] = useState(false)
+  const [columnUndoVersion, setColumnUndoVersion] = useState(0)
+
+  const effectiveVisibleColumns = localColumns ?? visibleColumns
+  const isExpandedView = expandedWidthPreference.value
+  const showCodes = locationDisplayPreference.value
+  const showNames = !showCodes
+
+  const activeColumns = useMemo(
+    () => PROVISIONAL_COLUMNS.filter((column) => effectiveVisibleColumns.has(column.key)),
+    [effectiveVisibleColumns],
+  )
 
   const fetchRecords = useCallback(async () => {
     setLoading(true)
@@ -124,6 +199,128 @@ function ProvisionalLEIContent() {
   useEffect(() => {
     fetchRecords()
   }, [fetchRecords])
+
+  useEffect(() => {
+    const fetchCountries = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/v1/lei-countries`)
+        if (!response.ok) return
+        const data = await response.json()
+        const next = new Map<string, string>()
+        if (Array.isArray(data)) {
+          data.forEach((country: unknown) => {
+            if (!country || typeof country !== 'object') return
+            const candidate = country as { code?: unknown; name?: unknown }
+            const code = String(candidate.code || '').trim().toUpperCase()
+            const name = String(candidate.name || '').trim()
+            if (code && name) {
+              next.set(code, name)
+            }
+          })
+        }
+        setCountryNameByCode(next)
+      } catch {
+        // Optional metadata; fall back to code display.
+      }
+    }
+
+    fetchCountries()
+  }, [])
+
+  const handleSetVisibleColumns = useCallback((nextColumns: Set<ProvisionalColumnKey>) => {
+    setLocalColumns(nextColumns)
+    pendingColumns.current = nextColumns
+    setShowColumnSavePrompt(true)
+    setColumnSaveVersion((version) => version + 1)
+  }, [])
+
+  const toggleColumn = useCallback((key: ProvisionalColumnKey) => {
+    const current = localColumns ?? visibleColumns
+    const next = new Set(current)
+    if (next.has(key)) {
+      if (next.size > 1) {
+        next.delete(key)
+      }
+    } else {
+      next.add(key)
+    }
+    handleSetVisibleColumns(next)
+  }, [handleSetVisibleColumns, localColumns, visibleColumns])
+
+  const handleSaveColumns = useCallback(() => {
+    if (pendingColumns.current) {
+      previousColumns.current = storedColumns
+      setStoredColumns(Array.from(pendingColumns.current).join(','))
+      setLocalColumns(null)
+      pendingColumns.current = null
+    }
+    setShowColumnSavePrompt(false)
+    setShowColumnUndoToast(true)
+    setColumnUndoVersion((version) => version + 1)
+  }, [setStoredColumns, storedColumns])
+
+  const handleDismissColumns = useCallback(() => {
+    setShowColumnSavePrompt(false)
+  }, [])
+
+  const handleUndoColumns = useCallback(() => {
+    if (previousColumns.current !== null) {
+      setStoredColumns(previousColumns.current)
+      setLocalColumns(null)
+      previousColumns.current = null
+    }
+    setShowColumnUndoToast(false)
+  }, [setStoredColumns])
+
+  const handleUndoDismissColumns = useCallback(() => {
+    setShowColumnUndoToast(false)
+  }, [])
+
+  const resolveCountryOrJurisdiction = (code: string) => {
+    const normalized = String(code || '').trim().toUpperCase()
+    if (!normalized) return '—'
+    if (!showNames) return normalized
+    return countryNameByCode.get(normalized) || normalized
+  }
+
+  const formatDateCell = (value: string) => {
+    if (!value || value.startsWith('0001-')) return '—'
+    return new Date(value).toISOString().split('T')[0]
+  }
+
+  const renderCell = (record: ProvisionalLEI, key: ProvisionalColumnKey) => {
+    switch (key) {
+      case 'lei':
+        return (
+          <>
+            {record.lei}
+            <span className="ml-1 px-1.5 py-0.5 text-[10px] rounded bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 font-sans">
+              {t('provisionalLei.badge')}
+            </span>
+          </>
+        )
+      case 'legal_name':
+        return record.legal_name || '—'
+      case 'provisioning_source':
+        return record.provisioning_source || '—'
+      case 'entity_status':
+        return statusBadge(record.entity_status)
+      case 'successor_lei':
+        return record.successor_lei || '—'
+      case 'legal_address_country':
+        return resolveCountryOrJurisdiction(record.legal_address_country)
+      case 'legal_address_city':
+        return record.legal_address_city || '—'
+      case 'legal_jurisdiction':
+        return resolveCountryOrJurisdiction(record.legal_jurisdiction)
+      case 'created_at':
+        return formatDateCell(record.created_at)
+      case 'updated_at':
+        return formatDateCell(record.updated_at)
+      default:
+        return '—'
+    }
+  }
 
   const handleCreate = async () => {
     const token = getAuthToken()
@@ -235,33 +432,74 @@ function ProvisionalLEIContent() {
 
   return (
     <main className="min-h-screen p-8">
-      <div className="max-w-7xl mx-auto">
+      <div className={`${isExpandedView ? 'max-w-[95vw]' : 'max-w-7xl'} mx-auto`}>
         <PageHeader
           title={t('provisionalLei.title')}
           subtitle={t('provisionalLei.subtitle')}
           titleTooltip={getEnglishTooltip('provisionalLei.title')}
           subtitleTooltip={getEnglishTooltip('provisionalLei.subtitle')}
           backHref="/dashboard"
+          docsHref={buildDocsUrl('admin/provisional-lei/')}
         />
 
         {error && <Alert variant="error" className="mb-4">{error}</Alert>}
         {success && <Alert variant="success" className="mb-4">{success}</Alert>}
 
-        {/* Toolbar */}
         <div className="flex items-center justify-between mb-4">
           <span className="text-sm theme-text-muted">
             {t('provisionalLei.totalCount', { count: total })}
           </span>
-          <button
-            onClick={() => { setShowCreate((v) => !v); setEditTarget(null); setSucceedTarget(null) }}
-            className="px-4 py-2 rounded-md text-sm font-medium theme-btn-primary"
-            title={getEnglishTooltip('provisionalLei.actions.create')}
-          >
-            {t('provisionalLei.actions.create')}
-          </button>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <button
+              onClick={locationDisplayPreference.toggle}
+              className="px-3 py-2 rounded-md text-sm font-medium theme-btn-neutral"
+              title={getEnglishTooltip('provisionalLei.controls.displayMode')}
+            >
+              {showNames ? t('provisionalLei.controls.displayNames') : t('provisionalLei.controls.displayCodes')}
+            </button>
+            <button
+              onClick={expandedWidthPreference.toggle}
+              className="px-3 py-2 rounded-md text-sm font-medium theme-btn-neutral"
+              title={getEnglishTooltip('provisionalLei.controls.viewMode')}
+            >
+              {isExpandedView ? t('provisionalLei.controls.normalView') : t('provisionalLei.controls.expandedView')}
+            </button>
+            <button
+              onClick={() => setShowColumnSelector((value) => !value)}
+              className="px-3 py-2 rounded-md text-sm font-medium theme-btn-neutral"
+              title={getEnglishTooltip('provisionalLei.controls.columns')}
+            >
+              {t('provisionalLei.controls.columns')}
+            </button>
+            <button
+              onClick={() => { setShowCreate((v) => !v); setEditTarget(null); setSucceedTarget(null) }}
+              className="px-4 py-2 rounded-md text-sm font-medium theme-btn-primary"
+              title={getEnglishTooltip('provisionalLei.actions.create')}
+            >
+              {t('provisionalLei.actions.create')}
+            </button>
+          </div>
         </div>
 
-        {/* Create form */}
+        {showColumnSelector && (
+          <div className="mb-4 p-4 rounded-lg theme-panel border border-[rgb(var(--border-rgb))]">
+            <p className="text-sm font-medium mb-3">{t('provisionalLei.controls.chooseColumns')}</p>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+              {PROVISIONAL_COLUMNS.map((column) => (
+                <label key={column.key} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={effectiveVisibleColumns.has(column.key)}
+                    onChange={() => toggleColumn(column.key)}
+                    className="rounded border-[rgb(var(--border-rgb))]"
+                  />
+                  <span>{t(column.labelKey)}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
         {showCreate && (
           <div className="mb-6 p-5 rounded-lg theme-panel border border-[rgb(var(--border-rgb))]">
             <h2 className="text-base font-semibold mb-4">{t('provisionalLei.form.createTitle')}</h2>
@@ -358,7 +596,6 @@ function ProvisionalLEIContent() {
           </div>
         )}
 
-        {/* Edit form */}
         {editTarget && editForm && (
           <div className="mb-6 p-5 rounded-lg theme-panel border border-[rgb(var(--border-rgb))]">
             <h2 className="text-base font-semibold mb-1">{t('provisionalLei.form.editTitle')}</h2>
@@ -453,7 +690,6 @@ function ProvisionalLEIContent() {
           </div>
         )}
 
-        {/* Succeed form */}
         {succeedTarget && (
           <div className="mb-6 p-5 rounded-lg theme-panel border border-[rgb(var(--border-rgb))]">
             <h2 className="text-base font-semibold mb-1">{t('provisionalLei.form.succeedTitle')}</h2>
@@ -491,7 +727,6 @@ function ProvisionalLEIContent() {
           </div>
         )}
 
-        {/* Table */}
         {loading ? (
           <LoadingSpinner message={t('provisionalLei.loading')} />
         ) : records.length === 0 ? (
@@ -501,61 +736,54 @@ function ProvisionalLEIContent() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="theme-table-header border-b border-[rgb(var(--border-rgb))]">
-                  <th className="px-4 py-3 text-left font-medium theme-table-header-cell">
-                    <span title={getEnglishTooltip('provisionalLei.columns.lei')}>{t('provisionalLei.columns.lei')}</span>
-                  </th>
-                  <th className="px-4 py-3 text-left font-medium theme-table-header-cell">
-                    <span title={getEnglishTooltip('provisionalLei.columns.legalName')}>{t('provisionalLei.columns.legalName')}</span>
-                  </th>
-                  <th className="px-4 py-3 text-left font-medium theme-table-header-cell">
-                    <span title={getEnglishTooltip('provisionalLei.columns.source')}>{t('provisionalLei.columns.source')}</span>
-                  </th>
-                  <th className="px-4 py-3 text-left font-medium theme-table-header-cell">
-                    <span title={getEnglishTooltip('provisionalLei.columns.status')}>{t('provisionalLei.columns.status')}</span>
-                  </th>
-                  <th className="px-4 py-3 text-left font-medium theme-table-header-cell">
-                    <span title={getEnglishTooltip('provisionalLei.columns.successorLei')}>{t('provisionalLei.columns.successorLei')}</span>
-                  </th>
-                  <th className="px-4 py-3 text-left font-medium theme-table-header-cell">
-                    <span title={getEnglishTooltip('provisionalLei.columns.created')}>{t('provisionalLei.columns.created')}</span>
-                  </th>
+                  {activeColumns.map((column) => (
+                    <th key={column.key} className="px-4 py-3 text-left font-medium theme-table-header-cell">
+                      <span title={getEnglishTooltip(column.labelKey)}>{t(column.labelKey)}</span>
+                    </th>
+                  ))}
                   <th className="px-4 py-3 text-left font-medium theme-table-header-cell">
                     <span title={getEnglishTooltip('provisionalLei.columns.actions')}>{t('provisionalLei.columns.actions')}</span>
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {records.map((r) => (
+                {records.map((record) => (
                   <tr
-                    key={r.id}
+                    key={record.id}
                     className="border-b border-[rgb(var(--border-rgb)/0.4)] theme-table-row-hover transition-colors"
                   >
-                    <td className="px-4 py-3 align-top font-mono text-xs">
-                      {r.lei}
-                      <span className="ml-1 px-1.5 py-0.5 text-[10px] rounded bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 font-sans">
-                        {t('provisionalLei.badge')}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 align-top font-medium">{r.legal_name}</td>
-                    <td className="px-4 py-3 align-top theme-text-muted text-xs">{r.provisioning_source || '—'}</td>
-                    <td className="px-4 py-3 align-top">{statusBadge(r.entity_status)}</td>
-                    <td className="px-4 py-3 align-top font-mono text-xs theme-text-muted">{r.successor_lei || '—'}</td>
-                    <td className="px-4 py-3 align-top text-xs theme-text-muted">
-                      {r.created_at && !r.created_at.startsWith('0001-')
-                        ? new Date(r.created_at).toISOString().split('T')[0]
-                        : '—'}
-                    </td>
+                    {activeColumns.map((column) => {
+                      const isMonospace =
+                        column.key === 'lei' ||
+                        column.key === 'successor_lei' ||
+                        column.key === 'created_at' ||
+                        column.key === 'updated_at'
+                      const isMuted =
+                        column.key === 'provisioning_source' ||
+                        column.key === 'successor_lei' ||
+                        column.key === 'created_at' ||
+                        column.key === 'updated_at'
+
+                      return (
+                        <td
+                          key={`${record.id}-${column.key}`}
+                          className={`px-4 py-3 align-top ${isMonospace ? 'font-mono text-xs' : ''} ${isMuted ? 'theme-text-muted' : ''}`}
+                        >
+                          {renderCell(record, column.key)}
+                        </td>
+                      )
+                    })}
                     <td className="px-4 py-3 align-top">
                       <div className="flex flex-wrap gap-2">
                         <button
-                          onClick={() => openEdit(r)}
+                          onClick={() => openEdit(record)}
                           className="px-3 py-1 text-xs rounded theme-btn-neutral theme-focus"
                         >
                           {t('provisionalLei.actions.edit')}
                         </button>
-                        {!r.successor_lei && (
+                        {!record.successor_lei && (
                           <button
-                            onClick={() => openSucceed(r)}
+                            onClick={() => openSucceed(record)}
                             className="px-3 py-1 text-xs rounded theme-btn-neutral theme-focus"
                           >
                             {t('provisionalLei.actions.succeed')}
@@ -575,6 +803,43 @@ function ProvisionalLEIContent() {
             {t('nav.backToDashboard')}
           </Link>
         </div>
+
+        <PreferenceSavePrompt
+          visible={showColumnSavePrompt}
+          resetKey={columnSaveVersion}
+          label={t('leiRecords.saveColumnPrompt')}
+          onSave={handleSaveColumns}
+          onDismiss={handleDismissColumns}
+          showUndo={showColumnUndoToast}
+          undoResetKey={columnUndoVersion}
+          onUndo={handleUndoColumns}
+          onUndoDismiss={handleUndoDismissColumns}
+          undoLabel={t('preferences.savedUndo')}
+        />
+        <PreferenceSavePrompt
+          visible={expandedWidthPreference.showPrompt}
+          resetKey={expandedWidthPreference.promptResetKey}
+          label={t('referenceLayout.savePageWidthDefault')}
+          onSave={expandedWidthPreference.save}
+          onDismiss={expandedWidthPreference.dismiss}
+          showUndo={expandedWidthPreference.showUndo}
+          undoResetKey={expandedWidthPreference.undoResetKey}
+          onUndo={expandedWidthPreference.undo}
+          onUndoDismiss={expandedWidthPreference.undoDismiss}
+          undoLabel={t('preferences.savedUndo')}
+        />
+        <PreferenceSavePrompt
+          visible={locationDisplayPreference.showPrompt}
+          resetKey={locationDisplayPreference.promptResetKey}
+          label={t('referenceLayout.saveDisplayModeDefault')}
+          onSave={locationDisplayPreference.save}
+          onDismiss={locationDisplayPreference.dismiss}
+          showUndo={locationDisplayPreference.showUndo}
+          undoResetKey={locationDisplayPreference.undoResetKey}
+          onUndo={locationDisplayPreference.undo}
+          onUndoDismiss={locationDisplayPreference.undoDismiss}
+          undoLabel={t('preferences.savedUndo')}
+        />
       </div>
     </main>
   )

@@ -46,17 +46,17 @@ func TestProvisionalLEIInsertPayload_ConvertsConstrainedEmptyStringsToNull(t *te
 	t.Helper()
 
 	record := &domain.LEIRecord{
-		ID:   uuid.New(),
-		LEI:  "AXIOFBQ64ZKYWLW1PO76",
-		LegalName: "Null coercion test",
-		LegalAddressCountry: "",
-		HQAddressCountry: "",
+		ID:                    uuid.New(),
+		LEI:                   "AXIOFBQ64ZKYWLW1PO76",
+		LegalName:             "Null coercion test",
+		LegalAddressCountry:   "",
+		HQAddressCountry:      "",
 		RegistrationAuthority: "",
-		EntityLegalForm: "",
-		LegalJurisdiction: "",
-		ManagingLOU: "",
-		SuccessorLEI: "",
-		ValidationAuthority: "",
+		EntityLegalForm:       "",
+		LegalJurisdiction:     "",
+		ManagingLOU:           "",
+		SuccessorLEI:          "",
+		ValidationAuthority:   "",
 	}
 
 	payload := provisionalLEIInsertPayload(record)

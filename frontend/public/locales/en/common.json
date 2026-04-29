@@ -162,7 +162,8 @@
     "noResults": "No results found",
     "required": "Required",
     "errorTitle": "⚠️ Error:",
-    "noticeTitle": "📋 Notice:"
+    "noticeTitle": "📋 Notice:",
+    "saving": "Saving..."
   },
   "admin": {
     "translations": {
@@ -1041,8 +1042,22 @@
       "source": "Source",
       "status": "Status",
       "successorLei": "Successor LEI",
+      "country": "Country",
+      "city": "City",
+      "jurisdiction": "Jurisdiction",
       "created": "Created",
+      "updated": "Updated",
       "actions": "Actions"
+    },
+    "controls": {
+      "columns": "Columns",
+      "chooseColumns": "Choose visible columns",
+      "expandedView": "Expanded View",
+      "normalView": "Normal View",
+      "displayNames": "Display: Names",
+      "displayCodes": "Display: Codes",
+      "displayMode": "Toggle names or codes",
+      "viewMode": "Toggle page width"
     },
     "form": {
       "createTitle": "Issue New Provisional LEI",
