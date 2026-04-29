@@ -17,6 +17,14 @@ const API_BASE_URL = getApiBaseUrl()
 
 type EntityRole = 'viewer' | 'trader' | 'entity_admin'
 
+interface UserOption {
+  id: string
+  username: string
+  full_name: string
+  email: string
+  status: string
+}
+
 interface UserEntityLink {
   id: string
   user_id: string
@@ -98,6 +106,8 @@ function UserEntityLinksContent() {
   // Form state
   const [showGrant, setShowGrant] = useState(false)
   const [grantForm, setGrantForm] = useState<GrantForm>(EMPTY_GRANT)
+  const [grantUsers, setGrantUsers] = useState<UserOption[]>([])
+  const [userPickerFilter, setUserPickerFilter] = useState('')
 
   const [editTarget, setEditTarget] = useState<UserEntityLink | null>(null)
   const [editForm, setEditForm] = useState<EditForm | null>(null)
@@ -144,6 +154,49 @@ function UserEntityLinksContent() {
   useEffect(() => {
     fetchLinks()
   }, [fetchLinks])
+
+  const fetchGrantUsers = useCallback(async () => {
+    const token = getAuthToken()
+    if (!token) return
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/auth/users?status=active&limit=500`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) return
+      const data = await res.json()
+      const raw: UserOption[] = Array.isArray(data) ? data : []
+      setGrantUsers(raw)
+    } catch {
+      // Non-blocking: grant form still works with direct ID fallback if users cannot be loaded
+      setGrantUsers([])
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchGrantUsers()
+  }, [fetchGrantUsers])
+
+  const filteredGrantUsers = userPickerFilter.trim()
+    ? grantUsers.filter((u) => {
+        const query = userPickerFilter.trim().toLowerCase()
+        return (
+          u.username.toLowerCase().includes(query) ||
+          (u.full_name || '').toLowerCase().includes(query) ||
+          u.email.toLowerCase().includes(query)
+        )
+      })
+    : grantUsers
+
+  const grantUserOptions = [
+    { value: '', label: t('userEntityLinks.form.selectUserPlaceholder') },
+    ...filteredGrantUsers.map((u) => ({
+      value: u.id,
+      label: `${u.username} - ${u.full_name || u.email}`,
+      title: `${u.username} - ${u.full_name || u.email}`,
+    })),
+  ]
+
+  const selectedGrantUser = grantUsers.find((u) => u.id === grantForm.user_id)
 
   const displayed = showActiveOnly ? links.filter((l) => !l.revoked_at) : links
 
@@ -322,15 +375,30 @@ function UserEntityLinksContent() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium mb-1 theme-text-muted">
-                  {t('userEntityLinks.form.userId')} *
+                  {t('userEntityLinks.form.user')} *
                 </label>
-                <input
+                <SearchInputWithOverflowTooltip
                   type="text"
-                  value={grantForm.user_id}
-                  onChange={(e) => setGrantForm((f) => ({ ...f, user_id: e.target.value }))}
-                  className="w-full rounded-md border border-[rgb(var(--border-rgb))] bg-[rgb(var(--surface-rgb))] px-3 py-2 text-sm font-mono theme-focus"
-                  placeholder="UUID"
+                  value={userPickerFilter}
+                  onChange={(e) => setUserPickerFilter(e.target.value)}
+                  className="w-full rounded-md border border-[rgb(var(--border-rgb))] bg-[rgb(var(--surface-rgb))] px-3 py-2 text-sm theme-focus mb-2"
+                  placeholder={t('userEntityLinks.form.userPickerSearch')}
                 />
+                <ThemedSelect
+                  value={grantForm.user_id}
+                  onChange={(value) => setGrantForm((f) => ({ ...f, user_id: value }))}
+                  options={grantUserOptions}
+                  ariaLabel={t('userEntityLinks.form.user')}
+                  className="w-full"
+                />
+                {selectedGrantUser && (
+                  <p className="mt-1 text-xs theme-text-muted">
+                    {t('userEntityLinks.form.selectedUserSummary', {
+                      username: selectedGrantUser.username,
+                      name: selectedGrantUser.full_name || selectedGrantUser.email,
+                    })}
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-xs font-medium mb-1 theme-text-muted">
