@@ -56,7 +56,9 @@ func TestGenerateProvisionalLEI_CheckDigits(t *testing.T) {
 		// We relax to allow 02–98 which is what MOD 97 can produce.
 		checkStr := lei[18:]
 		var check int
-		fmt.Sscanf(checkStr, "%d", &check)
+		if _, scanErr := fmt.Sscanf(checkStr, "%d", &check); scanErr != nil {
+			t.Fatalf("failed to parse check digits %q: %v", checkStr, scanErr)
+		}
 		if check < 2 || check > 98 {
 			t.Errorf("check digits %q (%d) out of valid range [2,98] for LEI %q", checkStr, check, lei)
 		}

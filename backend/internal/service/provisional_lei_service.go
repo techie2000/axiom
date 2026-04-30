@@ -281,7 +281,7 @@ func generateProvisionalLEI() (string, error) {
 	for i, ch := range result {
 		if i < 18 {
 			// First 18 chars must be alphanumeric
-			if !((ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'Z')) {
+			if (ch < '0' || ch > '9') && (ch < 'A' || ch > 'Z') {
 				return "", fmt.Errorf("generated LEI has invalid character at position %d: %c (must be 0-9 or A-Z)", i, ch)
 			}
 		} else {
@@ -315,7 +315,7 @@ func iso17442CheckDigits(raw18 string) int {
 	var sb strings.Builder
 	for _, ch := range strings.ToUpper(raw18) {
 		if ch >= 'A' && ch <= 'Z' {
-			sb.WriteString(fmt.Sprintf("%d", int(ch-'A')+10))
+			_, _ = fmt.Fprintf(&sb, "%d", int(ch-'A')+10)
 		} else if ch >= '0' && ch <= '9' {
 			sb.WriteByte(byte(ch))
 		}
@@ -397,7 +397,7 @@ func validateLEIFormat(lei string) error {
 	}
 	for i, ch := range lei {
 		if i < 18 {
-			if !((ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'Z')) {
+			if (ch < '0' || ch > '9') && (ch < 'A' || ch > 'Z') {
 				return fmt.Errorf("LEI contains invalid character at position %d", i)
 			}
 			continue

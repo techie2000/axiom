@@ -119,7 +119,7 @@ func validateLEICode(lei string) error {
 	}
 	for i, ch := range lei {
 		if i < 18 {
-			if !((ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'Z')) {
+			if (ch < '0' || ch > '9') && (ch < 'A' || ch > 'Z') {
 				return fmt.Errorf("LEI character at position %d is invalid: %c", i, ch)
 			}
 			continue
