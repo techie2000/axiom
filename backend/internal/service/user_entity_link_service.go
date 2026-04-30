@@ -26,26 +26,28 @@ type UserEntityLinkService interface {
 	ListByUser(userID string) ([]*domain.UserEntityLink, error)
 	// ListByLEI returns all links for a given LEI entity.
 	ListByLEI(lei string) ([]*domain.UserEntityLink, error)
+	// ListAll returns all links, including revoked and expired, with pagination.
+	ListAll(limit, offset int) ([]*domain.UserEntityLink, error)
 	// ListActive returns all currently effective links with pagination.
 	ListActive(limit, offset int) ([]*domain.UserEntityLink, error)
 }
 
 // GrantEntityLinkRequest holds the fields required to grant a user–entity link.
 type GrantEntityLinkRequest struct {
-	UserID          string             `json:"user_id" binding:"required"`
-	LEI             string             `json:"lei" binding:"required"`
-	EntityRole      domain.EntityRole  `json:"entity_role"`
-	IncludeChildren bool               `json:"include_children"`
-	ExpiresAt       *time.Time         `json:"expires_at,omitempty"`
-	Notes           string             `json:"notes,omitempty"`
+	UserID        string               `json:"user_id" binding:"required"`
+	LEI           string               `json:"lei" binding:"required"`
+	EntityRole    domain.EntityRole    `json:"entity_role"`
+	ChildrenScope domain.ChildrenScope `json:"children_scope"`
+	ExpiresAt     *time.Time           `json:"expires_at,omitempty"`
+	Notes         string               `json:"notes,omitempty"`
 }
 
 // UpdateEntityLinkRequest holds the fields that may be changed after creation.
 type UpdateEntityLinkRequest struct {
-	EntityRole      *domain.EntityRole `json:"entity_role,omitempty"`
-	IncludeChildren *bool              `json:"include_children,omitempty"`
-	ExpiresAt       *time.Time         `json:"expires_at,omitempty"`
-	Notes           *string            `json:"notes,omitempty"`
+	EntityRole    *domain.EntityRole    `json:"entity_role,omitempty"`
+	ChildrenScope *domain.ChildrenScope `json:"children_scope,omitempty"`
+	ExpiresAt     *time.Time            `json:"expires_at,omitempty"`
+	Notes         *string               `json:"notes,omitempty"`
 }
 
 type userEntityLinkService struct {
@@ -75,14 +77,19 @@ func (s *userEntityLinkService) Grant(req GrantEntityLinkRequest, adminUserID st
 		return nil, fmt.Errorf("invalid entity_role %q: must be one of viewer, trader, entity_admin", role)
 	}
 
+	scope := req.ChildrenScope
+	if scope == "" {
+		scope = domain.ChildrenScopeNone
+	}
+
 	link := &domain.UserEntityLink{
-		UserID:          userID,
-		LEI:             req.LEI,
-		EntityRole:      role,
-		IncludeChildren: req.IncludeChildren,
-		GrantedBy:       adminID,
-		ExpiresAt:       req.ExpiresAt,
-		Notes:           req.Notes,
+		UserID:        userID,
+		LEI:           req.LEI,
+		EntityRole:    role,
+		ChildrenScope: scope,
+		GrantedBy:     adminID,
+		ExpiresAt:     req.ExpiresAt,
+		Notes:         req.Notes,
 	}
 
 	if err := s.repo.Create(link); err != nil {
@@ -133,8 +140,8 @@ func (s *userEntityLinkService) Update(linkID string, req UpdateEntityLinkReques
 		}
 		link.EntityRole = *req.EntityRole
 	}
-	if req.IncludeChildren != nil {
-		link.IncludeChildren = *req.IncludeChildren
+	if req.ChildrenScope != nil {
+		link.ChildrenScope = *req.ChildrenScope
 	}
 	if req.ExpiresAt != nil {
 		link.ExpiresAt = req.ExpiresAt
@@ -180,6 +187,14 @@ func (s *userEntityLinkService) ListByLEI(lei string) ([]*domain.UserEntityLink,
 	links, err := s.repo.ListByLEI(lei)
 	if err != nil {
 		return nil, fmt.Errorf("list links for LEI %s: %w", lei, err)
+	}
+	return links, nil
+}
+
+func (s *userEntityLinkService) ListAll(limit, offset int) ([]*domain.UserEntityLink, error) {
+	links, err := s.repo.ListAll(limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("list all user-entity links: %w", err)
 	}
 	return links, nil
 }

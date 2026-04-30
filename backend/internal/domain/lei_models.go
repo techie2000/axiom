@@ -84,8 +84,13 @@ type LEIRecord struct {
 	// Provisional LEI fields (migration 000062)
 	// IsProvisional is TRUE for Axiom-issued provisional LEI records (AXIO prefix).
 	// FALSE for all GLEIF-ingested records. Defaults to FALSE.
-	IsProvisional     bool   `gorm:"column:is_provisional;not null;default:false" json:"is_provisional"`
+	IsProvisional      bool   `gorm:"column:is_provisional;not null;default:false" json:"is_provisional"`
 	ProvisioningSource string `gorm:"column:provisioning_source;size:50" json:"provisioning_source,omitempty"`
+
+	// Relationship data hydrated from lei_relationship_records for provisional LEIs.
+	// Not stored in lei_records; populated by the provisional LEI service layer only.
+	ParentLEI string `gorm:"-" json:"parent_lei,omitempty"`
+	ChildLEI  string `gorm:"-" json:"child_lei,omitempty"`
 
 	// Standard fields
 	CreatedAt time.Time      `json:"created_at"`

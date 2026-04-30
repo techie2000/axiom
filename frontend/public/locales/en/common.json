@@ -634,6 +634,9 @@
       "pageOf": "Page {{page}} of {{total}}",
       "itemsPerPage": "Items per page:"
     },
+    "badges": {
+      "provisional": "PROVISIONAL"
+    },
     "modal": {
       "title": "LEI Record Details",
       "close": "✕ Close",
@@ -1045,9 +1048,12 @@
       "source": "Source",
       "status": "Status",
       "successorLei": "Successor LEI",
+      "parentLei": "Parent LEI",
+      "childLei": "Child LEI",
       "country": "Country",
       "city": "City",
       "jurisdiction": "Jurisdiction",
+      "notes": "Notes",
       "created": "Created",
       "updated": "Updated",
       "actions": "Actions",
@@ -1055,6 +1061,7 @@
         "core": "Core Fields",
         "associated": "Associated Entities",
         "address": "Address",
+        "metadata": "Metadata",
         "dates": "Dates"
       }
     },
@@ -1084,6 +1091,10 @@
       "jurisdiction": "Jurisdiction",
       "entityStatus": "Entity Status",
       "officialLEI": "Official LEI (20 characters)",
+      "parentLei": "Parent LEI (optional)",
+      "parentLeiPlaceholder": "20-character parent LEI",
+      "childLei": "Child LEI (optional)",
+      "childLeiPlaceholder": "20-character child LEI",
       "notes": "Notes",
       "notesPlaceholder": "Optional internal notes"
     },
@@ -1092,6 +1103,21 @@
       "edit": "$t(common.edit)",
       "save": "$t(common.save)",
       "succeed": "Link to Official LEI"
+    },
+    "filters": {
+      "search": "$t(common.search)",
+      "searchPlaceholder": "Search by name, LEI, or source…",
+      "status": "Status",
+      "allStatuses": "All statuses",
+      "source": "Source",
+      "allSources": "All sources",
+      "country": "Country",
+      "allCountries": "All countries",
+      "statusActive": "Active",
+      "statusInactive": "Inactive",
+      "statusMerged": "Merged",
+      "noResults": "No records match the current filters.",
+      "resultCount": "Showing {{shown}} of {{total}} record(s)"
     },
     "success": {
       "created": "Provisional LEI issued successfully.",
@@ -1138,8 +1164,19 @@
       "lei": "LEI",
       "role": "Role",
       "expiresAt": "Expires At (optional)",
+      "datePlaceholder": "yyyy-mm-dd",
+      "openCalendar": "Open calendar",
       "notes": "Notes",
-      "includeChildren": "Include child entities"
+      "includeChildren": "Include child entities",
+      "childrenScope": "Entity hierarchy scope",
+      "childrenScopeNoneHint": "Access limited to the selected entity only.",
+      "childrenScopeDirectHint": "Access includes the selected entity and its direct children only.",
+      "childrenScopeAllHint": "Access includes the selected entity and all descendants (full tree). Note: closer/lower privileges override higher/parent privileges."
+    },
+    "childrenScope": {
+      "none": "None (entity only)",
+      "direct": "Direct children only",
+      "all": "All descendants"
     },
     "status": {
       "active": "active",
@@ -1161,6 +1198,10 @@
       "grantFailed": "Failed to grant access.",
       "updateFailed": "Failed to update link.",
       "revokeFailed": "Failed to revoke link.",
+      "invalidDateFormat": "Invalid date format. Use yyyy-mm-dd.",
+      "leiNotFound": "LEI not found. Please enter a valid, registered 20-character LEI.",
+      "userLoadFailed": "Failed to load users for the picker.",
+      "userLoadUnauthorized": "You do not have permission to list users. Please sign in as an admin.",
       "network": "Network error — please try again."
     }
   }

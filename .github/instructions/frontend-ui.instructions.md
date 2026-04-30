@@ -72,9 +72,13 @@ For numbers (not dates), using `.toLocaleString()` is acceptable for thousand se
 ### Standard Component Reuse (Required)
 
 - Reuse existing shared components from `frontend/app/components/` before creating page-local UI.
+- Reuse existing shared handlers/hooks from `frontend/app/lib/` before creating page-local event logic.
 - Do not re-implement behavior already provided by standard components used on reference pages (especially `lei-records`).
+- Do not re-implement behavior already provided by shared hooks/handlers used on reference pages.
 - If a suitable shared component exists, use it; do not copy/paste equivalent JSX with local styling variants.
+- If a suitable shared handler/hook exists, use it instead of page-local `addEventListener` logic.
 - Create a new shared component only when no existing component can satisfy the requirement without regressions.
+- Create a new shared hook/handler only when no existing one can satisfy the requirement without regressions.
 - When introducing a new shared component, place it under `frontend/app/components/` and migrate repeated page-local usages.
 
 Minimum baseline components to evaluate for list/data pages:
@@ -86,6 +90,10 @@ Minimum baseline components to evaluate for list/data pages:
 - `ThemedSelect`
 - `SyncedWideTable`
 - `TablePaginationControls`
+
+Minimum baseline reusable handlers/hooks to evaluate for list/data pages:
+
+- `useSearchFocusShortcut`
 
 Before merge, verify the page did not reinvent any of the above patterns locally.
 
@@ -262,6 +270,9 @@ EVERY visual change:
 - Do **not** place filter controls above stats cards on list/report pages.
 - Filter controls must be wrapped in a visible bordered container (LEI pattern), e.g.
   `bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm rounded-lg p-6`.
+- Filter bars that contain dropdown/select controls must be rendered in a higher stacking layer
+  than table headers (for example `relative z-40`) so option menus are never hidden behind sticky
+  or themed table headers.
 - Provide a `Clear Filters` action whenever a page has two or more filters (search counts as a filter).
 - Show `Clear Filters` only when at least one filter is active (LEI Records behavior).
 - `Clear Filters` should reset all filter inputs to default values in one click.
@@ -491,6 +502,9 @@ step-by-step guide and integration checklist.
 - Use consistent keyboard shortcuts for interactive overlays across pages (column selectors,
   dropdown panels, popovers, dialogs).
 - Pressing `Escape` must close the top-most open overlay element first.
+- On searchable list/report pages, `Ctrl+F`/`Cmd+F` must focus the page's primary search field
+  instead of opening browser find.
+- Implement this behavior via shared `useSearchFocusShortcut` unless there is an explicit exception.
 - Implement keyboard handlers with proper cleanup (`addEventListener`/`removeEventListener`)
   to avoid leaks and duplicate bindings.
 - Do not create page-specific shortcut behavior that conflicts with existing LEI patterns unless explicitly required.

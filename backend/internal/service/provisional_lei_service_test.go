@@ -125,9 +125,9 @@ func TestIsValidEntityRole_InvalidRole(t *testing.T) {
 
 func TestUserEntityLink_IsActive_Active(t *testing.T) {
 	link := &domain.UserEntityLink{
-		ID:        uuid.New(),
-		UserID:    uuid.New(),
-		LEI:       "AXIO00000000000001AB",
+		ID:         uuid.New(),
+		UserID:     uuid.New(),
+		LEI:        "AXIO00000000000001AB",
 		EntityRole: domain.EntityRoleViewer,
 	}
 	if !link.IsActive() {
@@ -165,5 +165,47 @@ func TestUserEntityLink_IsActive_NotYetExpired(t *testing.T) {
 	}
 	if !link.IsActive() {
 		t.Error("expected link with future expiry to be active")
+	}
+}
+
+func TestNormalizeRelationshipInputs_Valid(t *testing.T) {
+	parent, child, err := normalizeRelationshipInputs(
+		"  529900T8BM49AURSDO55  ",
+		"213800D1EI4B9WTWWD28",
+		"AXIO1234567890123479",
+	)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if parent != "529900T8BM49AURSDO55" {
+		t.Fatalf("unexpected parent LEI: %s", parent)
+	}
+	if child != "213800D1EI4B9WTWWD28" {
+		t.Fatalf("unexpected child LEI: %s", child)
+	}
+}
+
+func TestNormalizeRelationshipInputs_RejectsSelfAsParent(t *testing.T) {
+	_, _, err := normalizeRelationshipInputs("AXIO1234567890123479", "", "AXIO1234567890123479")
+	if err == nil {
+		t.Fatal("expected self-parent error")
+	}
+}
+
+func TestNormalizeRelationshipInputs_RejectsMatchingParentAndChild(t *testing.T) {
+	_, _, err := normalizeRelationshipInputs(
+		"529900T8BM49AURSDO55",
+		"529900T8BM49AURSDO55",
+		"AXIO1234567890123479",
+	)
+	if err == nil {
+		t.Fatal("expected matching parent/child error")
+	}
+}
+
+func TestValidateLEIFormat_InvalidLength(t *testing.T) {
+	err := validateLEIFormat("SHORT")
+	if err == nil {
+		t.Fatal("expected length validation error")
 	}
 }

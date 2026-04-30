@@ -22,6 +22,8 @@ type LEILevel2Repository interface {
 	BatchUpsertRelationshipRecords(records []*domain.LEIRelationshipRecord) (int, int, error)
 	FindRelationshipsByStartLEI(lei string) ([]*domain.LEIRelationshipRecord, error)
 	FindRelationshipsByEndLEI(lei string) ([]*domain.LEIRelationshipRecord, error)
+	FindRelationshipsByStartLEIsBatch(leis []string) ([]*domain.LEIRelationshipRecord, error)
+	FindRelationshipsByEndLEIsBatch(leis []string) ([]*domain.LEIRelationshipRecord, error)
 	CountRelationshipRecords() (int64, error)
 	DeleteRelationshipsBySourceFile(sourceFileID uuid.UUID) error
 
@@ -379,6 +381,28 @@ func (r *leiLevel2Repository) FindRelationshipsByStartLEI(lei string) ([]*domain
 func (r *leiLevel2Repository) FindRelationshipsByEndLEI(lei string) ([]*domain.LEIRelationshipRecord, error) {
 	var records []*domain.LEIRelationshipRecord
 	err := r.db.Where("end_node_lei = ?", lei).Find(&records).Error
+	return records, err
+}
+
+// FindRelationshipsByStartLEIsBatch returns all relationship records where start_node_lei is
+// any of the given LEI codes. Used to batch-hydrate parent LEI data for provisional records.
+func (r *leiLevel2Repository) FindRelationshipsByStartLEIsBatch(leis []string) ([]*domain.LEIRelationshipRecord, error) {
+	if len(leis) == 0 {
+		return nil, nil
+	}
+	var records []*domain.LEIRelationshipRecord
+	err := r.db.Where("start_node_lei IN ?", leis).Find(&records).Error
+	return records, err
+}
+
+// FindRelationshipsByEndLEIsBatch returns all relationship records where end_node_lei is
+// any of the given LEI codes. Used to batch-hydrate child LEI data for provisional records.
+func (r *leiLevel2Repository) FindRelationshipsByEndLEIsBatch(leis []string) ([]*domain.LEIRelationshipRecord, error) {
+	if len(leis) == 0 {
+		return nil, nil
+	}
+	var records []*domain.LEIRelationshipRecord
+	err := r.db.Where("end_node_lei IN ?", leis).Find(&records).Error
 	return records, err
 }
 

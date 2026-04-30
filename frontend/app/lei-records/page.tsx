@@ -111,6 +111,9 @@ interface LEIRecord {
   // Validation
   validation_sources: string
   validation_authority: string
+  
+  // Provisional LEI fields (Axiom-issued)
+  is_provisional: boolean
 }
 
 interface RelatedLEIReference {
@@ -1773,8 +1776,13 @@ export default function LEIRecordsPage() {
                               })()}
                             >
                               {isLeiColumn ? (
-                                <div>
+                                <div className="flex flex-col gap-2">
                                   <div className="font-mono">{formatCellValue(value, column.key)}</div>
+                                  {record.is_provisional && (
+                                    <Badge variant="blue" className="w-fit">
+                                      {t('leiRecords.badges.provisional')}
+                                    </Badge>
+                                  )}
                                 </div>
                               ) : isStatus ? (
                                 (() => {
@@ -2108,6 +2116,16 @@ export default function LEIRecordsPage() {
                       })()}
                     </p>
                   </div>
+                  {selectedRecord.is_provisional && (
+                    <div>
+                      <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">Type</span>
+                      <p className="mt-1">
+                        <Badge variant="blue">
+                          {t('leiRecords.badges.provisional')}
+                        </Badge>
+                      </p>
+                    </div>
+                  )}
                   <div>
                     <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">Category</span>
                     <p className="text-sm text-[rgb(var(--foreground-rgb))] mt-1">{selectedRecord.entity_category || '-'}</p>

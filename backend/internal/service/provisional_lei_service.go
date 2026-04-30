@@ -36,6 +36,8 @@ type CreateProvisionalLEIRequest struct {
 	LegalAddressCity    string `json:"legal_address_city"`
 	LegalJurisdiction   string `json:"legal_jurisdiction"`
 	ProvisioningSource  string `json:"provisioning_source"` // e.g. "onboarding", "counterparty"
+	ParentLEI           string `json:"parent_lei"`
+	ChildLEI            string `json:"child_lei"`
 	Notes               string `json:"notes"`
 }
 
@@ -47,22 +49,41 @@ type UpdateProvisionalLEIRequest struct {
 	LegalJurisdiction   string `json:"legal_jurisdiction"`
 	EntityStatus        string `json:"entity_status"`
 	ProvisioningSource  string `json:"provisioning_source"`
+	ParentLEI           string `json:"parent_lei"`
+	ChildLEI            string `json:"child_lei"`
 }
 
 type provisionalLEIService struct {
-	repo    repository.ProvisionalLEIRepository
-	leiRepo repository.LEIRepository
+	repo       repository.ProvisionalLEIRepository
+	leiRepo    repository.LEIRepository
+	level2Repo repository.LEILevel2Repository
 }
 
 // NewProvisionalLEIService creates a ProvisionalLEIService.
-func NewProvisionalLEIService(repo repository.ProvisionalLEIRepository, leiRepo repository.LEIRepository) ProvisionalLEIService {
-	return &provisionalLEIService{repo: repo, leiRepo: leiRepo}
+func NewProvisionalLEIService(
+	repo repository.ProvisionalLEIRepository,
+	leiRepo repository.LEIRepository,
+	level2Repo repository.LEILevel2Repository,
+) ProvisionalLEIService {
+	return &provisionalLEIService{repo: repo, leiRepo: leiRepo, level2Repo: level2Repo}
 }
 
 func (s *provisionalLEIService) Create(req CreateProvisionalLEIRequest, adminUserID string) (*domain.LEIRecord, error) {
 	code, err := generateProvisionalLEI()
 	if err != nil {
 		return nil, fmt.Errorf("generate provisional LEI code: %w", err)
+	}
+
+	parentLEI, childLEI, err := normalizeRelationshipInputs(req.ParentLEI, req.ChildLEI, code)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.validateRelatedLEI(parentLEI); err != nil {
+		return nil, err
+	}
+	if err := s.validateRelatedLEI(childLEI); err != nil {
+		return nil, err
 	}
 
 	log.Debug().
@@ -94,6 +115,14 @@ func (s *provisionalLEIService) Create(req CreateProvisionalLEIRequest, adminUse
 		return nil, fmt.Errorf("persist provisional LEI record: %w", err)
 	}
 
+	if err := s.upsertParentChildRelationships(code, parentLEI, childLEI); err != nil {
+		return nil, err
+	}
+
+	if err := s.hydrateRelationship(record); err != nil {
+		log.Warn().Err(err).Str("lei", code).Msg("failed to hydrate relationship after create")
+	}
+
 	log.Info().
 		Str("lei", code).
 		Str("legal_name", req.LegalName).
@@ -104,12 +133,25 @@ func (s *provisionalLEIService) Create(req CreateProvisionalLEIRequest, adminUse
 }
 
 func (s *provisionalLEIService) Update(lei string, req UpdateProvisionalLEIRequest, adminUserID string) (*domain.LEIRecord, error) {
+	normalizedLEI := strings.ToUpper(strings.TrimSpace(lei))
 	record, err := s.repo.FindByLEI(lei)
 	if err != nil {
 		return nil, fmt.Errorf("fetch provisional LEI %s: %w", lei, err)
 	}
 	if record == nil {
 		return nil, fmt.Errorf("provisional LEI %s not found", lei)
+	}
+
+	parentLEI, childLEI, err := normalizeRelationshipInputs(req.ParentLEI, req.ChildLEI, normalizedLEI)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.validateRelatedLEI(parentLEI); err != nil {
+		return nil, err
+	}
+	if err := s.validateRelatedLEI(childLEI); err != nil {
+		return nil, err
 	}
 
 	if req.LegalName != "" {
@@ -135,6 +177,14 @@ func (s *provisionalLEIService) Update(lei string, req UpdateProvisionalLEIReque
 
 	if err := s.repo.Update(record); err != nil {
 		return nil, fmt.Errorf("update provisional LEI %s: %w", lei, err)
+	}
+
+	if err := s.upsertParentChildRelationships(normalizedLEI, parentLEI, childLEI); err != nil {
+		return nil, err
+	}
+
+	if err := s.hydrateRelationship(record); err != nil {
+		log.Warn().Err(err).Str("lei", lei).Msg("failed to hydrate relationship after update")
 	}
 
 	log.Info().Str("lei", lei).Str("updated_by", adminUserID).Msg("provisional LEI updated")
@@ -178,6 +228,11 @@ func (s *provisionalLEIService) Get(lei string) (*domain.LEIRecord, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get provisional LEI %s: %w", lei, err)
 	}
+	if record != nil {
+		if hydrateErr := s.hydrateRelationship(record); hydrateErr != nil {
+			log.Warn().Err(hydrateErr).Str("lei", lei).Msg("failed to hydrate relationship for Get")
+		}
+	}
 	return record, nil
 }
 
@@ -189,6 +244,9 @@ func (s *provisionalLEIService) List(limit, offset int) ([]*domain.LEIRecord, in
 	total, err := s.repo.CountProvisional()
 	if err != nil {
 		return nil, 0, fmt.Errorf("count provisional LEIs: %w", err)
+	}
+	if hydrateErr := s.hydrateRelationshipsBatch(records); hydrateErr != nil {
+		log.Warn().Err(hydrateErr).Msg("failed to hydrate relationships for List")
 	}
 	return records, total, nil
 }
@@ -299,4 +357,181 @@ func computeMod97(numStr string) int {
 		remainder = (remainder*10 + digit) % 97
 	}
 	return remainder
+}
+
+func normalizeRelationshipInputs(parentLEI, childLEI, provisionalLEI string) (string, string, error) {
+	normalizedProvisional := strings.ToUpper(strings.TrimSpace(provisionalLEI))
+	normalizedParent := strings.ToUpper(strings.TrimSpace(parentLEI))
+	normalizedChild := strings.ToUpper(strings.TrimSpace(childLEI))
+
+	if normalizedParent != "" {
+		if err := validateLEIFormat(normalizedParent); err != nil {
+			return "", "", fmt.Errorf("invalid parent LEI: %w", err)
+		}
+	}
+
+	if normalizedChild != "" {
+		if err := validateLEIFormat(normalizedChild); err != nil {
+			return "", "", fmt.Errorf("invalid child LEI: %w", err)
+		}
+	}
+
+	if normalizedParent != "" && normalizedParent == normalizedProvisional {
+		return "", "", fmt.Errorf("parent LEI cannot be the same as the provisional LEI")
+	}
+
+	if normalizedChild != "" && normalizedChild == normalizedProvisional {
+		return "", "", fmt.Errorf("child LEI cannot be the same as the provisional LEI")
+	}
+
+	if normalizedParent != "" && normalizedChild != "" && normalizedParent == normalizedChild {
+		return "", "", fmt.Errorf("parent LEI and child LEI must be different")
+	}
+
+	return normalizedParent, normalizedChild, nil
+}
+
+func validateLEIFormat(lei string) error {
+	if len(lei) != 20 {
+		return fmt.Errorf("LEI must be exactly 20 characters")
+	}
+	for i, ch := range lei {
+		if i < 18 {
+			if !((ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'Z')) {
+				return fmt.Errorf("LEI contains invalid character at position %d", i)
+			}
+			continue
+		}
+		if ch < '0' || ch > '9' {
+			return fmt.Errorf("LEI check digits are invalid")
+		}
+	}
+	return nil
+}
+
+func (s *provisionalLEIService) validateRelatedLEI(lei string) error {
+	if lei == "" {
+		return nil
+	}
+	// Provisional LEIs (AXIO prefix) live in the provisional repo, not the GLEIF repo.
+	if strings.HasPrefix(lei, "AXIO") {
+		record, err := s.repo.FindByLEI(lei)
+		if err != nil {
+			return fmt.Errorf("fetch related provisional LEI %s: %w", lei, err)
+		}
+		if record == nil {
+			return fmt.Errorf("related provisional LEI %s not found", lei)
+		}
+		return nil
+	}
+	record, err := s.leiRepo.FindLEIByLEI(lei)
+	if err != nil {
+		return fmt.Errorf("fetch related LEI %s: %w", lei, err)
+	}
+	if record == nil {
+		return fmt.Errorf("related LEI %s not found", lei)
+	}
+	return nil
+}
+
+// hydrateRelationship populates ParentLEI and ChildLEI on a single provisional LEI record
+// by querying the level 2 relationship table.
+func (s *provisionalLEIService) hydrateRelationship(record *domain.LEIRecord) error {
+	startRels, err := s.level2Repo.FindRelationshipsByStartLEI(record.LEI)
+	if err != nil {
+		return fmt.Errorf("hydrate parent for %s: %w", record.LEI, err)
+	}
+	for _, rel := range startRels {
+		if rel.RelationshipType == "IS_DIRECTLY_CONSOLIDATED_BY" {
+			record.ParentLEI = rel.EndNodeLEI
+			break
+		}
+	}
+
+	endRels, err := s.level2Repo.FindRelationshipsByEndLEI(record.LEI)
+	if err != nil {
+		return fmt.Errorf("hydrate child for %s: %w", record.LEI, err)
+	}
+	for _, rel := range endRels {
+		if rel.RelationshipType == "IS_DIRECTLY_CONSOLIDATED_BY" {
+			record.ChildLEI = rel.StartNodeLEI
+			break
+		}
+	}
+	return nil
+}
+
+// hydrateRelationshipsBatch efficiently populates ParentLEI and ChildLEI for a slice of
+// provisional LEI records using two bulk queries instead of 2N individual queries.
+func (s *provisionalLEIService) hydrateRelationshipsBatch(records []*domain.LEIRecord) error {
+	if len(records) == 0 {
+		return nil
+	}
+
+	leis := make([]string, len(records))
+	for i, r := range records {
+		leis[i] = r.LEI
+	}
+
+	startRels, err := s.level2Repo.FindRelationshipsByStartLEIsBatch(leis)
+	if err != nil {
+		return fmt.Errorf("batch hydrate parents: %w", err)
+	}
+	parentByLEI := make(map[string]string, len(startRels))
+	for _, rel := range startRels {
+		if rel.RelationshipType == "IS_DIRECTLY_CONSOLIDATED_BY" {
+			parentByLEI[rel.StartNodeLEI] = rel.EndNodeLEI
+		}
+	}
+
+	endRels, err := s.level2Repo.FindRelationshipsByEndLEIsBatch(leis)
+	if err != nil {
+		return fmt.Errorf("batch hydrate children: %w", err)
+	}
+	childByLEI := make(map[string]string, len(endRels))
+	for _, rel := range endRels {
+		if rel.RelationshipType == "IS_DIRECTLY_CONSOLIDATED_BY" {
+			childByLEI[rel.EndNodeLEI] = rel.StartNodeLEI
+		}
+	}
+
+	for _, r := range records {
+		r.ParentLEI = parentByLEI[r.LEI]
+		r.ChildLEI = childByLEI[r.LEI]
+	}
+	return nil
+}
+
+func (s *provisionalLEIService) upsertParentChildRelationships(provisionalLEI, parentLEI, childLEI string) error {
+	if parentLEI != "" {
+		if err := s.level2Repo.UpsertRelationshipRecord(&domain.LEIRelationshipRecord{
+			StartNodeLEI:            provisionalLEI,
+			EndNodeLEI:              parentLEI,
+			RelationshipType:        "IS_DIRECTLY_CONSOLIDATED_BY",
+			RelationshipStatus:      "ACTIVE",
+			RelationshipPeriods:     domain.JSONBString("[]"),
+			RelationshipQualifiers:  domain.JSONBString("[]"),
+			RelationshipQuantifiers: domain.JSONBString("[]"),
+			RegistrationStatus:      "PUBLISHED",
+		}); err != nil {
+			return fmt.Errorf("upsert parent relationship for %s: %w", provisionalLEI, err)
+		}
+	}
+
+	if childLEI != "" {
+		if err := s.level2Repo.UpsertRelationshipRecord(&domain.LEIRelationshipRecord{
+			StartNodeLEI:            childLEI,
+			EndNodeLEI:              provisionalLEI,
+			RelationshipType:        "IS_DIRECTLY_CONSOLIDATED_BY",
+			RelationshipStatus:      "ACTIVE",
+			RelationshipPeriods:     domain.JSONBString("[]"),
+			RelationshipQualifiers:  domain.JSONBString("[]"),
+			RelationshipQuantifiers: domain.JSONBString("[]"),
+			RegistrationStatus:      "PUBLISHED",
+		}); err != nil {
+			return fmt.Errorf("upsert child relationship for %s: %w", provisionalLEI, err)
+		}
+	}
+
+	return nil
 }

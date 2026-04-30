@@ -62,6 +62,29 @@ The provisional table supports the same usability controls as other data tables:
 
 Each control supports **Save as default** with undo, so personal preferences persist.
 
+### Sort
+
+Click any column heading to sort the table by that column. Click again to reverse the direction.
+An arrow indicator shows the active sort column and direction.
+
+### Filter
+
+A filter bar is shown above the table. Use it to narrow the displayed records:
+
+- **Search** — matches against legal name, LEI code, source, or notes (case-insensitive).
+- **Status** — restricts results to a specific entity status (Active, Inactive, or Merged).
+- **Source** — filters to records from a specific provisioning source.
+- **Country** — filters to legal address country code/name (for example show only `GB`).
+
+When one or more filters are active, a **Clear Filters** button resets all filters at once.
+The record count in the header updates to show how many records match the current filters.
+
+### Parent LEI and Child LEI columns
+
+The **Parent LEI** and **Child LEI** columns display relationship data drawn from the LEI level-2
+relationship records. These values are hydrated at query time and may be blank if no relationship
+record exists for that provisional entity.
+
 ## Common issues
 
 | Issue | Likely cause | Resolution |

@@ -25,6 +25,8 @@ type UserEntityLinkRepository interface {
 	ListByUser(userID uuid.UUID) ([]*domain.UserEntityLink, error)
 	// ListByLEI returns all links (active and revoked) for a LEI entity.
 	ListByLEI(lei string) ([]*domain.UserEntityLink, error)
+	// ListAll returns all links, including revoked and expired, with pagination.
+	ListAll(limit, offset int) ([]*domain.UserEntityLink, error)
 	// ListActive returns all currently active links (not revoked, not expired).
 	ListActive(limit, offset int) ([]*domain.UserEntityLink, error)
 	// Revoke soft-deletes a link by setting revoked_at to now.
@@ -106,6 +108,19 @@ func (r *userEntityLinkRepository) ListByLEI(lei string) ([]*domain.UserEntityLi
 		Find(&links).Error
 	if err != nil {
 		return nil, fmt.Errorf("list links for LEI %s: %w", lei, err)
+	}
+	return links, nil
+}
+
+func (r *userEntityLinkRepository) ListAll(limit, offset int) ([]*domain.UserEntityLink, error) {
+	var links []*domain.UserEntityLink
+	err := r.db.
+		Order("granted_at DESC").
+		Limit(limit).
+		Offset(offset).
+		Find(&links).Error
+	if err != nil {
+		return nil, fmt.Errorf("list all user-entity links: %w", err)
 	}
 	return links, nil
 }

@@ -44,10 +44,10 @@ export default function AdminSection() {
           icon="👥"
         />
         <AdminLandingCard
-          href="/admin/translations"
-          title="Translations"
-          description="Review community-contributed UI translations, approve or reject pending strings, and add new translations"
-          icon="🌐"
+          href="/admin/user-entity-links"
+          title="User–Entity Links"
+          description="Grant and revoke entity-scoped access links that associate users with specific LEI entities and roles"
+          icon="🔗"
         />
         <AdminLandingCard
           href="/admin/provisional-lei"
@@ -56,10 +56,10 @@ export default function AdminSection() {
           icon="🔖"
         />
         <AdminLandingCard
-          href="/admin/user-entity-links"
-          title="User–Entity Links"
-          description="Grant and revoke entity-scoped access links that associate users with specific LEI entities and roles"
-          icon="🔗"
+          href="/admin/translations"
+          title="Translations"
+          description="Review community-contributed UI translations, approve or reject pending strings, and add new translations"
+          icon="🌐"
         />
       </div>
     </section>

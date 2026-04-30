@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 import PageHeader from '../../components/PageHeader'
+import SortableHeaderCell from '../../components/SortableHeaderCell'
+import SearchInputWithOverflowTooltip from '../../components/SearchInputWithOverflowTooltip'
 import Alert from '../../components/Alert'
 import LoadingSpinner from '../../components/LoadingSpinner'
 import PreferenceSavePrompt from '../../components/PreferenceSavePrompt'
@@ -14,6 +16,7 @@ import { getAuthToken } from '../../lib/auth-token'
 import { buildDocsUrl } from '../../lib/docsLinks'
 import { useDeferredBooleanPreference } from '../../lib/useDeferredBooleanPreference'
 import { useEnglishTooltips } from '../../lib/useEnglishTooltips'
+import { useSearchFocusShortcut } from '../../lib/useSearchFocusShortcut'
 import { useUserPreference } from '../../lib/useUserPreference'
 import { ensureLeadingEmoji, useButtonEmojiMode } from '../../lib/useButtonEmojiMode'
 
@@ -29,9 +32,13 @@ interface ProvisionalLEI {
   entity_status: string
   provisioning_source: string
   successor_lei: string
+  notes?: string
   is_provisional: boolean
   created_at: string
   updated_at: string
+  // Parent/child relationships are hydrated from lei_relationship_records (level 2 data)
+  parent_lei?: string
+  child_lei?: string
 }
 
 type ProvisionalColumnKey =
@@ -40,9 +47,11 @@ type ProvisionalColumnKey =
   | 'provisioning_source'
   | 'entity_status'
   | 'successor_lei'
+  | 'parent_lei'
   | 'legal_address_country'
   | 'legal_address_city'
   | 'legal_jurisdiction'
+  | 'notes'
   | 'created_at'
   | 'updated_at'
 
@@ -63,11 +72,15 @@ const PROVISIONAL_COLUMNS: ProvisionalColumn[] = [
   
   // Associated Entities
   { key: 'successor_lei', labelKey: 'provisionalLei.columns.successorLei', groupKey: 'provisionalLei.columns.groups.associated', defaultVisible: true, width: 'w-44' },
+  { key: 'parent_lei', labelKey: 'provisionalLei.columns.parentLei', groupKey: 'provisionalLei.columns.groups.associated', defaultVisible: false, width: 'w-44' },
   
   // Address
   { key: 'legal_address_country', labelKey: 'provisionalLei.columns.country', groupKey: 'provisionalLei.columns.groups.address', defaultVisible: true, width: 'w-24' },
   { key: 'legal_address_city', labelKey: 'provisionalLei.columns.city', groupKey: 'provisionalLei.columns.groups.address', defaultVisible: true, width: 'w-32' },
   { key: 'legal_jurisdiction', labelKey: 'provisionalLei.columns.jurisdiction', groupKey: 'provisionalLei.columns.groups.address', defaultVisible: true, width: 'w-32' },
+  
+  // Metadata
+  { key: 'notes', labelKey: 'provisionalLei.columns.notes', groupKey: 'provisionalLei.columns.groups.metadata', defaultVisible: false, width: 'min-w-64' },
   
   // Dates
   { key: 'created_at', labelKey: 'provisionalLei.columns.created', groupKey: 'provisionalLei.columns.groups.dates', defaultVisible: true, width: 'w-32' },
@@ -85,6 +98,8 @@ interface CreateForm {
   legal_jurisdiction: string
   provisioning_source: string
   notes: string
+  parent_lei: string
+  child_lei: string
 }
 
 interface EditForm {
@@ -94,6 +109,9 @@ interface EditForm {
   legal_jurisdiction: string
   entity_status: string
   provisioning_source: string
+  notes: string
+  parent_lei: string
+  child_lei: string
 }
 
 const EMPTY_CREATE: CreateForm = {
@@ -103,6 +121,8 @@ const EMPTY_CREATE: CreateForm = {
   legal_jurisdiction: '',
   provisioning_source: '',
   notes: '',
+  parent_lei: '',
+  child_lei: '',
 }
 
 const ENTITY_STATUS_OPTIONS = [
@@ -140,9 +160,19 @@ function ProvisionalLEIContent() {
   const [actionLoading, setActionLoading] = useState<string | null>(null)
 
   const [showCreate, setShowCreate] = useState(false)
+  const [sortColumn, setSortColumn] = useState<ProvisionalColumnKey | ''>('')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+  const [sourceFilter, setSourceFilter] = useState('')
+  const [countryFilter, setCountryFilter] = useState('')
+  const searchInputRef = useRef<HTMLInputElement | null>(null)
+
   const [createForm, setCreateForm] = useState<CreateForm>(EMPTY_CREATE)
   const [editTarget, setEditTarget] = useState<ProvisionalLEI | null>(null)
   const [editForm, setEditForm] = useState<EditForm | null>(null)
+  const [leiNames, setLeiNames] = useState<Record<string, string>>({})
+  const [leiLookupLoading, setLeiLookupLoading] = useState<Record<string, boolean>>({})
   const [succeedTarget, setSucceedTarget] = useState<ProvisionalLEI | null>(null)
   const [officialLEI, setOfficialLEI] = useState('')
   const [showColumnSelector, setShowColumnSelector] = useState(false)
@@ -196,6 +226,8 @@ function ProvisionalLEIContent() {
   const [showColumnUndoToast, setShowColumnUndoToast] = useState(false)
   const [columnUndoVersion, setColumnUndoVersion] = useState(0)
 
+  useSearchFocusShortcut(searchInputRef)
+
   const effectiveVisibleColumns = localColumns ?? visibleColumns
   const isExpandedView = expandedWidthPreference.value
   const showCodes = locationDisplayPreference.value
@@ -221,6 +253,113 @@ function ProvisionalLEIContent() {
     () => PROVISIONAL_COLUMNS.filter((column) => effectiveVisibleColumns.has(column.key)),
     [effectiveVisibleColumns],
   )
+
+  const normalizeLEI = (value: string) => value.trim().toUpperCase()
+
+  const handleSort = (key: ProvisionalColumnKey) => {
+    if (sortColumn === key) {
+      setSortDirection((d) => (d === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortColumn(key)
+      setSortDirection('asc')
+    }
+  }
+
+  const sourceFilterOptions = useMemo(() => {
+    const values = Array.from(new Set(records.map((r) => String(r.provisioning_source || '').trim()).filter(Boolean)))
+    return values.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
+  }, [records])
+
+  const countryFilterOptions = useMemo(() => {
+    const codes = Array.from(new Set(records.map((r) => String(r.legal_address_country || '').trim().toUpperCase()).filter(Boolean)))
+    return codes
+      .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
+      .map((code) => ({
+        value: code,
+        label: countryNameByCode.get(code) ? `${code} - ${countryNameByCode.get(code)}` : code,
+      }))
+  }, [records, countryNameByCode])
+
+  const hasActiveFilters =
+    searchTerm.trim() !== '' ||
+    statusFilter !== '' ||
+    sourceFilter !== '' ||
+    countryFilter !== ''
+
+  const clearFilters = () => {
+    setSearchTerm('')
+    setStatusFilter('')
+    setSourceFilter('')
+    setCountryFilter('')
+  }
+
+  const filteredRecords = useMemo(() => {
+    let result = records
+    const q = searchTerm.trim().toLowerCase()
+    if (q) {
+      result = result.filter(
+        (r) =>
+          r.legal_name?.toLowerCase().includes(q) ||
+          r.lei?.toLowerCase().includes(q) ||
+          r.provisioning_source?.toLowerCase().includes(q) ||
+          r.notes?.toLowerCase().includes(q),
+      )
+    }
+    if (statusFilter) {
+      result = result.filter((r) => (r.entity_status || '').toUpperCase() === statusFilter.toUpperCase())
+    }
+    if (sourceFilter) {
+      result = result.filter((r) => String(r.provisioning_source || '').trim().toLowerCase() === sourceFilter.toLowerCase())
+    }
+    if (countryFilter) {
+      result = result.filter((r) => String(r.legal_address_country || '').trim().toUpperCase() === countryFilter.toUpperCase())
+    }
+    if (sortColumn) {
+      result = [...result].sort((a, b) => {
+        const aVal = String(a[sortColumn as keyof ProvisionalLEI] ?? '')
+        const bVal = String(b[sortColumn as keyof ProvisionalLEI] ?? '')
+        return sortDirection === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal)
+      })
+    }
+    return result
+  }, [records, searchTerm, statusFilter, sourceFilter, countryFilter, sortColumn, sortDirection])
+
+  const getLeiName = (value: string) => leiNames[normalizeLEI(value)]
+
+  const lookupLEIName = useCallback(async (value: string, fieldKey: string) => {
+    const lei = normalizeLEI(value)
+    if (lei.length !== 20) {
+      setLeiLookupLoading((current) => ({ ...current, [fieldKey]: false }))
+      return
+    }
+
+    if (leiNames[lei]) {
+      return
+    }
+
+    const token = getAuthToken()
+    if (!token) return
+
+    setLeiLookupLoading((current) => ({ ...current, [fieldKey]: true }))
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/lei/${encodeURIComponent(lei)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      if (!res.ok) return
+
+      const data = await res.json()
+      const legalName = data?.legal_name ?? data?.data?.legal_name ?? data?.record?.legal_name
+      if (typeof legalName === 'string' && legalName.trim()) {
+        setLeiNames((current) => ({ ...current, [lei]: legalName }))
+      }
+    } catch {
+      // Best-effort display enrichment.
+    } finally {
+      setLeiLookupLoading((current) => ({ ...current, [fieldKey]: false }))
+    }
+  }, [leiNames])
 
   const fetchRecords = useCallback(async () => {
     setLoading(true)
@@ -255,6 +394,36 @@ function ProvisionalLEIContent() {
   useEffect(() => {
     fetchRecords()
   }, [fetchRecords])
+
+  const fetchLeiNames = useCallback(async (codes: string[]) => {
+    if (codes.length === 0) return
+    const token = getAuthToken()
+    if (!token) return
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/lei/names?codes=${encodeURIComponent(codes.join(','))}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) return
+
+      const data = await res.json()
+      if (!data || typeof data !== 'object' || Array.isArray(data)) return
+      setLeiNames((current) => ({ ...current, ...(data as Record<string, string>) }))
+    } catch {
+      // Best-effort table enrichment only.
+    }
+  }, [])
+
+  useEffect(() => {
+    const tableLeiCodes = Array.from(new Set(records.flatMap((record) => [
+      normalizeLEI(record.successor_lei || ''),
+      normalizeLEI(record.parent_lei || ''),
+    ]).filter((code) => code.length === 20)))
+    const missingCodes = tableLeiCodes.filter((code) => !leiNames[code])
+    if (missingCodes.length > 0) {
+      fetchLeiNames(missingCodes)
+    }
+  }, [fetchLeiNames, leiNames, records])
 
   useEffect(() => {
     const fetchCountries = async () => {
@@ -362,7 +531,21 @@ function ProvisionalLEIContent() {
       case 'entity_status':
         return statusBadge(record.entity_status)
       case 'successor_lei':
-        return record.successor_lei || '—'
+        return record.successor_lei ? (
+          <div>
+            <div className="font-mono">{record.successor_lei}</div>
+            {getLeiName(record.successor_lei) && <div className="opacity-60">{getLeiName(record.successor_lei)}</div>}
+          </div>
+        ) : '—'
+      case 'parent_lei':
+        return record.parent_lei ? (
+          <div>
+            <div className="font-mono">{record.parent_lei}</div>
+            {getLeiName(record.parent_lei) && <div className="opacity-60">{getLeiName(record.parent_lei)}</div>}
+          </div>
+        ) : '—'
+      case 'notes':
+        return record.notes || '—'
       case 'legal_address_country':
         return resolveCountryOrJurisdiction(record.legal_address_country)
       case 'legal_address_city':
@@ -415,7 +598,13 @@ function ProvisionalLEIContent() {
       legal_jurisdiction: r.legal_jurisdiction,
       entity_status: r.entity_status,
       provisioning_source: r.provisioning_source,
+      notes: r.notes || '',
+      parent_lei: r.parent_lei || '',
+      child_lei: r.child_lei || '',
     })
+    // Pre-load LEI names if parent/child are present
+    if (r.parent_lei) lookupLEIName(r.parent_lei, 'editParent')
+    if (r.child_lei) lookupLEIName(r.child_lei, 'editChild')
     setSucceedTarget(null)
     setShowCreate(false)
   }
@@ -573,7 +762,6 @@ function ProvisionalLEIContent() {
                             handleSetVisibleColumns(newSet)
                           }}
                           className="w-full text-left px-3 py-2 text-xs font-semibold hover:theme-panel-hover"
-                          title={t(`${groupKey}.tooltip`, { defaultValue: '' })}
                         >
                           {t(groupKey)}
                         </button>
@@ -596,7 +784,9 @@ function ProvisionalLEIContent() {
 
               <button
                 onClick={() => { setShowCreate((v) => !v); setEditTarget(null); setSucceedTarget(null) }}
-                className="h-9 px-3 rounded-lg theme-btn-primary theme-focus text-sm font-medium"
+                disabled={showCreate}
+                aria-pressed={showCreate}
+                className="h-9 px-3 rounded-lg theme-btn-primary theme-focus text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 title={getEnglishTooltip('provisionalLei.actions.create')}
               >
                 {formatLabel(t('provisionalLei.actions.create'))}
@@ -610,8 +800,74 @@ function ProvisionalLEIContent() {
 
         <div className="flex items-center justify-between mb-4">
           <span className="text-sm theme-text-muted">
-            {t('provisionalLei.totalCount', { count: total })}
+            {hasActiveFilters
+              ? t('provisionalLei.filters.resultCount', { shown: filteredRecords.length, total })
+              : t('provisionalLei.totalCount', { count: total })}
           </span>
+        </div>
+
+        {/* Filter bar */}
+        <div className="relative z-40 bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm rounded-lg p-4 mb-4 flex flex-wrap items-end gap-3">
+          <div className="flex-1 min-w-[200px]">
+            <label className="block text-xs font-medium theme-text-muted mb-1">{t('provisionalLei.filters.search')}</label>
+            <SearchInputWithOverflowTooltip
+              ref={searchInputRef}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder={t('provisionalLei.filters.searchPlaceholder')}
+              className="w-full h-9 px-3 rounded-lg border theme-input text-sm"
+            />
+          </div>
+          <div className="min-w-[160px]">
+            <label className="block text-xs font-medium theme-text-muted mb-1">{t('provisionalLei.filters.status')}</label>
+            <ThemedSelect
+              value={statusFilter}
+              onChange={setStatusFilter}
+              options={[
+                { value: '', label: t('provisionalLei.filters.allStatuses') },
+                { value: 'ACTIVE', label: t('provisionalLei.filters.statusActive') },
+                { value: 'INACTIVE', label: t('provisionalLei.filters.statusInactive') },
+                { value: 'MERGED', label: t('provisionalLei.filters.statusMerged') },
+              ]}
+              ariaLabel={t('provisionalLei.filters.status')}
+              className="w-full"
+            />
+          </div>
+          <div className="min-w-[200px]">
+            <label className="block text-xs font-medium theme-text-muted mb-1">{t('provisionalLei.filters.source')}</label>
+            <ThemedSelect
+              value={sourceFilter}
+              onChange={setSourceFilter}
+              options={[
+                { value: '', label: t('provisionalLei.filters.allSources') },
+                ...sourceFilterOptions.map((source) => ({ value: source, label: source })),
+              ]}
+              ariaLabel={t('provisionalLei.filters.source')}
+              className="w-full"
+            />
+          </div>
+          <div className="min-w-[220px]">
+            <label className="block text-xs font-medium theme-text-muted mb-1">{t('provisionalLei.filters.country')}</label>
+            <ThemedSelect
+              value={countryFilter}
+              onChange={setCountryFilter}
+              options={[
+                { value: '', label: t('provisionalLei.filters.allCountries') },
+                ...countryFilterOptions,
+              ]}
+              ariaLabel={t('provisionalLei.filters.country')}
+              className="w-full"
+            />
+          </div>
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="h-9 px-3 rounded-lg theme-btn-neutral theme-focus text-sm font-medium"
+            >
+              {t('common.clearFilters')}
+            </button>
+          )}
         </div>
 
         {showCreate && (
@@ -690,6 +946,42 @@ function ProvisionalLEIContent() {
                   className="w-full rounded-md border border-[rgb(var(--border-rgb))] bg-[rgb(var(--surface-rgb))] px-3 py-2 text-sm theme-focus"
                   placeholder={t('provisionalLei.form.notesPlaceholder')}
                 />
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1 theme-text-muted">
+                  {t('provisionalLei.form.parentLei')}
+                </label>
+                <input
+                  type="text"
+                  value={createForm.parent_lei}
+                  onChange={(e) => setCreateForm((f) => ({ ...f, parent_lei: e.target.value.toUpperCase() }))}
+                  onBlur={() => lookupLEIName(createForm.parent_lei, 'createParent')}
+                  className="w-full rounded-md border border-[rgb(var(--border-rgb))] bg-[rgb(var(--surface-rgb))] px-3 py-2 text-sm font-mono theme-focus"
+                  placeholder={t('provisionalLei.form.parentLeiPlaceholder')}
+                  maxLength={20}
+                />
+                {leiLookupLoading.createParent && <p className="mt-1 text-xs theme-text-muted">{t('common.loading')}</p>}
+                {!leiLookupLoading.createParent && getLeiName(createForm.parent_lei) && (
+                  <p className="mt-1 text-xs theme-text-muted">{getLeiName(createForm.parent_lei)}</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1 theme-text-muted">
+                  {t('provisionalLei.form.childLei')}
+                </label>
+                <input
+                  type="text"
+                  value={createForm.child_lei}
+                  onChange={(e) => setCreateForm((f) => ({ ...f, child_lei: e.target.value.toUpperCase() }))}
+                  onBlur={() => lookupLEIName(createForm.child_lei, 'createChild')}
+                  className="w-full rounded-md border border-[rgb(var(--border-rgb))] bg-[rgb(var(--surface-rgb))] px-3 py-2 text-sm font-mono theme-focus"
+                  placeholder={t('provisionalLei.form.childLeiPlaceholder')}
+                  maxLength={20}
+                />
+                {leiLookupLoading.createChild && <p className="mt-1 text-xs theme-text-muted">{t('common.loading')}</p>}
+                {!leiLookupLoading.createChild && getLeiName(createForm.child_lei) && (
+                  <p className="mt-1 text-xs theme-text-muted">{getLeiName(createForm.child_lei)}</p>
+                )}
               </div>
             </div>
             <div className="flex gap-3 mt-4">
@@ -783,6 +1075,42 @@ function ProvisionalLEIContent() {
                   className="w-full rounded-md border border-[rgb(var(--border-rgb))] bg-[rgb(var(--surface-rgb))] px-3 py-2 text-sm theme-focus"
                 />
               </div>
+              <div>
+                <label className="block text-xs font-medium mb-1 theme-text-muted">
+                  {t('provisionalLei.form.parentLei')}
+                </label>
+                <input
+                  type="text"
+                  value={editForm.parent_lei}
+                  onChange={(e) => setEditForm((f) => f ? { ...f, parent_lei: e.target.value.toUpperCase() } : f)}
+                  onBlur={() => lookupLEIName(editForm.parent_lei, 'editParent')}
+                  className="w-full rounded-md border border-[rgb(var(--border-rgb))] bg-[rgb(var(--surface-rgb))] px-3 py-2 text-sm font-mono theme-focus"
+                  placeholder={t('provisionalLei.form.parentLeiPlaceholder')}
+                  maxLength={20}
+                />
+                {leiLookupLoading.editParent && <p className="mt-1 text-xs theme-text-muted">{t('common.loading')}</p>}
+                {!leiLookupLoading.editParent && getLeiName(editForm.parent_lei) && (
+                  <p className="mt-1 text-xs theme-text-muted">{getLeiName(editForm.parent_lei)}</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1 theme-text-muted">
+                  {t('provisionalLei.form.childLei')}
+                </label>
+                <input
+                  type="text"
+                  value={editForm.child_lei}
+                  onChange={(e) => setEditForm((f) => f ? { ...f, child_lei: e.target.value.toUpperCase() } : f)}
+                  onBlur={() => lookupLEIName(editForm.child_lei, 'editChild')}
+                  className="w-full rounded-md border border-[rgb(var(--border-rgb))] bg-[rgb(var(--surface-rgb))] px-3 py-2 text-sm font-mono theme-focus"
+                  placeholder={t('provisionalLei.form.childLeiPlaceholder')}
+                  maxLength={20}
+                />
+                {leiLookupLoading.editChild && <p className="mt-1 text-xs theme-text-muted">{t('common.loading')}</p>}
+                {!leiLookupLoading.editChild && getLeiName(editForm.child_lei) && (
+                  <p className="mt-1 text-xs theme-text-muted">{getLeiName(editForm.child_lei)}</p>
+                )}
+              </div>
             </div>
             <div className="flex gap-3 mt-4">
               <button
@@ -843,15 +1171,23 @@ function ProvisionalLEIContent() {
           <LoadingSpinner message={t('provisionalLei.loading')} />
         ) : records.length === 0 ? (
           <div className="text-center py-16 theme-text-muted">{t('provisionalLei.empty')}</div>
+        ) : filteredRecords.length === 0 ? (
+          <div className="text-center py-16 theme-text-muted">{t('provisionalLei.filters.noResults')}</div>
         ) : (
           <div className="theme-table-shell border-2 backdrop-blur-sm rounded-lg shadow overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="theme-table-header border-b border-[rgb(var(--border-rgb))]">
                   {activeColumns.map((column) => (
-                    <th key={column.key} className={`${column.width} px-4 py-3 text-left font-medium theme-table-header-cell`}>
-                      <span title={getEnglishTooltip(column.labelKey)}>{t(column.labelKey)}</span>
-                    </th>
+                    <SortableHeaderCell
+                      key={column.key}
+                      label={<span title={getEnglishTooltip(column.labelKey)}>{t(column.labelKey)}</span>}
+                      className={`${column.width} px-4 py-3 font-medium theme-table-header-cell`}
+                      sortable
+                      onSort={() => handleSort(column.key as ProvisionalColumnKey)}
+                      isActiveSort={sortColumn === column.key}
+                      sortDirection={sortDirection}
+                    />
                   ))}
                   <th className="px-4 py-3 text-left font-medium theme-table-header-cell min-w-[220px]">
                     <span title={getEnglishTooltip('provisionalLei.columns.actions')}>{t('provisionalLei.columns.actions')}</span>
@@ -859,7 +1195,7 @@ function ProvisionalLEIContent() {
                 </tr>
               </thead>
               <tbody>
-                {records.map((record) => (
+                {filteredRecords.map((record) => (
                   <tr
                     key={record.id}
                     className="border-b border-[rgb(var(--border-rgb)/0.4)] theme-table-row-hover transition-colors"

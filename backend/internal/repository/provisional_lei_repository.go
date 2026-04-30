@@ -135,7 +135,18 @@ func (r *provisionalLEIRepository) Update(record *domain.LEIRecord) error {
 	if !record.IsProvisional {
 		return errors.New("cannot update a non-provisional LEI record via ProvisionalLEIRepository")
 	}
-	result := r.db.Table("lei_raw.lei_records").Save(record)
+	// Update only the fields that matter for provisional LEI records, not all fields.
+	// This prevents empty strings from being written to domain-typed columns like hq_address_country.
+	result := r.db.Table("lei_raw.lei_records").Where("id = ?", record.ID).Updates(map[string]interface{}{
+		"legal_name":            record.LegalName,
+		"legal_address_country": record.LegalAddressCountry,
+		"legal_address_city":    record.LegalAddressCity,
+		"legal_jurisdiction":    record.LegalJurisdiction,
+		"entity_status":         record.EntityStatus,
+		"provisioning_source":   record.ProvisioningSource,
+		"updated_by":            record.UpdatedBy,
+		"last_update_date":      record.LastUpdateDate,
+	})
 	return result.Error
 }
 

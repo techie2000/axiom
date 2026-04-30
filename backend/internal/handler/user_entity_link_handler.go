@@ -3,6 +3,7 @@ package handler
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/techie2000/axiom/internal/service"
@@ -23,11 +24,20 @@ func NewUserEntityLinkHandler(svc service.UserEntityLinkService) *UserEntityLink
 func (h *UserEntityLinkHandler) ListActive(c *gin.Context) {
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
 	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	includeRevoked := strings.EqualFold(c.Query("include_revoked"), "true")
 	if limit < 1 || limit > 200 {
 		limit = 50
 	}
 
-	links, err := h.svc.ListActive(limit, offset)
+	var (
+		links any
+		err   error
+	)
+	if includeRevoked {
+		links, err = h.svc.ListAll(limit, offset)
+	} else {
+		links, err = h.svc.ListActive(limit, offset)
+	}
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user-entity links"})
 		return

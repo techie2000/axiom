@@ -11,23 +11,23 @@ import (
 
 // Services holds all service interfaces
 type Services struct {
-	Auth             AuthService
-	Country          CountryService
-	Currency         CurrencyService
-	Language         LanguageService
-	Entity           EntityService
-	Instrument       InstrumentService
-	Account          AccountService
-	SSI              SSIService
-	LEI              LEIService
-	LEILevel2        LEILevel2Service
-	MasterData       MasterDataService
-	CodeMapping      CodeMappingService
-	UserPreference   UserPreferenceService
-	UITranslation    UITranslationService
-	GLEIFReference   GLEIFReferenceService
-	ProvisionalLEI   ProvisionalLEIService
-	UserEntityLink   UserEntityLinkService
+	Auth           AuthService
+	Country        CountryService
+	Currency       CurrencyService
+	Language       LanguageService
+	Entity         EntityService
+	Instrument     InstrumentService
+	Account        AccountService
+	SSI            SSIService
+	LEI            LEIService
+	LEILevel2      LEILevel2Service
+	MasterData     MasterDataService
+	CodeMapping    CodeMappingService
+	UserPreference UserPreferenceService
+	UITranslation  UITranslationService
+	GLEIFReference GLEIFReferenceService
+	ProvisionalLEI ProvisionalLEIService
+	UserEntityLink UserEntityLinkService
 }
 
 // NewServices creates a new services instance
@@ -55,7 +55,7 @@ func NewServices(repos *repository.Repositories, db *gorm.DB, leiDataDir string,
 			repos.GLEIFLegalJurisdiction,
 			leiDataDir,
 		),
-		ProvisionalLEI: NewProvisionalLEIService(repos.ProvisionalLEI, repos.LEI),
+		ProvisionalLEI: NewProvisionalLEIService(repos.ProvisionalLEI, repos.LEI, repos.LEILevel2),
 		UserEntityLink: NewUserEntityLinkService(repos.UserEntityLink),
 	}
 }
