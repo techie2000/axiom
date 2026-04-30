@@ -1,6 +1,7 @@
 name: Check Unresolved Review Threads
 
 on:
+  push:
   pull_request:
     types:
       - opened
