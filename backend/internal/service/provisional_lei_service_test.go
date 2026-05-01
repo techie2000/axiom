@@ -282,12 +282,32 @@ type provisionalLevel2RepoStub struct {
 	repository.LEILevel2Repository
 }
 
+func (s *provisionalLevel2RepoStub) UpsertRelationshipRecord(record *domain.LEIRelationshipRecord) error {
+	return nil
+}
+
 func (s *provisionalLevel2RepoStub) FindRelationshipsByStartLEI(lei string) ([]*domain.LEIRelationshipRecord, error) {
 	return nil, nil
 }
 
 func (s *provisionalLevel2RepoStub) FindRelationshipsByEndLEI(lei string) ([]*domain.LEIRelationshipRecord, error) {
 	return nil, nil
+}
+
+func (s *provisionalLevel2RepoStub) FindRelationshipsByStartLEIsBatch(leis []string) ([]*domain.LEIRelationshipRecord, error) {
+	return nil, nil
+}
+
+func (s *provisionalLevel2RepoStub) FindRelationshipsByEndLEIsBatch(leis []string) ([]*domain.LEIRelationshipRecord, error) {
+	return nil, nil
+}
+
+func (s *provisionalLevel2RepoStub) DeleteRelationshipsByStartLEIAndType(startLEI, relType string) error {
+	return nil
+}
+
+func (s *provisionalLevel2RepoStub) DeleteRelationshipsByEndLEIAndType(endLEI, relType string) error {
+	return nil
 }
 
 func TestProvisionalUpdate_WritesLEIRecordAudit(t *testing.T) {
