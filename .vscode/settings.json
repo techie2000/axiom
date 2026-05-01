@@ -2,7 +2,7 @@
   "chat.tools.terminal.autoApprove": {
     ".Name": true,
     ".vscode/settings.json": true,
-    "/^cd \\.\\.; pwsh \\./scripts/run-main-compose\\.ps1 up -d --build backend$/": {
+    "/^(cd \\.\\.; )?pwsh \\./scripts/run-main-compose\\.ps1 .*$/": {
       "approve": true,
       "matchCommandLine": true
     },
@@ -23,26 +23,6 @@
       "matchCommandLine": true
     },
     "/^pwsh -NoProfile -ExecutionPolicy Bypass -File \\./scripts/run-main-compose\\.ps1 up -d --build postgres rabbitmq backend frontend$/": {
-      "approve": true,
-      "matchCommandLine": true
-    },
-    "/^pwsh \\./scripts/run-main-compose\\.ps1 down$/": {
-      "approve": true,
-      "matchCommandLine": true
-    },
-    "/^pwsh \\./scripts/run-main-compose\\.ps1 up -d --build backend frontend$/": {
-      "approve": true,
-      "matchCommandLine": true
-    },
-    "/^pwsh \\./scripts/run-main-compose\\.ps1 up -d --build backend$/": {
-      "approve": true,
-      "matchCommandLine": true
-    },
-    "/^pwsh \\./scripts/run-main-compose\\.ps1 up -d --build frontend backend$/": {
-      "approve": true,
-      "matchCommandLine": true
-    },
-    "/^pwsh \\./scripts/run-main-compose\\.ps1 up -d --build$/": {
       "approve": true,
       "matchCommandLine": true
     },
