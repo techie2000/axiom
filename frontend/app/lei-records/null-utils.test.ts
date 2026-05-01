@@ -56,14 +56,14 @@ describe('LEI null-like value helpers', () => {
     expect(nullStatus.isActive).toBe(false)
 
     const activeStatus = getStatusBadgePresentation('ACTIVE')
-    expect(activeStatus.label).toBe('ACTIVE')
+    expect(activeStatus.label).toBe('Active')
     expect(activeStatus.isActive).toBe(true)
   })
 
   it('formats LEI cell values for date and null-like paths', () => {
     expect(formatLEICellValue('2022-03-14T00:00:00Z', 'last_update_date')).toBe('2022-03-14')
     expect(formatLEICellValue('NULL', 'entity_status')).toBe('-')
-    expect(formatLEICellValue('ACTIVE', 'entity_status')).toBe('ACTIVE')
+    expect(formatLEICellValue('ACTIVE', 'entity_status')).toBe('Active')
   })
 
   it('title-cases entity_category and entity_sub_category cell values', () => {

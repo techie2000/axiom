@@ -1114,7 +1114,7 @@
       "search": "$t(common.search)",
       "searchPlaceholder": "Search by name, LEI, or source…",
       "status": "Status",
-      "allStatuses": "All statuses",
+      "allStatuses": "All Statuses",
       "source": "Source",
       "allSources": "All sources",
       "country": "Country",

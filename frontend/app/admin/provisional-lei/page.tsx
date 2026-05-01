@@ -22,6 +22,7 @@ import { useEnglishTooltips } from '../../lib/useEnglishTooltips'
 import { useSearchFocusShortcut } from '../../lib/useSearchFocusShortcut'
 import { useUserPreference } from '../../lib/useUserPreference'
 import { ensureLeadingEmoji, useButtonEmojiMode } from '../../lib/useButtonEmojiMode'
+import { formatStatusLabel } from '../../lib/status-label'
 import { getRelatedLeiNotFoundErrorKey, isCompleteLei, ProvisionalLeiLookupField } from '@/app/lib/provisional-lei-lookup'
 
 const API_BASE_URL = getApiBaseUrl()
@@ -127,9 +128,9 @@ const EMPTY_CREATE: CreateForm = {
 }
 
 const ENTITY_STATUS_OPTIONS = [
-  { value: 'ACTIVE', label: 'ACTIVE' },
-  { value: 'INACTIVE', label: 'INACTIVE' },
-  { value: 'MERGED', label: 'MERGED' },
+  { value: 'ACTIVE', label: formatStatusLabel('ACTIVE') },
+  { value: 'INACTIVE', label: formatStatusLabel('INACTIVE') },
+  { value: 'MERGED', label: formatStatusLabel('MERGED') },
 ]
 
 function statusBadge(status: string) {
@@ -141,7 +142,7 @@ function statusBadge(status: string) {
         : 'theme-subtle'
   return (
     <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${cls}`}>
-      {status || '—'}
+      {status ? formatStatusLabel(status) : '—'}
     </span>
   )
 }
