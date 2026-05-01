@@ -399,7 +399,7 @@ function UserEntityLinksContent() {
     const lei = rawLei.trim().toUpperCase()
     if (!/^[A-Z0-9]{20}$/.test(lei)) {
       setLeiValidating(false)
-      setLeiError('')
+      setLeiError(lei.length > 0 ? t('userEntityLinks.errors.leiNotFound') : '')
       lastValidatedLeiRef.current = ''
       return
     }
@@ -806,10 +806,14 @@ function UserEntityLinksContent() {
                   value={grantForm.lei}
                   onChange={(e) => {
                     const nextLei = e.target.value.toUpperCase()
-                    setLeiError('')
                     setGrantForm((f) => ({ ...f, lei: nextLei }))
-                    if (/^[A-Z0-9]{20}$/.test(nextLei.trim())) {
+                    const normalized = nextLei.trim()
+                    if (normalized.length === 0) {
+                      setLeiError('')
+                    } else if (/^[A-Z0-9]{20}$/.test(normalized)) {
                       void validateGrantLEI(nextLei)
+                    } else {
+                      setLeiError(t('userEntityLinks.errors.leiNotFound'))
                     }
                   }}
                   onBlur={() => {

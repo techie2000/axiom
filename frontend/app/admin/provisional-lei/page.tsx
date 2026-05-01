@@ -21,6 +21,7 @@ import { useEnglishTooltips } from '../../lib/useEnglishTooltips'
 import { useSearchFocusShortcut } from '../../lib/useSearchFocusShortcut'
 import { useUserPreference } from '../../lib/useUserPreference'
 import { ensureLeadingEmoji, useButtonEmojiMode } from '../../lib/useButtonEmojiMode'
+import { getRelatedLeiNotFoundErrorKey, isCompleteLei, ProvisionalLeiLookupField } from '@/app/lib/provisional-lei-lookup'
 
 const API_BASE_URL = getApiBaseUrl()
 
@@ -175,6 +176,7 @@ function ProvisionalLEIContent() {
   const [editForm, setEditForm] = useState<EditForm | null>(null)
   const [leiNames, setLeiNames] = useState<Record<string, string>>({})
   const [leiLookupLoading, setLeiLookupLoading] = useState<Record<string, boolean>>({})
+  const [leiLookupError, setLeiLookupError] = useState<Record<string, string>>({})
   const [succeedTarget, setSucceedTarget] = useState<ProvisionalLEI | null>(null)
   const [officialLEI, setOfficialLEI] = useState('')
   const [succeedLeiError, setSucceedLeiError] = useState('')
@@ -337,14 +339,36 @@ function ProvisionalLEIContent() {
 
   const getLeiName = (value: string) => leiNames[normalizeLEI(value)]
 
-  const lookupLEIName = useCallback(async (value: string, fieldKey: string) => {
+  const hasCreateRelatedLeiError = Boolean(leiLookupError.createParent || leiLookupError.createChild)
+  const hasEditRelatedLeiError = Boolean(leiLookupError.editParent || leiLookupError.editChild)
+  const isCreateRelatedLeiValidating = Boolean(leiLookupLoading.createParent || leiLookupLoading.createChild)
+  const isEditRelatedLeiValidating = Boolean(leiLookupLoading.editParent || leiLookupLoading.editChild)
+  const canCreateSubmit = Boolean(
+    createForm.legal_name.trim() &&
+      actionLoading !== 'create' &&
+      !hasCreateRelatedLeiError &&
+      !isCreateRelatedLeiValidating,
+  )
+  const canEditSubmit = Boolean(
+    editForm?.legal_name.trim() &&
+      actionLoading !== 'edit' &&
+      !hasEditRelatedLeiError &&
+      !isEditRelatedLeiValidating,
+  )
+
+  const lookupLEIName = useCallback(async (value: string, fieldKey: ProvisionalLeiLookupField) => {
     const lei = normalizeLEI(value)
-    if (lei.length !== 20) {
+    if (!isCompleteLei(lei)) {
       setLeiLookupLoading((current) => ({ ...current, [fieldKey]: false }))
+      setLeiLookupError((current) => ({
+        ...current,
+        [fieldKey]: lei.length > 0 ? t(getRelatedLeiNotFoundErrorKey(fieldKey)) : '',
+      }))
       return
     }
 
     if (leiNames[lei]) {
+      setLeiLookupError((current) => ({ ...current, [fieldKey]: '' }))
       return
     }
 
@@ -352,11 +376,17 @@ function ProvisionalLEIContent() {
     if (!token) return
 
     setLeiLookupLoading((current) => ({ ...current, [fieldKey]: true }))
+    setLeiLookupError((current) => ({ ...current, [fieldKey]: '' }))
 
     try {
       const res = await fetch(`${API_BASE_URL}/api/v1/lei/${encodeURIComponent(lei)}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
+
+      if (res.status === 404) {
+        setLeiLookupError((current) => ({ ...current, [fieldKey]: t(getRelatedLeiNotFoundErrorKey(fieldKey)) }))
+        return
+      }
 
       if (!res.ok) return
 
@@ -364,13 +394,14 @@ function ProvisionalLEIContent() {
       const legalName = data?.legal_name ?? data?.data?.legal_name ?? data?.record?.legal_name
       if (typeof legalName === 'string' && legalName.trim()) {
         setLeiNames((current) => ({ ...current, [lei]: legalName }))
+        setLeiLookupError((current) => ({ ...current, [fieldKey]: '' }))
       }
     } catch {
       // Best-effort display enrichment.
     } finally {
       setLeiLookupLoading((current) => ({ ...current, [fieldKey]: false }))
     }
-  }, [leiNames])
+  }, [leiNames, t])
 
   const fetchRecords = useCallback(async () => {
     setLoading(true)
@@ -599,6 +630,9 @@ function ProvisionalLEIContent() {
   const handleCreate = async () => {
     const token = getAuthToken()
     if (!token) return
+    if (hasCreateRelatedLeiError || isCreateRelatedLeiValidating) {
+      return
+    }
     setActionLoading('create')
     setError('')
     setSuccess('')
@@ -648,6 +682,9 @@ function ProvisionalLEIContent() {
     if (!editTarget || !editForm) return
     const token = getAuthToken()
     if (!token) return
+    if (hasEditRelatedLeiError || isEditRelatedLeiValidating) {
+      return
+    }
     setActionLoading('edit')
     setError('')
     setSuccess('')
@@ -739,7 +776,7 @@ function ProvisionalLEIContent() {
     const lei = normalizeLEI(rawLei)
     if (!/^[A-Z0-9]{20}$/.test(lei)) {
       setSucceedLeiValidating(false)
-      setSucceedLeiError('')
+      setSucceedLeiError(lei.length > 0 ? t('provisionalLei.errors.successorLeiNotFound') : '')
       setIsSucceedLeiValid(false)
       lastValidatedSucceedLeiRef.current = ''
       return
@@ -1106,14 +1143,27 @@ function ProvisionalLEIContent() {
                 <input
                   type="text"
                   value={createForm.parent_lei}
-                  onChange={(e) => setCreateForm((f) => ({ ...f, parent_lei: e.target.value.toUpperCase() }))}
+                  onChange={(e) => {
+                    const nextLei = e.target.value.toUpperCase()
+                    setCreateForm((f) => ({ ...f, parent_lei: nextLei }))
+                    const normalized = normalizeLEI(nextLei)
+                    if (normalized.length === 0) {
+                      setLeiLookupError((current) => ({ ...current, createParent: '' }))
+                    } else if (!isCompleteLei(normalized)) {
+                      setLeiLookupError((current) => ({ ...current, createParent: t('provisionalLei.errors.parentLeiNotFound') }))
+                    } else {
+                      setLeiLookupError((current) => ({ ...current, createParent: '' }))
+                      void lookupLEIName(normalized, 'createParent')
+                    }
+                  }}
                   onBlur={() => lookupLEIName(createForm.parent_lei, 'createParent')}
-                  className="w-full rounded-md border border-[rgb(var(--border-rgb))] bg-[rgb(var(--surface-rgb))] px-3 py-2 text-sm font-mono theme-focus"
+                  className={`w-full rounded-md border bg-[rgb(var(--surface-rgb))] px-3 py-2 text-sm font-mono theme-focus ${leiLookupError.createParent ? 'border-red-500' : 'border-[rgb(var(--border-rgb))]'}`}
                   placeholder={t('provisionalLei.form.parentLeiPlaceholder')}
                   maxLength={20}
                 />
                 {leiLookupLoading.createParent && <p className="mt-1 text-xs theme-text-muted">{t('common.loading')}</p>}
-                {!leiLookupLoading.createParent && getLeiName(createForm.parent_lei) && (
+                {leiLookupError.createParent && <p className="mt-1 text-xs text-red-700 dark:text-red-300">{leiLookupError.createParent}</p>}
+                {!leiLookupError.createParent && !leiLookupLoading.createParent && getLeiName(createForm.parent_lei) && (
                   <p className="mt-1 text-xs theme-text-muted">{getLeiName(createForm.parent_lei)}</p>
                 )}
               </div>
@@ -1124,14 +1174,27 @@ function ProvisionalLEIContent() {
                 <input
                   type="text"
                   value={createForm.child_lei}
-                  onChange={(e) => setCreateForm((f) => ({ ...f, child_lei: e.target.value.toUpperCase() }))}
+                  onChange={(e) => {
+                    const nextLei = e.target.value.toUpperCase()
+                    setCreateForm((f) => ({ ...f, child_lei: nextLei }))
+                    const normalized = normalizeLEI(nextLei)
+                    if (normalized.length === 0) {
+                      setLeiLookupError((current) => ({ ...current, createChild: '' }))
+                    } else if (!isCompleteLei(normalized)) {
+                      setLeiLookupError((current) => ({ ...current, createChild: t('provisionalLei.errors.childLeiNotFound') }))
+                    } else {
+                      setLeiLookupError((current) => ({ ...current, createChild: '' }))
+                      void lookupLEIName(normalized, 'createChild')
+                    }
+                  }}
                   onBlur={() => lookupLEIName(createForm.child_lei, 'createChild')}
-                  className="w-full rounded-md border border-[rgb(var(--border-rgb))] bg-[rgb(var(--surface-rgb))] px-3 py-2 text-sm font-mono theme-focus"
+                  className={`w-full rounded-md border bg-[rgb(var(--surface-rgb))] px-3 py-2 text-sm font-mono theme-focus ${leiLookupError.createChild ? 'border-red-500' : 'border-[rgb(var(--border-rgb))]'}`}
                   placeholder={t('provisionalLei.form.childLeiPlaceholder')}
                   maxLength={20}
                 />
                 {leiLookupLoading.createChild && <p className="mt-1 text-xs theme-text-muted">{t('common.loading')}</p>}
-                {!leiLookupLoading.createChild && getLeiName(createForm.child_lei) && (
+                {leiLookupError.createChild && <p className="mt-1 text-xs text-red-700 dark:text-red-300">{leiLookupError.createChild}</p>}
+                {!leiLookupError.createChild && !leiLookupLoading.createChild && getLeiName(createForm.child_lei) && (
                   <p className="mt-1 text-xs theme-text-muted">{getLeiName(createForm.child_lei)}</p>
                 )}
               </div>
@@ -1139,8 +1202,12 @@ function ProvisionalLEIContent() {
             <div className="flex gap-3 mt-4">
               <button
                 onClick={handleCreate}
-                disabled={!createForm.legal_name.trim() || actionLoading === 'create'}
-                className="px-4 py-2 text-sm rounded-md theme-btn-primary disabled:opacity-60"
+                disabled={!canCreateSubmit}
+                aria-disabled={!canCreateSubmit}
+                title={!canCreateSubmit && (hasCreateRelatedLeiError || isCreateRelatedLeiValidating)
+                  ? t('provisionalLei.form.fixRelatedLeiBeforeSave')
+                  : undefined}
+                className={`px-4 py-2 text-sm rounded-md ${canCreateSubmit ? 'theme-btn-primary' : 'theme-btn-neutral opacity-60 cursor-not-allowed pointer-events-none'}`}
               >
                 {actionLoading === 'create' ? t('common.saving') : t('provisionalLei.actions.save')}
               </button>
@@ -1234,14 +1301,27 @@ function ProvisionalLEIContent() {
                 <input
                   type="text"
                   value={editForm.parent_lei}
-                  onChange={(e) => setEditForm((f) => f ? { ...f, parent_lei: e.target.value.toUpperCase() } : f)}
+                  onChange={(e) => {
+                    const nextLei = e.target.value.toUpperCase()
+                    setEditForm((f) => f ? { ...f, parent_lei: nextLei } : f)
+                    const normalized = normalizeLEI(nextLei)
+                    if (normalized.length === 0) {
+                      setLeiLookupError((current) => ({ ...current, editParent: '' }))
+                    } else if (!isCompleteLei(normalized)) {
+                      setLeiLookupError((current) => ({ ...current, editParent: t('provisionalLei.errors.parentLeiNotFound') }))
+                    } else {
+                      setLeiLookupError((current) => ({ ...current, editParent: '' }))
+                      void lookupLEIName(normalized, 'editParent')
+                    }
+                  }}
                   onBlur={() => lookupLEIName(editForm.parent_lei, 'editParent')}
-                  className="w-full rounded-md border border-[rgb(var(--border-rgb))] bg-[rgb(var(--surface-rgb))] px-3 py-2 text-sm font-mono theme-focus"
+                  className={`w-full rounded-md border bg-[rgb(var(--surface-rgb))] px-3 py-2 text-sm font-mono theme-focus ${leiLookupError.editParent ? 'border-red-500' : 'border-[rgb(var(--border-rgb))]'}`}
                   placeholder={t('provisionalLei.form.parentLeiPlaceholder')}
                   maxLength={20}
                 />
                 {leiLookupLoading.editParent && <p className="mt-1 text-xs theme-text-muted">{t('common.loading')}</p>}
-                {!leiLookupLoading.editParent && getLeiName(editForm.parent_lei) && (
+                {leiLookupError.editParent && <p className="mt-1 text-xs text-red-700 dark:text-red-300">{leiLookupError.editParent}</p>}
+                {!leiLookupError.editParent && !leiLookupLoading.editParent && getLeiName(editForm.parent_lei) && (
                   <p className="mt-1 text-xs theme-text-muted">{getLeiName(editForm.parent_lei)}</p>
                 )}
               </div>
@@ -1252,14 +1332,27 @@ function ProvisionalLEIContent() {
                 <input
                   type="text"
                   value={editForm.child_lei}
-                  onChange={(e) => setEditForm((f) => f ? { ...f, child_lei: e.target.value.toUpperCase() } : f)}
+                  onChange={(e) => {
+                    const nextLei = e.target.value.toUpperCase()
+                    setEditForm((f) => f ? { ...f, child_lei: nextLei } : f)
+                    const normalized = normalizeLEI(nextLei)
+                    if (normalized.length === 0) {
+                      setLeiLookupError((current) => ({ ...current, editChild: '' }))
+                    } else if (!isCompleteLei(normalized)) {
+                      setLeiLookupError((current) => ({ ...current, editChild: t('provisionalLei.errors.childLeiNotFound') }))
+                    } else {
+                      setLeiLookupError((current) => ({ ...current, editChild: '' }))
+                      void lookupLEIName(normalized, 'editChild')
+                    }
+                  }}
                   onBlur={() => lookupLEIName(editForm.child_lei, 'editChild')}
-                  className="w-full rounded-md border border-[rgb(var(--border-rgb))] bg-[rgb(var(--surface-rgb))] px-3 py-2 text-sm font-mono theme-focus"
+                  className={`w-full rounded-md border bg-[rgb(var(--surface-rgb))] px-3 py-2 text-sm font-mono theme-focus ${leiLookupError.editChild ? 'border-red-500' : 'border-[rgb(var(--border-rgb))]'}`}
                   placeholder={t('provisionalLei.form.childLeiPlaceholder')}
                   maxLength={20}
                 />
                 {leiLookupLoading.editChild && <p className="mt-1 text-xs theme-text-muted">{t('common.loading')}</p>}
-                {!leiLookupLoading.editChild && getLeiName(editForm.child_lei) && (
+                {leiLookupError.editChild && <p className="mt-1 text-xs text-red-700 dark:text-red-300">{leiLookupError.editChild}</p>}
+                {!leiLookupError.editChild && !leiLookupLoading.editChild && getLeiName(editForm.child_lei) && (
                   <p className="mt-1 text-xs theme-text-muted">{getLeiName(editForm.child_lei)}</p>
                 )}
               </div>
@@ -1267,8 +1360,12 @@ function ProvisionalLEIContent() {
             <div className="flex gap-3 mt-4">
               <button
                 onClick={handleEdit}
-                disabled={!editForm.legal_name.trim() || actionLoading === 'edit'}
-                className="px-4 py-2 text-sm rounded-md theme-btn-primary disabled:opacity-60"
+                disabled={!canEditSubmit}
+                aria-disabled={!canEditSubmit}
+                title={!canEditSubmit && (hasEditRelatedLeiError || isEditRelatedLeiValidating)
+                  ? t('provisionalLei.form.fixRelatedLeiBeforeSave')
+                  : undefined}
+                className={`px-4 py-2 text-sm rounded-md ${canEditSubmit ? 'theme-btn-primary' : 'theme-btn-neutral opacity-60 cursor-not-allowed pointer-events-none'}`}
               >
                 {actionLoading === 'edit' ? t('common.saving') : t('provisionalLei.actions.save')}
               </button>
@@ -1307,8 +1404,12 @@ function ProvisionalLEIContent() {
                     setIsSucceedLeiValid(false)
                   }
 
-                  if (/^[A-Z0-9]{20}$/.test(normalized)) {
+                  if (normalized.length === 0) {
+                    setSucceedLeiError('')
+                  } else if (/^[A-Z0-9]{20}$/.test(normalized)) {
                     void validateSucceedLEI(normalized)
+                  } else {
+                    setSucceedLeiError(t('provisionalLei.errors.successorLeiNotFound'))
                   }
                 }}
                 onBlur={() => {

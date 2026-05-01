@@ -2,6 +2,14 @@
   "chat.tools.terminal.autoApprove": {
     ".Name": true,
     ".vscode/settings.json": true,
+    "/^cd \"c:\\\\Users\\\\mb53535\\\\AppData\\\\Local\\\\Code\\\\github\\\\axiom3\"; pwsh \\./scripts/run-main-compose\\.ps1 up -d --build frontend$/": {
+      "approve": true,
+      "matchCommandLine": true
+    },
+    "/^cd \\.\\.; pwsh \\./scripts/run-main-compose\\.ps1 up -d --build backend$/": {
+      "approve": true,
+      "matchCommandLine": true
+    },
     "/^docker rm -f axiom-main-frontend; docker volume rm axiom-main_frontend_node_modules_main axiom-main_frontend_next_main; pwsh -NoProfile -ExecutionPolicy Bypass -File \\./scripts/run-main-compose\\.ps1 up -d frontend$/": {
       "approve": true,
       "matchCommandLine": true

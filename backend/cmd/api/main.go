@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	docs "github.com/techie2000/axiom/docs"
 	"github.com/techie2000/axiom/internal/config"
 	"github.com/techie2000/axiom/internal/handler"
 	"github.com/techie2000/axiom/internal/middleware"
@@ -26,7 +27,6 @@ import (
 
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-	_ "github.com/techie2000/axiom/docs" // Swagger docs
 )
 
 // @title Axiom API
@@ -295,7 +295,17 @@ func setupRouter(cfg *config.Config, h *handler.Handlers) *gin.Engine {
 	})
 
 	// Swagger documentation
-	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	// Keep host/scheme aligned with the current request so "Try it out" works across dev/main/UAT ports.
+	swaggerHandler := ginSwagger.WrapHandler(swaggerFiles.Handler)
+	router.GET("/swagger/*any", func(c *gin.Context) {
+		docs.SwaggerInfo.Host = c.Request.Host
+		if c.Request.TLS != nil {
+			docs.SwaggerInfo.Schemes = []string{"https"}
+		} else {
+			docs.SwaggerInfo.Schemes = []string{"http"}
+		}
+		swaggerHandler(c)
+	})
 
 	// API v1 routes
 	v1 := router.Group("/api/v1")

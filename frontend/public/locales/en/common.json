@@ -1096,6 +1096,7 @@
       "parentLeiPlaceholder": "20-character parent LEI",
       "childLei": "Child LEI (optional)",
       "childLeiPlaceholder": "20-character child LEI",
+      "fixRelatedLeiBeforeSave": "Resolve parent/child LEI validation errors before saving.",
       "notes": "Notes",
       "notesPlaceholder": "Optional internal notes"
     },
@@ -1132,6 +1133,8 @@
       "createFailed": "Failed to issue provisional LEI.",
       "updateFailed": "Failed to update record.",
       "succeedFailed": "Failed to link successor LEI.",
+      "parentLeiNotFound": "Parent LEI not found. Please enter a valid, registered 20-character LEI.",
+      "childLeiNotFound": "Child LEI not found. Please enter a valid, registered 20-character LEI.",
       "successorLeiNotFound": "Successor LEI not found. Enter a valid, existing 20-character LEI.",
       "network": "Network error — please try again."
     }
