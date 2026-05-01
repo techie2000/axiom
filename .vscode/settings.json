@@ -26,6 +26,10 @@
       "approve": true,
       "matchCommandLine": true
     },
+    "/^pwsh \\./scripts/run-main-compose\\.ps1 down$/": {
+      "approve": true,
+      "matchCommandLine": true
+    },
     "/^pwsh \\./scripts/run-main-compose\\.ps1 up -d --build backend frontend$/": {
       "approve": true,
       "matchCommandLine": true
@@ -35,6 +39,10 @@
       "matchCommandLine": true
     },
     "/^pwsh \\./scripts/run-main-compose\\.ps1 up -d --build frontend backend$/": {
+      "approve": true,
+      "matchCommandLine": true
+    },
+    "/^pwsh \\./scripts/run-main-compose\\.ps1 up -d --build$/": {
       "approve": true,
       "matchCommandLine": true
     },

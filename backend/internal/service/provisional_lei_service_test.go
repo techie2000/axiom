@@ -260,7 +260,7 @@ func (s *provisionalRepoStub) Succeed(provisionalLEI, officialLEI, changedBy str
 
 type leiRepoAuditStub struct {
 	repository.LEIRepository
-	audits        []*domain.LEIRecordAudit
+	audits         []*domain.LEIRecordAudit
 	officialRecord *domain.LEIRecord
 }
 
