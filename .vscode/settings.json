@@ -22,6 +22,14 @@
       "approve": true,
       "matchCommandLine": true
     },
+    "/^pwsh \\./scripts/run-main-compose\\.ps1 up -d --build backend frontend$/": {
+      "approve": true,
+      "matchCommandLine": true
+    },
+    "/^pwsh \\./scripts/run-main-compose\\.ps1 up -d --build backend$/": {
+      "approve": true,
+      "matchCommandLine": true
+    },
     "/^Set-Location backend; go test \\./internal/repository; Set-Location \\.\\.; node --check frontend/scripts/extract-i18n-keys\\.mjs$/": {
       "approve": true,
       "matchCommandLine": true
@@ -88,6 +96,7 @@
     "Move-Item": true,
     "npm --prefix frontend": true,
     "npm install": true,
+    "npm run -s i18n:verify": true,
     "npm run build": true,
     "npm run docs:build": true,
     "npm run i18n:verify": true,

@@ -18,6 +18,8 @@ type UserEntityLinkService interface {
 	Grant(req GrantEntityLinkRequest, adminUserID string) (*domain.UserEntityLink, error)
 	// Revoke soft-deletes an active link.
 	Revoke(linkID string, adminUserID string) error
+	// Unrevoke restores a previously revoked link.
+	Unrevoke(linkID string, adminUserID string) error
 	// Update changes the mutable attributes of an existing link (role, children scope, expiry, notes).
 	Update(linkID string, req UpdateEntityLinkRequest, adminUserID string) (*domain.UserEntityLink, error)
 	// GetByID returns a single link by its surrogate key.
@@ -117,6 +119,20 @@ func (s *userEntityLinkService) Revoke(linkID string, adminUserID string) error 
 	}
 
 	log.Info().Str("link_id", linkID).Str("revoked_by", adminUserID).Msg("user-entity link revoked")
+	return nil
+}
+
+func (s *userEntityLinkService) Unrevoke(linkID string, adminUserID string) error {
+	id, err := uuid.Parse(linkID)
+	if err != nil {
+		return fmt.Errorf("invalid link ID %q: %w", linkID, err)
+	}
+
+	if err := s.repo.Unrevoke(id, adminUserID); err != nil {
+		return fmt.Errorf("unrevoke user-entity link %s: %w", linkID, err)
+	}
+
+	log.Info().Str("link_id", linkID).Str("unrevoked_by", adminUserID).Msg("user-entity link unrevoked")
 	return nil
 }
 

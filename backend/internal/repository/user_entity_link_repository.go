@@ -31,6 +31,8 @@ type UserEntityLinkRepository interface {
 	ListActive(limit, offset int) ([]*domain.UserEntityLink, error)
 	// Revoke soft-deletes a link by setting revoked_at to now.
 	Revoke(id uuid.UUID, revokedBy string) error
+	// Unrevoke restores a revoked link by clearing revoked_at.
+	Unrevoke(id uuid.UUID, restoredBy string) error
 }
 
 type userEntityLinkRepository struct {
@@ -153,6 +155,24 @@ func (r *userEntityLinkRepository) Revoke(id uuid.UUID, revokedBy string) error 
 	}
 	if result.RowsAffected == 0 {
 		return fmt.Errorf("user-entity link %s not found or already revoked", id)
+	}
+	return nil
+}
+
+func (r *userEntityLinkRepository) Unrevoke(id uuid.UUID, restoredBy string) error {
+	now := time.Now().UTC()
+	result := r.db.Model(&domain.UserEntityLink{}).
+		Where("id = ? AND revoked_at IS NOT NULL", id).
+		Updates(map[string]interface{}{
+			"revoked_at": nil,
+			"notes":      gorm.Expr("COALESCE(notes, '') || ' [unrevoked by ' || ? || ' at ' || ? || ']'", restoredBy, now.Format(time.RFC3339)),
+			"updated_at": now,
+		})
+	if result.Error != nil {
+		return fmt.Errorf("unrevoke user-entity link %s: %w", id, result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("user-entity link %s not found or not revoked", id)
 	}
 	return nil
 }

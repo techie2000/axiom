@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef, useMemo, Suspense } from 'react'
+import { MouseEvent as ReactMouseEvent, useState, useEffect, useCallback, useRef, useMemo, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
@@ -15,6 +15,7 @@ import { useEnglishTooltips } from '../../lib/useEnglishTooltips'
 import { buildDocsUrl } from '../../lib/docsLinks'
 import SortableHeaderCell from '../../components/SortableHeaderCell'
 import { formatStatusLabel } from '../../lib/status-label'
+import { getUserEntityLinkStatus } from '../../lib/user-entity-link-status'
 
 const API_BASE_URL = getApiBaseUrl()
 
@@ -82,6 +83,14 @@ const CHILDREN_SCOPE_OPTIONS = [
   { value: 'direct' as ChildrenScope, label: 'userEntityLinks.childrenScope.direct' },
   { value: 'all' as ChildrenScope, label: 'userEntityLinks.childrenScope.all' },
 ]
+
+const CHILDREN_SCOPE_LABEL_KEY: Record<ChildrenScope, string> = {
+  none: 'userEntityLinks.childrenScope.none',
+  direct: 'userEntityLinks.childrenScope.direct',
+  all: 'userEntityLinks.childrenScope.all',
+}
+
+const DUPLICATE_ACTIVE_LINK_REGEX = /active user-entity link already exists for user ([0-9a-fA-F-]{36}) and LEI ([A-Z0-9]{20})/i
 
 const EMPTY_GRANT: GrantForm = {
   user_id: '',
@@ -168,10 +177,18 @@ function roleBadge(role: EntityRole) {
   )
 }
 
-function revokedBadge() {
+function revokedBadge(label: string) {
   return (
     <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
-      revoked
+      {label}
+    </span>
+  )
+}
+
+function expiredBadge(label: string) {
+  return (
+    <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+      {label}
     </span>
   )
 }
@@ -216,6 +233,11 @@ function UserEntityLinksContent() {
   const [leiValidating, setLeiValidating] = useState(false)
   const [leiNames, setLeiNames] = useState<Record<string, string>>({})
   const lastValidatedLeiRef = useRef('')
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; link: UserEntityLink } | null>(null)
+  const contextMenuRef = useRef<HTMLDivElement>(null)
+  const contextMenuEditRef = useRef<HTMLButtonElement>(null)
+  const contextMenuRevokeRef = useRef<HTMLButtonElement>(null)
+  const contextMenuUnrevokeRef = useRef<HTMLButtonElement>(null)
 
   const fetchLinks = useCallback(async (overrides?: { filterUser?: string; filterLEI?: string }) => {
     setLoading(true)
@@ -416,7 +438,7 @@ function UserEntityLinksContent() {
   }, [leiNames, t])
 
   const displayed = useMemo(() => {
-    const base = showActiveOnly ? links.filter((l) => !l.revoked_at) : links
+    const base = showActiveOnly ? links.filter((l) => getUserEntityLinkStatus(l) === 'active') : links
     return [...base].sort((a, b) => {
       let valA: string
       let valB: string
@@ -449,8 +471,8 @@ function UserEntityLinksContent() {
           valB = b.expires_at ?? ''
           break
         case 'status':
-          valA = a.revoked_at ? '1' : '0'
-          valB = b.revoked_at ? '1' : '0'
+          valA = getUserEntityLinkStatus(a)
+          valB = getUserEntityLinkStatus(b)
           break
         default:
           return 0
@@ -459,6 +481,64 @@ function UserEntityLinksContent() {
       return sortDirection === 'asc' ? cmp : -cmp
     })
   }, [links, showActiveOnly, sortField, sortDirection, grantUsers])
+
+  const formatUserDisplayName = useCallback((userId: string) => {
+    const user = grantUsers.find((candidate) => candidate.id === userId)
+    if (!user) return userId
+    if (user.full_name && user.full_name.trim()) {
+      return `${user.username} (${user.full_name})`
+    }
+    return user.username || user.email || userId
+  }, [grantUsers])
+
+  const formatGrantErrorMessage = useCallback((rawError: string) => {
+    const match = DUPLICATE_ACTIVE_LINK_REGEX.exec(rawError)
+    if (match) {
+      const duplicateUserId = match[1]
+      const duplicateLei = match[2]
+      return t('userEntityLinks.errors.duplicateActiveLink', {
+        user: formatUserDisplayName(duplicateUserId),
+        lei: duplicateLei,
+      })
+    }
+    return rawError
+  }, [formatUserDisplayName, t])
+
+  const normalizedGrantLei = grantForm.lei.trim().toUpperCase()
+  const isGrantLeiValid =
+    /^[A-Z0-9]{20}$/.test(normalizedGrantLei) &&
+    Boolean(leiNames[normalizedGrantLei]) &&
+    !leiError &&
+    !leiValidating
+
+  const handleRowContextMenu = useCallback((event: ReactMouseEvent, link: UserEntityLink) => {
+    event.preventDefault()
+    event.stopPropagation()
+    setContextMenu({ x: event.clientX, y: event.clientY, link })
+  }, [])
+
+  const closeContextMenu = useCallback(() => setContextMenu(null), [])
+
+  useEffect(() => {
+    const handleClick = () => closeContextMenu()
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeContextMenu()
+    }
+    if (contextMenu) {
+      document.addEventListener('click', handleClick)
+      document.addEventListener('keydown', handleKey)
+    }
+    return () => {
+      document.removeEventListener('click', handleClick)
+      document.removeEventListener('keydown', handleKey)
+    }
+  }, [contextMenu, closeContextMenu])
+
+  useEffect(() => {
+    if (contextMenu && contextMenuRef.current) {
+      contextMenuRef.current.focus()
+    }
+  }, [contextMenu])
 
   const handleGrant = async () => {
     const token = getAuthToken()
@@ -505,7 +585,12 @@ function UserEntityLinksContent() {
       })
       if (!res.ok) {
         const data = await res.json()
-        setError(data.error || t('userEntityLinks.errors.grantFailed'))
+        const backendError = typeof data?.error === 'string' ? data.error : ''
+        setError(
+          backendError
+            ? formatGrantErrorMessage(backendError)
+            : t('userEntityLinks.errors.grantFailed'),
+        )
         return
       }
       setSuccess(t('userEntityLinks.success.granted'))
@@ -593,6 +678,31 @@ function UserEntityLinksContent() {
         return
       }
       setSuccess(t('userEntityLinks.success.revoked'))
+      await fetchLinks()
+    } catch {
+      setError(t('userEntityLinks.errors.network'))
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const handleUnrevoke = async (id: string) => {
+    const token = getAuthToken()
+    if (!token) return
+    setActionLoading(id + '-unrevoke')
+    setError('')
+    setSuccess('')
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/user-entity-links/${id}/unrevoke`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        setError(data.error || t('userEntityLinks.errors.unrevokeFailed'))
+        return
+      }
+      setSuccess(t('userEntityLinks.success.unrevoked'))
       await fetchLinks()
     } catch {
       setError(t('userEntityLinks.errors.network'))
@@ -776,7 +886,7 @@ function UserEntityLinksContent() {
             <div className="flex gap-3 mt-4">
               <button
                 onClick={handleGrant}
-                disabled={!grantForm.user_id.trim() || !grantForm.lei.trim() || actionLoading === 'grant'}
+                disabled={!grantForm.user_id.trim() || !isGrantLeiValid || actionLoading === 'grant'}
                 className="px-4 py-2 text-sm rounded-md theme-btn-primary disabled:opacity-60"
               >
                 {actionLoading === 'grant' ? t('common.saving') : t('userEntityLinks.actions.grantSave')}
@@ -956,9 +1066,12 @@ function UserEntityLinksContent() {
                 </tr>
               </thead>
               <tbody>
-                {displayed.map((l) => (
+                {displayed.map((l) => {
+                  const linkStatus = getUserEntityLinkStatus(l)
+                  return (
                   <tr
                     key={l.id}
+                    onContextMenu={(event) => handleRowContextMenu(event, l)}
                     className={`border-b border-[rgb(var(--border-rgb)/0.4)] theme-table-row-hover transition-colors ${l.revoked_at ? 'opacity-50' : ''}`}
                   >
                     <td className="px-4 py-3 align-top text-xs">
@@ -981,7 +1094,7 @@ function UserEntityLinksContent() {
                     </td>
                     <td className="px-4 py-3 align-top">{roleBadge(l.entity_role)}</td>
                     <td className="px-4 py-3 align-top text-center text-sm">
-                      {t(`userEntityLinks.childrenScope.${l.children_scope}`)}
+                      {t(CHILDREN_SCOPE_LABEL_KEY[l.children_scope])}
                     </td>
                     <td className="px-4 py-3 align-top text-xs theme-text-muted">
                       {l.granted_at ? new Date(l.granted_at).toISOString().split('T')[0] : '—'}
@@ -990,14 +1103,14 @@ function UserEntityLinksContent() {
                       {l.expires_at ? new Date(l.expires_at).toISOString().split('T')[0] : '—'}
                     </td>
                     <td className="px-4 py-3 align-top">
-                      {l.revoked_at ? revokedBadge() : (
+                      {linkStatus === 'revoked' ? revokedBadge(t('userEntityLinks.status.revoked')) : linkStatus === 'expired' ? expiredBadge(t('userEntityLinks.status.expired')) : (
                         <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
                           {t('userEntityLinks.status.active')}
                         </span>
                       )}
                     </td>
                     <td className="px-4 py-3 align-top">
-                      {!l.revoked_at && (
+                      {linkStatus !== 'revoked' ? (
                         <div className="flex flex-wrap gap-2">
                           <button
                             onClick={() => openEdit(l)}
@@ -1013,12 +1126,153 @@ function UserEntityLinksContent() {
                             {actionLoading === l.id + '-revoke' ? t('common.saving') : t('userEntityLinks.actions.revoke')}
                           </button>
                         </div>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            onClick={() => handleUnrevoke(l.id)}
+                            disabled={actionLoading === l.id + '-unrevoke'}
+                            className="px-3 py-1 text-xs rounded theme-btn-neutral theme-focus disabled:opacity-60"
+                          >
+                            {actionLoading === l.id + '-unrevoke' ? t('common.saving') : t('userEntityLinks.actions.unrevoke')}
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {contextMenu && (
+          <div
+            ref={contextMenuRef}
+            role="menu"
+            tabIndex={-1}
+            aria-label={t('userEntityLinks.columns.actions')}
+            className="fixed z-[60] min-w-56 theme-dropdown rounded-lg shadow-xl border border-[rgb(var(--border-rgb))] overflow-hidden"
+            style={{ top: contextMenu.y, left: contextMenu.x }}
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              const isRevoked = Boolean(contextMenu.link.revoked_at)
+              if (e.key === 'Escape') {
+                closeContextMenu()
+              } else if (e.key === 'ArrowDown') {
+                e.preventDefault()
+                if (isRevoked) {
+                  contextMenuUnrevokeRef.current?.focus()
+                } else {
+                  contextMenuRevokeRef.current?.focus()
+                }
+              } else if (e.key === 'ArrowUp') {
+                e.preventDefault()
+                if (isRevoked) {
+                  contextMenuUnrevokeRef.current?.focus()
+                } else {
+                  contextMenuEditRef.current?.focus()
+                }
+              }
+            }}
+          >
+            <div title={contextMenu.link.revoked_at ? t('userEntityLinks.actions.disabledRevokedReason') : getEnglishTooltip('userEntityLinks.actions.edit')}>
+              <button
+                ref={contextMenuEditRef}
+                role="menuitem"
+                type="button"
+                disabled={Boolean(contextMenu.link.revoked_at)}
+                className="w-full text-left px-4 py-2.5 text-sm hover:bg-[rgb(var(--surface-muted-rgb))] transition-colors focus:outline-none focus-visible:ring-inset focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none"
+                onKeyDown={(e) => {
+                  if (e.key === 'ArrowDown') {
+                    e.preventDefault()
+                    if (contextMenu.link.revoked_at) {
+                      contextMenuRef.current?.focus()
+                    } else {
+                      contextMenuRevokeRef.current?.focus()
+                    }
+                  } else if (e.key === 'ArrowUp') {
+                    e.preventDefault()
+                    contextMenuRef.current?.focus()
+                  } else if (e.key === 'Escape') {
+                    closeContextMenu()
+                  }
+                }}
+                onClick={() => {
+                  if (contextMenu.link.revoked_at) return
+                  closeContextMenu()
+                  openEdit(contextMenu.link)
+                }}
+              >
+                {t('userEntityLinks.actions.edit')}
+              </button>
+            </div>
+            <div title={contextMenu.link.revoked_at ? t('userEntityLinks.actions.disabledRevokedReason') : getEnglishTooltip('userEntityLinks.actions.revoke')}>
+              <button
+                ref={contextMenuRevokeRef}
+                role="menuitem"
+                type="button"
+                disabled={Boolean(contextMenu.link.revoked_at)}
+                className="w-full text-left px-4 py-2.5 text-sm hover:bg-[rgb(var(--surface-muted-rgb))] transition-colors focus:outline-none focus-visible:ring-inset focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none"
+                onKeyDown={(e) => {
+                  if (e.key === 'ArrowDown') {
+                    e.preventDefault()
+                    if (contextMenu.link.revoked_at) {
+                      contextMenuRef.current?.focus()
+                    } else {
+                      contextMenuEditRef.current?.focus()
+                    }
+                  } else if (e.key === 'ArrowUp') {
+                    e.preventDefault()
+                    if (contextMenu.link.revoked_at) {
+                      contextMenuRef.current?.focus()
+                    } else {
+                      contextMenuEditRef.current?.focus()
+                    }
+                  } else if (e.key === 'Escape') {
+                    closeContextMenu()
+                  }
+                }}
+                onClick={() => {
+                  if (contextMenu.link.revoked_at) return
+                  closeContextMenu()
+                  void handleRevoke(contextMenu.link.id)
+                }}
+              >
+                {t('userEntityLinks.actions.revoke')}
+              </button>
+            </div>
+            <div title={!contextMenu.link.revoked_at ? t('userEntityLinks.actions.unrevokeOnlyForRevoked') : getEnglishTooltip('userEntityLinks.actions.unrevoke')}>
+              <button
+                ref={contextMenuUnrevokeRef}
+                role="menuitem"
+                type="button"
+                disabled={!Boolean(contextMenu.link.revoked_at)}
+                className="w-full text-left px-4 py-2.5 text-sm hover:bg-[rgb(var(--surface-muted-rgb))] transition-colors focus:outline-none focus-visible:ring-inset focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none"
+                onKeyDown={(e) => {
+                  if (e.key === 'ArrowDown') {
+                    e.preventDefault()
+                    contextMenuEditRef.current?.focus()
+                  } else if (e.key === 'ArrowUp') {
+                    e.preventDefault()
+                    if (contextMenu.link.revoked_at) {
+                      contextMenuRevokeRef.current?.focus()
+                    } else {
+                      contextMenuEditRef.current?.focus()
+                    }
+                  } else if (e.key === 'Escape') {
+                    closeContextMenu()
+                  }
+                }}
+                onClick={() => {
+                  if (!contextMenu.link.revoked_at) return
+                  closeContextMenu()
+                  void handleUnrevoke(contextMenu.link.id)
+                }}
+              >
+                {t('userEntityLinks.actions.unrevoke')}
+              </button>
+            </div>
           </div>
         )}
 

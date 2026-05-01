@@ -2,30 +2,30 @@
 
 ## Goal
 
-Issue and manage Axiom provisional LEI records for entities that do not yet have an official GLEIF LEI.
+Issue and manage Axiom provisional LEI records for entities that do not yet have a final successor LEI.
 
 ## Prerequisites
 
 - You are signed in to Axiom with an **Admin** role.
-- You can access **Admin → Provisional LEIs**.
-- If you plan to complete succession, you have the official LEI value ready.
+- You can access **Admin -> Provisional LEIs**.
+- If you plan to complete succession, you have the successor LEI value ready.
 
-## When to use this page
+## When To Use This Page
 
-Use **Provisional LEI** when onboarding or linking an entity that needs a temporary identifier before an
-official LEI is available.
+Use **Provisional LEI** when onboarding or linking an entity that needs a temporary identifier before a
+final successor LEI is available.
 
 Provisional records:
 
 - are flagged as provisional in Axiom,
 - can be edited while active,
-- can be linked later to the final official LEI.
+- can be linked later to a final successor LEI.
 
 ## Steps
 
-### Create a provisional LEI
+### Create A Provisional LEI
 
-1. Open **Admin → Provisional LEIs**.
+1. Open **Admin -> Provisional LEIs**.
 2. Click **New Provisional LEI**.
 3. Enter at minimum:
    - **Legal Name** (required)
@@ -35,7 +35,7 @@ Provisional records:
 
 Expected result: A new row appears with a generated LEI, status, source, and date fields.
 
-### Edit an existing provisional LEI
+### Edit An Existing Provisional LEI
 
 1. Find the record in the table.
 2. Open actions using either:
@@ -46,7 +46,7 @@ Expected result: A new row appears with a generated LEI, status, source, and dat
 
 Expected result: The row updates and the change is visible in the table.
 
-### Clone a provisional LEI
+### Clone A Provisional LEI
 
 Use clone to speed up entry when creating entities with similar details.
 
@@ -59,17 +59,20 @@ Use clone to speed up entry when creating entities with similar details.
 
 Expected result: A new provisional LEI is created using the copied values as a starting point.
 
-### Link a provisional LEI to an official LEI
+### Link A Provisional LEI To A Successor LEI
 
 1. In the row for the provisional record, open actions using either:
-   - **Link to Official LEI** in the row action buttons, or
-   - **Right-click** the row and choose **Link to Official LEI**.
-2. Enter the 20-character official LEI.
+   - **Link Successor LEI** in the row action buttons, or
+   - **Right-click** the row and choose **Link Successor LEI**.
+2. Enter the 20-character successor LEI.
+   - If the LEI is found, its legal name appears below the input.
+   - If the LEI is not found, an inline validation warning is shown.
 3. Save the action.
 
 Expected result: The record stores the successor LEI reference and is marked as merged/succeeded.
+The action button remains disabled until a valid, found successor LEI is entered.
 
-## Table controls
+## Table Controls
 
 The provisional table supports the same usability controls as other data tables:
 
@@ -79,7 +82,7 @@ The provisional table supports the same usability controls as other data tables:
 
 Each control supports **Save as default** with undo, so personal preferences persist.
 
-### Columns selector behavior
+### Columns Selector Behavior
 
 The columns selector supports grouped toggles matching LEI Records behavior:
 
@@ -97,30 +100,30 @@ An arrow indicator shows the active sort column and direction.
 
 A filter bar is shown above the table. Use it to narrow the displayed records:
 
-- **Search** — matches against legal name, LEI code, source, or notes (case-insensitive).
-- **Status** — restricts results to a specific entity status (Active, Inactive, or Merged).
-- **Source** — filters to records from a specific provisioning source.
-- **Country** — filters to legal address country code/name (for example show only `GB`).
+- **Search**: matches against legal name, LEI code, source, or notes (case-insensitive).
+- **Status**: restricts results to a specific entity status (Active, Inactive, or Merged).
+- **Source**: filters to records from a specific provisioning source.
+- **Country**: filters to legal address country code/name (for example show only `GB`).
 
 When one or more filters are active, a **Clear Filters** button resets all filters at once.
 The record count in the header updates to show how many records match the current filters.
 
-### Parent LEI and Child LEI columns
+### Parent LEI And Child LEI Columns
 
 The **Parent LEI** and **Child LEI** columns display relationship data drawn from the LEI level-2
 relationship records. These values are hydrated at query time and may be blank if no relationship
 record exists for that provisional entity.
 
-## Common issues
+## Common Issues
 
 | Issue | Likely cause | Resolution |
 | --- | --- | --- |
 | Record saves but some values look blank in table | Column is hidden | Open **Columns** and enable the field |
 | Cannot create record | Missing required legal name or API validation failure | Provide legal name and verify input format |
-| Link to official LEI fails | Official LEI not found or invalid | Verify LEI exists in official LEI records first |
+| Link successor LEI fails | Successor LEI not found or invalid | Verify LEI exists in LEI records first |
 
-## Related tasks
+## Related Tasks
 
-- [LEI Records](../workflows/lei-records) — search official LEI data.
-- [User Approvals](./user-approvals) — manage admin access.
-- [Data Dictionary](../reference/data-dictionary) — field definitions.
+- [LEI Records](../workflows/lei-records): search LEI data.
+- [User Approvals](./user-approvals): manage admin access.
+- [Data Dictionary](../reference/data-dictionary): field definitions.

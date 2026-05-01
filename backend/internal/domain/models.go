@@ -633,49 +633,49 @@ func (SSIAudit) TableName() string {
 type EntityRole string
 
 const (
-EntityRoleViewer      EntityRole = "viewer"       // Read-only access to this entity's data.
-EntityRoleTrader      EntityRole = "trader"        // Read + trade instruction access.
-EntityRoleEntityAdmin EntityRole = "entity_admin"  // Can manage other users' links to this entity.
+	EntityRoleViewer      EntityRole = "viewer"       // Read-only access to this entity's data.
+	EntityRoleTrader      EntityRole = "trader"       // Read + trade instruction access.
+	EntityRoleEntityAdmin EntityRole = "entity_admin" // Can manage other users' links to this entity.
 )
 
 // ChildrenScope controls which child entities are included when a user-entity link is evaluated.
 type ChildrenScope string
 
 const (
-ChildrenScopeNone   ChildrenScope = "none"   // Access limited to the named entity only.
-ChildrenScopeDirect ChildrenScope = "direct" // Access extends to the entity and its direct children.
-ChildrenScopeAll    ChildrenScope = "all"    // Access extends to the entity and all descendants.
+	ChildrenScopeNone   ChildrenScope = "none"   // Access limited to the named entity only.
+	ChildrenScopeDirect ChildrenScope = "direct" // Access extends to the entity and its direct children.
+	ChildrenScopeAll    ChildrenScope = "all"    // Access extends to the entity and all descendants.
 )
 
 // UserEntityLink records the relationship between a system user and a LEI entity.
 // It forms the foundation for entity-scoped access control (see ADR-0018).
 type UserEntityLink struct {
-ID             uuid.UUID     `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
-UserID         uuid.UUID     `gorm:"type:uuid;not null;index" json:"user_id"`
-LEI            string        `gorm:"column:lei;size:20;not null;index" json:"lei"`
-EntityRole     EntityRole    `gorm:"type:varchar(50);not null;default:'viewer'" json:"entity_role"`
-ChildrenScope  ChildrenScope `gorm:"column:children_scope;type:varchar(10);not null;default:'none'" json:"children_scope"`
-GrantedBy      uuid.UUID     `gorm:"type:uuid;not null" json:"granted_by"`
-GrantedAt      time.Time     `gorm:"column:granted_at;not null;default:now()" json:"granted_at"`
-ExpiresAt      *time.Time    `gorm:"column:expires_at" json:"expires_at,omitempty"`
-RevokedAt      *time.Time    `gorm:"column:revoked_at" json:"revoked_at,omitempty"`
-Notes          string        `gorm:"type:text" json:"notes,omitempty"`
-CreatedAt      time.Time     `json:"created_at"`
-UpdatedAt      time.Time     `json:"updated_at"`
+	ID            uuid.UUID     `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+	UserID        uuid.UUID     `gorm:"type:uuid;not null;index" json:"user_id"`
+	LEI           string        `gorm:"column:lei;size:20;not null;index" json:"lei"`
+	EntityRole    EntityRole    `gorm:"type:varchar(50);not null;default:'viewer'" json:"entity_role"`
+	ChildrenScope ChildrenScope `gorm:"column:children_scope;type:varchar(10);not null;default:'none'" json:"children_scope"`
+	GrantedBy     uuid.UUID     `gorm:"type:uuid;not null" json:"granted_by"`
+	GrantedAt     time.Time     `gorm:"column:granted_at;not null;default:now()" json:"granted_at"`
+	ExpiresAt     *time.Time    `gorm:"column:expires_at" json:"expires_at,omitempty"`
+	RevokedAt     *time.Time    `gorm:"column:revoked_at" json:"revoked_at,omitempty"`
+	Notes         string        `gorm:"type:text" json:"notes,omitempty"`
+	CreatedAt     time.Time     `json:"created_at"`
+	UpdatedAt     time.Time     `json:"updated_at"`
 }
 
 // TableName overrides the table name for UserEntityLink.
 func (UserEntityLink) TableName() string {
-return "user_entity_links"
+	return "user_entity_links"
 }
 
 // IsActive reports whether the link is currently effective (not revoked and not expired).
 func (u *UserEntityLink) IsActive() bool {
-if u.RevokedAt != nil {
-return false
-}
-if u.ExpiresAt != nil && time.Now().After(*u.ExpiresAt) {
-return false
-}
-return true
+	if u.RevokedAt != nil {
+		return false
+	}
+	if u.ExpiresAt != nil && time.Now().After(*u.ExpiresAt) {
+		return false
+	}
+	return true
 }

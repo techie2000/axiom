@@ -257,6 +257,20 @@ func setupRouter(cfg *config.Config, h *handler.Handlers) *gin.Engine {
 	router.Use(middleware.RateLimit())
 
 	// Health check
+	router.GET("/", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"service": "Axiom API",
+			"status":  "running",
+			"routes": gin.H{
+				"health":  "/health",
+				"version": "/version",
+				"swagger": "/swagger/index.html",
+				"apiBase": "/api/v1",
+			},
+		})
+	})
+
+	// Health check
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "healthy"})
 	})
@@ -453,6 +467,7 @@ func setupRouter(cfg *config.Config, h *handler.Handlers) *gin.Engine {
 				userEntityLinks.POST("", h.UserEntityLink.Grant)
 				userEntityLinks.PUT("/:id", h.UserEntityLink.Update)
 				userEntityLinks.POST("/:id/revoke", h.UserEntityLink.Revoke)
+				userEntityLinks.POST("/:id/unrevoke", h.UserEntityLink.Unrevoke)
 			}
 
 			// Data acquisition routes

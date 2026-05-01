@@ -1,0 +1,3973 @@
+basePath: /api/v1
+definitions:
+  domain.Account:
+    properties:
+      account_currency:
+        $ref: '#/definitions/domain.Currency'
+      account_currency_id:
+        type: string
+      account_number:
+        type: string
+      active:
+        type: boolean
+      balance:
+        type: number
+      created_at:
+        type: string
+      entity:
+        $ref: '#/definitions/domain.Entity'
+      entity_id:
+        type: string
+      id:
+        type: string
+      opened_at:
+        type: string
+      type:
+        $ref: '#/definitions/domain.AccountType'
+      updated_at:
+        type: string
+    required:
+    - account_number
+    type: object
+  domain.AccountType:
+    enum:
+    - TRADING
+    - SETTLEMENT
+    - CUSTODY
+    - MARGIN
+    type: string
+    x-enum-varnames:
+    - AccountTypeTrading
+    - AccountTypeSettlement
+    - AccountTypeCustody
+    - AccountTypeMargin
+  domain.Address:
+    properties:
+      address_line_1:
+        description: Unstructured address lines (ISO20022 allows up to 7 lines)
+        type: string
+      address_line_2:
+        type: string
+      address_line_3:
+        type: string
+      address_line_4:
+        type: string
+      address_line_5:
+        type: string
+      address_line_6:
+        type: string
+      address_line_7:
+        type: string
+      address_type:
+        description: Structured address fields (ISO20022)
+        type: string
+      building_name:
+        description: Building name
+        type: string
+      building_number:
+        description: Building number
+        type: string
+      country:
+        $ref: '#/definitions/domain.Country'
+      country_id:
+        type: string
+      country_sub_division:
+        description: State/province/region
+        type: string
+      created_at:
+        type: string
+      department:
+        description: Department
+        type: string
+      district_name:
+        description: District name
+        type: string
+      floor:
+        description: Floor
+        type: string
+      id:
+        type: string
+      post_box:
+        description: Post office box number
+        type: string
+      postal_code:
+        description: Postal code/ZIP code
+        type: string
+      room:
+        description: Room
+        type: string
+      street_name:
+        description: Street name
+        type: string
+      sub_department:
+        description: Sub-department
+        type: string
+      town_location_name:
+        description: Town location name
+        type: string
+      town_name:
+        description: Town/city name
+        type: string
+      updated_at:
+        type: string
+    type: object
+  domain.ChildrenScope:
+    enum:
+    - none
+    - direct
+    - all
+    type: string
+    x-enum-comments:
+      ChildrenScopeAll: Access extends to the entity and all descendants.
+      ChildrenScopeDirect: Access extends to the entity and its direct children.
+      ChildrenScopeNone: Access limited to the named entity only.
+    x-enum-descriptions:
+    - Access limited to the named entity only.
+    - Access extends to the entity and its direct children.
+    - Access extends to the entity and all descendants.
+    x-enum-varnames:
+    - ChildrenScopeNone
+    - ChildrenScopeDirect
+    - ChildrenScopeAll
+  domain.CodeMapping:
+    properties:
+      active:
+        type: boolean
+      created_at:
+        type: string
+      created_by:
+        type: string
+      description:
+        type: string
+      from_code:
+        type: string
+      from_code_type:
+        type: string
+      from_system:
+        type: string
+      id:
+        type: string
+      to_code:
+        type: string
+      to_code_type:
+        type: string
+      to_system:
+        type: string
+      updated_at:
+        type: string
+    required:
+    - from_code
+    - from_code_type
+    - from_system
+    - to_code
+    - to_code_type
+    - to_system
+    type: object
+  domain.CodeType:
+    enum:
+    - ISIN
+    - FIGI
+    - CUSIP
+    - WKN
+    - SEDOL
+    - RIC
+    - TICKER
+    - BLOOMBERG
+    type: string
+    x-enum-varnames:
+    - CodeTypeISIN
+    - CodeTypeFIGI
+    - CodeTypeCUSIP
+    - CodeTypeWKN
+    - CodeTypeSEDOL
+    - CodeTypeRIC
+    - CodeTypeTicker
+    - CodeTypeBloomberg
+  domain.Country:
+    properties:
+      active:
+        type: boolean
+      alpha3_code:
+        type: string
+      capital:
+        type: string
+      code:
+        type: string
+      continent:
+        description: AF, AN, AS, EU, NA, OC, SA
+        type: string
+      created_at:
+        type: string
+      currency_codes:
+        description: JSON array of currency codes
+        type: string
+      id:
+        type: string
+      languages:
+        description: JSON array of language codes
+        type: string
+      name:
+        type: string
+      native_name:
+        type: string
+      phone_codes:
+        description: JSON array of phone codes
+        type: string
+      region:
+        type: string
+      updated_at:
+        type: string
+    required:
+    - code
+    - name
+    type: object
+  domain.Currency:
+    properties:
+      active:
+        type: boolean
+      code:
+        type: string
+      created_at:
+        type: string
+      decimal_digits:
+        type: integer
+      id:
+        type: string
+      is_alert_cls_allowed:
+        type: boolean
+      is_ofac_sanctioned:
+        type: boolean
+      name:
+        type: string
+      name_plural:
+        type: string
+      rounding:
+        type: integer
+      symbol:
+        type: string
+      symbol_native:
+        type: string
+      updated_at:
+        type: string
+    required:
+    - code
+    - name
+    type: object
+  domain.Entity:
+    properties:
+      active:
+        type: boolean
+      addresses:
+        items:
+          $ref: '#/definitions/domain.EntityAddress'
+        type: array
+      created_at:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      registration_number:
+        type: string
+      type:
+        $ref: '#/definitions/domain.EntityType'
+      updated_at:
+        type: string
+    required:
+    - name
+    type: object
+  domain.EntityAddress:
+    properties:
+      address:
+        $ref: '#/definitions/domain.Address'
+      address_id:
+        type: string
+      address_type:
+        description: e.g., 'REGISTERED', 'TRADING', 'BILLING', 'CORRESPONDENCE'
+        type: string
+      created_at:
+        type: string
+      entity:
+        $ref: '#/definitions/domain.Entity'
+      entity_id:
+        type: string
+      id:
+        type: string
+      is_primary:
+        type: boolean
+      updated_at:
+        type: string
+    type: object
+  domain.EntityRole:
+    enum:
+    - viewer
+    - trader
+    - entity_admin
+    type: string
+    x-enum-comments:
+      EntityRoleEntityAdmin: Can manage other users' links to this entity.
+      EntityRoleTrader: Read + trade instruction access.
+      EntityRoleViewer: Read-only access to this entity's data.
+    x-enum-descriptions:
+    - Read-only access to this entity's data.
+    - Read + trade instruction access.
+    - Can manage other users' links to this entity.
+    x-enum-varnames:
+    - EntityRoleViewer
+    - EntityRoleTrader
+    - EntityRoleEntityAdmin
+  domain.EntityType:
+    enum:
+    - COMPANY
+    - BUSINESS
+    - CORPORATION
+    - PARTNERSHIP
+    - INDIVIDUAL
+    type: string
+    x-enum-varnames:
+    - EntityTypeCompany
+    - EntityTypeBusiness
+    - EntityTypeCorporation
+    - EntityTypePartnership
+    - EntityTypeIndividual
+  domain.FileProcessingStatus:
+    properties:
+      created_at:
+        type: string
+      current_source_file:
+        $ref: '#/definitions/domain.SourceFile'
+      current_source_file_id:
+        type: string
+      depends_on_job_label:
+        type: string
+      depends_on_job_type:
+        description: |-
+          DependsOnJobType is the JobType of the upstream job that must complete successfully
+          before this job can run.  Empty string means this is a root job with no dependency.
+          Known chain: DAILY_FULL → LEVEL2_RR → LEVEL2_REPEX.
+        type: string
+      error_message:
+        type: string
+      id:
+        type: string
+      job_label:
+        type: string
+      job_type:
+        description: DAILY_FULL, DAILY_DELTA, LEVEL2_RR, LEVEL2_REPEX
+        type: string
+      last_run_at:
+        type: string
+      last_success_at:
+        type: string
+      next_run_at:
+        type: string
+      progress_message:
+        type: string
+      status:
+        description: IDLE, RUNNING, COMPLETED, FAILED
+        type: string
+      updated_at:
+        type: string
+    type: object
+  domain.IdentifierLevel:
+    enum:
+    - INTERNATIONAL
+    - REGIONAL
+    - LOCAL
+    type: string
+    x-enum-comments:
+      IdentifierLevelInternational: ISIN, FIGI
+      IdentifierLevelLocal: Exchange-specific codes
+      IdentifierLevelRegional: CUSIP, WKN
+    x-enum-descriptions:
+    - ISIN, FIGI
+    - CUSIP, WKN
+    - Exchange-specific codes
+    x-enum-varnames:
+    - IdentifierLevelInternational
+    - IdentifierLevelRegional
+    - IdentifierLevelLocal
+  domain.Instrument:
+    properties:
+      active:
+        type: boolean
+      codes:
+        items:
+          $ref: '#/definitions/domain.InstrumentCode'
+        type: array
+      created_at:
+        type: string
+      id:
+        type: string
+      issue_currency:
+        $ref: '#/definitions/domain.Currency'
+      issue_currency_id:
+        type: string
+      name:
+        type: string
+      primary_exchange:
+        type: string
+      type:
+        $ref: '#/definitions/domain.InstrumentType'
+      updated_at:
+        type: string
+    required:
+    - name
+    type: object
+  domain.InstrumentCode:
+    properties:
+      code_type:
+        $ref: '#/definitions/domain.CodeType'
+      code_value:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      identifier_level:
+        $ref: '#/definitions/domain.IdentifierLevel'
+      instrument:
+        $ref: '#/definitions/domain.Instrument'
+      instrument_id:
+        type: string
+      market_identifier_code:
+        description: MIC code (e.g., XNAS, XFRA)
+        type: string
+      region:
+        description: For regional codes (e.g., US, DE)
+        type: string
+      updated_at:
+        type: string
+    type: object
+  domain.InstrumentType:
+    enum:
+    - EQUITY
+    - BOND
+    - DERIVATIVE
+    - COMMODITY
+    - FUND
+    - FOREX
+    type: string
+    x-enum-varnames:
+    - InstrumentTypeEquity
+    - InstrumentTypeBond
+    - InstrumentTypeDerivative
+    - InstrumentTypeCommodity
+    - InstrumentTypeFund
+    - InstrumentTypeForex
+  domain.LEIRecord:
+    properties:
+      changed_fields:
+        description: Last change details
+        type: string
+      child_lei:
+        type: string
+      created_at:
+        description: Standard fields
+        type: string
+      created_by:
+        type: string
+      entity_category:
+        type: string
+      entity_legal_form:
+        type: string
+      entity_legal_form_name:
+        type: string
+      entity_status:
+        type: string
+      entity_sub_category:
+        type: string
+      hq_address_city:
+        type: string
+      hq_address_country:
+        description: ISO 3166-1 alpha-2
+        type: string
+      hq_address_line_1:
+        description: Headquarters address
+        type: string
+      hq_address_line_2:
+        type: string
+      hq_address_line_3:
+        type: string
+      hq_address_line_4:
+        type: string
+      hq_address_postal_code:
+        type: string
+      hq_address_region:
+        type: string
+      id:
+        type: string
+      initial_registration_date:
+        description: Dates
+        type: string
+      is_provisional:
+        description: |-
+          Provisional LEI fields (migration 000062)
+          IsProvisional is TRUE for Axiom-issued provisional LEI records (AXIO prefix).
+          FALSE for all GLEIF-ingested records. Defaults to FALSE.
+        type: boolean
+      last_update_date:
+        type: string
+      legal_address_city:
+        type: string
+      legal_address_country:
+        description: ISO 3166-1 alpha-2
+        type: string
+      legal_address_line_1:
+        description: Legal address
+        type: string
+      legal_address_line_2:
+        type: string
+      legal_address_line_3:
+        type: string
+      legal_address_line_4:
+        type: string
+      legal_address_postal_code:
+        type: string
+      legal_address_region:
+        type: string
+      legal_jurisdiction:
+        type: string
+      legal_name:
+        description: Entity information
+        type: string
+      lei:
+        description: Legal Entity Identifier (unique)
+        type: string
+      managing_lou:
+        description: Associated entities
+        type: string
+      managing_lou_legal_name:
+        type: string
+      next_renewal_date:
+        type: string
+      other_names:
+        description: Array of alternative names
+        type: string
+      parent_lei:
+        description: |-
+          Relationship data hydrated from lei_relationship_records for provisional LEIs.
+          Not stored in lei_records; populated by the provisional LEI service layer only.
+        type: string
+      provisioning_source:
+        type: string
+      registration_authority:
+        description: Registration
+        type: string
+      registration_authority_comments:
+        type: string
+      registration_authority_id:
+        type: string
+      registration_authority_international_name:
+        type: string
+      registration_authority_name:
+        description: GLEIF reference resolved names (computed via JOIN, not stored
+          in lei_records)
+        type: string
+      registration_authority_website:
+        type: string
+      registration_number:
+        type: string
+      registration_status:
+        type: string
+      source_file:
+        $ref: '#/definitions/domain.SourceFile'
+      source_file_id:
+        description: Audit and provenance
+        type: string
+      successor_lei:
+        type: string
+      successor_lei_legal_name:
+        type: string
+      transliterated_legal_name:
+        type: string
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+      validation_authority:
+        type: string
+      validation_sources:
+        description: Validation
+        type: string
+    required:
+    - lei
+    type: object
+  domain.LEIRecordAudit:
+    properties:
+      action:
+        description: CREATE, UPDATE, DELETE
+        type: string
+      changed_by:
+        type: string
+      changed_fields:
+        description: Change details
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      lei:
+        type: string
+      lei_record_id:
+        type: string
+      record_snapshot:
+        description: Complete record snapshot
+        type: string
+      source_file_id:
+        description: Source information
+        type: string
+    type: object
+  domain.Language:
+    properties:
+      code:
+        type: string
+      created_at:
+        type: string
+      name:
+        type: string
+      native:
+        type: string
+      rtl:
+        type: boolean
+      updated_at:
+        type: string
+    type: object
+  domain.SSI:
+    properties:
+      active:
+        type: boolean
+      beneficiary_account:
+        type: string
+      beneficiary_bank:
+        type: string
+      beneficiary_bank_bic:
+        type: string
+      beneficiary_name:
+        type: string
+      created_at:
+        type: string
+      entity:
+        $ref: '#/definitions/domain.Entity'
+      entity_id:
+        type: string
+      id:
+        type: string
+      instrument:
+        $ref: '#/definitions/domain.Instrument'
+      instrument_id:
+        type: string
+      intermediary_bank:
+        type: string
+      intermediary_bank_bic:
+        type: string
+      settlement_currency:
+        $ref: '#/definitions/domain.Currency'
+      settlement_currency_id:
+        type: string
+      settlement_type:
+        $ref: '#/definitions/domain.SettlementType'
+      updated_at:
+        type: string
+      valid_from:
+        type: string
+      valid_to:
+        type: string
+    required:
+    - beneficiary_account
+    - beneficiary_bank
+    - beneficiary_name
+    type: object
+  domain.SettlementType:
+    enum:
+    - DVP
+    - FOP
+    - RVP
+    - DAP
+    type: string
+    x-enum-comments:
+      SettlementTypeDAP: Delivery Against Payment
+      SettlementTypeDVP: Delivery Versus Payment
+      SettlementTypeFOP: Free Of Payment
+      SettlementTypeRVP: Receive Versus Payment
+    x-enum-descriptions:
+    - Delivery Versus Payment
+    - Free Of Payment
+    - Receive Versus Payment
+    - Delivery Against Payment
+    x-enum-varnames:
+    - SettlementTypeDVP
+    - SettlementTypeFOP
+    - SettlementTypeRVP
+    - SettlementTypeDAP
+  domain.SourceFile:
+    properties:
+      created_at:
+        type: string
+      downloaded_at:
+        type: string
+      failed_records:
+        type: integer
+      failure_category:
+        description: SCHEMA_ERROR, NETWORK_ERROR, FILE_CORRUPTION, UNKNOWN
+        type: string
+      file_hash:
+        description: SHA-256 hash
+        type: string
+      file_name:
+        type: string
+      file_size:
+        type: integer
+      file_type:
+        description: FULL, DELTA
+        type: string
+      file_url:
+        type: string
+      id:
+        type: string
+      job_label:
+        type: string
+      job_type:
+        type: string
+      last_processed_lei:
+        description: For resumption
+        type: string
+      max_retries:
+        type: integer
+      processed_records:
+        type: integer
+      processing_completed_at:
+        type: string
+      processing_error:
+        type: string
+      processing_started_at:
+        type: string
+      processing_status:
+        description: Processing status
+        type: string
+      publication_date:
+        type: string
+      retry_count:
+        description: Retry tracking
+        type: integer
+      total_records:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  domain.TranslationStatus:
+    enum:
+    - pending
+    - approved
+    - rejected
+    type: string
+    x-enum-varnames:
+    - TranslationStatusPending
+    - TranslationStatusApproved
+    - TranslationStatusRejected
+  domain.UITranslation:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      language_code:
+        type: string
+      notes:
+        type: string
+      reviewed_at:
+        type: string
+      reviewed_by:
+        type: string
+      status:
+        $ref: '#/definitions/domain.TranslationStatus'
+      submitted_by:
+        type: string
+      translation_key:
+        type: string
+      translation_value:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  domain.User:
+    properties:
+      approved_at:
+        type: string
+      approved_by:
+        type: string
+      created_at:
+        type: string
+      email:
+        type: string
+      full_name:
+        type: string
+      id:
+        type: string
+      is_bootstrap:
+        description: |-
+          IsBootstrap marks the default seed admin that must be replaced on first login.
+          Exposed in API responses so the UI can lock down actions on this account.
+        type: boolean
+      role:
+        $ref: '#/definitions/domain.UserRole'
+      status:
+        $ref: '#/definitions/domain.UserStatus'
+      updated_at:
+        type: string
+      username:
+        type: string
+    type: object
+  domain.UserEntityLink:
+    properties:
+      children_scope:
+        $ref: '#/definitions/domain.ChildrenScope'
+      created_at:
+        type: string
+      entity_role:
+        $ref: '#/definitions/domain.EntityRole'
+      expires_at:
+        type: string
+      granted_at:
+        type: string
+      granted_by:
+        type: string
+      id:
+        type: string
+      lei:
+        type: string
+      notes:
+        type: string
+      revoked_at:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+  domain.UserRole:
+    enum:
+    - admin
+    - user
+    type: string
+    x-enum-varnames:
+    - UserRoleAdmin
+    - UserRoleUser
+  domain.UserStatus:
+    enum:
+    - pending
+    - active
+    - inactive
+    type: string
+    x-enum-varnames:
+    - UserStatusPending
+    - UserStatusActive
+    - UserStatusInactive
+  handler.loginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  handler.preferenceResponse:
+    properties:
+      page_key:
+        type: string
+      preference_key:
+        type: string
+      preference_value:
+        type: string
+    type: object
+  handler.setPreferenceRequest:
+    properties:
+      page_key:
+        type: string
+      preference_key:
+        type: string
+      preference_value:
+        type: string
+    required:
+    - page_key
+    - preference_key
+    - preference_value
+    type: object
+  handler.ssiListItemResponse:
+    properties:
+      account_name:
+        type: string
+      bic:
+        type: string
+      counterparty_name:
+        type: string
+      country_code:
+        type: string
+      currency:
+        type: string
+      iban:
+        type: string
+      id:
+        type: string
+      settlement_method:
+        type: string
+      ssi_reference:
+        type: string
+      status:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  handler.submitTranslationRequest:
+    properties:
+      language_code:
+        type: string
+      notes:
+        type: string
+      translation_key:
+        type: string
+      translation_value:
+        type: string
+    required:
+    - language_code
+    - translation_key
+    - translation_value
+    type: object
+  handler.succeedProvisionalLEIRequest:
+    properties:
+      official_lei:
+        type: string
+    required:
+    - official_lei
+    type: object
+  handler.translationListResponse:
+    properties:
+      records:
+        items:
+          $ref: '#/definitions/handler.uiTranslationPublicDTO'
+        type: array
+      total:
+        type: integer
+    type: object
+  handler.uiTranslationPublicDTO:
+    properties:
+      language_code:
+        type: string
+      translation_key:
+        type: string
+      translation_value:
+        type: string
+    type: object
+  handler.updateRoleRequest:
+    properties:
+      role:
+        type: string
+    required:
+    - role
+    type: object
+  handler.userResponse:
+    properties:
+      approved_at:
+        type: string
+      approved_by:
+        type: string
+      created_at:
+        type: string
+      email:
+        type: string
+      full_name:
+        type: string
+      id:
+        type: string
+      is_bootstrap:
+        type: boolean
+      role:
+        type: string
+      status:
+        type: string
+      username:
+        type: string
+    type: object
+  service.CreateProvisionalLEIRequest:
+    properties:
+      child_lei:
+        type: string
+      legal_address_city:
+        type: string
+      legal_address_country:
+        type: string
+      legal_jurisdiction:
+        type: string
+      legal_name:
+        type: string
+      notes:
+        type: string
+      parent_lei:
+        type: string
+      provisioning_source:
+        description: e.g. "onboarding", "counterparty"
+        type: string
+    required:
+    - legal_name
+    type: object
+  service.GrantEntityLinkRequest:
+    properties:
+      children_scope:
+        $ref: '#/definitions/domain.ChildrenScope'
+      entity_role:
+        $ref: '#/definitions/domain.EntityRole'
+      expires_at:
+        type: string
+      lei:
+        type: string
+      notes:
+        type: string
+      user_id:
+        type: string
+    required:
+    - lei
+    - user_id
+    type: object
+  service.LoginResponse:
+    properties:
+      is_bootstrap:
+        type: boolean
+      token:
+        type: string
+      user:
+        $ref: '#/definitions/domain.User'
+    type: object
+  service.RegisterRequest:
+    properties:
+      email:
+        type: string
+      full_name:
+        type: string
+      password:
+        minLength: 8
+        type: string
+      username:
+        maxLength: 100
+        minLength: 3
+        type: string
+    required:
+    - email
+    - password
+    - username
+    type: object
+  service.UpdateEntityLinkRequest:
+    properties:
+      children_scope:
+        $ref: '#/definitions/domain.ChildrenScope'
+      entity_role:
+        $ref: '#/definitions/domain.EntityRole'
+      expires_at:
+        type: string
+      notes:
+        type: string
+    type: object
+  service.UpdateProvisionalLEIRequest:
+    properties:
+      child_lei:
+        type: string
+      entity_status:
+        type: string
+      legal_address_city:
+        type: string
+      legal_address_country:
+        type: string
+      legal_jurisdiction:
+        type: string
+      legal_name:
+        type: string
+      parent_lei:
+        type: string
+      provisioning_source:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@axiom.example.com
+    name: API Support
+  description: Financial Services Static Data Management System
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: Axiom API
+  version: "1.0"
+paths:
+  /accounts:
+    get:
+      consumes:
+      - application/json
+      description: Get list of all accounts
+      parameters:
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Account'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List accounts
+      tags:
+      - accounts
+    post:
+      consumes:
+      - application/json
+      description: Create a new account
+      parameters:
+      - description: Account object
+        in: body
+        name: account
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Account'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.Account'
+        "400":
+          description: Bad Request
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create account
+      tags:
+      - accounts
+  /accounts/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete an account
+      parameters:
+      - description: Account ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "500":
+          description: Internal Server Error
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete account
+      tags:
+      - accounts
+    get:
+      consumes:
+      - application/json
+      description: Get a single account by ID
+      parameters:
+      - description: Account ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Account'
+        "404":
+          description: Not Found
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get account by ID
+      tags:
+      - accounts
+    put:
+      consumes:
+      - application/json
+      description: Update an existing account
+      parameters:
+      - description: Account ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Account object
+        in: body
+        name: account
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Account'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Account'
+        "400":
+          description: Bad Request
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update account
+      tags:
+      - accounts
+  /admin/translations:
+    get:
+      description: Return a paginated list of translation strings, optionally filtered
+        by language, status, or search text
+      parameters:
+      - description: Filter by ISO 639-1 language code (e.g. fr, es)
+        in: query
+        name: language
+        type: string
+      - description: Filter by status (pending, approved, rejected)
+        in: query
+        name: status
+        type: string
+      - description: Search by key or value substring
+        in: query
+        name: search
+        type: string
+      - description: Maximum records to return (default 50)
+        in: query
+        name: limit
+        type: integer
+      - description: Offset for pagination (default 0)
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.translationListResponse'
+      security:
+      - BearerAuth: []
+      summary: List UI translations for admin review
+      tags:
+      - translations
+  /api/v1/lei:
+    get:
+      consumes:
+      - application/json
+      description: Get a paginated list of LEI records with optional search and filters
+      parameters:
+      - default: 50
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      - description: Search term (LEI code or legal name)
+        in: query
+        name: search
+        type: string
+      - description: Entity status filter (e.g., ACTIVE, INACTIVE)
+        in: query
+        name: status
+        type: string
+      - description: Entity category filter (e.g., GENERAL, FUND)
+        in: query
+        name: category
+        type: string
+      - description: Country code filter (e.g., US, GB)
+        in: query
+        name: country
+        type: string
+      - description: Sort field (lei, legal_name, entity_status, entity_category,
+          legal_address_country, last_update_date)
+        in: query
+        name: sortBy
+        type: string
+      - default: asc
+        description: Sort order (asc, desc)
+        in: query
+        name: sortOrder
+        type: string
+      - description: Include successor/managing LOU legal names in list response
+        in: query
+        name: includeLinkedNames
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.LEIRecord'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List LEI records
+      tags:
+      - LEI
+  /api/v1/lei-categories:
+    get:
+      description: Get sorted list of unique category values from LEI records
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: string
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get distinct categories
+      tags:
+      - LEI
+  /api/v1/lei-countries:
+    get:
+      description: Get sorted list of unique countries from LEI records
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: string
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get distinct countries
+      tags:
+      - LEI
+  /api/v1/lei-legal-forms:
+    get:
+      description: Get sorted list of unique legal form values from LEI records
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: string
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get distinct legal forms
+      tags:
+      - LEI
+  /api/v1/lei-regions:
+    get:
+      description: Get sorted list of unique regions from LEI records
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: string
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get distinct regions
+      tags:
+      - LEI
+  /api/v1/lei/{lei}:
+    get:
+      consumes:
+      - application/json
+      description: Get a specific LEI record by its LEI code
+      parameters:
+      - description: LEI code
+        in: path
+        name: lei
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.LEIRecord'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get LEI record by code
+      tags:
+      - LEI
+  /api/v1/lei/{lei}/audit:
+    get:
+      consumes:
+      - application/json
+      description: Get audit trail for a specific LEI record
+      parameters:
+      - description: LEI code
+        in: path
+        name: lei
+        required: true
+        type: string
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.LEIRecordAudit'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get LEI audit history
+      tags:
+      - LEI
+  /api/v1/lei/{lei}/predecessors:
+    get:
+      consumes:
+      - application/json
+      description: Get LEI records whose successor_lei equals the provided LEI
+      parameters:
+      - description: LEI code
+        in: path
+        name: lei
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.LEIRecord'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get predecessor LEI records
+      tags:
+      - LEI
+  /api/v1/lei/count:
+    get:
+      description: Returns the total count of LEI records stored in the database,
+        regardless of sync status
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              format: int64
+              type: integer
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get total LEI record count
+      tags:
+      - LEI
+  /api/v1/lei/import-failures:
+    get:
+      consumes:
+      - application/json
+      description: Get persisted Level 1/Level 2 processing failures with open/resolved
+        lifecycle filtering
+      parameters:
+      - description: Job type filter (DAILY_FULL, DAILY_DELTA, LEVEL2_RR, LEVEL2_REPEX)
+        in: query
+        name: jobType
+        type: string
+      - default: true
+        description: When true (default), returns only unresolved failures
+        in: query
+        name: openOnly
+        type: boolean
+      - default: 100
+        description: Max rows
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List LEI import processing failures
+      tags:
+      - LEI
+  /api/v1/lei/level2/failures:
+    get:
+      consumes:
+      - application/json
+      description: Deprecated endpoint. Use /api/v1/lei/import-failures instead.
+      parameters:
+      - description: Job type filter (DAILY_FULL, DAILY_DELTA, LEVEL2_RR, LEVEL2_REPEX)
+        in: query
+        name: jobType
+        type: string
+      - default: true
+        description: When true (default), returns only unresolved failures
+        in: query
+        name: openOnly
+        type: boolean
+      - default: 100
+        description: Max rows
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List LEI import processing failures (Deprecated)
+      tags:
+      - LEI
+  /api/v1/lei/names:
+    get:
+      description: Returns a map of LEI code to legal name. Input codes are trimmed,
+        normalized, deduplicated, and validated (20-char uppercase alphanumeric).
+        Codes not found are absent from the response.
+      parameters:
+      - description: Comma-separated list of LEI codes (max 500)
+        in: query
+        name: codes
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Batch-fetch legal names for a set of LEI codes
+      tags:
+      - LEI
+  /api/v1/lei/provisional:
+    get:
+      description: Returns provisional LEI records with pagination.
+      parameters:
+      - default: 50
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List provisional LEI records
+      tags:
+      - Provisional LEI
+    post:
+      consumes:
+      - application/json
+      description: Issues a new provisional LEI record.
+      parameters:
+      - description: Create provisional LEI request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.CreateProvisionalLEIRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.LEIRecord'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create provisional LEI record
+      tags:
+      - Provisional LEI
+  /api/v1/lei/provisional/{lei}:
+    get:
+      description: Returns a single provisional LEI record by LEI code.
+      parameters:
+      - description: Provisional LEI code
+        in: path
+        name: lei
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.LEIRecord'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get provisional LEI record
+      tags:
+      - Provisional LEI
+    put:
+      consumes:
+      - application/json
+      description: Updates mutable fields of an existing provisional LEI record.
+      parameters:
+      - description: Provisional LEI code
+        in: path
+        name: lei
+        required: true
+        type: string
+      - description: Update provisional LEI request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.UpdateProvisionalLEIRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.LEIRecord'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update provisional LEI record
+      tags:
+      - Provisional LEI
+  /api/v1/lei/provisional/{lei}/succeed:
+    post:
+      consumes:
+      - application/json
+      description: Marks a provisional LEI as succeeded by a successor LEI.
+      parameters:
+      - description: Provisional LEI code
+        in: path
+        name: lei
+        required: true
+        type: string
+      - description: Succeed provisional LEI request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.succeedProvisionalLEIRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Succeed provisional LEI
+      tags:
+      - Provisional LEI
+  /api/v1/lei/record/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get a specific LEI record by its database ID
+      parameters:
+      - description: Record ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.LEIRecord'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get LEI record by ID
+      tags:
+      - LEI
+  /api/v1/lei/source-file/{id}/resume:
+    post:
+      consumes:
+      - application/json
+      description: Resume processing of a source file from where it left off
+      parameters:
+      - description: Source file ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Resume file processing
+      tags:
+      - LEI
+  /api/v1/lei/status/{jobType}:
+    get:
+      consumes:
+      - application/json
+      description: Get the current processing status for LEI sync jobs
+      parameters:
+      - description: Job type (DAILY_FULL, DAILY_DELTA, LEVEL2_RR, or LEVEL2_REPEX)
+        in: path
+        name: jobType
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.FileProcessingStatus'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get processing status
+      tags:
+      - LEI
+  /api/v1/lei/sync/delta:
+    post:
+      consumes:
+      - application/json
+      description: Manually trigger a delta LEI data synchronization
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Trigger delta LEI sync
+      tags:
+      - LEI
+  /api/v1/lei/sync/full:
+    post:
+      consumes:
+      - application/json
+      description: Manually trigger a full LEI data synchronization
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Trigger full LEI sync
+      tags:
+      - LEI
+  /api/v1/lei/sync/gleif-reference:
+    post:
+      consumes:
+      - application/json
+      description: Manually trigger synchronization of GLEIF reference code lists
+        (registration authorities,
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Trigger GLEIF reference sync
+      tags:
+      - LEI
+  /api/v1/lei/sync/level2:
+    post:
+      consumes:
+      - application/json
+      description: Manually trigger a GLEIF Level 2 data synchronization (Relationship
+        Records + Reporting Exceptions). Runs independently of the
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Trigger Level 2 LEI sync
+      tags:
+      - LEI
+  /api/v1/lei/sync/level2/repex:
+    post:
+      consumes:
+      - application/json
+      description: Manually trigger the Level 2 Reporting Exceptions job.
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Trigger Level 2 Reporting Exceptions sync
+      tags:
+      - LEI
+  /api/v1/lei/sync/level2/rr:
+    post:
+      consumes:
+      - application/json
+      description: Manually trigger the Level 2 Relationship Records job.
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Trigger Level 2 Relationship Records sync
+      tags:
+      - LEI
+  /api/v1/lei/sync/masterdata:
+    post:
+      consumes:
+      - application/json
+      description: Manually trigger countries/currencies/languages synchronization
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Trigger master data sync
+      tags:
+      - LEI
+  /api/v1/user-entity-links:
+    get:
+      description: Returns active links by default; set include_revoked=true to include
+        revoked links.
+      parameters:
+      - default: 50
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      - description: Include revoked links
+        in: query
+        name: include_revoked
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List user-entity links
+      tags:
+      - User Entity Links
+    post:
+      consumes:
+      - application/json
+      description: Creates a new user-entity link.
+      parameters:
+      - description: Grant request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.GrantEntityLinkRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.UserEntityLink'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Grant user-entity link
+      tags:
+      - User Entity Links
+  /api/v1/user-entity-links/{id}:
+    get:
+      description: Returns a single user-entity link by ID.
+      parameters:
+      - description: Link ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.UserEntityLink'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get user-entity link
+      tags:
+      - User Entity Links
+    put:
+      consumes:
+      - application/json
+      description: Updates role, children scope, expiry, or notes on an existing link.
+      parameters:
+      - description: Link ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.UpdateEntityLinkRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.UserEntityLink'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update user-entity link
+      tags:
+      - User Entity Links
+  /api/v1/user-entity-links/{id}/revoke:
+    post:
+      description: Soft-deletes a link by setting revoked_at.
+      parameters:
+      - description: Link ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Revoke user-entity link
+      tags:
+      - User Entity Links
+  /api/v1/user-entity-links/{id}/unrevoke:
+    post:
+      description: Restores a revoked link by clearing revoked_at.
+      parameters:
+      - description: Link ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Unrevoke user-entity link
+      tags:
+      - User Entity Links
+  /api/v1/user-entity-links/lei/{lei}:
+    get:
+      description: Returns all user links associated with the specified LEI.
+      parameters:
+      - description: LEI code
+        in: path
+        name: lei
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.UserEntityLink'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List links by LEI
+      tags:
+      - User Entity Links
+  /api/v1/user-entity-links/user/{user_id}:
+    get:
+      description: Returns all links (active, expired, and revoked) for a specific
+        user.
+      parameters:
+      - description: User ID (UUID)
+        in: path
+        name: user_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.UserEntityLink'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List links by user
+      tags:
+      - User Entity Links
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user and return JWT token
+      parameters:
+      - description: Login credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/handler.loginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/service.LoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      summary: User login
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Submit a registration request that an admin must approve
+      parameters:
+      - description: Registration details
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/service.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            properties:
+              message:
+                type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      summary: Request a new user account
+      tags:
+      - auth
+  /auth/users:
+    get:
+      description: Return users optionally filtered by status
+      parameters:
+      - description: 'Filter by status: pending, active, inactive'
+        in: query
+        name: status
+        type: string
+      - description: Limit (default 50)
+        in: query
+        name: limit
+        type: integer
+      - description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handler.userResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: List users (admin only)
+      tags:
+      - auth
+  /auth/users/{id}/approve:
+    post:
+      description: Activate a user account so the user can log in
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            properties:
+              message:
+                type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Approve a pending user (admin only)
+      tags:
+      - auth
+  /auth/users/{id}/reject:
+    post:
+      description: Deactivate a user account. Fails if this would remove the last
+        active admin.
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            properties:
+              message:
+                type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Reject/deactivate a user (admin only)
+      tags:
+      - auth
+  /auth/users/{id}/role:
+    put:
+      consumes:
+      - application/json
+      description: Promote a user to admin or demote an admin to user. Fails if this
+        would remove the last active admin.
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: New role
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.updateRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            properties:
+              message:
+                type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Change a user's role (admin only)
+      tags:
+      - auth
+  /code-mappings:
+    get:
+      consumes:
+      - application/json
+      description: Get list of all code mappings
+      parameters:
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.CodeMapping'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: List code mappings
+      tags:
+      - code-mappings
+    post:
+      consumes:
+      - application/json
+      description: Create a new code mapping
+      parameters:
+      - description: Code Mapping object
+        in: body
+        name: mapping
+        required: true
+        schema:
+          $ref: '#/definitions/domain.CodeMapping'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.CodeMapping'
+      security:
+      - BearerAuth: []
+      summary: Create code mapping
+      tags:
+      - code-mappings
+  /code-mappings/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a code mapping
+      parameters:
+      - description: Code Mapping ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete code mapping
+      tags:
+      - code-mappings
+    get:
+      consumes:
+      - application/json
+      description: Get a single code mapping by ID
+      parameters:
+      - description: Code Mapping ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.CodeMapping'
+      security:
+      - BearerAuth: []
+      summary: Get code mapping by ID
+      tags:
+      - code-mappings
+    put:
+      consumes:
+      - application/json
+      description: Update an existing code mapping
+      parameters:
+      - description: Code Mapping ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Code Mapping object
+        in: body
+        name: mapping
+        required: true
+        schema:
+          $ref: '#/definitions/domain.CodeMapping'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.CodeMapping'
+      security:
+      - BearerAuth: []
+      summary: Update code mapping
+      tags:
+      - code-mappings
+  /code-mappings/translate:
+    get:
+      consumes:
+      - application/json
+      description: Translate a from_code to a to_code using active mappings
+      parameters:
+      - description: Source system (e.g. ALERT)
+        in: query
+        name: from_system
+        required: true
+        type: string
+      - description: Source code type (e.g. CCY_ALERT)
+        in: query
+        name: from_code_type
+        required: true
+        type: string
+      - description: Source code value (e.g. SWE)
+        in: query
+        name: from_code
+        required: true
+        type: string
+      - description: Target code type (e.g. CCY_CODE)
+        in: query
+        name: to_code_type
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            properties:
+              to_code:
+                type: string
+            type: object
+      summary: Translate a code
+      tags:
+      - code-mappings
+  /countries:
+    get:
+      consumes:
+      - application/json
+      description: Get list of all countries
+      parameters:
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Country'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: List countries
+      tags:
+      - countries
+    post:
+      consumes:
+      - application/json
+      description: Create a new country
+      parameters:
+      - description: Country object
+        in: body
+        name: country
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Country'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.Country'
+      security:
+      - BearerAuth: []
+      summary: Create country
+      tags:
+      - countries
+  /countries/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a country
+      parameters:
+      - description: Country ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete country
+      tags:
+      - countries
+    get:
+      consumes:
+      - application/json
+      description: Get a single country by ID
+      parameters:
+      - description: Country ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Country'
+      security:
+      - BearerAuth: []
+      summary: Get country by ID
+      tags:
+      - countries
+    put:
+      consumes:
+      - application/json
+      description: Update an existing country
+      parameters:
+      - description: Country ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Country object
+        in: body
+        name: country
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Country'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Country'
+      security:
+      - BearerAuth: []
+      summary: Update country
+      tags:
+      - countries
+  /currencies:
+    get:
+      consumes:
+      - application/json
+      description: Get list of all currencies
+      parameters:
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Currency'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      summary: List currencies
+      tags:
+      - currencies
+    post:
+      consumes:
+      - application/json
+      description: Create a new currency
+      parameters:
+      - description: Currency object
+        in: body
+        name: currency
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Currency'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.Currency'
+        "400":
+          description: Bad Request
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create currency
+      tags:
+      - currencies
+  /currencies/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a currency
+      parameters:
+      - description: Currency ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "500":
+          description: Internal Server Error
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete currency
+      tags:
+      - currencies
+    get:
+      consumes:
+      - application/json
+      description: Get a single currency by ID
+      parameters:
+      - description: Currency ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Currency'
+        "404":
+          description: Not Found
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      summary: Get currency by ID
+      tags:
+      - currencies
+    put:
+      consumes:
+      - application/json
+      description: Update an existing currency
+      parameters:
+      - description: Currency ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Currency object
+        in: body
+        name: currency
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Currency'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Currency'
+        "400":
+          description: Bad Request
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update currency
+      tags:
+      - currencies
+  /data/export:
+    post:
+      consumes:
+      - application/json
+      description: Trigger data export job
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Export data
+      tags:
+      - data-acquisition
+  /data/import:
+    post:
+      consumes:
+      - application/json
+      description: Trigger data import job
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Import data
+      tags:
+      - data-acquisition
+  /data/jobs:
+    get:
+      consumes:
+      - application/json
+      description: List data acquisition jobs
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List data jobs
+      tags:
+      - data-acquisition
+  /data/jobs/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get a data acquisition job by ID
+      parameters:
+      - description: Job ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get data job
+      tags:
+      - data-acquisition
+  /entities:
+    get:
+      consumes:
+      - application/json
+      description: Get list of all entities
+      parameters:
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Entity'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List entities
+      tags:
+      - entities
+    post:
+      consumes:
+      - application/json
+      description: Create a new entity
+      parameters:
+      - description: Entity object
+        in: body
+        name: entity
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Entity'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.Entity'
+        "400":
+          description: Bad Request
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create entity
+      tags:
+      - entities
+  /entities/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete an entity
+      parameters:
+      - description: Entity ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "500":
+          description: Internal Server Error
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete entity
+      tags:
+      - entities
+    get:
+      consumes:
+      - application/json
+      description: Get a single entity by ID
+      parameters:
+      - description: Entity ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Entity'
+        "404":
+          description: Not Found
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get entity by ID
+      tags:
+      - entities
+    put:
+      consumes:
+      - application/json
+      description: Update an existing entity
+      parameters:
+      - description: Entity ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Entity object
+        in: body
+        name: entity
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Entity'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Entity'
+        "400":
+          description: Bad Request
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update entity
+      tags:
+      - entities
+  /instruments:
+    get:
+      consumes:
+      - application/json
+      description: Get list of all instruments
+      parameters:
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Instrument'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List instruments
+      tags:
+      - instruments
+    post:
+      consumes:
+      - application/json
+      description: Create a new instrument
+      parameters:
+      - description: Instrument object
+        in: body
+        name: instrument
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Instrument'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.Instrument'
+        "400":
+          description: Bad Request
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create instrument
+      tags:
+      - instruments
+  /instruments/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete an instrument
+      parameters:
+      - description: Instrument ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "500":
+          description: Internal Server Error
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete instrument
+      tags:
+      - instruments
+    get:
+      consumes:
+      - application/json
+      description: Get a single instrument by ID
+      parameters:
+      - description: Instrument ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Instrument'
+        "404":
+          description: Not Found
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get instrument by ID
+      tags:
+      - instruments
+    put:
+      consumes:
+      - application/json
+      description: Update an existing instrument
+      parameters:
+      - description: Instrument ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Instrument object
+        in: body
+        name: instrument
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Instrument'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Instrument'
+        "400":
+          description: Bad Request
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update instrument
+      tags:
+      - instruments
+  /languages:
+    get:
+      consumes:
+      - application/json
+      description: Get list of all languages
+      parameters:
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Language'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      summary: List languages
+      tags:
+      - languages
+  /preferences:
+    delete:
+      description: Remove a specific preference for the authenticated user
+      parameters:
+      - description: Page key
+        in: query
+        name: page_key
+        required: true
+        type: string
+      - description: Preference key
+        in: query
+        name: preference_key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete a user preference
+      tags:
+      - preferences
+    get:
+      description: Return all stored preferences for the authenticated user, optionally
+        filtered by page_key
+      parameters:
+      - description: Filter by page key (e.g. 'lei-records', 'global')
+        in: query
+        name: page_key
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handler.preferenceResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Get user preferences
+      tags:
+      - preferences
+    put:
+      consumes:
+      - application/json
+      description: Create or update a single preference for the authenticated user
+      parameters:
+      - description: Preference to set
+        in: body
+        name: preference
+        required: true
+        schema:
+          $ref: '#/definitions/handler.setPreferenceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.preferenceResponse'
+      security:
+      - BearerAuth: []
+      summary: Set a user preference
+      tags:
+      - preferences
+  /ssis:
+    get:
+      consumes:
+      - application/json
+      description: Get list of all settlement standing instructions
+      parameters:
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handler.ssiListItemResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List SSIs
+      tags:
+      - ssis
+    post:
+      consumes:
+      - application/json
+      description: Create a new settlement standing instruction
+      parameters:
+      - description: SSI object
+        in: body
+        name: ssi
+        required: true
+        schema:
+          $ref: '#/definitions/domain.SSI'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.SSI'
+        "400":
+          description: Bad Request
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create SSI
+      tags:
+      - ssis
+  /ssis/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a settlement standing instruction
+      parameters:
+      - description: SSI ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "500":
+          description: Internal Server Error
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete SSI
+      tags:
+      - ssis
+    get:
+      consumes:
+      - application/json
+      description: Get a single settlement standing instruction by ID
+      parameters:
+      - description: SSI ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ssiListItemResponse'
+        "404":
+          description: Not Found
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get SSI by ID
+      tags:
+      - ssis
+    put:
+      consumes:
+      - application/json
+      description: Update an existing settlement standing instruction
+      parameters:
+      - description: SSI ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: SSI object
+        in: body
+        name: ssi
+        required: true
+        schema:
+          $ref: '#/definitions/domain.SSI'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.SSI'
+        "400":
+          description: Bad Request
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update SSI
+      tags:
+      - ssis
+  /translations:
+    get:
+      description: Return a paginated list of approved translation strings for public
+        read-only consumption
+      parameters:
+      - description: Filter by ISO 639-1 language code (e.g. fr, es)
+        in: query
+        name: language
+        type: string
+      - description: Public access only supports approved
+        in: query
+        name: status
+        type: string
+      - description: Search by key or value substring
+        in: query
+        name: search
+        type: string
+      - description: Maximum records to return (default 50)
+        in: query
+        name: limit
+        type: integer
+      - description: Offset for pagination (default 0)
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.translationListResponse'
+      summary: List approved UI translations
+      tags:
+      - translations
+    post:
+      consumes:
+      - application/json
+      description: Create or update a translation string and mark it as pending review
+      parameters:
+      - description: Translation details
+        in: body
+        name: translation
+        required: true
+        schema:
+          $ref: '#/definitions/handler.submitTranslationRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.UITranslation'
+      security:
+      - BearerAuth: []
+      summary: Submit a translation for review
+      tags:
+      - translations
+  /translations/{id}:
+    delete:
+      description: Remove a translation by its UUID (admin only)
+      parameters:
+      - description: Translation UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete a translation
+      tags:
+      - translations
+  /translations/{id}/approve:
+    post:
+      description: Mark a pending translation as approved (admin only)
+      parameters:
+      - description: Translation UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Approve a translation
+      tags:
+      - translations
+  /translations/{id}/reject:
+    post:
+      description: Mark a pending translation as rejected (admin only)
+      parameters:
+      - description: Translation UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Reject a translation
+      tags:
+      - translations
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

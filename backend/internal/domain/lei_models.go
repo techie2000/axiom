@@ -332,11 +332,11 @@ func (LEIRelationshipRecord) TableName() string {
 // Each record indicates that a legal entity cannot or will not disclose its parent ownership
 // relationship, along with the category and reason for that exception.
 type LEIReportingException struct {
-	ID                 uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
-	LEI                string    `gorm:"size:20;not null;index" json:"lei"`
+	ID                 uuid.UUID   `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	LEI                string      `gorm:"size:20;not null;index" json:"lei"`
 	ExceptionCategory  string      `gorm:"size:100;not null" json:"exception_category"`
 	ExceptionReasons   JSONBString `gorm:"type:jsonb;not null;default:'[]'" json:"exception_reasons"`
-	ExceptionReference string    `gorm:"size:500" json:"exception_reference"`
+	ExceptionReference string      `gorm:"size:500" json:"exception_reference"`
 
 	SourceFileID *uuid.UUID `gorm:"type:uuid" json:"source_file_id"`
 

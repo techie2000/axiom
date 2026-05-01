@@ -1080,8 +1080,8 @@
     "form": {
       "createTitle": "Issue New Provisional LEI",
       "editTitle": "Edit Provisional LEI Record",
-      "succeedTitle": "Link to Official LEI",
-      "succeedHint": "Enter the official GLEIF LEI that will succeed the provisional record {{lei}} ({{name}}).",
+      "succeedTitle": "Link Successor LEI",
+      "succeedHint": "Enter the successor LEI for provisional record {{lei}} ({{name}}). This can be another provisional LEI or an official GLEIF LEI.",
       "legalName": "Legal Name",
       "legalNamePlaceholder": "Full legal entity name",
       "provisioningSource": "Source",
@@ -1090,7 +1090,8 @@
       "city": "City",
       "jurisdiction": "Jurisdiction",
       "entityStatus": "Entity Status",
-      "officialLEI": "Official LEI (20 characters)",
+      "officialLEI": "Successor LEI (20 characters)",
+      "successorLeiPlaceholder": "20-character successor LEI",
       "parentLei": "Parent LEI (optional)",
       "parentLeiPlaceholder": "20-character parent LEI",
       "childLei": "Child LEI (optional)",
@@ -1103,7 +1104,8 @@
       "edit": "$t(common.edit)",
       "clone": "Clone",
       "save": "$t(common.save)",
-      "succeed": "Link to Official LEI"
+      "succeed": "Link Successor LEI",
+      "succeedDisabledReason": "This record already has a successor LEI linked."
     },
     "filters": {
       "search": "$t(common.search)",
@@ -1123,13 +1125,14 @@
     "success": {
       "created": "Provisional LEI issued successfully.",
       "updated": "Record updated.",
-      "succeeded": "Provisional LEI linked to official LEI."
+      "succeeded": "Provisional LEI linked to successor LEI."
     },
     "errors": {
       "loadFailed": "Failed to load provisional LEI records.",
       "createFailed": "Failed to issue provisional LEI.",
       "updateFailed": "Failed to update record.",
-      "succeedFailed": "Failed to link to official LEI.",
+      "succeedFailed": "Failed to link successor LEI.",
+      "successorLeiNotFound": "Successor LEI not found. Enter a valid, existing 20-character LEI.",
       "network": "Network error — please try again."
     }
   },
@@ -1181,24 +1184,31 @@
     },
     "status": {
       "active": "active",
+      "expired": "expired",
       "revoked": "revoked"
     },
     "actions": {
       "grant": "+ Grant Access",
       "grantSave": "Grant",
       "edit": "$t(common.edit)",
-      "revoke": "Revoke"
+      "revoke": "Revoke",
+      "unrevoke": "Unrevoke",
+      "disabledRevokedReason": "This link is already revoked, so these actions are unavailable.",
+      "unrevokeOnlyForRevoked": "Unrevoke is only available for revoked links."
     },
     "success": {
       "granted": "Access granted.",
       "updated": "Link updated.",
-      "revoked": "Link revoked."
+      "revoked": "Link revoked.",
+      "unrevoked": "Link unrevoked."
     },
     "errors": {
       "loadFailed": "Failed to load user–entity links.",
       "grantFailed": "Failed to grant access.",
+      "duplicateActiveLink": "Active user-entity link already exists for {{user}} and LEI {{lei}}.",
       "updateFailed": "Failed to update link.",
       "revokeFailed": "Failed to revoke link.",
+      "unrevokeFailed": "Failed to unrevoke link.",
       "invalidDateFormat": "Invalid date format. Use yyyy-mm-dd.",
       "leiNotFound": "LEI not found. Please enter a valid, registered 20-character LEI.",
       "userLoadFailed": "Failed to load users for the picker.",

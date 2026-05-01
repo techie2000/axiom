@@ -58,6 +58,10 @@ func (s *userEntityLinkRepositoryStub) Revoke(id uuid.UUID, revokedBy string) er
 	return nil
 }
 
+func (s *userEntityLinkRepositoryStub) Unrevoke(id uuid.UUID, restoredBy string) error {
+	return nil
+}
+
 // ---------------------------------------------------------------------------
 // GrantEntityLinkRequest validation tests (via isValidEntityRole)
 // ---------------------------------------------------------------------------

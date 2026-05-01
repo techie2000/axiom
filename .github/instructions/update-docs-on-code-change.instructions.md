@@ -144,6 +144,32 @@ Automatically check if documentation updates are needed when:
   - Revise security requirements
   - Update API key/token documentation
 
+### API Documentation Gate (Required)
+
+For any backend API change (new endpoint, removed endpoint, route rename, request/response schema change,
+query/path parameter change, or status code behavior change), complete all of the following in the same change:
+
+- Update or add Swag annotations on the handler method.
+
+Required annotation coverage:
+
+- `@Summary`, `@Description`, `@Tags`
+- `@Param` entries for path/query/body
+- `@Success` and `@Failure` response definitions
+- `@Router` with the exact route and HTTP method
+- `@Security BearerAuth` when endpoint is authenticated
+
+- Regenerate Swagger docs:
+
+```bash
+make swagger
+```
+
+- Verify generated Swagger output changed as expected under `backend/docs/`.
+- Confirm Swagger UI includes the endpoint and correct schema/params.
+
+Do not treat API work as complete until this gate passes.
+
 ### Code Example Synchronization
 
 **Verify and update code examples when:**

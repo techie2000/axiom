@@ -177,6 +177,10 @@ function ProvisionalLEIContent() {
   const [leiLookupLoading, setLeiLookupLoading] = useState<Record<string, boolean>>({})
   const [succeedTarget, setSucceedTarget] = useState<ProvisionalLEI | null>(null)
   const [officialLEI, setOfficialLEI] = useState('')
+  const [succeedLeiError, setSucceedLeiError] = useState('')
+  const [succeedLeiValidating, setSucceedLeiValidating] = useState(false)
+  const [isSucceedLeiValid, setIsSucceedLeiValid] = useState(false)
+  const lastValidatedSucceedLeiRef = useRef('')
   const [showColumnSelector, setShowColumnSelector] = useState(false)
   const columnSelectorRef = useRef<HTMLDivElement>(null)
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; record: ProvisionalLEI } | null>(null)
@@ -672,6 +676,10 @@ function ProvisionalLEIContent() {
   const openSucceed = (r: ProvisionalLEI) => {
     setSucceedTarget(r)
     setOfficialLEI('')
+    setSucceedLeiError('')
+    setSucceedLeiValidating(false)
+    setIsSucceedLeiValid(false)
+    lastValidatedSucceedLeiRef.current = ''
     setEditTarget(null)
     setEditForm(null)
     setShowCreate(false)
@@ -727,8 +735,67 @@ function ProvisionalLEIContent() {
     }
   }, [contextMenu])
 
+  const validateSucceedLEI = useCallback(async (rawLei: string) => {
+    const lei = normalizeLEI(rawLei)
+    if (!/^[A-Z0-9]{20}$/.test(lei)) {
+      setSucceedLeiValidating(false)
+      setSucceedLeiError('')
+      setIsSucceedLeiValid(false)
+      lastValidatedSucceedLeiRef.current = ''
+      return
+    }
+
+    if (leiNames[lei]) {
+      setSucceedLeiError('')
+      setIsSucceedLeiValid(true)
+      lastValidatedSucceedLeiRef.current = lei
+      return
+    }
+
+    if (lastValidatedSucceedLeiRef.current === lei) {
+      return
+    }
+
+    const token = getAuthToken()
+    if (!token) return
+
+    lastValidatedSucceedLeiRef.current = lei
+    setSucceedLeiValidating(true)
+    setSucceedLeiError('')
+    setIsSucceedLeiValid(false)
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/lei/${encodeURIComponent(lei)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      if (res.status === 404) {
+        setSucceedLeiError(t('provisionalLei.errors.successorLeiNotFound'))
+        return
+      }
+
+      if (!res.ok) {
+        return
+      }
+
+      const data = await res.json()
+      const legalName = data?.legal_name ?? data?.data?.legal_name ?? data?.record?.legal_name
+      if (typeof legalName === 'string' && legalName.trim()) {
+        setLeiNames((current) => ({ ...current, [lei]: legalName }))
+        setSucceedLeiError('')
+        setIsSucceedLeiValid(true)
+      } else {
+        setSucceedLeiError(t('provisionalLei.errors.successorLeiNotFound'))
+      }
+    } catch {
+      // Best-effort validation. Do not block with a network-specific inline error.
+    } finally {
+      setSucceedLeiValidating(false)
+    }
+  }, [leiNames, t])
+
   const handleSucceed = async () => {
-    if (!succeedTarget || !officialLEI.trim()) return
+    if (!succeedTarget || !officialLEI.trim() || !isSucceedLeiValid) return
     const token = getAuthToken()
     if (!token) return
     setActionLoading('succeed')
@@ -748,6 +815,10 @@ function ProvisionalLEIContent() {
       setSuccess(t('provisionalLei.success.succeeded'))
       setSucceedTarget(null)
       setOfficialLEI('')
+      setSucceedLeiError('')
+      setSucceedLeiValidating(false)
+      setIsSucceedLeiValid(false)
+      lastValidatedSucceedLeiRef.current = ''
       await fetchRecords()
     } catch {
       setError(t('provisionalLei.errors.network'))
@@ -1224,22 +1295,56 @@ function ProvisionalLEIContent() {
               <input
                 type="text"
                 value={officialLEI}
-                onChange={(e) => setOfficialLEI(e.target.value.toUpperCase())}
+                onChange={(e) => {
+                  const nextLei = e.target.value.toUpperCase()
+                  setOfficialLEI(nextLei)
+                  setSucceedLeiError('')
+
+                  const normalized = normalizeLEI(nextLei)
+                  if (leiNames[normalized]) {
+                    setIsSucceedLeiValid(true)
+                  } else {
+                    setIsSucceedLeiValid(false)
+                  }
+
+                  if (/^[A-Z0-9]{20}$/.test(normalized)) {
+                    void validateSucceedLEI(normalized)
+                  }
+                }}
+                onBlur={() => {
+                  void validateSucceedLEI(officialLEI)
+                }}
                 className="w-full rounded-md border border-[rgb(var(--border-rgb))] bg-[rgb(var(--surface-rgb))] px-3 py-2 text-sm font-mono theme-focus"
-                placeholder="20-character official LEI"
+                placeholder={t('provisionalLei.form.successorLeiPlaceholder')}
                 maxLength={20}
               />
+              {succeedLeiValidating && (
+                <p className="mt-1 text-xs theme-text-muted opacity-60">⟳ {t('common.loading')}</p>
+              )}
+              {succeedLeiError && (
+                <p className="mt-1 text-xs text-red-700 dark:text-red-300">{succeedLeiError}</p>
+              )}
+              {!succeedLeiError && !succeedLeiValidating && getLeiName(officialLEI) && (
+                <p className="mt-1 text-xs theme-text-muted">{getLeiName(officialLEI)}</p>
+              )}
             </div>
             <div className="flex gap-3 mt-4">
               <button
                 onClick={handleSucceed}
-                disabled={officialLEI.trim().length !== 20 || actionLoading === 'succeed'}
+                disabled={!isSucceedLeiValid || actionLoading === 'succeed'}
                 className="px-4 py-2 text-sm rounded-md theme-btn-primary disabled:opacity-60"
               >
                 {actionLoading === 'succeed' ? t('common.saving') : t('provisionalLei.actions.succeed')}
               </button>
               <button
-                onClick={() => { setSucceedTarget(null); setOfficialLEI('') }}
+                onClick={() => {
+                  setSucceedTarget(null)
+                  setOfficialLEI('')
+                  setSucceedLeiError('')
+                  setSucceedLeiValidating(false)
+                  setIsSucceedLeiValid(false)
+                  lastValidatedSucceedLeiRef.current = ''
+                }}
                 className="px-4 py-2 text-sm rounded-md theme-btn-neutral"
               >
                 {t('common.cancel')}
@@ -1389,7 +1494,11 @@ function ProvisionalLEIContent() {
               onKeyDown={(e) => {
                 if (e.key === 'ArrowDown') {
                   e.preventDefault()
-                  contextMenuLinkOfficialRef.current?.focus()
+                  if (contextMenu.record.successor_lei) {
+                    contextMenuEditRef.current?.focus()
+                  } else {
+                    contextMenuLinkOfficialRef.current?.focus()
+                  }
                 } else if (e.key === 'ArrowUp') {
                   e.preventDefault()
                   contextMenuEditRef.current?.focus()
@@ -1404,31 +1513,39 @@ function ProvisionalLEIContent() {
             >
               {formatLabel(t('provisionalLei.actions.clone'))}
             </button>
-            <button
-              ref={contextMenuLinkOfficialRef}
-              role="menuitem"
-              type="button"
-              disabled={Boolean(contextMenu.record.successor_lei)}
-              className="w-full text-left px-4 py-2.5 text-sm hover:bg-[rgb(var(--surface-muted-rgb))] transition-colors focus:outline-none focus-visible:ring-inset focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              onKeyDown={(e) => {
-                if (e.key === 'ArrowDown') {
-                  e.preventDefault()
-                  contextMenuEditRef.current?.focus()
-                } else if (e.key === 'ArrowUp') {
-                  e.preventDefault()
-                  contextMenuCloneRef.current?.focus()
-                } else if (e.key === 'Escape') {
-                  closeContextMenu()
-                }
-              }}
-              onClick={() => {
-                if (contextMenu.record.successor_lei) return
-                closeContextMenu()
-                openSucceed(contextMenu.record)
-              }}
+            <div
+              title={
+                contextMenu.record.successor_lei
+                  ? t('provisionalLei.actions.succeedDisabledReason')
+                  : getEnglishTooltip('provisionalLei.actions.succeed')
+              }
             >
-              {formatLabel(t('provisionalLei.actions.succeed'))}
-            </button>
+              <button
+                ref={contextMenuLinkOfficialRef}
+                role="menuitem"
+                type="button"
+                disabled={Boolean(contextMenu.record.successor_lei)}
+                className="w-full text-left px-4 py-2.5 text-sm hover:bg-[rgb(var(--surface-muted-rgb))] transition-colors focus:outline-none focus-visible:ring-inset focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none"
+                onKeyDown={(e) => {
+                  if (e.key === 'ArrowDown') {
+                    e.preventDefault()
+                    contextMenuEditRef.current?.focus()
+                  } else if (e.key === 'ArrowUp') {
+                    e.preventDefault()
+                    contextMenuCloneRef.current?.focus()
+                  } else if (e.key === 'Escape') {
+                    closeContextMenu()
+                  }
+                }}
+                onClick={() => {
+                  if (contextMenu.record.successor_lei) return
+                  closeContextMenu()
+                  openSucceed(contextMenu.record)
+                }}
+              >
+                {formatLabel(t('provisionalLei.actions.succeed'))}
+              </button>
+            </div>
           </div>
         )}
 

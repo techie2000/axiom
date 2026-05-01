@@ -16,7 +16,8 @@ Use **User-Entity Links** when you need to:
 
 - grant a user access to a specific LEI entity,
 - update role, expiry, or notes for an existing link,
-- revoke access that is no longer valid.
+- revoke access that is no longer valid,
+- restore a link that was revoked by mistake.
 
 ## Steps
 
@@ -47,7 +48,9 @@ the child entity.
 ### Edit an existing link
 
 1. Find the link in the table.
-2. Click **Edit**.
+2. Open actions using either:
+   - **Edit** in the row action buttons, or
+   - **Right-click** the row and choose **Edit**.
 3. Update role, expiry date, include-children flag, or notes.
 4. Click **Save**.
 
@@ -56,20 +59,35 @@ Expected result: The row reflects updated values.
 ### Revoke a link
 
 1. Find the link in the table.
-2. Click **Revoke**.
+2. Open actions using either:
+   - **Revoke** in the row action buttons, or
+   - **Right-click** the row and choose **Revoke**.
 3. Confirm the action.
 
 Expected result: The link is marked revoked and is excluded when **Active only** is enabled.
+
+### Unrevoke a link
+
+1. Find a revoked link in the table (toggle **Active only** off if needed).
+2. Open actions using either:
+   - **Unrevoke** in the row action buttons, or
+   - **Right-click** the row and choose **Unrevoke**.
+3. Confirm the action.
+
+Expected result: The link is restored and becomes active again if it has not expired.
 
 ## Table controls
 
 - **Filter by User ID**: show links for a specific user.
 - **Filter by LEI**: show links for a specific LEI.
 - **Active only**: toggle between only active links and all links (including revoked).
+- **Status** column: shows whether links are `active`, `expired`, or `revoked`.
 
 ## Validation behavior
 
 - LEI values are validated when granting access.
+- If a 20-character LEI is not found, an inline error is shown.
+- The **Grant** button remains disabled until the LEI is valid and found.
 - Expiry dates must use `yyyy-mm-dd` format.
 - If user lookup is unavailable, you can still provide a valid user ID directly.
 
