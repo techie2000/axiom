@@ -3,6 +3,7 @@ package repository
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -180,8 +181,23 @@ func (r *userEntityLinkRepository) Unrevoke(id uuid.UUID, restoredBy string) err
 }
 
 func (r *userEntityLinkRepository) CreateAudit(audit *domain.UserEntityLinkAudit) error {
-	result := r.db.Create(audit)
+	auditRow := map[string]interface{}{
+		"user_entity_link_id": audit.UserEntityLinkID,
+		"action":             audit.Action,
+		"record_snapshot":    audit.RecordSnapshot,
+		"changed_fields":     normalizeJSONBOrNil(audit.ChangedFields),
+		"changed_by":         audit.ChangedBy,
+	}
+
+	result := r.db.Model(&domain.UserEntityLinkAudit{}).Create(auditRow)
 	return result.Error
+}
+
+func normalizeJSONBOrNil(value string) interface{} {
+	if strings.TrimSpace(value) == "" {
+		return nil
+	}
+	return value
 }
 
 // Compile-time interface check.
