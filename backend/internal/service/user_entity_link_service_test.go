@@ -62,6 +62,10 @@ func (s *userEntityLinkRepositoryStub) Unrevoke(id uuid.UUID, restoredBy string)
 	return nil
 }
 
+func (s *userEntityLinkRepositoryStub) CreateAudit(audit *domain.UserEntityLinkAudit) error {
+	return nil
+}
+
 // ---------------------------------------------------------------------------
 // GrantEntityLinkRequest validation tests (via isValidEntityRole)
 // ---------------------------------------------------------------------------

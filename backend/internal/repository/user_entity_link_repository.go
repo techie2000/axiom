@@ -33,6 +33,8 @@ type UserEntityLinkRepository interface {
 	Revoke(id uuid.UUID, revokedBy string) error
 	// Unrevoke restores a revoked link by clearing revoked_at.
 	Unrevoke(id uuid.UUID, restoredBy string) error
+	// CreateAudit logs an audit record for a user-entity link change.
+	CreateAudit(audit *domain.UserEntityLinkAudit) error
 }
 
 type userEntityLinkRepository struct {
@@ -175,6 +177,11 @@ func (r *userEntityLinkRepository) Unrevoke(id uuid.UUID, restoredBy string) err
 		return fmt.Errorf("user-entity link %s not found or not revoked", id)
 	}
 	return nil
+}
+
+func (r *userEntityLinkRepository) CreateAudit(audit *domain.UserEntityLinkAudit) error {
+	result := r.db.Create(audit)
+	return result.Error
 }
 
 // Compile-time interface check.

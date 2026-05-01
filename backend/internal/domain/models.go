@@ -679,3 +679,18 @@ func (u *UserEntityLink) IsActive() bool {
 	}
 	return true
 }
+
+// UserEntityLinkAudit represents the complete audit history of user-entity link changes
+type UserEntityLinkAudit struct {
+	ID                 uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	UserEntityLinkID   uuid.UUID `gorm:"type:uuid;not null;index" json:"user_entity_link_id"`
+	Action             string    `gorm:"size:20;not null" json:"action"` // CREATE, UPDATE, DELETE
+	RecordSnapshot     string    `gorm:"type:jsonb;not null" json:"record_snapshot"`
+	ChangedFields      string    `gorm:"type:jsonb" json:"changed_fields"`
+	ChangedBy          string    `gorm:"size:100;not null;default:'system'" json:"changed_by"`
+	CreatedAt          time.Time `json:"created_at"`
+}
+
+func (UserEntityLinkAudit) TableName() string {
+	return "user_entity_links_audit"
+}
