@@ -866,7 +866,7 @@ function ProvisionalLEIContent() {
 
   return (
     <main className="min-h-screen p-8">
-      <div className={`${isExpandedView ? 'max-w-[95vw]' : 'max-w-7xl'} mx-auto`}>
+      <div suppressHydrationWarning className={`${isExpandedView ? 'max-w-[95vw]' : 'max-w-7xl'} mx-auto`}>
         <PageHeader
           title={t('provisionalLei.title')}
           subtitle={t('provisionalLei.subtitle')}
@@ -886,6 +886,7 @@ function ProvisionalLEIContent() {
               </button>
 
               <button
+                suppressHydrationWarning
                 onClick={expandedWidthPreference.toggle}
                 className="h-9 px-3 rounded-lg theme-btn-neutral theme-focus text-sm font-medium"
                 title={isExpandedView ? getEnglishTooltip('referenceLayout.normalButton') : getEnglishTooltip('referenceLayout.expandButton')}
