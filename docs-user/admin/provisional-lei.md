@@ -38,15 +38,32 @@ Expected result: A new row appears with a generated LEI, status, source, and dat
 ### Edit an existing provisional LEI
 
 1. Find the record in the table.
-2. Click **Edit**.
+2. Open actions using either:
+   - **Edit** in the row action buttons, or
+   - **Right-click** the row and choose **Edit**.
 3. Update the fields you need (for example legal name, status, source, location values).
 4. Click **Save**.
 
 Expected result: The row updates and the change is visible in the table.
 
+### Clone a provisional LEI
+
+Use clone to speed up entry when creating entities with similar details.
+
+1. Find a similar record in the table.
+2. Open actions using either:
+   - **Clone** in the row action buttons, or
+   - **Right-click** the row and choose **Clone**.
+3. Review and adjust prefilled values in the create form.
+4. Click **Save**.
+
+Expected result: A new provisional LEI is created using the copied values as a starting point.
+
 ### Link a provisional LEI to an official LEI
 
-1. In the row for the provisional record, click **Link to Official LEI**.
+1. In the row for the provisional record, open actions using either:
+   - **Link to Official LEI** in the row action buttons, or
+   - **Right-click** the row and choose **Link to Official LEI**.
 2. Enter the 20-character official LEI.
 3. Save the action.
 
@@ -61,6 +78,15 @@ The provisional table supports the same usability controls as other data tables:
 - **Display: Codes / Names**: toggle location rendering where name metadata exists.
 
 Each control supports **Save as default** with undo, so personal preferences persist.
+
+### Columns selector behavior
+
+The columns selector supports grouped toggles matching LEI Records behavior:
+
+- Group header rows show tri-state selection (`☑`, `◐`, `☐`).
+- Group header rows show selected/total counts (for example `3/7`).
+- **Select All** and **Reset to Default** controls are available in the selector header.
+- **Parent LEI** is included in the default visible column set.
 
 ### Sort
 

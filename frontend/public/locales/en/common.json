@@ -1101,6 +1101,7 @@
     "actions": {
       "create": "+ New Provisional LEI",
       "edit": "$t(common.edit)",
+      "clone": "Clone",
       "save": "$t(common.save)",
       "succeed": "Link to Official LEI"
     },

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, Suspense, useMemo, useRef } from 'react'
+import { MouseEvent as ReactMouseEvent, useState, useEffect, useCallback, Suspense, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
@@ -8,11 +8,13 @@ import PageHeader from '../../components/PageHeader'
 import SortableHeaderCell from '../../components/SortableHeaderCell'
 import SearchInputWithOverflowTooltip from '../../components/SearchInputWithOverflowTooltip'
 import Alert from '../../components/Alert'
+import Badge from '../../components/Badge'
 import LoadingSpinner from '../../components/LoadingSpinner'
 import PreferenceSavePrompt from '../../components/PreferenceSavePrompt'
 import ThemedSelect from '../../components/ThemedSelect'
 import { getApiBaseUrl } from '../../lib/api-base'
 import { getAuthToken } from '../../lib/auth-token'
+import { PROVISIONAL_BADGE_VARIANT } from '../../lib/badge-presets'
 import { buildDocsUrl } from '../../lib/docsLinks'
 import { useDeferredBooleanPreference } from '../../lib/useDeferredBooleanPreference'
 import { useEnglishTooltips } from '../../lib/useEnglishTooltips'
@@ -72,7 +74,7 @@ const PROVISIONAL_COLUMNS: ProvisionalColumn[] = [
   
   // Associated Entities
   { key: 'successor_lei', labelKey: 'provisionalLei.columns.successorLei', groupKey: 'provisionalLei.columns.groups.associated', defaultVisible: true, width: 'w-44' },
-  { key: 'parent_lei', labelKey: 'provisionalLei.columns.parentLei', groupKey: 'provisionalLei.columns.groups.associated', defaultVisible: false, width: 'w-44' },
+  { key: 'parent_lei', labelKey: 'provisionalLei.columns.parentLei', groupKey: 'provisionalLei.columns.groups.associated', defaultVisible: true, width: 'w-44' },
   
   // Address
   { key: 'legal_address_country', labelKey: 'provisionalLei.columns.country', groupKey: 'provisionalLei.columns.groups.address', defaultVisible: true, width: 'w-24' },
@@ -177,6 +179,11 @@ function ProvisionalLEIContent() {
   const [officialLEI, setOfficialLEI] = useState('')
   const [showColumnSelector, setShowColumnSelector] = useState(false)
   const columnSelectorRef = useRef<HTMLDivElement>(null)
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; record: ProvisionalLEI } | null>(null)
+  const contextMenuRef = useRef<HTMLDivElement>(null)
+  const contextMenuEditRef = useRef<HTMLButtonElement>(null)
+  const contextMenuCloneRef = useRef<HTMLButtonElement>(null)
+  const contextMenuLinkOfficialRef = useRef<HTMLButtonElement>(null)
 
   const [storedColumns, setStoredColumns] = useUserPreference('provisional-lei', 'visible_columns', DEFAULT_VISIBLE_KEYS)
   const expandedWidthPreference = useDeferredBooleanPreference({
@@ -472,6 +479,30 @@ function ProvisionalLEIContent() {
     handleSetVisibleColumns(next)
   }, [handleSetVisibleColumns, localColumns, visibleColumns])
 
+  const toggleGroupColumns = useCallback((groupKey: string) => {
+    const groupColumns = PROVISIONAL_COLUMNS.filter((column) => column.groupKey === groupKey)
+    const allGroupColumnsVisible = groupColumns.every((column) => effectiveVisibleColumns.has(column.key))
+
+    const nextVisibleColumns = new Set(effectiveVisibleColumns)
+    if (allGroupColumnsVisible) {
+      groupColumns.forEach((column) => nextVisibleColumns.delete(column.key))
+    } else {
+      groupColumns.forEach((column) => nextVisibleColumns.add(column.key))
+    }
+    handleSetVisibleColumns(nextVisibleColumns)
+  }, [effectiveVisibleColumns, handleSetVisibleColumns])
+
+  const isGroupFullySelected = useCallback((groupKey: string) => {
+    const groupColumns = PROVISIONAL_COLUMNS.filter((column) => column.groupKey === groupKey)
+    return groupColumns.every((column) => effectiveVisibleColumns.has(column.key))
+  }, [effectiveVisibleColumns])
+
+  const isGroupPartiallySelected = useCallback((groupKey: string) => {
+    const groupColumns = PROVISIONAL_COLUMNS.filter((column) => column.groupKey === groupKey)
+    const visibleCount = groupColumns.filter((column) => effectiveVisibleColumns.has(column.key)).length
+    return visibleCount > 0 && visibleCount < groupColumns.length
+  }, [effectiveVisibleColumns])
+
   const handleSaveColumns = useCallback(() => {
     if (pendingColumns.current) {
       previousColumns.current = storedColumns
@@ -519,9 +550,9 @@ function ProvisionalLEIContent() {
         return (
           <>
             {record.lei}
-            <span className="ml-1 px-1.5 py-0.5 text-[10px] rounded bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 font-sans">
+            <Badge variant={PROVISIONAL_BADGE_VARIANT} className="ml-1 inline-block w-fit px-1.5 py-0.5 text-[10px] font-sans">
               {t('provisionalLei.badge')}
-            </span>
+            </Badge>
           </>
         )
       case 'legal_name':
@@ -646,6 +677,56 @@ function ProvisionalLEIContent() {
     setShowCreate(false)
   }
 
+  const openClone = (record: ProvisionalLEI) => {
+    setCreateForm({
+      legal_name: record.legal_name || '',
+      legal_address_country: record.legal_address_country || '',
+      legal_address_city: record.legal_address_city || '',
+      legal_jurisdiction: record.legal_jurisdiction || '',
+      provisioning_source: record.provisioning_source || '',
+      notes: record.notes || '',
+      parent_lei: record.parent_lei || '',
+      child_lei: record.child_lei || '',
+    })
+
+    if (record.parent_lei) lookupLEIName(record.parent_lei, 'createParent')
+    if (record.child_lei) lookupLEIName(record.child_lei, 'createChild')
+
+    setEditTarget(null)
+    setEditForm(null)
+    setSucceedTarget(null)
+    setShowCreate(true)
+  }
+
+  const handleRowContextMenu = useCallback((event: ReactMouseEvent, record: ProvisionalLEI) => {
+    event.preventDefault()
+    event.stopPropagation()
+    setContextMenu({ x: event.clientX, y: event.clientY, record })
+  }, [])
+
+  const closeContextMenu = useCallback(() => setContextMenu(null), [])
+
+  useEffect(() => {
+    const handleClick = () => closeContextMenu()
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeContextMenu()
+    }
+    if (contextMenu) {
+      document.addEventListener('click', handleClick)
+      document.addEventListener('keydown', handleKey)
+    }
+    return () => {
+      document.removeEventListener('click', handleClick)
+      document.removeEventListener('keydown', handleKey)
+    }
+  }, [contextMenu, closeContextMenu])
+
+  useEffect(() => {
+    if (contextMenu && contextMenuRef.current) {
+      contextMenuRef.current.focus()
+    }
+  }, [contextMenu])
+
   const handleSucceed = async () => {
     if (!succeedTarget || !officialLEI.trim()) return
     const token = getAuthToken()
@@ -749,33 +830,33 @@ function ProvisionalLEIContent() {
                     {Object.entries(getColumnsByGroup()).map(([groupKey, columns]) => (
                       <div key={groupKey} className="border-b last:border-b-0" style={{ borderColor: 'rgb(var(--border-rgb) / 0.75)' }}>
                         <button
-                          onClick={(e) => {
-                            e.preventDefault()
-                            const allGroupKeys = columns.map(c => c.key)
-                            const allSelected = allGroupKeys.every(key => effectiveVisibleColumns.has(key))
-                            const newSet = new Set(effectiveVisibleColumns)
-                            if (allSelected) {
-                              allGroupKeys.forEach(key => newSet.delete(key))
-                            } else {
-                              allGroupKeys.forEach(key => newSet.add(key))
-                            }
-                            handleSetVisibleColumns(newSet)
-                          }}
-                          className="w-full text-left px-3 py-2 text-xs font-semibold hover:theme-panel-hover"
+                          type="button"
+                          onClick={() => toggleGroupColumns(groupKey)}
+                          className="w-full px-3 py-2.5 theme-subtle font-semibold text-sm cursor-pointer transition-colors flex items-center justify-between gap-3 theme-focus"
                         >
-                          {t(groupKey)}
+                          <span className="flex items-center gap-2.5">
+                            <span className="text-base leading-none">
+                              {isGroupFullySelected(groupKey) ? '☑' : isGroupPartiallySelected(groupKey) ? '◐' : '☐'}
+                            </span>
+                            <span>{t(groupKey)}</span>
+                          </span>
+                          <span className="text-xs theme-text-muted font-normal">
+                            {columns.filter((column) => effectiveVisibleColumns.has(column.key)).length}/{columns.length}
+                          </span>
                         </button>
-                        {columns.map((col) => (
-                          <label key={col.key} className="flex items-center gap-2 px-3 py-2 text-xs hover:theme-panel-hover cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={effectiveVisibleColumns.has(col.key)}
-                              onChange={() => toggleColumn(col.key)}
-                              className="rounded border-[rgb(var(--border-rgb))]"
-                            />
-                            <span>{t(col.labelKey)}</span>
-                          </label>
-                        ))}
+                        <div className="p-2">
+                          {columns.map((col) => (
+                            <label key={col.key} className="flex items-center gap-2 px-2 py-1.5 theme-table-row-hover transition-colors rounded cursor-pointer text-sm">
+                              <input
+                                type="checkbox"
+                                checked={effectiveVisibleColumns.has(col.key)}
+                                onChange={() => toggleColumn(col.key)}
+                                className="rounded"
+                              />
+                              <span>{t(col.labelKey)}</span>
+                            </label>
+                          ))}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -1198,6 +1279,7 @@ function ProvisionalLEIContent() {
                 {filteredRecords.map((record) => (
                   <tr
                     key={record.id}
+                    onContextMenu={(event) => handleRowContextMenu(event, record)}
                     className="border-b border-[rgb(var(--border-rgb)/0.4)] theme-table-row-hover transition-colors"
                   >
                     {activeColumns.map((column) => {
@@ -1230,6 +1312,13 @@ function ProvisionalLEIContent() {
                         >
                           {formatLabel(t('provisionalLei.actions.edit'))}
                         </button>
+                        <button
+                          onClick={() => openClone(record)}
+                          className="px-3 py-1 text-xs rounded theme-btn-neutral theme-focus"
+                          title={getEnglishTooltip('provisionalLei.actions.clone')}
+                        >
+                          {formatLabel(t('provisionalLei.actions.clone'))}
+                        </button>
                         {!record.successor_lei && (
                           <button
                             onClick={() => openSucceed(record)}
@@ -1245,6 +1334,101 @@ function ProvisionalLEIContent() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {contextMenu && (
+          <div
+            ref={contextMenuRef}
+            role="menu"
+            tabIndex={-1}
+            aria-label={t('provisionalLei.columns.actions')}
+            className="fixed z-[60] min-w-56 theme-dropdown rounded-lg shadow-xl border border-[rgb(var(--border-rgb))] overflow-hidden"
+            style={{ top: contextMenu.y, left: contextMenu.x }}
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                closeContextMenu()
+              } else if (e.key === 'ArrowDown') {
+                e.preventDefault()
+                contextMenuCloneRef.current?.focus()
+              } else if (e.key === 'ArrowUp') {
+                e.preventDefault()
+                contextMenuEditRef.current?.focus()
+              }
+            }}
+          >
+            <button
+              ref={contextMenuEditRef}
+              role="menuitem"
+              type="button"
+              className="w-full text-left px-4 py-2.5 text-sm hover:bg-[rgb(var(--surface-muted-rgb))] transition-colors focus:outline-none focus-visible:ring-inset focus-visible:ring-2 focus-visible:ring-blue-500"
+              onKeyDown={(e) => {
+                if (e.key === 'ArrowDown') {
+                  e.preventDefault()
+                  contextMenuCloneRef.current?.focus()
+                } else if (e.key === 'ArrowUp') {
+                  e.preventDefault()
+                  contextMenuRef.current?.focus()
+                } else if (e.key === 'Escape') {
+                  closeContextMenu()
+                }
+              }}
+              onClick={() => {
+                closeContextMenu()
+                openEdit(contextMenu.record)
+              }}
+            >
+              {formatLabel(t('provisionalLei.actions.edit'))}
+            </button>
+            <button
+              ref={contextMenuCloneRef}
+              role="menuitem"
+              type="button"
+              className="w-full text-left px-4 py-2.5 text-sm hover:bg-[rgb(var(--surface-muted-rgb))] transition-colors focus:outline-none focus-visible:ring-inset focus-visible:ring-2 focus-visible:ring-blue-500"
+              onKeyDown={(e) => {
+                if (e.key === 'ArrowDown') {
+                  e.preventDefault()
+                  contextMenuLinkOfficialRef.current?.focus()
+                } else if (e.key === 'ArrowUp') {
+                  e.preventDefault()
+                  contextMenuEditRef.current?.focus()
+                } else if (e.key === 'Escape') {
+                  closeContextMenu()
+                }
+              }}
+              onClick={() => {
+                closeContextMenu()
+                openClone(contextMenu.record)
+              }}
+            >
+              {formatLabel(t('provisionalLei.actions.clone'))}
+            </button>
+            <button
+              ref={contextMenuLinkOfficialRef}
+              role="menuitem"
+              type="button"
+              disabled={Boolean(contextMenu.record.successor_lei)}
+              className="w-full text-left px-4 py-2.5 text-sm hover:bg-[rgb(var(--surface-muted-rgb))] transition-colors focus:outline-none focus-visible:ring-inset focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              onKeyDown={(e) => {
+                if (e.key === 'ArrowDown') {
+                  e.preventDefault()
+                  contextMenuEditRef.current?.focus()
+                } else if (e.key === 'ArrowUp') {
+                  e.preventDefault()
+                  contextMenuCloneRef.current?.focus()
+                } else if (e.key === 'Escape') {
+                  closeContextMenu()
+                }
+              }}
+              onClick={() => {
+                if (contextMenu.record.successor_lei) return
+                closeContextMenu()
+                openSucceed(contextMenu.record)
+              }}
+            >
+              {formatLabel(t('provisionalLei.actions.succeed'))}
+            </button>
           </div>
         )}
 

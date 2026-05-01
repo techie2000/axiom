@@ -16,6 +16,7 @@ import TablePaginationControls from '../components/TablePaginationControls'
 import ThemedSelect from '../components/ThemedSelect'
 import { getApiBaseUrl } from '../lib/api-base'
 import { getAuthToken } from '../lib/auth-token'
+import { PROVISIONAL_BADGE_VARIANT } from '../lib/badge-presets'
 import { useDeferredBooleanPreference } from '../lib/useDeferredBooleanPreference'
 import { buildDocsUrl } from '../lib/docsLinks'
 import { useButtonEmojiMode } from '../lib/useButtonEmojiMode'
@@ -1779,7 +1780,7 @@ export default function LEIRecordsPage() {
                                 <div className="flex flex-col gap-2">
                                   <div className="font-mono">{formatCellValue(value, column.key)}</div>
                                   {record.is_provisional && (
-                                    <Badge variant="blue" className="w-fit">
+                                    <Badge variant={PROVISIONAL_BADGE_VARIANT} className="w-fit">
                                       {t('leiRecords.badges.provisional')}
                                     </Badge>
                                   )}
@@ -2120,7 +2121,7 @@ export default function LEIRecordsPage() {
                     <div>
                       <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">Type</span>
                       <p className="mt-1">
-                        <Badge variant="blue">
+                        <Badge variant={PROVISIONAL_BADGE_VARIANT}>
                           {t('leiRecords.badges.provisional')}
                         </Badge>
                       </p>

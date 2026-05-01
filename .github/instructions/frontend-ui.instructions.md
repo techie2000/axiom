@@ -289,6 +289,9 @@ EVERY visual change:
 - Include `Select All` and `Reset Default` actions in the selector.
 - The `Columns` count should reflect current visible column count.
 - Use the LEI Records pattern as the baseline implementation for grouped or ungrouped column selectors.
+- For grouped selectors, group header rows must match LEI Records flavor:
+  tri-state indicator (`☑`/`◐`/`☐`), translated group label, and visible/total counter
+  on the right (for example `3/7`).
 - **Column visibility must be backed by `useUserPreference`** (see User Preference Standard below).
 - All visible selector labels/actions must be rendered through i18n keys (`t('...')`).
   Do not hardcode user-facing labels such as `Save as default`, `Select All`, `Reset`, `Columns`, or group names.
@@ -976,6 +979,12 @@ import Badge from '../components/Badge'
 ```
 
 Variants: `blue | green | red | yellow | orange | purple | gray`
+
+#### Provisional LEI Badge Standard (Required)
+
+- `PROVISIONAL` markers must use shared `<Badge>` styling, not page-local `<span>` chips.
+- Use `variant="blue"` for `PROVISIONAL` on both `lei-records` and `admin/provisional-lei`.
+- Reuse `frontend/app/lib/badge-presets.ts` (`PROVISIONAL_BADGE_VARIANT`) to keep pages aligned.
 
 ### StatCard
 

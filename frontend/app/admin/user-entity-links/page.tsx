@@ -215,6 +215,7 @@ function UserEntityLinksContent() {
   const [leiError, setLeiError] = useState('')
   const [leiValidating, setLeiValidating] = useState(false)
   const [leiNames, setLeiNames] = useState<Record<string, string>>({})
+  const lastValidatedLeiRef = useRef('')
 
   const fetchLinks = useCallback(async (overrides?: { filterUser?: string; filterLEI?: string }) => {
     setLoading(true)
@@ -372,16 +373,25 @@ function UserEntityLinksContent() {
     })),
   ]
 
-  const selectedGrantUser = grantUsers.find((u) => u.id === grantForm.user_id)
-
-  const handleLEIBlur = async () => {
-    const lei = grantForm.lei.trim().toUpperCase()
-    if (lei.length !== 20) {
+  const validateGrantLEI = useCallback(async (rawLei: string) => {
+    const lei = rawLei.trim().toUpperCase()
+    if (!/^[A-Z0-9]{20}$/.test(lei)) {
+      setLeiValidating(false)
       setLeiError('')
+      lastValidatedLeiRef.current = ''
+      return
+    }
+    if (leiNames[lei]) {
+      setLeiError('')
+      lastValidatedLeiRef.current = lei
+      return
+    }
+    if (lastValidatedLeiRef.current === lei) {
       return
     }
     const token = getAuthToken()
     if (!token) return
+    lastValidatedLeiRef.current = lei
     setLeiValidating(true)
     setLeiError('')
     try {
@@ -395,6 +405,7 @@ function UserEntityLinksContent() {
         const legalName = data?.legal_name ?? data?.data?.legal_name ?? data?.record?.legal_name
         if (typeof legalName === 'string' && legalName.trim()) {
           setLeiNames((current) => ({ ...current, [lei]: legalName }))
+          setLeiError('')
         }
       }
     } catch {
@@ -402,7 +413,7 @@ function UserEntityLinksContent() {
     } finally {
       setLeiValidating(false)
     }
-  }
+  }, [leiNames, t])
 
   const displayed = useMemo(() => {
     const base = showActiveOnly ? links.filter((l) => !l.revoked_at) : links
@@ -675,14 +686,6 @@ function UserEntityLinksContent() {
                 {grantUsersError && (
                   <p className="mt-1 text-xs text-red-700 dark:text-red-300">{grantUsersError}</p>
                 )}
-                {selectedGrantUser && (
-                  <p className="mt-1 text-xs theme-text-muted">
-                    {t('userEntityLinks.form.selectedUserSummary', {
-                      username: selectedGrantUser.username,
-                      name: selectedGrantUser.full_name || selectedGrantUser.email,
-                    })}
-                  </p>
-                )}
               </div>
               <div>
                 <label className="block text-xs font-medium mb-1 theme-text-muted">
@@ -691,8 +694,17 @@ function UserEntityLinksContent() {
                 <input
                   type="text"
                   value={grantForm.lei}
-                  onChange={(e) => { setLeiError(''); setGrantForm((f) => ({ ...f, lei: e.target.value.toUpperCase() })) }}
-                  onBlur={handleLEIBlur}
+                  onChange={(e) => {
+                    const nextLei = e.target.value.toUpperCase()
+                    setLeiError('')
+                    setGrantForm((f) => ({ ...f, lei: nextLei }))
+                    if (/^[A-Z0-9]{20}$/.test(nextLei.trim())) {
+                      void validateGrantLEI(nextLei)
+                    }
+                  }}
+                  onBlur={() => {
+                    void validateGrantLEI(grantForm.lei)
+                  }}
                   className={`w-full rounded-md border bg-[rgb(var(--surface-rgb))] px-3 py-2 text-sm font-mono theme-focus ${leiError ? 'border-red-500' : 'border-[rgb(var(--border-rgb))]'}`}
                   placeholder="20-character LEI"
                   maxLength={20}
