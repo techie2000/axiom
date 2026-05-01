@@ -61,6 +61,32 @@ For numbers (not dates), using `.toLocaleString()` is acceptable for thousand se
 <p>{amount.toLocaleString()}</p>        // 1,234,567.89
 ```
 
+## Status Presentation Standard
+
+### Status and Enum Label Casing (Required)
+
+Use a single presentation standard for user-facing status/enum labels across pages.
+
+- Display status and enum labels in **Title Case** (for example: `Active`, `Issued`, `Entity Admin`).
+- Do not render raw backend enum values directly (for example: `ACTIVE`, `active`, `entity_admin`).
+- Normalize display labels through shared helpers (for example `formatStatusLabel`) before rendering badges,
+  table cells, and filter options.
+- Keep canonical backend values unchanged in API payloads and filters; only normalize for display.
+
+#### ✅ CORRECT Examples
+
+```tsx
+<span>{formatStatusLabel('ACTIVE')}</span>        // Active
+<span>{formatStatusLabel('entity_admin')}</span>  // Entity Admin
+<span>{formatStatusLabel(t('user.status.issued'))}</span>
+```
+
+#### ❌ INCORRECT Examples
+
+```tsx
+<span>{status}</span>   // active, ACTIVE, entity_admin
+```
+
 ## React and TypeScript Best Practices
 
 ### Component Structure

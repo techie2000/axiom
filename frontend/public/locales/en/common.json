@@ -163,7 +163,8 @@
     "required": "Required",
     "errorTitle": "⚠️ Error:",
     "noticeTitle": "📋 Notice:",
-    "saving": "Saving..."
+    "saving": "Saving...",
+    "columns": "Columns"
   },
   "admin": {
     "translations": {
@@ -711,7 +712,7 @@
     "displayToggleNamesTitle": "Switch to display country names instead of codes",
     "displayToggleCodes": "🏷️ Display: Codes",
     "displayToggleCodesTitle": "Switch to display country codes instead of names",
-    "columns": "Columns",
+    "columns": "$t(common.columns)",
     "selectColumns": "Select columns to display",
     "timelineSlider": "Navigate audit history timeline",
     "viewAuditHistory": "📋 View Audit History",
@@ -1158,6 +1159,10 @@
     "filters": {
       "byUser": "Filter by User ID…",
       "byLEI": "Filter by LEI…",
+      "status": "Status",
+      "allStatuses": "All Statuses",
+      "role": "Role",
+      "allRoles": "All Roles",
       "clear": "$t(common.clear)",
       "activeOnly": "Active only"
     },
@@ -1187,9 +1192,9 @@
       "all": "All descendants"
     },
     "status": {
-      "active": "active",
-      "expired": "expired",
-      "revoked": "revoked"
+      "active": "Active",
+      "expired": "Expired",
+      "revoked": "Revoked"
     },
     "actions": {
       "grant": "+ Grant Access",

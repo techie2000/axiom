@@ -16,6 +16,7 @@ import { buildDocsUrl } from '../../lib/docsLinks'
 import SortableHeaderCell from '../../components/SortableHeaderCell'
 import { formatStatusLabel } from '../../lib/status-label'
 import { getUserEntityLinkStatus } from '../../lib/user-entity-link-status'
+import { filterUserEntityLinks } from '../../lib/user-entity-link-filter'
 
 const API_BASE_URL = getApiBaseUrl()
 
@@ -77,6 +78,12 @@ function dateOnlyToISOString(value: string): string | null {
 
 const ROLES: EntityRole[] = ['viewer', 'trader', 'entity_admin']
 const ROLE_OPTIONS = ROLES.map((role) => ({ value: role, label: formatStatusLabel(role) }))
+const STATUS_OPTIONS = ['active', 'expired', 'revoked'] as const
+const STATUS_LABEL_KEYS: Record<(typeof STATUS_OPTIONS)[number], string> = {
+  active: 'userEntityLinks.status.active',
+  expired: 'userEntityLinks.status.expired',
+  revoked: 'userEntityLinks.status.revoked',
+}
 
 const CHILDREN_SCOPE_OPTIONS = [
   { value: 'none' as ChildrenScope, label: 'userEntityLinks.childrenScope.none' },
@@ -204,6 +211,8 @@ function UserEntityLinksContent() {
   const [success, setSuccess] = useState('')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [showActiveOnly, setShowActiveOnly] = useState(true)
+  const [statusFilter, setStatusFilter] = useState<'all' | (typeof STATUS_OPTIONS)[number]>('all')
+  const [roleFilter, setRoleFilter] = useState<'all' | EntityRole>('all')
   const [sortField, setSortField] = useState<string>('granted_at')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
 
@@ -395,6 +404,19 @@ function UserEntityLinksContent() {
     })),
   ]
 
+  const roleFilterOptions = [
+    { value: 'all', label: t('userEntityLinks.filters.allRoles') },
+    ...ROLE_OPTIONS,
+  ]
+
+  const statusFilterOptions = [
+    { value: 'all', label: t('userEntityLinks.filters.allStatuses') },
+    ...STATUS_OPTIONS.map((status) => ({
+      value: status,
+      label: formatStatusLabel(t(STATUS_LABEL_KEYS[status])),
+    })),
+  ]
+
   const validateGrantLEI = useCallback(async (rawLei: string) => {
     const lei = rawLei.trim().toUpperCase()
     if (!/^[A-Z0-9]{20}$/.test(lei)) {
@@ -438,7 +460,11 @@ function UserEntityLinksContent() {
   }, [leiNames, t])
 
   const displayed = useMemo(() => {
-    const base = showActiveOnly ? links.filter((l) => getUserEntityLinkStatus(l) === 'active') : links
+    const base = filterUserEntityLinks(links, {
+      showActiveOnly,
+      status: statusFilter,
+      role: roleFilter,
+    })
     return [...base].sort((a, b) => {
       let valA: string
       let valB: string
@@ -480,7 +506,7 @@ function UserEntityLinksContent() {
       const cmp = valA.localeCompare(valB, undefined, { sensitivity: 'base' })
       return sortDirection === 'asc' ? cmp : -cmp
     })
-  }, [links, showActiveOnly, sortField, sortDirection, grantUsers])
+  }, [links, showActiveOnly, statusFilter, roleFilter, sortField, sortDirection, grantUsers])
 
   const formatUserDisplayName = useCallback((userId: string) => {
     const user = grantUsers.find((candidate) => candidate.id === userId)
@@ -746,8 +772,27 @@ function UserEntityLinksContent() {
             placeholder={t('userEntityLinks.filters.byLEI')}
             className="rounded-md border border-[rgb(var(--border-rgb))] bg-[rgb(var(--surface-rgb))] px-3 py-2 text-sm font-mono theme-focus w-56"
           />
+          <ThemedSelect
+            value={statusFilter}
+            onChange={(value) => setStatusFilter(value as 'all' | (typeof STATUS_OPTIONS)[number])}
+            options={statusFilterOptions}
+            ariaLabel={t('userEntityLinks.filters.status')}
+            className="w-48"
+          />
+          <ThemedSelect
+            value={roleFilter}
+            onChange={(value) => setRoleFilter(value as 'all' | EntityRole)}
+            options={roleFilterOptions}
+            ariaLabel={t('userEntityLinks.filters.role')}
+            className="w-52"
+          />
           <button
-            onClick={() => { setFilterUser(''); setFilterLEI(''); }}
+            onClick={() => {
+              setFilterUser('')
+              setFilterLEI('')
+              setStatusFilter('all')
+              setRoleFilter('all')
+            }}
             className="px-3 py-2 text-sm rounded-md theme-btn-neutral"
           >
             {t('userEntityLinks.filters.clear')}
@@ -1107,9 +1152,9 @@ function UserEntityLinksContent() {
                       {l.expires_at ? new Date(l.expires_at).toISOString().split('T')[0] : '—'}
                     </td>
                     <td className="px-4 py-3 align-top">
-                      {linkStatus === 'revoked' ? revokedBadge(t('userEntityLinks.status.revoked')) : linkStatus === 'expired' ? expiredBadge(t('userEntityLinks.status.expired')) : (
+                      {linkStatus === 'revoked' ? revokedBadge(formatStatusLabel(t('userEntityLinks.status.revoked'))) : linkStatus === 'expired' ? expiredBadge(formatStatusLabel(t('userEntityLinks.status.expired'))) : (
                         <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                          {t('userEntityLinks.status.active')}
+                          {formatStatusLabel(t('userEntityLinks.status.active'))}
                         </span>
                       )}
                     </td>
