@@ -59,6 +59,10 @@ func main() {
 	// Initialize logger
 	logger.Init(cfg.Log.Level)
 
+	// Configure Swagger metadata once at startup to avoid request-time global mutations.
+	docs.SwaggerInfo.Host = fmt.Sprintf("localhost:%d", cfg.Server.Port)
+	docs.SwaggerInfo.Schemes = []string{"http"}
+
 	// Connect to database
 	db, err := connectDatabase(cfg)
 	if err != nil {
@@ -295,17 +299,7 @@ func setupRouter(cfg *config.Config, h *handler.Handlers) *gin.Engine {
 	})
 
 	// Swagger documentation
-	// Keep host/scheme aligned with the current request so "Try it out" works across dev/main/UAT ports.
-	swaggerHandler := ginSwagger.WrapHandler(swaggerFiles.Handler)
-	router.GET("/swagger/*any", func(c *gin.Context) {
-		docs.SwaggerInfo.Host = c.Request.Host
-		if c.Request.TLS != nil {
-			docs.SwaggerInfo.Schemes = []string{"https"}
-		} else {
-			docs.SwaggerInfo.Schemes = []string{"http"}
-		}
-		swaggerHandler(c)
-	})
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// API v1 routes
 	v1 := router.Group("/api/v1")

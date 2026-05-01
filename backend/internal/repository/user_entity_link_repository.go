@@ -48,12 +48,19 @@ func NewUserEntityLinkRepository(db *gorm.DB) UserEntityLinkRepository {
 }
 
 func (r *userEntityLinkRepository) Create(link *domain.UserEntityLink) error {
-	// Enforce uniqueness: reject if an active link already exists for this (user, lei) pair.
-	existing, err := r.FindByUserAndLEI(link.UserID, link.LEI)
-	if err != nil {
+	// Align with DB uniqueness rule (user_id, lei) WHERE revoked_at IS NULL to avoid
+	// low-level unique-constraint errors when an expired-but-not-revoked row exists.
+	var existing domain.UserEntityLink
+	err := r.db.
+		Where("user_id = ? AND lei = ? AND revoked_at IS NULL", link.UserID, link.LEI).
+		First(&existing).Error
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return fmt.Errorf("check duplicate user-entity link: %w", err)
 	}
-	if existing != nil {
+	if err == nil {
+		if existing.ExpiresAt != nil && existing.ExpiresAt.Before(time.Now().UTC()) {
+			return fmt.Errorf("non-revoked expired user-entity link already exists for user %s and LEI %s; revoke it before re-granting", link.UserID, link.LEI)
+		}
 		return fmt.Errorf("active user-entity link already exists for user %s and LEI %s", link.UserID, link.LEI)
 	}
 

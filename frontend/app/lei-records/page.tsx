@@ -2119,7 +2119,7 @@ export default function LEIRecordsPage() {
                   </div>
                   {selectedRecord.is_provisional && (
                     <div>
-                      <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">Type</span>
+                      <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">{t('leiRecords.modal.type')}</span>
                       <p className="mt-1">
                         <Badge variant={PROVISIONAL_BADGE_VARIANT}>
                           {t('leiRecords.badges.provisional')}

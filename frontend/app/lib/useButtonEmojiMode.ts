@@ -17,8 +17,8 @@ function isEmojiMode(value: string): value is EmojiMode {
 const LEADING_EMOJI_RE = /^(\p{Extended_Pictographic}\uFE0F?\u20E3?\s*)+/u
 
 /**
- * Ensures a label has a specific leading emoji. If an emoji already exists,
- * the label is returned unchanged.
+ * Ensures a label has a leading emoji. If one already exists, it is preserved
+ * even when it differs from the requested emoji.
  */
 export function ensureLeadingEmoji(label: string, emoji: string): string {
   return LEADING_EMOJI_RE.test(label) ? label : `${emoji} ${label}`

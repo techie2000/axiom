@@ -2,6 +2,7 @@
 
 import AdminLandingCard from './AdminLandingCard'
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { readStoredUser } from '../lib/stored-user'
 
 /**
@@ -16,6 +17,7 @@ import { readStoredUser } from '../lib/stored-user'
 export default function AdminSection() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const { t } = useTranslation('common')
 
   useEffect(() => {
     setMounted(true)
@@ -30,35 +32,35 @@ export default function AdminSection() {
       <div className="flex items-center mb-6">
         <span className="text-2xl mr-3">⚙️</span>
         <div>
-          <h2 className="text-2xl font-bold">Administration</h2>
+          <h2 className="text-2xl font-bold">{t('adminLanding.title')}</h2>
           <p className="text-sm theme-text-muted">
-            System configuration and user management • Admin access required
+            {t('adminLanding.subtitle')}
           </p>
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <AdminLandingCard
           href="/admin/users"
-          title="User Management"
-          description="Review registration requests, approve or deactivate accounts, and manage user roles"
+          title={t('adminLanding.cards.users.title')}
+          description={t('adminLanding.cards.users.description')}
           icon="👥"
         />
         <AdminLandingCard
           href="/admin/user-entity-links"
-          title="User–Entity Links"
-          description="Grant and revoke entity-scoped access links that associate users with specific LEI entities and roles"
+          title={t('adminLanding.cards.userEntityLinks.title')}
+          description={t('adminLanding.cards.userEntityLinks.description')}
           icon="🔗"
         />
         <AdminLandingCard
           href="/admin/provisional-lei"
-          title="Provisional LEI Records"
-          description="Issue and manage Axiom-assigned provisional LEI codes for entities not yet registered with GLEIF, and link them to official LEIs when available"
+          title={t('adminLanding.cards.provisionalLei.title')}
+          description={t('adminLanding.cards.provisionalLei.description')}
           icon="🔖"
         />
         <AdminLandingCard
           href="/admin/translations"
-          title="Translations"
-          description="Review community-contributed UI translations, approve or reject pending strings, and add new translations"
+          title={t('adminLanding.cards.translations.title')}
+          description={t('adminLanding.cards.translations.description')}
           icon="🌐"
         />
       </div>

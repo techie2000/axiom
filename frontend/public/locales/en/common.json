@@ -646,6 +646,7 @@
       "dateDaysOnly": "🔢 Days only",
       "display": "Display:",
       "coreInformation": "Core Information",
+      "type": "Type",
       "addresses": "Addresses",
       "legalAddress": "Legal Address",
       "hqAddress": "Headquarters Address",
@@ -1034,6 +1035,29 @@
       "google": "Google Maps",
       "bing": "Bing Maps",
       "apple": "Apple Maps"
+    }
+  },
+  "adminLanding": {
+    "title": "Administration",
+    "subtitle": "System configuration and user management • Admin access required",
+    "badge": "Admin Only",
+    "cards": {
+      "users": {
+        "title": "User Management",
+        "description": "Review registration requests, approve or deactivate accounts, and manage user roles"
+      },
+      "userEntityLinks": {
+        "title": "User–Entity Links",
+        "description": "Grant and revoke entity-scoped access links that associate users with specific LEI entities and roles"
+      },
+      "provisionalLei": {
+        "title": "Provisional LEI Records",
+        "description": "Issue and manage Axiom-assigned provisional LEI codes for entities not yet registered with GLEIF, and link them to official LEIs when available"
+      },
+      "translations": {
+        "title": "Translations",
+        "description": "Review community-contributed UI translations, approve or reject pending strings, and add new translations"
+      }
     }
   },
   "provisionalLei": {

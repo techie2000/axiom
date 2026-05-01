@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog/log"
 	"github.com/techie2000/axiom/internal/service"
 )
 
@@ -98,7 +99,8 @@ func (h *ProvisionalLEIHandler) Create(c *gin.Context) {
 	adminID := extractUserID(c)
 	record, err := h.svc.Create(req, adminID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Error().Err(err).Str("admin_id", adminID).Msg("failed to create provisional LEI record")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create provisional LEI record"})
 		return
 	}
 	c.JSON(http.StatusCreated, record)
@@ -130,7 +132,8 @@ func (h *ProvisionalLEIHandler) Update(c *gin.Context) {
 	adminID := extractUserID(c)
 	record, err := h.svc.Update(lei, req, adminID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Error().Err(err).Str("lei", lei).Str("admin_id", adminID).Msg("failed to update provisional LEI record")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update provisional LEI record"})
 		return
 	}
 	c.JSON(http.StatusOK, record)

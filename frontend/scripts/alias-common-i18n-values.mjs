@@ -1,8 +1,11 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-const ROOT = process.cwd()
-const LOCALE_FILE = path.join(ROOT, 'frontend', 'public', 'locales', 'en', 'common.json')
+const SCRIPT_FILE = fileURLToPath(import.meta.url)
+const SCRIPT_DIR = path.dirname(SCRIPT_FILE)
+const FRONTEND_ROOT = path.resolve(SCRIPT_DIR, '..')
+const LOCALE_FILE = path.join(FRONTEND_ROOT, 'public', 'locales', 'en', 'common.json')
 
 function isPlainObject(value) {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) {
