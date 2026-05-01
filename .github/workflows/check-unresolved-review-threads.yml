@@ -13,6 +13,10 @@ on:
     types:
       - submitted
       - dismissed
+  pull_request_review_thread:
+    types:
+      - resolved
+      - unresolved
 
 permissions:
   pull-requests: read
@@ -27,7 +31,7 @@ jobs:
           script: |
             const prNumber = context.payload.pull_request?.number
             if (!prNumber) {
-              core.info('No pull_request payload in this event; skipping unresolved-thread check.')
+              core.info('No pull_request context found (e.g., push event); skipping unresolved-thread check.')
               return
             }
 
