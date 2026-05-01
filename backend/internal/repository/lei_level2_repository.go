@@ -26,6 +26,8 @@ type LEILevel2Repository interface {
 	FindRelationshipsByEndLEIsBatch(leis []string) ([]*domain.LEIRelationshipRecord, error)
 	CountRelationshipRecords() (int64, error)
 	DeleteRelationshipsBySourceFile(sourceFileID uuid.UUID) error
+	DeleteRelationshipsByStartLEIAndType(startLEI, relType string) error
+	DeleteRelationshipsByEndLEIAndType(endLEI, relType string) error
 
 	// Reporting Exceptions
 	UpsertReportingException(exc *domain.LEIReportingException) error
@@ -417,6 +419,22 @@ func (r *leiLevel2Repository) CountRelationshipRecords() (int64, error) {
 // given source file. Used to roll back a partial load before re-processing.
 func (r *leiLevel2Repository) DeleteRelationshipsBySourceFile(sourceFileID uuid.UUID) error {
 	return r.db.Where("source_file_id = ?", sourceFileID).
+		Delete(&domain.LEIRelationshipRecord{}).Error
+}
+
+// DeleteRelationshipsByStartLEIAndType removes all relationship records where start_node_lei
+// matches the given LEI and the relationship_type matches. Used when replacing provisional LEI
+// relationships to ensure only one active relationship exists per direction.
+func (r *leiLevel2Repository) DeleteRelationshipsByStartLEIAndType(startLEI, relType string) error {
+	return r.db.Where("start_node_lei = ? AND relationship_type = ?", startLEI, relType).
+		Delete(&domain.LEIRelationshipRecord{}).Error
+}
+
+// DeleteRelationshipsByEndLEIAndType removes all relationship records where end_node_lei
+// matches the given LEI and the relationship_type matches. Used when replacing provisional LEI
+// relationships to ensure only one active relationship exists per direction.
+func (r *leiLevel2Repository) DeleteRelationshipsByEndLEIAndType(endLEI, relType string) error {
+	return r.db.Where("end_node_lei = ? AND relationship_type = ?", endLEI, relType).
 		Delete(&domain.LEIRelationshipRecord{}).Error
 }
 

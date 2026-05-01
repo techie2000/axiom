@@ -75,7 +75,10 @@ function normalizeChangedFields(cf: ParsedChangedFields): ParsedChangedFields {
   const out: ParsedChangedFields = {}
   for (const [key, val] of Object.entries(cf)) {
     const nk = normalizeFieldKey(key)
-    out[nk] = { ...val, field_name: nk }
+    // Transform backend "old"/"new" keys to frontend "old_value"/"new_value"
+    const oldValue = (val as Record<string, unknown>)?.old ?? val.old_value
+    const newValue = (val as Record<string, unknown>)?.new ?? val.new_value
+    out[nk] = { old_value: oldValue, new_value: newValue, field_name: nk }
   }
   return out
 }

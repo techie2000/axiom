@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"testing"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/techie2000/axiom/internal/domain"
+	"github.com/techie2000/axiom/internal/repository"
 )
 
 // ---------------------------------------------------------------------------
@@ -209,5 +211,232 @@ func TestValidateLEIFormat_InvalidLength(t *testing.T) {
 	err := validateLEIFormat("SHORT")
 	if err == nil {
 		t.Fatal("expected length validation error")
+	}
+}
+
+type provisionalRepoStub struct {
+	repository.ProvisionalLEIRepository
+	record       *domain.LEIRecord
+	createCount  int
+	updatedCount int
+	succeedCount int
+}
+
+func (s *provisionalRepoStub) Create(record *domain.LEIRecord) error {
+	s.createCount++
+	copy := *record
+	s.record = &copy
+	return nil
+}
+
+func (s *provisionalRepoStub) FindByLEI(lei string) (*domain.LEIRecord, error) {
+	if s.record == nil {
+		return nil, nil
+	}
+	copy := *s.record
+	return &copy, nil
+}
+
+func (s *provisionalRepoStub) Update(record *domain.LEIRecord) error {
+	s.updatedCount++
+	copy := *record
+	s.record = &copy
+	return nil
+}
+
+func (s *provisionalRepoStub) Succeed(provisionalLEI, officialLEI, changedBy string) error {
+	if s.record == nil {
+		return fmt.Errorf("provisional LEI %s not found", provisionalLEI)
+	}
+	if s.record.LEI != provisionalLEI {
+		return fmt.Errorf("provisional LEI %s not found", provisionalLEI)
+	}
+	s.succeedCount++
+	s.record.SuccessorLEI = officialLEI
+	s.record.EntityStatus = "MERGED"
+	s.record.UpdatedBy = changedBy
+	return nil
+}
+
+type leiRepoAuditStub struct {
+	repository.LEIRepository
+	audits        []*domain.LEIRecordAudit
+	officialRecord *domain.LEIRecord
+}
+
+func (s *leiRepoAuditStub) CreateAuditRecord(audit *domain.LEIRecordAudit) error {
+	copy := *audit
+	s.audits = append(s.audits, &copy)
+	return nil
+}
+
+func (s *leiRepoAuditStub) FindLEIByLEI(lei string) (*domain.LEIRecord, error) {
+	if s.officialRecord == nil || s.officialRecord.LEI != lei {
+		return nil, nil
+	}
+	copy := *s.officialRecord
+	return &copy, nil
+}
+
+type provisionalLevel2RepoStub struct {
+	repository.LEILevel2Repository
+}
+
+func (s *provisionalLevel2RepoStub) FindRelationshipsByStartLEI(lei string) ([]*domain.LEIRelationshipRecord, error) {
+	return nil, nil
+}
+
+func (s *provisionalLevel2RepoStub) FindRelationshipsByEndLEI(lei string) ([]*domain.LEIRelationshipRecord, error) {
+	return nil, nil
+}
+
+func TestProvisionalUpdate_WritesLEIRecordAudit(t *testing.T) {
+	recordID := uuid.New()
+	provisionalRepo := &provisionalRepoStub{record: &domain.LEIRecord{
+		ID:                  recordID,
+		LEI:                 "AXIO1234567890123479",
+		LegalName:           "Old Name Ltd",
+		LegalAddressCountry: "GB",
+		LegalAddressCity:    "London",
+		LegalJurisdiction:   "GB",
+		EntityStatus:        "ACTIVE",
+		ProvisioningSource:  "manual",
+		IsProvisional:       true,
+	}}
+	leiRepo := &leiRepoAuditStub{}
+	level2Repo := &provisionalLevel2RepoStub{}
+
+	svc := NewProvisionalLEIService(provisionalRepo, leiRepo, level2Repo)
+
+	updated, err := svc.Update("AXIO1234567890123479", UpdateProvisionalLEIRequest{
+		LegalName: "New Name Ltd",
+	}, "admin-user")
+	if err != nil {
+		t.Fatalf("Update returned error: %v", err)
+	}
+	if updated == nil {
+		t.Fatal("expected updated record, got nil")
+	}
+	if updated.LegalName != "New Name Ltd" {
+		t.Fatalf("expected legal name to be updated, got %q", updated.LegalName)
+	}
+
+	if provisionalRepo.updatedCount != 1 {
+		t.Fatalf("expected provisional repo update to be called once, got %d", provisionalRepo.updatedCount)
+	}
+	if len(leiRepo.audits) != 1 {
+		t.Fatalf("expected one audit record, got %d", len(leiRepo.audits))
+	}
+
+	audit := leiRepo.audits[0]
+	if audit.Action != "UPDATE" {
+		t.Fatalf("expected audit action UPDATE, got %q", audit.Action)
+	}
+	if audit.LEIRecordID != recordID {
+		t.Fatalf("expected LEIRecordID %s, got %s", recordID, audit.LEIRecordID)
+	}
+	if audit.LEI != "AXIO1234567890123479" {
+		t.Fatalf("expected audit LEI AXIO1234567890123479, got %q", audit.LEI)
+	}
+	if audit.ChangedBy != "admin-user" {
+		t.Fatalf("expected ChangedBy admin-user, got %q", audit.ChangedBy)
+	}
+
+	changed := map[string]map[string]string{}
+	if err := json.Unmarshal([]byte(audit.ChangedFields), &changed); err != nil {
+		t.Fatalf("failed to parse changed_fields JSON: %v", err)
+	}
+	nameChange, ok := changed["legal_name"]
+	if !ok {
+		t.Fatalf("expected legal_name change in changed_fields, got %v", changed)
+	}
+	if nameChange["old"] != "Old Name Ltd" || nameChange["new"] != "New Name Ltd" {
+		t.Fatalf("unexpected legal_name change payload: %+v", nameChange)
+	}
+}
+
+func TestProvisionalCreate_WritesLEIRecordAudit(t *testing.T) {
+	provisionalRepo := &provisionalRepoStub{}
+	leiRepo := &leiRepoAuditStub{}
+	level2Repo := &provisionalLevel2RepoStub{}
+
+	svc := NewProvisionalLEIService(provisionalRepo, leiRepo, level2Repo)
+
+	created, err := svc.Create(CreateProvisionalLEIRequest{LegalName: "Create Name Ltd"}, "admin-user")
+	if err != nil {
+		t.Fatalf("Create returned error: %v", err)
+	}
+	if created == nil {
+		t.Fatal("expected created record, got nil")
+	}
+	if provisionalRepo.createCount != 1 {
+		t.Fatalf("expected provisional repo create to be called once, got %d", provisionalRepo.createCount)
+	}
+	if len(leiRepo.audits) != 1 {
+		t.Fatalf("expected one audit record, got %d", len(leiRepo.audits))
+	}
+
+	audit := leiRepo.audits[0]
+	if audit.Action != "CREATE" {
+		t.Fatalf("expected audit action CREATE, got %q", audit.Action)
+	}
+	if audit.LEIRecordID != created.ID {
+		t.Fatalf("expected LEIRecordID %s, got %s", created.ID, audit.LEIRecordID)
+	}
+	if audit.LEI != created.LEI {
+		t.Fatalf("expected audit LEI %q, got %q", created.LEI, audit.LEI)
+	}
+	if audit.ChangedBy != "admin-user" {
+		t.Fatalf("expected ChangedBy admin-user, got %q", audit.ChangedBy)
+	}
+}
+
+func TestProvisionalSucceed_WritesLEIRecordAudit(t *testing.T) {
+	recordID := uuid.New()
+	provisionalRepo := &provisionalRepoStub{record: &domain.LEIRecord{
+		ID:            recordID,
+		LEI:           "AXIO1234567890123479",
+		LegalName:     "Succeed Name Ltd",
+		EntityStatus:  "ACTIVE",
+		IsProvisional: true,
+	}}
+	leiRepo := &leiRepoAuditStub{officialRecord: &domain.LEIRecord{LEI: "529900T8BM49AURSDO55"}}
+	level2Repo := &provisionalLevel2RepoStub{}
+
+	svc := NewProvisionalLEIService(provisionalRepo, leiRepo, level2Repo)
+
+	err := svc.Succeed("AXIO1234567890123479", "529900T8BM49AURSDO55", "admin-user")
+	if err != nil {
+		t.Fatalf("Succeed returned error: %v", err)
+	}
+	if provisionalRepo.succeedCount != 1 {
+		t.Fatalf("expected provisional repo succeed to be called once, got %d", provisionalRepo.succeedCount)
+	}
+	if len(leiRepo.audits) != 1 {
+		t.Fatalf("expected one audit record, got %d", len(leiRepo.audits))
+	}
+
+	audit := leiRepo.audits[0]
+	if audit.Action != "UPDATE" {
+		t.Fatalf("expected audit action UPDATE, got %q", audit.Action)
+	}
+
+	changed := map[string]map[string]string{}
+	if err := json.Unmarshal([]byte(audit.ChangedFields), &changed); err != nil {
+		t.Fatalf("failed to parse changed_fields JSON: %v", err)
+	}
+	statusChange, ok := changed["entity_status"]
+	if !ok {
+		t.Fatalf("expected entity_status change in changed_fields, got %v", changed)
+	}
+	if statusChange["old"] != "ACTIVE" || statusChange["new"] != "MERGED" {
+		t.Fatalf("unexpected entity_status change payload: %+v", statusChange)
+	}
+	successorChange, ok := changed["successor_lei"]
+	if !ok {
+		t.Fatalf("expected successor_lei change in changed_fields, got %v", changed)
+	}
+	if successorChange["old"] != "" || successorChange["new"] != "529900T8BM49AURSDO55" {
+		t.Fatalf("unexpected successor_lei change payload: %+v", successorChange)
 	}
 }

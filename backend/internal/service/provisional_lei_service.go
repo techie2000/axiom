@@ -2,6 +2,7 @@ package service
 
 import (
 	"crypto/rand"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"strings"
@@ -123,6 +124,10 @@ func (s *provisionalLEIService) Create(req CreateProvisionalLEIRequest, adminUse
 		log.Warn().Err(err).Str("lei", code).Msg("failed to hydrate relationship after create")
 	}
 
+	if err := s.createProvisionalAudit("CREATE", nil, record, adminUserID); err != nil {
+		return nil, fmt.Errorf("create provisional LEI audit for %s: %w", code, err)
+	}
+
 	log.Info().
 		Str("lei", code).
 		Str("legal_name", req.LegalName).
@@ -140,6 +145,12 @@ func (s *provisionalLEIService) Update(lei string, req UpdateProvisionalLEIReque
 	}
 	if record == nil {
 		return nil, fmt.Errorf("provisional LEI %s not found", lei)
+	}
+	before := *record
+
+	// Hydrate before with old relationships for audit comparison
+	if hydrateErr := s.hydrateRelationship(&before); hydrateErr != nil {
+		log.Warn().Err(hydrateErr).Str("lei", lei).Msg("failed to hydrate before relationships for audit")
 	}
 
 	parentLEI, childLEI, err := normalizeRelationshipInputs(req.ParentLEI, req.ChildLEI, normalizedLEI)
@@ -187,8 +198,69 @@ func (s *provisionalLEIService) Update(lei string, req UpdateProvisionalLEIReque
 		log.Warn().Err(err).Str("lei", lei).Msg("failed to hydrate relationship after update")
 	}
 
+	if err := s.createProvisionalAudit("UPDATE", &before, record, adminUserID); err != nil {
+		return nil, fmt.Errorf("create provisional LEI audit for %s: %w", lei, err)
+	}
+
 	log.Info().Str("lei", lei).Str("updated_by", adminUserID).Msg("provisional LEI updated")
 	return record, nil
+}
+
+func (s *provisionalLEIService) createProvisionalAudit(action string, before, after *domain.LEIRecord, adminUserID string) error {
+	if after == nil {
+		return nil
+	}
+
+	changedFieldsJSON := domain.JSONBString("{}")
+	if before != nil {
+		changedFields := map[string]map[string]string{}
+		appendChange := func(field, oldValue, newValue string) {
+			if oldValue == newValue {
+				return
+			}
+			changedFields[field] = map[string]string{
+				"old": oldValue,
+				"new": newValue,
+			}
+		}
+
+		appendChange("legal_name", before.LegalName, after.LegalName)
+		appendChange("legal_address_country", before.LegalAddressCountry, after.LegalAddressCountry)
+		appendChange("legal_address_city", before.LegalAddressCity, after.LegalAddressCity)
+		appendChange("legal_jurisdiction", before.LegalJurisdiction, after.LegalJurisdiction)
+		appendChange("entity_status", before.EntityStatus, after.EntityStatus)
+		appendChange("provisioning_source", before.ProvisioningSource, after.ProvisioningSource)
+		appendChange("successor_lei", before.SuccessorLEI, after.SuccessorLEI)
+
+		// Track parent_lei and child_lei changes using hydrated record fields
+		appendChange("parent_lei", before.ParentLEI, after.ParentLEI)
+		appendChange("child_lei", before.ChildLEI, after.ChildLEI)
+
+		if len(changedFields) > 0 {
+			payload, err := json.Marshal(changedFields)
+			if err != nil {
+				return fmt.Errorf("marshal changed fields: %w", err)
+			}
+			changedFieldsJSON = domain.JSONBString(payload)
+		}
+	}
+
+	recordSnapshot, err := json.Marshal(after)
+	if err != nil {
+		return fmt.Errorf("marshal record snapshot: %w", err)
+	}
+
+	audit := &domain.LEIRecordAudit{
+		LEIRecordID:    after.ID,
+		LEI:            after.LEI,
+		Action:         action,
+		RecordSnapshot: domain.JSONBString(recordSnapshot),
+		ChangedFields:  changedFieldsJSON,
+		SourceFileID:   after.SourceFileID,
+		ChangedBy:      adminUserID,
+	}
+
+	return s.leiRepo.CreateAuditRecord(audit)
 }
 
 func (s *provisionalLEIService) Succeed(provisionalLEI, officialLEI, adminUserID string) error {
@@ -212,6 +284,18 @@ func (s *provisionalLEIService) Succeed(provisionalLEI, officialLEI, adminUserID
 
 	if err := s.repo.Succeed(provisionalLEI, officialLEI, adminUserID); err != nil {
 		return fmt.Errorf("persist succession for %s → %s: %w", provisionalLEI, officialLEI, err)
+	}
+
+	updatedProvisional, err := s.repo.FindByLEI(provisionalLEI)
+	if err != nil {
+		return fmt.Errorf("fetch updated provisional LEI %s after succession: %w", provisionalLEI, err)
+	}
+	if updatedProvisional == nil {
+		return fmt.Errorf("provisional LEI %s not found after succession", provisionalLEI)
+	}
+
+	if err := s.createProvisionalAudit("UPDATE", provisional, updatedProvisional, adminUserID); err != nil {
+		return fmt.Errorf("create provisional LEI audit for %s succession: %w", provisionalLEI, err)
 	}
 
 	log.Info().
@@ -515,6 +599,17 @@ func (s *provisionalLEIService) hydrateRelationshipsBatch(records []*domain.LEIR
 }
 
 func (s *provisionalLEIService) upsertParentChildRelationships(provisionalLEI, parentLEI, childLEI string) error {
+	// Delete all existing parent relationships for this provisional LEI before inserting the new
+	// one. The upsert conflicts on (start, end, type), so changing the parent to a different LEI
+	// would create a second active row rather than replacing the first. Deleting first ensures
+	// only one IS_DIRECTLY_CONSOLIDATED_BY row ever exists per direction.
+	if err := s.level2Repo.DeleteRelationshipsByStartLEIAndType(provisionalLEI, "IS_DIRECTLY_CONSOLIDATED_BY"); err != nil {
+		return fmt.Errorf("delete old parent relationships for %s: %w", provisionalLEI, err)
+	}
+	if err := s.level2Repo.DeleteRelationshipsByEndLEIAndType(provisionalLEI, "IS_DIRECTLY_CONSOLIDATED_BY"); err != nil {
+		return fmt.Errorf("delete old child relationships for %s: %w", provisionalLEI, err)
+	}
+
 	if parentLEI != "" {
 		if err := s.level2Repo.UpsertRelationshipRecord(&domain.LEIRelationshipRecord{
 			StartNodeLEI:            provisionalLEI,

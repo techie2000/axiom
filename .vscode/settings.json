@@ -2,10 +2,6 @@
   "chat.tools.terminal.autoApprove": {
     ".Name": true,
     ".vscode/settings.json": true,
-    "/^cd \"c:\\\\Users\\\\mb53535\\\\AppData\\\\Local\\\\Code\\\\github\\\\axiom3\"; pwsh \\./scripts/run-main-compose\\.ps1 up -d --build frontend$/": {
-      "approve": true,
-      "matchCommandLine": true
-    },
     "/^cd \\.\\.; pwsh \\./scripts/run-main-compose\\.ps1 up -d --build backend$/": {
       "approve": true,
       "matchCommandLine": true
@@ -35,6 +31,10 @@
       "matchCommandLine": true
     },
     "/^pwsh \\./scripts/run-main-compose\\.ps1 up -d --build backend$/": {
+      "approve": true,
+      "matchCommandLine": true
+    },
+    "/^pwsh \\./scripts/run-main-compose\\.ps1 up -d --build frontend backend$/": {
       "approve": true,
       "matchCommandLine": true
     },

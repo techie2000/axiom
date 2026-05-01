@@ -12,6 +12,7 @@ import Badge from '../../components/Badge'
 import LoadingSpinner from '../../components/LoadingSpinner'
 import PreferenceSavePrompt from '../../components/PreferenceSavePrompt'
 import ThemedSelect from '../../components/ThemedSelect'
+import LEIAuditHistoryModal from '../../components/LEIAuditHistoryModal'
 import { getApiBaseUrl } from '../../lib/api-base'
 import { getAuthToken } from '../../lib/auth-token'
 import { PROVISIONAL_BADGE_VARIANT } from '../../lib/badge-presets'
@@ -190,6 +191,7 @@ function ProvisionalLEIContent() {
   const contextMenuEditRef = useRef<HTMLButtonElement>(null)
   const contextMenuCloneRef = useRef<HTMLButtonElement>(null)
   const contextMenuLinkOfficialRef = useRef<HTMLButtonElement>(null)
+  const [auditRecord, setAuditRecord] = useState<ProvisionalLEI | null>(null)
 
   const [storedColumns, setStoredColumns] = useUserPreference('provisional-lei', 'visible_columns', DEFAULT_VISIBLE_KEYS)
   const expandedWidthPreference = useDeferredBooleanPreference({
@@ -238,20 +240,25 @@ function ProvisionalLEIContent() {
   const [localColumns, setLocalColumns] = useState<Set<ProvisionalColumnKey> | null>(null)
   const [showColumnUndoToast, setShowColumnUndoToast] = useState(false)
   const [columnUndoVersion, setColumnUndoVersion] = useState(0)
+  const [hasHydrated, setHasHydrated] = useState(false)
+
+  useEffect(() => {
+    setHasHydrated(true)
+  }, [])
 
   useSearchFocusShortcut(searchInputRef)
 
   const effectiveVisibleColumns = localColumns ?? visibleColumns
-  const isExpandedView = expandedWidthPreference.value
+  const isExpandedView = hasHydrated ? expandedWidthPreference.value : false
   const showCodes = locationDisplayPreference.value
   const showNames = !showCodes
   const displayModeLabel = showNames
     ? ensureLeadingEmoji(t('referenceLayout.displayNamesButton'), '🏷️')
     : ensureLeadingEmoji(t('referenceLayout.displayCodesButton'), '🏷️')
-  const columnsButtonLabel = ensureLeadingEmoji(
-    t('buttons.columnsWithCount', { count: effectiveVisibleColumns.size }),
-    '⚙️',
-  )
+  const columnsButtonA11yLabel = hasHydrated
+    ? t('buttons.columnsWithCount', { count: effectiveVisibleColumns.size })
+    : t('common.columns')
+  const columnsButtonLabel = ensureLeadingEmoji(columnsButtonA11yLabel, '⚙️')
 
   const getColumnsByGroup = useCallback(() => {
     const groups: Record<string, ProvisionalColumn[]> = {}
@@ -585,7 +592,7 @@ function ProvisionalLEIContent() {
         return (
           <>
             {record.lei}
-            <Badge variant={PROVISIONAL_BADGE_VARIANT} className="ml-1 inline-block w-fit px-1.5 py-0.5 text-[10px] font-sans">
+            <Badge variant={PROVISIONAL_BADGE_VARIANT} className="ml-1 inline-block w-fit px-1.5 py-0.5 text-[10px] font-sans select-none">
               {t('provisionalLei.badge')}
             </Badge>
           </>
@@ -900,7 +907,7 @@ function ProvisionalLEIContent() {
                   onClick={() => setShowColumnSelector(!showColumnSelector)}
                   className="h-9 px-3 rounded-lg theme-btn-neutral theme-focus text-sm font-medium"
                   title={getEnglishTooltip('common.columns')}
-                  aria-label={t('buttons.columnsWithCount', { count: effectiveVisibleColumns.size })}
+                  aria-label={columnsButtonA11yLabel}
                 >
                   {formatLabel(columnsButtonLabel)}
                 </button>
@@ -1535,6 +1542,13 @@ function ProvisionalLEIContent() {
                             {formatLabel(t('provisionalLei.actions.succeed'))}
                           </button>
                         )}
+                        <button
+                          onClick={() => setAuditRecord(record)}
+                          className="px-3 py-1 text-xs rounded theme-btn-neutral theme-focus"
+                          title={getEnglishTooltip('leiAudit.viewAuditHistory')}
+                        >
+                          {formatLabel(t('leiAudit.historyButton'))}
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -1693,6 +1707,29 @@ function ProvisionalLEIContent() {
           onUndoDismiss={locationDisplayPreference.undoDismiss}
           undoLabel={t('preferences.savedUndo')}
         />
+
+        {/* Audit History Modal */}
+        {auditRecord && (
+          <LEIAuditHistoryModal
+            lei={auditRecord.lei}
+            legalName={auditRecord.legal_name}
+            onClose={() => setAuditRecord(null)}
+            apiBaseUrl={API_BASE_URL}
+            availableColumns={[
+              { key: 'legal_name', labelKey: 'provisionalLei.columns.legalName', groupKey: 'provisionalLei.columns.groups.core', defaultVisible: true },
+              { key: 'legal_address_country', labelKey: 'provisionalLei.columns.country', groupKey: 'provisionalLei.columns.groups.address', defaultVisible: true },
+              { key: 'legal_address_city', labelKey: 'provisionalLei.columns.city', groupKey: 'provisionalLei.columns.groups.address', defaultVisible: true },
+              { key: 'legal_jurisdiction', labelKey: 'provisionalLei.columns.jurisdiction', groupKey: 'provisionalLei.columns.groups.address', defaultVisible: true },
+              { key: 'entity_status', labelKey: 'provisionalLei.columns.status', groupKey: 'provisionalLei.columns.groups.core', defaultVisible: true },
+              { key: 'provisioning_source', labelKey: 'provisionalLei.columns.source', groupKey: 'provisionalLei.columns.groups.core', defaultVisible: true },
+              { key: 'successor_lei', labelKey: 'provisionalLei.columns.successorLei', groupKey: 'provisionalLei.columns.groups.associated', defaultVisible: true },
+              { key: 'parent_lei', labelKey: 'provisionalLei.columns.parentLei', groupKey: 'provisionalLei.columns.groups.hierarchy', defaultVisible: false },
+              { key: 'child_lei', labelKey: 'provisionalLei.columns.childLei', groupKey: 'provisionalLei.columns.groups.hierarchy', defaultVisible: false },
+            ]}
+            visibleColumns={new Set(['legal_name', 'legal_address_country', 'legal_address_city', 'legal_jurisdiction', 'entity_status', 'provisioning_source', 'successor_lei', 'parent_lei', 'child_lei'])}
+            onLeiClick={() => { /* no-op for provisional LEI */ }}
+          />
+        )}
       </div>
     </main>
   )

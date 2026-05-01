@@ -1062,7 +1062,8 @@
         "associated": "Associated Entities",
         "address": "Address",
         "metadata": "Metadata",
-        "dates": "Dates"
+        "dates": "Dates",
+        "hierarchy": "Hierarchy"
       }
     },
     "controls": {
