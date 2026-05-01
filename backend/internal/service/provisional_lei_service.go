@@ -259,19 +259,31 @@ func generateProvisionalLEI() (string, error) {
 	const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	const bodyLen = 14
 
-	body := make([]byte, bodyLen)
-	for i := range body {
-		n, err := rand.Int(rand.Reader, big.NewInt(int64(len(alphabet))))
-		if err != nil {
-			return "", fmt.Errorf("generate random LEI character: %w", err)
-		}
-		body[i] = alphabet[n.Int64()]
-	}
-
 	prefix := "AXIO"
-	raw18 := prefix + string(body) // 18 alphanumeric chars before check digits
 
-	check := iso17442CheckDigits(raw18)
+	// ISO 17442 reserves check digit 01 (and 00). Loop until the random body
+	// produces a check digit in the valid range [02, 98]. The probability of
+	// needing a retry is 1/97, so this terminates almost always on the first try.
+	var (
+		body  []byte
+		raw18 string
+		check int
+	)
+	for {
+		body = make([]byte, bodyLen)
+		for i := range body {
+			n, err := rand.Int(rand.Reader, big.NewInt(int64(len(alphabet))))
+			if err != nil {
+				return "", fmt.Errorf("generate random LEI character: %w", err)
+			}
+			body[i] = alphabet[n.Int64()]
+		}
+		raw18 = prefix + string(body)
+		check = iso17442CheckDigits(raw18)
+		if check >= 2 {
+			break
+		}
+	}
 	result := raw18 + fmt.Sprintf("%02d", check)
 
 	// Validate the final LEI matches the required pattern
@@ -324,12 +336,12 @@ func iso17442CheckDigits(raw18 string) int {
 
 	numStr := sb.String()
 	mod := computeMod97(numStr)
+	// (98 - mod) % 97 gives values in [0, 97].
+	// mod=1  → result=0  (reserved, invalid)
+	// mod=0  → result=1  (reserved, invalid per ISO 17442)
+	// All other mod values → result in [2, 97] (valid)
+	// Callers that require [2, 98] must regenerate when result < 2.
 	result := (98 - mod) % 97
-
-	// Ensure result is non-zero (ISO spec requires check digits to be 01-97, never 00)
-	if result == 0 {
-		result = 97
-	}
 
 	log.Info().
 		Str("raw18", raw18).
