@@ -210,6 +210,27 @@ func TestValidateColumns_AllowsRegistrationAndValidationFields(t *testing.T) {
 	}
 }
 
+func TestValidateColumns_AlwaysIncludesProvisionalSemantics(t *testing.T) {
+	t.Helper()
+
+	columns := validateColumns("lei,legal_name")
+	if !containsColumn(columns, "is_provisional") {
+		t.Fatalf("expected validated columns to always include is_provisional")
+	}
+	if !containsColumn(columns, "provisioning_source") {
+		t.Fatalf("expected validated columns to always include provisioning_source")
+	}
+}
+
+func TestValidateColumns_AllowsProvisioningSourceSelection(t *testing.T) {
+	t.Helper()
+
+	columns := validateColumns("lei,provisioning_source")
+	if !containsColumn(columns, "provisioning_source") {
+		t.Fatalf("expected provisioning_source to be allowed")
+	}
+}
+
 func TestEnsureLinkedLEICodeColumns_AddsRequiredColumnsWithoutDuplicates(t *testing.T) {
 	t.Helper()
 

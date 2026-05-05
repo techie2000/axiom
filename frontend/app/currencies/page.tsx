@@ -290,7 +290,7 @@ export default function CurrenciesPage() {
         </div>
 
         {/* Search and compliance filter */}
-        <div className="mb-6 theme-panel border-2 backdrop-blur-sm rounded-lg p-6">
+        <div className="relative z-40 mb-6 theme-panel border-2 backdrop-blur-sm rounded-lg p-6">
           <div className="flex flex-col sm:flex-row gap-3 mb-4">
           <SearchInputWithOverflowTooltip
             ref={searchInputRef}
