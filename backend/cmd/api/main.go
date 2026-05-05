@@ -59,9 +59,9 @@ func main() {
 	// Initialize logger
 	logger.Init(cfg.Log.Level)
 
-	// Leave host/schemes empty so Swagger uses the request origin in deployed environments.
-	docs.SwaggerInfo.Host = ""
-	docs.SwaggerInfo.Schemes = nil
+	// Configure Swagger metadata once at startup to avoid request-time global mutations.
+	docs.SwaggerInfo.Host = fmt.Sprintf("localhost:%d", cfg.Server.Port)
+	docs.SwaggerInfo.Schemes = []string{"http"}
 
 	// Connect to database
 	db, err := connectDatabase(cfg)
