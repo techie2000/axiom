@@ -623,40 +623,45 @@ This repository configuration is designed to make AI coding agents immediately p
 
 ## PR Finalization Default (Team Preference)
 
-When an AI agent creates a pull request, it should complete standard PR hygiene automatically **without asking for confirmation**:
+**Use the `create-pull-request` skill to automatically handle PR creation with labels, reviewer assignment, and verification checklist.**
 
-1. Add appropriate labels following the three-namespace taxonomy:
-   - **Category** (optional, max one): `bug`, `enhancement`, `security`, `performance`, or `question` — add only when it conveys information not already implied by Area
-   - **Area** (required, exactly one): `area:backend`, `area:frontend`, `area:database`, `area:docs`,
-     `area:infra`, `area:ci`, `area:lei`, or `area:dependencies` — infer from the files touched OR let CI workflow auto-apply
-   - **Type** (optional secondary, one or two): `type:tests`, `type:refactor`, `type:chore`
-   - Add `automated` to mark AI-created items and `no-issue-needed` for PRs with no backing issue
-   - **Note**: The CI workflow (`auto-label-prs.yml`) automatically applies Area labels based on file paths. Do not manually add Area labels unless the auto-detection fails. Avoid duplicate semantics: do not add `documentation` when `area:docs` is present. Category labels are only needed when they are orthogonal to Area (e.g., `area:backend` change that is also a `security` fix should add `security`).
-   - **Replacement promotion PRs** (e.g., conflict-resolution branches like `fix/sync-dev-from-main-*` or
-     `fix/sync-uat-from-dev-*` that target `dev` or `uat` but do not originate from the required source branch):
-     apply `hotfix` **and** `no-issue-needed` at PR creation time — not reactively after CI flags them.
-     This is required because `Check Environment Branch Flow` blocks non-`main` branches targeting `dev`
-     unless the `hotfix` or `emergency` label is present, and `Check PR Issue Link` blocks PRs with no
-     issue reference unless `no-issue-needed` is present. Both checks will show
-   `Expected — Waiting for status to be reported` until the labels are applied, which triggers the
-   relevant workflows against the current PR head SHA without requiring an extra commit push.
-2. Request a reviewer (prefer `copilot-pull-request-reviewer` when available).
-3. Post a concise verification checklist comment relevant to the changed files.
-4. After each commit push to the PR branch, post a concise implementation summary comment that includes:
-   - what changed,
-   - what validation/tests were run,
-   - any follow-up actions or known limitations.
-   - If a push has no meaningful reviewer-facing delta, do not post a new summary comment.
-5. For each linked underlying issue (prefer `Refs #123`; use `Fixes/Closes #123` only when `#123` is confirmed to be
-   an issue and not a pull request),
-   post a concise issue update comment after each PR push (same per-push trigger as
-   [`instructions/copilot-pr-feedback-resolution.instructions.md`](instructions/copilot-pr-feedback-resolution.instructions.md))
-   that includes:
-   - implementation status,
-   - validation status,
-   - testing guidance for user/UAT verification,
-   - PR link.
-6. Do not ask whether to post the summary/checklist/issue-update comments; post them by default.
+The skill encodes these Axiom-specific workflows and posts all required comments automatically without asking for confirmation.
+
+### Manual Reference: Label Taxonomy
+
+If manually applying labels (not using the skill), follow this taxonomy:
+
+**Categories** (optional, max one):
+- `bug` — defect fix
+- `enhancement` — new feature or capability
+- `security` — security issue or fix
+- `performance` — performance improvement
+- `question` — unclear or needs clarification
+
+**Area** (required, exactly one):
+- `area:backend` — Go backend code changes
+- `area:frontend` — React/Next.js frontend changes
+- `area:database` — migrations, schema, or DB-related
+- `area:docs` — documentation and guides
+- `area:infra` — Docker, Docker Compose, infrastructure
+- `area:ci` — GitHub Actions workflows
+- `area:lei` — LEI-specific features
+- `area:dependencies` — dependency updates
+
+**Type** (optional secondary, one or two):
+- `type:tests` — test additions or modifications
+- `type:refactor` — code restructuring without behavior change
+- `type:chore` — maintenance, tooling
+
+**Special Labels**:
+- `automated` — mark AI-created PRs
+- `no-issue-needed` — for PRs with no backing issue
+- `hotfix` — for replacement promotion branches (`fix/sync-*` branches). Apply **with** `no-issue-needed` at PR creation time to bypass branch-flow checks.
+
+**Notes**:
+- The CI workflow (`auto-label-prs.yml`) auto-applies Area labels; do not manually duplicate.
+- Avoid duplicate semantics: do not add `documentation` when `area:docs` is present.
+- Category labels are only needed when orthogonal to Area (e.g., `area:backend` change that is also `security` should add `security`).
 
 ### Required Check Context Fallback (REQUIRED)
 
