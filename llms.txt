@@ -57,6 +57,8 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
 ## User Documentation — Admin Workflows
 
 - [Admin Overview](docs-user/admin/index.md): Overview of admin-only workflow guides
+- [Provisional LEI](docs-user/admin/provisional-lei.md): Issue, update, and link provisional LEI records to official LEIs
+- [User-Entity Links](docs-user/admin/user-entity-links.md): Grant, update, revoke, and restore user-entity access links
 - [User Approvals](docs-user/admin/user-approvals.md): Review and approve new user registration requests
 - [Translation Review](docs-user/admin/translation-review.md): Review and approve community-submitted UI translations
 - [Sync Triggers](docs-user/admin/sync-triggers.md): Manually trigger LEI and master data synchronisation

@@ -10,7 +10,7 @@ describe('LEI status filter helpers', () => {
     expect(formatStatusFilterLabel('NOT_SET')).toBe('Not Set')
     expect(formatStatusFilterLabel('null')).toBe('Not Set')
     expect(formatStatusFilterLabel('Not Set')).toBe('Not Set')
-    expect(formatStatusFilterLabel('ACTIVE')).toBe('ACTIVE')
+    expect(formatStatusFilterLabel('ACTIVE')).toBe('Active')
   })
 
   it('maps not-set filters to backend not-set query token', () => {

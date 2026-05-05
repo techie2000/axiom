@@ -801,7 +801,7 @@ export default function AdminTranslationsPage() {
         )}
 
         {/* Filters */}
-        <div className="theme-panel backdrop-blur-sm border-2 rounded-lg p-4 mb-6 flex flex-wrap gap-3 items-end">
+        <div className="relative z-40 theme-panel backdrop-blur-sm border-2 rounded-lg p-4 mb-6 flex flex-wrap gap-3 items-end">
           <div>
             <label className="block text-xs theme-text-muted mb-1">
               {t('admin.translations.filterByLanguage')}

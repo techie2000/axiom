@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { renderHook } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { applyEmojiMode, useButtonEmojiMode } from './useButtonEmojiMode'
+import { applyEmojiMode, ensureLeadingEmoji, useButtonEmojiMode } from './useButtonEmojiMode'
 import { useUserPreference } from './useUserPreference'
 
 vi.mock('./useUserPreference', () => ({
@@ -45,6 +45,18 @@ describe('applyEmojiMode', () => {
       expect(applyEmojiMode('Documentation', 'emoji')).toBe('Documentation')
       expect(applyEmojiMode('Normal', 'emoji')).toBe('Normal')
     })
+  })
+})
+
+describe('ensureLeadingEmoji', () => {
+  it('prepends emoji when none exists', () => {
+    expect(ensureLeadingEmoji('Columns (9)', '⚙️')).toBe('⚙️ Columns (9)')
+    expect(ensureLeadingEmoji('Display: Names', '🏷️')).toBe('🏷️ Display: Names')
+  })
+
+  it('keeps existing leading emoji unchanged', () => {
+    expect(ensureLeadingEmoji('⚙️ Columns (9)', '⚙️')).toBe('⚙️ Columns (9)')
+    expect(ensureLeadingEmoji('🏷️ Display: Names', '🏷️')).toBe('🏷️ Display: Names')
   })
 })
 

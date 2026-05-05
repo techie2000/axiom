@@ -289,6 +289,8 @@ func validateColumns(columns string) []clause.Column {
 		"lei",
 		"legal_name",
 		"other_names",
+		"is_provisional",
+		"provisioning_source",
 		"entity_status",
 		"entity_category",
 		"legal_address_country",
@@ -299,11 +301,17 @@ func validateColumns(columns string) []clause.Column {
 		"id",
 		"lei",
 		"legal_name",
+		"is_provisional",
+		"provisioning_source",
 		"entity_status",
 		"entity_category",
 		"legal_address_country",
 		"last_update_date",
 	}
+
+	// Always include these columns so list responses preserve provisional semantics
+	// even when frontend requests a narrow projection.
+	semanticColumns := []string{"is_provisional", "provisioning_source"}
 
 	// Whitelist of allowed LEI record columns (prevents SQL injection)
 	validColumns := map[string]bool{
@@ -344,6 +352,8 @@ func validateColumns(columns string) []clause.Column {
 		"next_renewal_date":         true,
 		"validation_sources":        true,
 		"validation_authority":      true,
+		"is_provisional":            true,
+		"provisioning_source":       true,
 		"created_at":                true,
 		"updated_at":                true,
 	}
@@ -378,6 +388,19 @@ func validateColumns(columns string) []clause.Column {
 	}
 	if !hasID {
 		validatedCols = append([]string{"id"}, validatedCols...)
+	}
+
+	for _, semanticCol := range semanticColumns {
+		hasSemanticCol := false
+		for _, col := range validatedCols {
+			if col == semanticCol {
+				hasSemanticCol = true
+				break
+			}
+		}
+		if !hasSemanticCol {
+			validatedCols = append(validatedCols, semanticCol)
+		}
 	}
 
 	return toClauseColumns(validatedCols)

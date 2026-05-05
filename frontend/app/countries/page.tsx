@@ -675,7 +675,7 @@ export default function CountriesPage() {
           <StatCard title={t('countries.stats.dataStandard')} titleTooltip={getEnglishTooltip('countries.stats.dataStandard')} value={t('countries.stats.iso3166')} />
         </div>
 
-        <div className="mb-6 theme-panel border-2 backdrop-blur-sm rounded-lg p-6">
+        <div className="relative z-40 mb-6 theme-panel border-2 backdrop-blur-sm rounded-lg p-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
             <div>
               <label className="block text-sm font-medium mb-2 theme-text-muted">{t('countries.filters.search')}</label>

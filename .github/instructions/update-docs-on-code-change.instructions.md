@@ -144,6 +144,32 @@ Automatically check if documentation updates are needed when:
   - Revise security requirements
   - Update API key/token documentation
 
+### API Documentation Gate (Required)
+
+For any backend API change (new endpoint, removed endpoint, route rename, request/response schema change,
+query/path parameter change, or status code behavior change), complete all of the following in the same change:
+
+- Update or add Swag annotations on the handler method.
+
+Required annotation coverage:
+
+- `@Summary`, `@Description`, `@Tags`
+- `@Param` entries for path/query/body
+- `@Success` and `@Failure` response definitions
+- `@Router` with the exact route and HTTP method
+- `@Security BearerAuth` when endpoint is authenticated
+
+- Regenerate Swagger docs:
+
+```bash
+make swagger
+```
+
+- Verify generated Swagger output changed as expected under `backend/docs/`.
+- Confirm Swagger UI includes the endpoint and correct schema/params.
+
+Do not treat API work as complete until this gate passes.
+
 ### Code Example Synchronization
 
 **Verify and update code examples when:**
@@ -197,6 +223,14 @@ with the application whenever user-visible behaviour changes.
 - An existing workflow or UI flow changes in a user-visible way
   - Update the corresponding page in `docs-user/workflows/`, `docs-user/admin/`, etc.
   - Update any screenshots or step descriptions that no longer match the UI
+  - Include action-surface changes such as new row actions, right-click/context-menu actions,
+    new defaults, or changed table controls
+
+**Authoring source of truth:**
+
+- `docs-user/` pages are authored as Markdown source files (`.md`).
+- Do not treat generated `.html` output as the canonical editable source.
+- For UI changes, update the relevant `docs-user/*.md` file in the same PR as the code change.
 
 - A new admin capability is added (e.g. new sync trigger, new approval type)
   - Add or update the page under `docs-user/admin/`
