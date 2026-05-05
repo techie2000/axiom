@@ -33,7 +33,27 @@ gh api repos/techie2000/axiom/pulls/{PR_NUMBER} --jq '{number, state, merged, ti
 # Should show: "merged": true
 ```
 
-### Step 3: Delete Local Branches
+### Step 3: Run Hotfix Backport Gate (for env direct merges)
+
+If the merged PR targeted `dev`, `uat`, or `prod` via `hotfix`/`emergency` labels,
+check whether it introduced substantive changes not present on `main`.
+
+```bash
+# Inspect merged PR metadata and changed files
+gh pr view {PR_NUMBER} --repo techie2000/axiom --json baseRefName,headRefName,labels,files,commits
+
+# Refresh refs and compare branch patch delta versus main
+git fetch origin --prune
+git cherry -v origin/main origin/{env-branch}
+```
+
+If meaningful fixes are missing on `main`:
+
+- Create a backport branch from `main`.
+- Cherry-pick focused fix commits (avoid blind merge-commit cherry-picks).
+- Open a PR to `main` and cross-link both PRs.
+
+### Step 4: Delete Local Branches
 
 Once merge is confirmed:
 
@@ -48,7 +68,7 @@ git branch -d {branch-name}
 git branch -D {branch-name}
 ```
 
-### Step 4: Remove Associated Worktrees (if any)
+### Step 5: Remove Associated Worktrees (if any)
 
 ```bash
 # List worktrees
@@ -64,7 +84,7 @@ git branch -d {branch-name}
 git branch -D {branch-name}
 ```
 
-### Step 5: Prune Remote Refs
+### Step 6: Prune Remote Refs
 
 ```bash
 git fetch origin --prune
@@ -130,6 +150,7 @@ git fetch origin --prune
 
 After cleanup:
 
+- [ ] For env hotfix merges, confirm a backport PR to `main` exists or a waiver is documented
 - [ ] Check remaining branches: `git branch -v`
 - [ ] Verify no orphaned worktree directories in `worktrees/`
 - [ ] Confirm no stale remote refs remain: `git remote prune origin --dry-run`
@@ -144,3 +165,4 @@ After cleanup:
     intentionally discarding local-only commits
 - **Single source of truth**: GitHub is authoritative; local branches are ephemeral
 - **Batch deletions** when multiple PRs merge (more efficient)
+- **Do not skip backports** for direct env hotfixes with real fixes; otherwise later promotion can overwrite them
