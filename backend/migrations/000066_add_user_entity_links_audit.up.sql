@@ -16,7 +16,7 @@ COMMENT ON TABLE user_entity_links_audit IS
 'Audit log for user-entity link lifecycle events: grant (CREATE), update (UPDATE), revoke (DELETE).
 Tracks who made changes, when, and what changed.';
 COMMENT ON COLUMN user_entity_links_audit.id IS 'Surrogate primary key (UUID v4).';
-COMMENT ON COLUMN user_entity_links_audit.user_entity_link_id IS 'Foreign key to user_entity_links.id.';
+COMMENT ON COLUMN user_entity_links_audit.user_entity_link_id IS 'References user_entity_links.id in application logic (no DB foreign key constraint).';
 COMMENT ON COLUMN user_entity_links_audit."action" IS 'Type of change: CREATE (granted), UPDATE (role/scope/expiry changed), DELETE (revoked/unrevoked).';
 COMMENT ON COLUMN user_entity_links_audit.record_snapshot IS 'Full snapshot of the user_entity_links row after the action.';
 COMMENT ON COLUMN user_entity_links_audit.changed_fields IS 'JSON object showing which fields changed and their before/after values (null for CREATE).';
