@@ -34,6 +34,8 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+          # Always run from main so automated security PRs are based on the canonical branch.
+          ref: main
 
       - name: Set up Go
         uses: actions/setup-go@v6
