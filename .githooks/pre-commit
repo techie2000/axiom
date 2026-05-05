@@ -47,6 +47,27 @@ if [ -f "frontend/public/data/ra-urls.json" ]; then
     fi
 fi
 
+# Auto-alias duplicate locale values to common.* when en/common.json is staged.
+STAGED_COMMON_LOCALE=$(git diff --cached --name-only --diff-filter=ACM | grep '^frontend/public/locales/en/common.json$' || true)
+if [ -n "$STAGED_COMMON_LOCALE" ]; then
+    if command -v node > /dev/null 2>&1; then
+        echo "Aliasing duplicate i18n values to common.*..."
+        if ! node ./frontend/scripts/alias-common-i18n-values.mjs; then
+            echo "❌ Failed to alias duplicate i18n values"
+            exit 1
+        fi
+
+        # Keep index in sync if the alias script changed the file.
+        if ! git diff --quiet -- frontend/public/locales/en/common.json; then
+            git add frontend/public/locales/en/common.json
+            echo "✅ Aliased and staged frontend/public/locales/en/common.json"
+        fi
+    else
+        echo "❌ node not found; required for i18n common aliasing"
+        exit 1
+    fi
+fi
+
 echo "Running markdown linting..."
 
 # Check if npx is available for markdownlint-cli2

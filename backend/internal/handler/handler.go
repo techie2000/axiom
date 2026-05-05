@@ -26,6 +26,8 @@ type Handlers struct {
 	CodeMapping     *CodeMappingHandler
 	UserPreference  *UserPreferenceHandler
 	UITranslation   *UITranslationHandler
+	ProvisionalLEI  *ProvisionalLEIHandler
+	UserEntityLink  *UserEntityLinkHandler
 }
 
 // NewHandlers creates a new handlers instance
@@ -44,6 +46,8 @@ func NewHandlers(services *service.Services, schedulerService service.SchedulerS
 		CodeMapping:     NewCodeMappingHandler(services.CodeMapping),
 		UserPreference:  NewUserPreferenceHandler(services.UserPreference),
 		UITranslation:   NewUITranslationHandler(services.UITranslation),
+		ProvisionalLEI:  NewProvisionalLEIHandler(services.ProvisionalLEI),
+		UserEntityLink:  NewUserEntityLinkHandler(services.UserEntityLink),
 	}
 }
 
@@ -453,6 +457,18 @@ func NewLanguageHandler(service service.LanguageService) *LanguageHandler {
 	return &LanguageHandler{service: service}
 }
 
+// List godoc
+// @Summary List currencies
+// @Description Get list of all currencies
+// @Tags currencies
+// @Accept json
+// @Produce json
+// @Param limit query int false "Limit"
+// @Param offset query int false "Offset"
+// @Success 200 {array} domain.Currency
+// @Failure 400 {object} object{error=string}
+// @Failure 500 {object} object{error=string}
+// @Router /currencies [get]
 func (h *CurrencyHandler) List(c *gin.Context) {
 	limit, err := strconv.Atoi(c.DefaultQuery("limit", strconv.Itoa(referenceDataDefaultLimit)))
 	if err != nil || limit < 1 || limit > referenceDataMaxLimit {
@@ -474,6 +490,16 @@ func (h *CurrencyHandler) List(c *gin.Context) {
 	c.JSON(http.StatusOK, currencies)
 }
 
+// Get godoc
+// @Summary Get currency by ID
+// @Description Get a single currency by ID
+// @Tags currencies
+// @Accept json
+// @Produce json
+// @Param id path string true "Currency ID"
+// @Success 200 {object} domain.Currency
+// @Failure 404 {object} object{error=string}
+// @Router /currencies/{id} [get]
 func (h *CurrencyHandler) Get(c *gin.Context) {
 	currency, err := h.service.GetByID(c.Param("id"))
 	if err != nil {
@@ -483,6 +509,18 @@ func (h *CurrencyHandler) Get(c *gin.Context) {
 	c.JSON(http.StatusOK, currency)
 }
 
+// Create godoc
+// @Summary Create currency
+// @Description Create a new currency
+// @Tags currencies
+// @Accept json
+// @Produce json
+// @Param currency body domain.Currency true "Currency object"
+// @Success 201 {object} domain.Currency
+// @Failure 400 {object} object{error=string}
+// @Failure 500 {object} object{error=string}
+// @Security BearerAuth
+// @Router /currencies [post]
 func (h *CurrencyHandler) Create(c *gin.Context) {
 	var currency domain.Currency
 	if err := c.ShouldBindJSON(&currency); err != nil {
@@ -496,6 +534,20 @@ func (h *CurrencyHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, currency)
 }
 
+// Update godoc
+// @Summary Update currency
+// @Description Update an existing currency
+// @Tags currencies
+// @Accept json
+// @Produce json
+// @Param id path string true "Currency ID"
+// @Param currency body domain.Currency true "Currency object"
+// @Success 200 {object} domain.Currency
+// @Failure 400 {object} object{error=string}
+// @Failure 404 {object} object{error=string}
+// @Failure 500 {object} object{error=string}
+// @Security BearerAuth
+// @Router /currencies/{id} [put]
 func (h *CurrencyHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 
@@ -528,6 +580,17 @@ func (h *CurrencyHandler) Update(c *gin.Context) {
 	c.JSON(http.StatusOK, currency)
 }
 
+// Delete godoc
+// @Summary Delete currency
+// @Description Delete a currency
+// @Tags currencies
+// @Accept json
+// @Produce json
+// @Param id path string true "Currency ID"
+// @Success 204
+// @Failure 500 {object} object{error=string}
+// @Security BearerAuth
+// @Router /currencies/{id} [delete]
 func (h *CurrencyHandler) Delete(c *gin.Context) {
 	if err := h.service.Delete(c.Param("id")); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete currency"})
@@ -536,6 +599,18 @@ func (h *CurrencyHandler) Delete(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// List godoc
+// @Summary List languages
+// @Description Get list of all languages
+// @Tags languages
+// @Accept json
+// @Produce json
+// @Param limit query int false "Limit"
+// @Param offset query int false "Offset"
+// @Success 200 {array} domain.Language
+// @Failure 400 {object} object{error=string}
+// @Failure 500 {object} object{error=string}
+// @Router /languages [get]
 func (h *LanguageHandler) List(c *gin.Context) {
 	limit, err := strconv.Atoi(c.DefaultQuery("limit", strconv.Itoa(referenceDataDefaultLimit)))
 	if err != nil || limit < 1 || limit > referenceDataMaxLimit {
@@ -574,6 +649,18 @@ func NewSSIHandler(s service.SSIService) *SSIHandler             { return &SSIHa
 func NewDataAcquisitionHandler() *DataAcquisitionHandler         { return &DataAcquisitionHandler{} }
 
 // Implement CRUD methods for remaining handlers
+// List godoc
+// @Summary List entities
+// @Description Get list of all entities
+// @Tags entities
+// @Accept json
+// @Produce json
+// @Param limit query int false "Limit"
+// @Param offset query int false "Offset"
+// @Success 200 {array} domain.Entity
+// @Failure 500 {object} object{error=string}
+// @Security BearerAuth
+// @Router /entities [get]
 func (h *EntityHandler) List(c *gin.Context) {
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
 	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
@@ -585,6 +672,17 @@ func (h *EntityHandler) List(c *gin.Context) {
 	c.JSON(http.StatusOK, entities)
 }
 
+// Get godoc
+// @Summary Get entity by ID
+// @Description Get a single entity by ID
+// @Tags entities
+// @Accept json
+// @Produce json
+// @Param id path string true "Entity ID"
+// @Success 200 {object} domain.Entity
+// @Failure 404 {object} object{error=string}
+// @Security BearerAuth
+// @Router /entities/{id} [get]
 func (h *EntityHandler) Get(c *gin.Context) {
 	entity, err := h.service.GetByID(c.Param("id"))
 	if err != nil {
@@ -594,6 +692,18 @@ func (h *EntityHandler) Get(c *gin.Context) {
 	c.JSON(http.StatusOK, entity)
 }
 
+// Create godoc
+// @Summary Create entity
+// @Description Create a new entity
+// @Tags entities
+// @Accept json
+// @Produce json
+// @Param entity body domain.Entity true "Entity object"
+// @Success 201 {object} domain.Entity
+// @Failure 400 {object} object{error=string}
+// @Failure 500 {object} object{error=string}
+// @Security BearerAuth
+// @Router /entities [post]
 func (h *EntityHandler) Create(c *gin.Context) {
 	var entity domain.Entity
 	if err := c.ShouldBindJSON(&entity); err != nil {
@@ -607,6 +717,20 @@ func (h *EntityHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, entity)
 }
 
+// Update godoc
+// @Summary Update entity
+// @Description Update an existing entity
+// @Tags entities
+// @Accept json
+// @Produce json
+// @Param id path string true "Entity ID"
+// @Param entity body domain.Entity true "Entity object"
+// @Success 200 {object} domain.Entity
+// @Failure 400 {object} object{error=string}
+// @Failure 404 {object} object{error=string}
+// @Failure 500 {object} object{error=string}
+// @Security BearerAuth
+// @Router /entities/{id} [put]
 func (h *EntityHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 
@@ -639,6 +763,17 @@ func (h *EntityHandler) Update(c *gin.Context) {
 	c.JSON(http.StatusOK, entity)
 }
 
+// Delete godoc
+// @Summary Delete entity
+// @Description Delete an entity
+// @Tags entities
+// @Accept json
+// @Produce json
+// @Param id path string true "Entity ID"
+// @Success 204
+// @Failure 500 {object} object{error=string}
+// @Security BearerAuth
+// @Router /entities/{id} [delete]
 func (h *EntityHandler) Delete(c *gin.Context) {
 	if err := h.service.Delete(c.Param("id")); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete entity"})
@@ -648,6 +783,18 @@ func (h *EntityHandler) Delete(c *gin.Context) {
 }
 
 // Instrument handler methods
+// List godoc
+// @Summary List instruments
+// @Description Get list of all instruments
+// @Tags instruments
+// @Accept json
+// @Produce json
+// @Param limit query int false "Limit"
+// @Param offset query int false "Offset"
+// @Success 200 {array} domain.Instrument
+// @Failure 500 {object} object{error=string}
+// @Security BearerAuth
+// @Router /instruments [get]
 func (h *InstrumentHandler) List(c *gin.Context) {
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
 	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
@@ -659,6 +806,17 @@ func (h *InstrumentHandler) List(c *gin.Context) {
 	c.JSON(http.StatusOK, instruments)
 }
 
+// Get godoc
+// @Summary Get instrument by ID
+// @Description Get a single instrument by ID
+// @Tags instruments
+// @Accept json
+// @Produce json
+// @Param id path string true "Instrument ID"
+// @Success 200 {object} domain.Instrument
+// @Failure 404 {object} object{error=string}
+// @Security BearerAuth
+// @Router /instruments/{id} [get]
 func (h *InstrumentHandler) Get(c *gin.Context) {
 	instrument, err := h.service.GetByID(c.Param("id"))
 	if err != nil {
@@ -668,6 +826,18 @@ func (h *InstrumentHandler) Get(c *gin.Context) {
 	c.JSON(http.StatusOK, instrument)
 }
 
+// Create godoc
+// @Summary Create instrument
+// @Description Create a new instrument
+// @Tags instruments
+// @Accept json
+// @Produce json
+// @Param instrument body domain.Instrument true "Instrument object"
+// @Success 201 {object} domain.Instrument
+// @Failure 400 {object} object{error=string}
+// @Failure 500 {object} object{error=string}
+// @Security BearerAuth
+// @Router /instruments [post]
 func (h *InstrumentHandler) Create(c *gin.Context) {
 	var instrument domain.Instrument
 	if err := c.ShouldBindJSON(&instrument); err != nil {
@@ -681,6 +851,20 @@ func (h *InstrumentHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, instrument)
 }
 
+// Update godoc
+// @Summary Update instrument
+// @Description Update an existing instrument
+// @Tags instruments
+// @Accept json
+// @Produce json
+// @Param id path string true "Instrument ID"
+// @Param instrument body domain.Instrument true "Instrument object"
+// @Success 200 {object} domain.Instrument
+// @Failure 400 {object} object{error=string}
+// @Failure 404 {object} object{error=string}
+// @Failure 500 {object} object{error=string}
+// @Security BearerAuth
+// @Router /instruments/{id} [put]
 func (h *InstrumentHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 
@@ -713,6 +897,17 @@ func (h *InstrumentHandler) Update(c *gin.Context) {
 	c.JSON(http.StatusOK, instrument)
 }
 
+// Delete godoc
+// @Summary Delete instrument
+// @Description Delete an instrument
+// @Tags instruments
+// @Accept json
+// @Produce json
+// @Param id path string true "Instrument ID"
+// @Success 204
+// @Failure 500 {object} object{error=string}
+// @Security BearerAuth
+// @Router /instruments/{id} [delete]
 func (h *InstrumentHandler) Delete(c *gin.Context) {
 	if err := h.service.Delete(c.Param("id")); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete instrument"})
@@ -722,6 +917,18 @@ func (h *InstrumentHandler) Delete(c *gin.Context) {
 }
 
 // Account handler methods
+// List godoc
+// @Summary List accounts
+// @Description Get list of all accounts
+// @Tags accounts
+// @Accept json
+// @Produce json
+// @Param limit query int false "Limit"
+// @Param offset query int false "Offset"
+// @Success 200 {array} domain.Account
+// @Failure 500 {object} object{error=string}
+// @Security BearerAuth
+// @Router /accounts [get]
 func (h *AccountHandler) List(c *gin.Context) {
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
 	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
@@ -733,6 +940,17 @@ func (h *AccountHandler) List(c *gin.Context) {
 	c.JSON(http.StatusOK, accounts)
 }
 
+// Get godoc
+// @Summary Get account by ID
+// @Description Get a single account by ID
+// @Tags accounts
+// @Accept json
+// @Produce json
+// @Param id path string true "Account ID"
+// @Success 200 {object} domain.Account
+// @Failure 404 {object} object{error=string}
+// @Security BearerAuth
+// @Router /accounts/{id} [get]
 func (h *AccountHandler) Get(c *gin.Context) {
 	account, err := h.service.GetByID(c.Param("id"))
 	if err != nil {
@@ -742,6 +960,18 @@ func (h *AccountHandler) Get(c *gin.Context) {
 	c.JSON(http.StatusOK, account)
 }
 
+// Create godoc
+// @Summary Create account
+// @Description Create a new account
+// @Tags accounts
+// @Accept json
+// @Produce json
+// @Param account body domain.Account true "Account object"
+// @Success 201 {object} domain.Account
+// @Failure 400 {object} object{error=string}
+// @Failure 500 {object} object{error=string}
+// @Security BearerAuth
+// @Router /accounts [post]
 func (h *AccountHandler) Create(c *gin.Context) {
 	var account domain.Account
 	if err := c.ShouldBindJSON(&account); err != nil {
@@ -755,6 +985,20 @@ func (h *AccountHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, account)
 }
 
+// Update godoc
+// @Summary Update account
+// @Description Update an existing account
+// @Tags accounts
+// @Accept json
+// @Produce json
+// @Param id path string true "Account ID"
+// @Param account body domain.Account true "Account object"
+// @Success 200 {object} domain.Account
+// @Failure 400 {object} object{error=string}
+// @Failure 404 {object} object{error=string}
+// @Failure 500 {object} object{error=string}
+// @Security BearerAuth
+// @Router /accounts/{id} [put]
 func (h *AccountHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 
@@ -787,6 +1031,17 @@ func (h *AccountHandler) Update(c *gin.Context) {
 	c.JSON(http.StatusOK, account)
 }
 
+// Delete godoc
+// @Summary Delete account
+// @Description Delete an account
+// @Tags accounts
+// @Accept json
+// @Produce json
+// @Param id path string true "Account ID"
+// @Success 204
+// @Failure 500 {object} object{error=string}
+// @Security BearerAuth
+// @Router /accounts/{id} [delete]
 func (h *AccountHandler) Delete(c *gin.Context) {
 	if err := h.service.Delete(c.Param("id")); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete account"})
@@ -796,6 +1051,18 @@ func (h *AccountHandler) Delete(c *gin.Context) {
 }
 
 // SSI handler methods
+// List godoc
+// @Summary List SSIs
+// @Description Get list of all settlement standing instructions
+// @Tags ssis
+// @Accept json
+// @Produce json
+// @Param limit query int false "Limit"
+// @Param offset query int false "Offset"
+// @Success 200 {array} handler.ssiListItemResponse
+// @Failure 500 {object} object{error=string}
+// @Security BearerAuth
+// @Router /ssis [get]
 func (h *SSIHandler) List(c *gin.Context) {
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
 	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
@@ -813,6 +1080,17 @@ func (h *SSIHandler) List(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+// Get godoc
+// @Summary Get SSI by ID
+// @Description Get a single settlement standing instruction by ID
+// @Tags ssis
+// @Accept json
+// @Produce json
+// @Param id path string true "SSI ID"
+// @Success 200 {object} handler.ssiListItemResponse
+// @Failure 404 {object} object{error=string}
+// @Security BearerAuth
+// @Router /ssis/{id} [get]
 func (h *SSIHandler) Get(c *gin.Context) {
 	ssi, err := h.service.GetByID(c.Param("id"))
 	if err != nil {
@@ -822,6 +1100,18 @@ func (h *SSIHandler) Get(c *gin.Context) {
 	c.JSON(http.StatusOK, mapSSIToListItem(ssi))
 }
 
+// Create godoc
+// @Summary Create SSI
+// @Description Create a new settlement standing instruction
+// @Tags ssis
+// @Accept json
+// @Produce json
+// @Param ssi body domain.SSI true "SSI object"
+// @Success 201 {object} domain.SSI
+// @Failure 400 {object} object{error=string}
+// @Failure 500 {object} object{error=string}
+// @Security BearerAuth
+// @Router /ssis [post]
 func (h *SSIHandler) Create(c *gin.Context) {
 	var ssi domain.SSI
 	if err := c.ShouldBindJSON(&ssi); err != nil {
@@ -835,6 +1125,20 @@ func (h *SSIHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, ssi)
 }
 
+// Update godoc
+// @Summary Update SSI
+// @Description Update an existing settlement standing instruction
+// @Tags ssis
+// @Accept json
+// @Produce json
+// @Param id path string true "SSI ID"
+// @Param ssi body domain.SSI true "SSI object"
+// @Success 200 {object} domain.SSI
+// @Failure 400 {object} object{error=string}
+// @Failure 404 {object} object{error=string}
+// @Failure 500 {object} object{error=string}
+// @Security BearerAuth
+// @Router /ssis/{id} [put]
 func (h *SSIHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 
@@ -867,6 +1171,17 @@ func (h *SSIHandler) Update(c *gin.Context) {
 	c.JSON(http.StatusOK, ssi)
 }
 
+// Delete godoc
+// @Summary Delete SSI
+// @Description Delete a settlement standing instruction
+// @Tags ssis
+// @Accept json
+// @Produce json
+// @Param id path string true "SSI ID"
+// @Success 204
+// @Failure 500 {object} object{error=string}
+// @Security BearerAuth
+// @Router /ssis/{id} [delete]
 func (h *SSIHandler) Delete(c *gin.Context) {
 	if err := h.service.Delete(c.Param("id")); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete SSI"})
@@ -972,18 +1287,55 @@ func settlementMethodFromType(settlementType domain.SettlementType) string {
 }
 
 // Data acquisition endpoints
+// Import godoc
+// @Summary Import data
+// @Description Trigger data import job
+// @Tags data-acquisition
+// @Accept json
+// @Produce json
+// @Success 200 {object} map[string]string
+// @Security BearerAuth
+// @Router /data/import [post]
 func (h *DataAcquisitionHandler) Import(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Import endpoint - to be implemented"})
 }
 
+// Export godoc
+// @Summary Export data
+// @Description Trigger data export job
+// @Tags data-acquisition
+// @Accept json
+// @Produce json
+// @Success 200 {object} map[string]string
+// @Security BearerAuth
+// @Router /data/export [post]
 func (h *DataAcquisitionHandler) Export(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Export endpoint - to be implemented"})
 }
 
+// ListJobs godoc
+// @Summary List data jobs
+// @Description List data acquisition jobs
+// @Tags data-acquisition
+// @Accept json
+// @Produce json
+// @Success 200 {object} map[string]string
+// @Security BearerAuth
+// @Router /data/jobs [get]
 func (h *DataAcquisitionHandler) ListJobs(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "List jobs endpoint - to be implemented"})
 }
 
+// GetJob godoc
+// @Summary Get data job
+// @Description Get a data acquisition job by ID
+// @Tags data-acquisition
+// @Accept json
+// @Produce json
+// @Param id path string true "Job ID"
+// @Success 200 {object} map[string]string
+// @Security BearerAuth
+// @Router /data/jobs/{id} [get]
 func (h *DataAcquisitionHandler) GetJob(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Get job endpoint - to be implemented"})
 }

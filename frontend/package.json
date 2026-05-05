@@ -11,6 +11,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
+    "i18n:alias-common": "node ./scripts/alias-common-i18n-values.mjs",
     "i18n:extract": "node ./scripts/extract-i18n-keys.mjs",
     "i18n:check": "node ./scripts/check-i18n-completeness.mjs",
     "i18n:verify": "npm run i18n:extract && npm run i18n:check && git diff --exit-code -- public/locales",
@@ -32,12 +33,12 @@
     "i18next": "^26.0.8",
     "i18next-browser-languagedetector": "^8.2.1",
     "i18next-http-backend": "^3.0.6",
-    "lucide-react": "^1.11.0",
+    "lucide-react": "^1.14.0",
     "next": "16.2.4",
-    "postcss": "^8.5.12",
+    "postcss": "^8.5.13",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
-    "react-i18next": "^17.0.4",
+    "react-i18next": "^17.0.6",
     "tailwind-merge": "^2.2.0",
     "tailwindcss": "^4.2.4"
   },
@@ -50,13 +51,13 @@
     "@types/node": "^25.6.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "@vitest/coverage-v8": "^4.1.4",
-    "eslint": "^9.25.1",
+    "@vitest/coverage-v8": "^4.1.5",
+    "eslint": "^9.39.4",
     "eslint-config-next": "15.5.15",
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "happy-dom": "^20.9.0",
-    "jsdom": "^29.1.0",
+    "jsdom": "^29.1.1",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.4"
+    "vitest": "^4.1.5"
   }
 }

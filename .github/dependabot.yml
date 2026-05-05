@@ -90,6 +90,8 @@ updates:
     ignore:
       - dependency-name: "eslint-config-next"
         versions: [">=16"]
+      - dependency-name: "eslint"
+        versions: [">=10"]
     # Group npm updates by type
     groups:
       npm-framework:

@@ -46,10 +46,11 @@ export function formatEnumDisplayValue(value: unknown): string {
 }
 
 export function getStatusBadgePresentation(value: unknown): { label: string; isActive: boolean } {
-  const label = formatLEIDisplayValue(value)
+  const rawValue = formatLEIDisplayValue(value)
+  const normalized = rawValue === '-' ? '' : rawValue.toUpperCase()
   return {
-    label,
-    isActive: label === 'ACTIVE',
+    label: rawValue === '-' ? rawValue : formatEnumDisplayValue(normalized),
+    isActive: normalized === 'ACTIVE',
   }
 }
 
@@ -103,7 +104,7 @@ export function formatLEICellValue(value: unknown, key: string): string {
     return '-'
   }
 
-  if (key === 'entity_category' || key === 'entity_sub_category' || key === 'registration_status') {
+  if (key === 'entity_category' || key === 'entity_sub_category' || key === 'registration_status' || key === 'entity_status') {
     return formatEnumDisplayValue(baseDisplayValue)
   }
 

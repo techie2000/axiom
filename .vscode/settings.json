@@ -2,6 +2,10 @@
   "chat.tools.terminal.autoApprove": {
     ".Name": true,
     ".vscode/settings.json": true,
+    "/^(cd \\.\\.; )?pwsh \\./scripts/run-main-compose\\.ps1 .*$/": {
+      "approve": true,
+      "matchCommandLine": true
+    },
     "/^docker rm -f axiom-main-frontend; docker volume rm axiom-main_frontend_node_modules_main axiom-main_frontend_next_main; pwsh -NoProfile -ExecutionPolicy Bypass -File \\./scripts/run-main-compose\\.ps1 up -d frontend$/": {
       "approve": true,
       "matchCommandLine": true
@@ -88,11 +92,15 @@
     "Move-Item": true,
     "npm --prefix frontend": true,
     "npm install": true,
+    "npm run -s i18n:verify": true,
     "npm run build": true,
+    "npm run docs:build": true,
+    "npm run i18n:verify": true,
     "npm run lint": true,
     "npm test": true,
     "npx --no-install markdownlint-cli2": true,
     "npx --yes markdownlint-cli2": true,
+    "npx markdownlint-cli2": true,
     "Out-Null": true,
     "Pop-Location": true,
     "println": true,
@@ -119,6 +127,7 @@
     "asac",
     "asyncio",
     "AURSDO",
+    "AXIO",
     "Backpressure",
     "BARCGB",
     "Beego",
@@ -300,6 +309,7 @@
     "ugorji",
     "Unknownland",
     "unmarshal",
+    "unrevoke",
     "Upserted",
     "Upserting",
     "upserts",
@@ -314,6 +324,7 @@
     "WHATIF",
     "Worktree",
     "worktrees",
+    "WTWWD",
     "XFRA",
     "xmldoc",
     "XNAS",
