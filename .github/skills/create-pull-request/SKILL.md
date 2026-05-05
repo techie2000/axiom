@@ -225,7 +225,7 @@ gh issue comment <issue-number> --repo techie2000/axiom --body "..."
 
 Issue update body template:
 
-```bash
+```markdown
 **PR Status**: Implementation started
 
 - PR: [#<pr-number>](https://github.com/techie2000/axiom/pull/<pr-number>)

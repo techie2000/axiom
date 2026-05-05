@@ -168,9 +168,10 @@ gh pr comment <pr-number> --reply-to <comment-id> --body-file "/path/to/resoluti
 **Validation**: `make docs-check`, linters pass
 ```
 
-Use the safe comment helper if available to verify rendered body before posting:
+Use the safe comment helper if available to verify rendered body before posting.
+For Bash shells, use the `gh pr comment --reply-to` command shown above.
 
-```bash
+```powershell
 pwsh ./scripts/post-gh-comment-safe.ps1 `
   -Repo "techie2000/axiom" `
   -TargetType pr `
