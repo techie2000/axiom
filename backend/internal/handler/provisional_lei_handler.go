@@ -41,6 +41,9 @@ func (h *ProvisionalLEIHandler) List(c *gin.Context) {
 	if limit < 1 || limit > 200 {
 		limit = 50
 	}
+	if offset < 0 {
+		offset = 0
+	}
 
 	records, total, err := h.svc.List(limit, offset)
 	if err != nil {

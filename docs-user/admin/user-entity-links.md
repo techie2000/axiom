@@ -41,7 +41,7 @@ Expected result: A new active link appears in the table.
 - **All descendants**: Access includes the entity and all descendants (full tree hierarchy).
 
 **Privilege precedence**: When a user has multiple roles across a parent and child
-entity (for example, `admin` at parent, `viewer` at child), the **most restrictive role
+entity (for example, `entity_admin` at parent, `viewer` at child), the **most restrictive role
 applies** at that level. In this example, the user would be a `viewer` when accessing
 the child entity.
 
@@ -51,7 +51,7 @@ the child entity.
 2. Open actions using either:
    - **Edit** in the row action buttons, or
    - **Right-click** the row and choose **Edit**.
-3. Update role, expiry date, include-children flag, or notes.
+3. Update role, expiry date, children scope (`none`, `direct`, or `all`), or notes.
 4. Click **Save**.
 
 Expected result: The row reflects updated values.
