@@ -220,6 +220,27 @@ func TestUpdateProcessingStatus_GLEIFReferenceSyncPreservesMessageWhenCompleted(
 	}
 }
 
+// TestUpdateProcessingStatus_GLEIFReferenceSyncPreservesMessageWhenIdle covers the actual
+// post-run terminal state written by RunGLEIFReferenceSync (IDLE, not COMPLETED).
+func TestUpdateProcessingStatus_GLEIFReferenceSyncPreservesMessageWhenIdle(t *testing.T) {
+	stub := &progressMsgRepoStub{}
+	svc := newProgressMsgService(stub)
+
+	status := &domain.FileProcessingStatus{
+		ID:              uuid.New(),
+		JobType:         "GLEIF_REFERENCE_SYNC",
+		Status:          "IDLE",
+		ProgressMessage: `{"total_records":7121,"files_saved":2}`,
+	}
+
+	if err := svc.UpdateProcessingStatus(status); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if stub.capturedMessage != `{"total_records":7121,"files_saved":2}` {
+		t.Errorf("GLEIF_REFERENCE_SYNC IDLE: want stats JSON preserved, got %q", stub.capturedMessage)
+	}
+}
+
 func TestUpdateProcessingStatus_Level1JobPreservesMessageWhenCompleted(t *testing.T) {
 	stub := &progressMsgRepoStub{}
 	svc := newProgressMsgService(stub)

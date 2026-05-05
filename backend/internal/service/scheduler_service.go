@@ -1858,6 +1858,10 @@ func (s *schedulerService) RunGLEIFReferenceSync() error {
 		log.Error().Err(syncErr).Msg("GLEIF reference sync failed")
 	} else {
 		completedAt := time.Now()
+		// GLEIF reference sync uses IDLE as its post-run terminal state (not COMPLETED) because it
+		// is a recurring background maintenance job without a discrete "completed" lifecycle.
+		// UpdateProcessingStatus preserves ProgressMessage for GLEIF_REFERENCE_SYNC regardless of
+		// status via shouldPreserveProgressMessage, so the stats JSON written above is retained.
 		status.Status = "IDLE"
 		status.NextRunAt = s.calculateNextDailyFullRun()
 		status.ErrorMessage = ""

@@ -225,15 +225,11 @@ worktree-local empty database directory.
 
 #### Works from repo root or any git worktree
 
-**Windows / PowerShell:**
-
-```powershell
-./scripts/run-main-compose.ps1 up -d --build
-```
-
-**Linux / macOS:**
-
 ```bash
+# Windows / PowerShell
+./scripts/run-main-compose.ps1 up -d --build
+
+# Linux / macOS
 ./scripts/run-main-compose.sh up -d --build
 ```
 

@@ -1,5 +1,5 @@
 {
-  "_comment": "Maps Registration Authority (RA) codes to arrays of lookup URL templates. Each entry has a 'name' (shown in dropdown) and 'url' (with {registration_number} placeholder, and optionally {lang} for language-aware registries). Only add entries that have been explicitly verified - do not guess.",
+  "_comment": "Maps Registration Authority (RA) codes to arrays of lookup URL templates. Each entry has a 'name' (shown in dropdown) and 'url' with one or more placeholders: {registration_number} (full number as registered), {registration_number_digits} (digits-only variant used by some registries, e.g. Belgium), and optionally {lang} for language-aware registries. Only add entries that have been explicitly verified - do not guess.",
   "RA000025": [
     {
       "name": "KBO (Belgium)",
