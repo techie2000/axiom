@@ -441,6 +441,13 @@ import Badge from '../components/Badge'
 | `purple` | Coming-soon / future features |
 | `gray` | Inactive / neutral |
 
+#### Provisional LEI Standard (Required)
+
+- Use `<Badge variant="blue">` for the PROVISIONAL marker on both `lei-records` and
+  `admin/provisional-lei` pages.
+- Do not use page-local raw `<span>` chips for this marker.
+- Reuse `frontend/app/lib/badge-presets.ts` (`PROVISIONAL_BADGE_VARIANT`) for consistency.
+
 ---
 
 ### Alert

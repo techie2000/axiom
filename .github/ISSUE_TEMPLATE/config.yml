@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and exploratory discussions
+    url: https://github.com/techie2000/axiom/discussions
+    about: Use discussions for open-ended questions instead of filing a work item.

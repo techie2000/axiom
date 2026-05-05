@@ -2,8 +2,10 @@
 
 import React, { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import Badge from './Badge'
 import CountryFlag from './CountryFlag'
 import { useButtonEmojiMode } from '../lib/useButtonEmojiMode'
+import { getRegistrationStatusBadgePresentation, REGISTRATION_STATUS_BADGE_VARIANT } from '../lei-records/null-utils'
 
 export interface LEIAuditEntry {
   id: string
@@ -32,6 +34,18 @@ const COUNTRY_CODE_FIELDS = new Set(['legal_address_country', 'hq_address_countr
 const ALPHA2_RE = /^[A-Z]{2}$/
 /** Fields whose values are LEI codes — rendered with monospace primary styling + optional click. */
 const LEI_CODE_FIELDS = new Set(['managing_lou', 'successor_lei'])
+/**
+ * Fields whose values are enum strings with underscores (e.g. FULLY_CORROBORATED).
+ * In the snapshot view these are displayed with underscores replaced by spaces so they read
+ * naturally (e.g. "FULLY CORROBORATED") without altering the stored value.
+ */
+const ENUM_DISPLAY_FIELDS = new Set([
+  'validation_sources',
+  'registration_status',
+  'entity_status',
+  'entity_category',
+  'entity_sub_category',
+])
 /** Border colour that uses the theme token at 75% opacity. Used in column-selector group rows. */
 const GROUP_BORDER_STYLE: React.CSSProperties = { borderColor: 'rgb(var(--border-rgb) / 0.75)' }
 
@@ -61,7 +75,10 @@ function normalizeChangedFields(cf: ParsedChangedFields): ParsedChangedFields {
   const out: ParsedChangedFields = {}
   for (const [key, val] of Object.entries(cf)) {
     const nk = normalizeFieldKey(key)
-    out[nk] = { ...val, field_name: nk }
+    // Transform backend "old"/"new" keys to frontend "old_value"/"new_value"
+    const oldValue = (val as Record<string, unknown>)?.old ?? val.old_value
+    const newValue = (val as Record<string, unknown>)?.new ?? val.new_value
+    out[nk] = { old_value: oldValue, new_value: newValue, field_name: nk }
   }
   return out
 }
@@ -155,7 +172,7 @@ function formatNameEntry(obj: Record<string, unknown>): string {
   return `${name}${typePart}${langPart}`
 }
 
-function formatSnapshotValue(value: unknown): string {
+export function formatSnapshotValue(value: unknown): string {
   if (value === null || value === undefined || value === '') return '—'
   if (typeof value === 'string') {
     if (value.startsWith('0001-') || value.toLowerCase() === 'null') return '—'
@@ -197,32 +214,208 @@ function formatSnapshotValue(value: unknown): string {
       .join('\n')
   }
   if (typeof value === 'object') {
+    // An empty plain object (e.g. validation_sources stored as JSONB `{}`) means "no value".
+    if (Object.keys(value as Record<string, unknown>).length === 0) return '—'
     return JSON.stringify(value)
   }
   return String(value)
 }
 
+export function formatEnumDisplayText(fieldKey: string, value: unknown, formattedText: string): string {
+  if (!ENUM_DISPLAY_FIELDS.has(fieldKey)) return formattedText
+  if (formattedText === '—') return formattedText
+
+  if (Array.isArray(value) && value.every((item) => typeof item === 'string')) {
+    return (value as string[]).map((item) => item.replace(/_/g, ' ')).join('\n')
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      try {
+        const parsed = JSON.parse(trimmed)
+        if (Array.isArray(parsed) && parsed.every((item) => typeof item === 'string')) {
+          return (parsed as string[]).map((item) => item.replace(/_/g, ' ')).join('\n')
+        }
+      } catch {
+        // Fall through to plain enum string handling.
+      }
+    }
+
+    if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+      return formattedText
+    }
+
+    return formattedText.replace(/_/g, ' ')
+  }
+
+  return formattedText
+}
+
+export interface AlignedDiffRow {
+  oldLine: string | null
+  newLine: string | null
+  state: 'unchanged' | 'added' | 'removed'
+}
+
+function splitDisplayLines(fieldKey: string, value: unknown): string[] {
+  const formattedText = formatEnumDisplayText(fieldKey, value, formatSnapshotValue(value))
+  if (formattedText === '—') {
+    return []
+  }
+  return formattedText.split('\n')
+}
+
+export function alignMultilineDiffRows(fieldKey: string, oldValue: unknown, newValue: unknown): AlignedDiffRow[] {
+  const oldLines = splitDisplayLines(fieldKey, oldValue)
+  const newLines = splitDisplayLines(fieldKey, newValue)
+  const shouldAlign = oldLines.length > 1 || newLines.length > 1
+
+  if (!shouldAlign) {
+    return []
+  }
+
+  const longestCommonSubsequence: number[][] = Array.from({ length: oldLines.length + 1 }, () =>
+    Array<number>(newLines.length + 1).fill(0)
+  )
+
+  for (let oldIndex = oldLines.length - 1; oldIndex >= 0; oldIndex -= 1) {
+    for (let newIndex = newLines.length - 1; newIndex >= 0; newIndex -= 1) {
+      longestCommonSubsequence[oldIndex][newIndex] = oldLines[oldIndex] === newLines[newIndex]
+        ? longestCommonSubsequence[oldIndex + 1][newIndex + 1] + 1
+        : Math.max(longestCommonSubsequence[oldIndex + 1][newIndex], longestCommonSubsequence[oldIndex][newIndex + 1])
+    }
+  }
+
+  const rows: AlignedDiffRow[] = []
+  let oldIndex = 0
+  let newIndex = 0
+
+  while (oldIndex < oldLines.length || newIndex < newLines.length) {
+    if (
+      oldIndex < oldLines.length &&
+      newIndex < newLines.length &&
+      oldLines[oldIndex] === newLines[newIndex]
+    ) {
+      rows.push({
+        oldLine: oldLines[oldIndex],
+        newLine: newLines[newIndex],
+        state: 'unchanged',
+      })
+      oldIndex += 1
+      newIndex += 1
+      continue
+    }
+
+    if (
+      newIndex < newLines.length &&
+      (
+        oldIndex === oldLines.length ||
+        longestCommonSubsequence[oldIndex][newIndex + 1] >= longestCommonSubsequence[oldIndex + 1][newIndex]
+      )
+    ) {
+      rows.push({
+        oldLine: null,
+        newLine: newLines[newIndex],
+        state: 'added',
+      })
+      newIndex += 1
+      continue
+    }
+
+    if (oldIndex < oldLines.length) {
+      rows.push({
+        oldLine: oldLines[oldIndex],
+        newLine: null,
+        state: 'removed',
+      })
+      oldIndex += 1
+    }
+  }
+
+  return rows
+}
+
 interface SnapshotValueProps {
   fieldKey: string
   value: unknown
+  snapshot?: ParsedSnapshot
   showCodes?: boolean
   countryByCode?: Map<string, string>
   onLeiClick?: (lei: string) => void
   linkedLeiNames?: Map<string, string>
+  registrationAuthorityNameByCode?: Map<string, string>
+  registrationAuthorityFallback?: {
+    code?: string
+    name?: string
+    internationalName?: string
+  }
 }
 
 /** Renders a value with optional country flag, names/codes display mode, and LEI code links. */
-function SnapshotValue({ fieldKey, value, showCodes = true, countryByCode, onLeiClick, linkedLeiNames }: SnapshotValueProps) {
+function SnapshotValue({ fieldKey, value, snapshot, showCodes = true, countryByCode, onLeiClick, linkedLeiNames, registrationAuthorityNameByCode, registrationAuthorityFallback }: SnapshotValueProps) {
   const text = formatSnapshotValue(value)
-  if (text === '—') return <span className="theme-text-muted">—</span>
+  const displayText = formatEnumDisplayText(fieldKey, value, text)
+  if (displayText === '—') return <span className="theme-text-muted">—</span>
+  if (fieldKey === 'registration_authority' && typeof value === 'string') {
+    const raCode = value.trim()
+    const snapshotRaCode = typeof snapshot?.registration_authority === 'string'
+      ? snapshot.registration_authority.trim()
+      : ''
+    const canUseSnapshotName = snapshotRaCode !== '' && snapshotRaCode === raCode
+    const raName = typeof snapshot?.registration_authority_name === 'string'
+      ? (canUseSnapshotName ? snapshot.registration_authority_name.trim() : '')
+      : ''
+    const raIntlName = typeof snapshot?.registration_authority_international_name === 'string'
+      ? (canUseSnapshotName ? snapshot.registration_authority_international_name.trim() : '')
+      : ''
+    const fallbackNameFromMap = registrationAuthorityNameByCode?.get(raCode)?.trim() || ''
+    const fallbackCode = (registrationAuthorityFallback?.code || '').trim()
+    const fallbackNameFromRecord = fallbackCode === raCode
+      ? (registrationAuthorityFallback?.name || '').trim()
+      : ''
+    const fallbackIntlFromRecord = fallbackCode === raCode
+      ? (registrationAuthorityFallback?.internationalName || '').trim()
+      : ''
+
+    const fallbackName = fallbackNameFromMap || fallbackNameFromRecord
+    const displayName = raName || fallbackName
+    const displayIntlName = raIntlName || fallbackIntlFromRecord
+    const showIntl = displayIntlName && displayName && displayIntlName !== displayName
+
+    return (
+      <span className="flex flex-col gap-0.5">
+        <span className="font-mono">{raCode || '—'}</span>
+        {displayName && displayName !== raCode && (
+          <span className="text-xs theme-text-muted">
+            {displayName}
+            {showIntl && <span className="ml-1 opacity-75">({displayIntlName})</span>}
+          </span>
+        )}
+      </span>
+    )
+  }
   if (COUNTRY_CODE_FIELDS.has(fieldKey) && typeof value === 'string' && ALPHA2_RE.test(value.trim().toUpperCase())) {
     const code = value.trim().toUpperCase()
     const displayText = (!showCodes && countryByCode) ? (countryByCode.get(code) ?? code) : code
     return (
       <span className="inline-flex items-center gap-1.5">
-        <CountryFlag countryCode={code} />
+        <CountryFlag countryCode={code} className="h-4 w-6 rounded-sm border border-[rgb(var(--border-rgb))]" />
         <span>{displayText}</span>
       </span>
+    )
+  }
+  if (fieldKey === 'registration_status' && typeof value === 'string' && value.trim().length > 0) {
+    const regStatusPresentation = getRegistrationStatusBadgePresentation(value)
+    return (
+      <Badge
+        title={regStatusPresentation.tooltip}
+        className="inline-block whitespace-nowrap"
+        variant={REGISTRATION_STATUS_BADGE_VARIANT[regStatusPresentation.variant]}
+      >
+        {regStatusPresentation.label}
+      </Badge>
     )
   }
   if (LEI_CODE_FIELDS.has(fieldKey) && typeof value === 'string' && value.trim().length > 0) {
@@ -250,16 +443,16 @@ function SnapshotValue({ fieldKey, value, showCodes = true, countryByCode, onLei
     return leiEl
   }
   // Multi-line values (e.g. other_names with multiple entries)
-  if (text.includes('\n')) {
+  if (displayText.includes('\n')) {
     return (
       <span className="flex flex-col gap-0.5">
-        {text.split('\n').map((line, i) => (
+        {displayText.split('\n').map((line, i) => (
           <span key={i}>{line}</span>
         ))}
       </span>
     )
   }
-  return <>{text}</>
+  return <>{displayText}</>
 }
 
 /** Compute changed fields by diffing two snapshots — used for arbitrary version pairs. */
@@ -305,9 +498,15 @@ interface SnapshotTableProps {
   countryByCode?: Map<string, string>
   onLeiClick?: (lei: string) => void
   linkedLeiNames?: Map<string, string>
+  registrationAuthorityNameByCode?: Map<string, string>
+  registrationAuthorityFallback?: {
+    code?: string
+    name?: string
+    internationalName?: string
+  }
 }
 
-function SnapshotTable({ snapshot, columns, changedFields, labelMap, showCodes = true, countryByCode, onLeiClick, linkedLeiNames }: SnapshotTableProps) {
+function SnapshotTable({ snapshot, columns, changedFields, labelMap, showCodes = true, countryByCode, onLeiClick, linkedLeiNames, registrationAuthorityNameByCode, registrationAuthorityFallback }: SnapshotTableProps) {
   const { t } = useTranslation('common')
   if (columns.length === 0) {
     return <p className="text-sm theme-text-muted py-4">{t('leiAudit.noColumnsSelected')}</p>
@@ -364,14 +563,14 @@ function SnapshotTable({ snapshot, columns, changedFields, labelMap, showCodes =
                       /* Show old → new inline so the change is immediately obvious */
                       <span className="flex flex-col gap-0.5">
                         <span className="text-red-600 dark:text-red-400 text-xs">
-                          <SnapshotValue fieldKey={col.key} value={change.old_value} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} />
+                          <SnapshotValue fieldKey={col.key} value={change.old_value} snapshot={snapshot} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} registrationAuthorityNameByCode={registrationAuthorityNameByCode} registrationAuthorityFallback={registrationAuthorityFallback} />
                         </span>
                         <span className="text-green-600 dark:text-green-400 font-semibold">
-                          <SnapshotValue fieldKey={col.key} value={change.new_value} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} />
+                          <SnapshotValue fieldKey={col.key} value={change.new_value} snapshot={snapshot} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} registrationAuthorityNameByCode={registrationAuthorityNameByCode} registrationAuthorityFallback={registrationAuthorityFallback} />
                         </span>
                       </span>
                     ) : (
-                      <SnapshotValue fieldKey={col.key} value={rawValue} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} />
+                      <SnapshotValue fieldKey={col.key} value={rawValue} snapshot={snapshot} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} registrationAuthorityNameByCode={registrationAuthorityNameByCode} registrationAuthorityFallback={registrationAuthorityFallback} />
                     )}
                   </td>
                 </tr>
@@ -396,6 +595,12 @@ interface CompareTableProps {
   countryByCode?: Map<string, string>
   onLeiClick?: (lei: string) => void
   linkedLeiNames?: Map<string, string>
+  registrationAuthorityNameByCode?: Map<string, string>
+  registrationAuthorityFallback?: {
+    code?: string
+    name?: string
+    internationalName?: string
+  }
 }
 
 /** Single merged table for compare mode — rows always aligned. Older (red) on left, Newer (green) on right. */
@@ -411,6 +616,8 @@ function CompareTable({
   countryByCode,
   onLeiClick,
   linkedLeiNames,
+  registrationAuthorityNameByCode,
+  registrationAuthorityFallback,
 }: CompareTableProps) {
   const { t } = useTranslation('common')
   if (columns.length === 0) {
@@ -448,6 +655,8 @@ function CompareTable({
             const olderValue = isChanged && change ? change.old_value : olderSnapshot[col.key]
             // Newer value: use new_value from changedFields if available, else newer snapshot
             const newerValue = isChanged && change ? change.new_value : newerSnapshot[col.key]
+            const alignedRows = isChanged ? alignMultilineDiffRows(col.key, olderValue, newerValue) : []
+            const useAlignedRows = alignedRows.length > 0
             const isNewGroup = i === 0 || col.groupKey !== columns[i - 1].groupKey
             return (
               <React.Fragment key={col.key}>
@@ -474,22 +683,57 @@ function CompareTable({
                     {isChanged && <span className="mr-1" aria-hidden="true">🚩</span>}
                     {label}
                   </td>
-                  {/* Older (previous) value — red */}
-                  <td
-                    className={`px-3 py-2 break-words ${
-                      isChanged ? 'text-red-600 dark:text-red-400' : 'theme-text-muted'
-                    }`}
-                  >
-                    <SnapshotValue fieldKey={col.key} value={olderValue} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} />
-                  </td>
-                  {/* Newer (current) value — green */}
-                  <td
-                    className={`px-3 py-2 break-words ${
-                      isChanged ? 'text-green-700 dark:text-green-400 font-semibold' : ''
-                    }`}
-                  >
-                    <SnapshotValue fieldKey={col.key} value={newerValue} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} />
-                  </td>
+                  {useAlignedRows ? (
+                    <td colSpan={2} className="px-3 py-2">
+                      <div className="grid gap-1" style={{ gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)' }}>
+                        {alignedRows.map((row, rowIndex) => (
+                          <React.Fragment key={`${col.key}-aligned-${rowIndex}`}>
+                            <div
+                              className={`px-2 py-1 rounded whitespace-pre-wrap break-words ${
+                                row.state === 'removed'
+                                  ? 'bg-red-100/70 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                                  : row.state === 'unchanged'
+                                    ? 'theme-text-muted'
+                                    : 'theme-text-muted opacity-70'
+                              }`}
+                            >
+                              {row.oldLine ?? '—'}
+                            </div>
+                            <div
+                              className={`px-2 py-1 rounded whitespace-pre-wrap break-words ${
+                                row.state === 'added'
+                                  ? 'bg-green-100/70 dark:bg-green-900/30 text-green-800 dark:text-green-300 font-semibold'
+                                  : row.state === 'unchanged'
+                                    ? 'theme-text-muted'
+                                    : 'theme-text-muted opacity-70'
+                              }`}
+                            >
+                              {row.newLine ?? '—'}
+                            </div>
+                          </React.Fragment>
+                        ))}
+                      </div>
+                    </td>
+                  ) : (
+                    <>
+                      {/* Older (previous) value — red */}
+                      <td
+                        className={`px-3 py-2 break-words ${
+                          isChanged ? 'text-red-600 dark:text-red-400' : 'theme-text-muted'
+                        }`}
+                      >
+                        <SnapshotValue fieldKey={col.key} value={olderValue} snapshot={olderSnapshot} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} registrationAuthorityNameByCode={registrationAuthorityNameByCode} registrationAuthorityFallback={registrationAuthorityFallback} />
+                      </td>
+                      {/* Newer (current) value — green */}
+                      <td
+                        className={`px-3 py-2 break-words ${
+                          isChanged ? 'text-green-700 dark:text-green-400 font-semibold' : ''
+                        }`}
+                      >
+                        <SnapshotValue fieldKey={col.key} value={newerValue} snapshot={newerSnapshot} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} registrationAuthorityNameByCode={registrationAuthorityNameByCode} registrationAuthorityFallback={registrationAuthorityFallback} />
+                      </td>
+                    </>
+                  )}
                 </tr>
               </React.Fragment>
             )
@@ -508,6 +752,12 @@ interface Props {
   availableColumns: AuditColumnConfig[]
   visibleColumns: Set<string>
   onLeiClick?: (lei: string) => void
+  registrationAuthorityNameByCode?: Map<string, string>
+  registrationAuthorityFallback?: {
+    code?: string
+    name?: string
+    internationalName?: string
+  }
 }
 
 export default function LEIAuditHistoryModal({
@@ -518,6 +768,8 @@ export default function LEIAuditHistoryModal({
   availableColumns,
   visibleColumns,
   onLeiClick,
+  registrationAuthorityNameByCode,
+  registrationAuthorityFallback,
 }: Props) {
   const { t } = useTranslation('common')
   const { formatLabel } = useButtonEmojiMode()
@@ -1189,6 +1441,8 @@ export default function LEIAuditHistoryModal({
                             const group = columnGroupMap.get(field)
                             const prevGroup = i > 0 ? columnGroupMap.get(sortedChangedFieldEntries[i - 1][0]) : undefined
                             const showGroupHeader = group && group !== prevGroup
+                            const alignedRows = alignMultilineDiffRows(field, change.old_value, change.new_value)
+                            const useAlignedRows = alignedRows.length > 0
                             return (
                               <React.Fragment key={field}>
                                 {showGroupHeader && (
@@ -1196,20 +1450,58 @@ export default function LEIAuditHistoryModal({
                                     {t(group)}
                                   </div>
                                 )}
-                                <div
-                                  className="grid gap-2 text-xs"
-                                  style={{ gridTemplateColumns: '11rem minmax(0, 1fr) minmax(0, 1fr)' }}
-                                >
-                                  <span className="font-medium text-[rgb(var(--foreground-rgb))]">
-                                    {labelMap.get(field) ?? formatFieldLabel(field)}
-                                  </span>
-                                  <span className="text-red-600 dark:text-red-400 break-words">
-                                    <SnapshotValue fieldKey={field} value={change.old_value} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} />
-                                  </span>
-                                  <span className="text-green-600 dark:text-green-400 font-medium break-words">
-                                    <SnapshotValue fieldKey={field} value={change.new_value} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} />
-                                  </span>
-                                </div>
+                                {useAlignedRows ? (
+                                  <div className="space-y-1">
+                                    {alignedRows.map((row, rowIndex) => (
+                                      <div
+                                        key={`${field}-aligned-${rowIndex}`}
+                                        className="grid gap-2 text-xs"
+                                        style={{ gridTemplateColumns: '11rem minmax(0, 1fr) minmax(0, 1fr)' }}
+                                      >
+                                        <span className="font-medium text-[rgb(var(--foreground-rgb))]">
+                                          {rowIndex === 0 ? (labelMap.get(field) ?? formatFieldLabel(field)) : ''}
+                                        </span>
+                                        <div
+                                          className={`px-2 py-1 rounded whitespace-pre-wrap break-words ${
+                                            row.state === 'removed'
+                                              ? 'bg-red-100/70 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                                              : row.state === 'unchanged'
+                                                ? 'theme-text-muted'
+                                                : 'theme-text-muted opacity-70'
+                                          }`}
+                                        >
+                                          {row.oldLine ?? '—'}
+                                        </div>
+                                        <div
+                                          className={`px-2 py-1 rounded whitespace-pre-wrap break-words ${
+                                            row.state === 'added'
+                                              ? 'bg-green-100/70 dark:bg-green-900/30 text-green-800 dark:text-green-300 font-medium'
+                                              : row.state === 'unchanged'
+                                                ? 'theme-text-muted'
+                                                : 'theme-text-muted opacity-70'
+                                          }`}
+                                        >
+                                          {row.newLine ?? '—'}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <div
+                                    className="grid gap-2 text-xs"
+                                    style={{ gridTemplateColumns: '11rem minmax(0, 1fr) minmax(0, 1fr)' }}
+                                  >
+                                    <span className="font-medium text-[rgb(var(--foreground-rgb))]">
+                                      {labelMap.get(field) ?? formatFieldLabel(field)}
+                                    </span>
+                                    <span className="text-red-600 dark:text-red-400 break-words">
+                                      <SnapshotValue fieldKey={field} value={change.old_value} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} registrationAuthorityNameByCode={registrationAuthorityNameByCode} registrationAuthorityFallback={registrationAuthorityFallback} />
+                                    </span>
+                                    <span className="text-green-600 dark:text-green-400 font-medium break-words">
+                                      <SnapshotValue fieldKey={field} value={change.new_value} showCodes={showCodes} countryByCode={countryByCode} onLeiClick={onLeiClick} linkedLeiNames={linkedLeiNames} registrationAuthorityNameByCode={registrationAuthorityNameByCode} registrationAuthorityFallback={registrationAuthorityFallback} />
+                                    </span>
+                                  </div>
+                                )}
                               </React.Fragment>
                             )
                           })}
@@ -1233,6 +1525,8 @@ export default function LEIAuditHistoryModal({
                           countryByCode={countryByCode}
                           onLeiClick={onLeiClick}
                           linkedLeiNames={linkedLeiNames}
+                          registrationAuthorityNameByCode={registrationAuthorityNameByCode}
+                          registrationAuthorityFallback={registrationAuthorityFallback}
                         />
                       ) : (
                         <div className="flex flex-col items-center justify-center h-40 gap-2 text-sm theme-text-muted">
@@ -1255,6 +1549,8 @@ export default function LEIAuditHistoryModal({
                         countryByCode={countryByCode}
                         onLeiClick={onLeiClick}
                         linkedLeiNames={linkedLeiNames}
+                        registrationAuthorityNameByCode={registrationAuthorityNameByCode}
+                        registrationAuthorityFallback={registrationAuthorityFallback}
                       />
                     </div>
                   )}

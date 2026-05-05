@@ -1,3 +1,5 @@
+import { formatStatusLabel } from '../lib/status-label'
+
 export const LEI_STATUS_FILTER_OPTIONS = ['ACTIVE', 'INACTIVE', 'NOT_SET'] as const
 
 function isNotSetStatusFilterValue(value: string): boolean {
@@ -6,7 +8,7 @@ function isNotSetStatusFilterValue(value: string): boolean {
 }
 
 export function formatStatusFilterLabel(value: string): string {
-  return isNotSetStatusFilterValue(value) ? 'Not Set' : value
+  return isNotSetStatusFilterValue(value) ? 'Not Set' : formatStatusLabel(value)
 }
 
 export function normalizeStatusFilterForAPI(value: string): string {

@@ -1,0 +1,63 @@
+name: Check Environment Branch Flow
+
+on:
+  pull_request_target:
+    branches:
+      - dev
+      - uat
+      - prod
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - edited
+      - ready_for_review
+      - labeled
+      - unlabeled
+
+permissions:
+  pull-requests: read
+
+jobs:
+  enforce-branch-flow:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enforce promotion-only flow for environment branches
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request
+            const base = pr.base.ref
+            const head = pr.head.ref
+            const labels = (pr.labels || []).map((l) => (typeof l === 'string' ? l : l.name).toLowerCase())
+            const title = (pr.title || '').toLowerCase()
+
+            const isPromotionPR =
+              (base === 'dev' && head === 'main') ||
+              (base === 'uat' && head === 'dev') ||
+              (base === 'prod' && head === 'uat')
+
+            const hasEmergencyOverrideLabel =
+              labels.includes('emergency') ||
+              labels.includes('hotfix')
+
+            const hasEmergencyOverrideTitle =
+              title.startsWith('emergency:') ||
+              title.startsWith('hotfix:')
+
+            if (isPromotionPR) {
+              core.info(`Allowed promotion PR: ${head} -> ${base}`)
+              return
+            }
+
+            if (hasEmergencyOverrideLabel || hasEmergencyOverrideTitle) {
+              core.info('Allowed emergency/hotfix override detected')
+              return
+            }
+
+            core.setFailed(
+              `Branch-flow policy violation: non-promotion PR to '${base}' is blocked. ` +
+                `Allowed paths are main->dev, dev->uat, and uat->prod. ` +
+                `For an exception, explicitly mark the PR as emergency/hotfix ` +
+                `(label 'emergency' or 'hotfix', or title prefix 'emergency:'/'hotfix:').`
+            )

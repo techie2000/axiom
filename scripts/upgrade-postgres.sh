@@ -60,7 +60,12 @@ done
 [[ -z "$ENVIRONMENT" ]] && usage
 
 # ── Config ────────────────────────────────────────────────────────────────────
-cd "$(dirname "$0")/.."
+if git_common_dir="$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)"; then
+    repo_root="$(dirname "$git_common_dir")"
+else
+    repo_root="$(cd "$(dirname "$0")/.." && pwd)"
+fi
+cd "$repo_root"
 
 ENV_FILE=".env.$ENVIRONMENT"
 COMPOSE_FILE="docker-compose.$ENVIRONMENT.yml"
@@ -91,7 +96,11 @@ POSTGRES_DATA_DIR=$(parse_env "POSTGRES_DATA_DIR")
 # If POSTGRES_DATA_DIR is set in the env file the environment uses a host bind mount.
 if [[ -n "$POSTGRES_DATA_DIR" ]]; then
     USE_BIND_MOUNT=true
-    DATA_SRC="$POSTGRES_DATA_DIR"
+    if [[ "$POSTGRES_DATA_DIR" = /* ]]; then
+        DATA_SRC="$POSTGRES_DATA_DIR"
+    else
+        DATA_SRC="$repo_root/${POSTGRES_DATA_DIR#./}"
+    fi
 else
     USE_BIND_MOUNT=false
     DATA_SRC="$VOLUME_NAME"

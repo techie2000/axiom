@@ -57,6 +57,8 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
 ## User Documentation — Admin Workflows
 
 - [Admin Overview](docs-user/admin/index.md): Overview of admin-only workflow guides
+- [Provisional LEI](docs-user/admin/provisional-lei.md): Issue, update, and link provisional LEI records to official LEIs
+- [User-Entity Links](docs-user/admin/user-entity-links.md): Grant, update, revoke, and restore user-entity access links
 - [User Approvals](docs-user/admin/user-approvals.md): Review and approve new user registration requests
 - [Translation Review](docs-user/admin/translation-review.md): Review and approve community-submitted UI translations
 - [Sync Triggers](docs-user/admin/sync-triggers.md): Manually trigger LEI and master data synchronisation
@@ -92,6 +94,8 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
 - [LEI Acquisition](docs/lei/LEI_ACQUISITION.md): Complete LEI integration documentation with GLEIF API details
 - [LEI Implementation Summary](docs/lei/LEI_IMPLEMENTATION_SUMMARY.md): Technical implementation details and features
 - [LEI Data Flow](docs/lei/LEI_DATA_FLOW.md): Data processing flow diagrams and scheduler architecture
+- [GLEIF Source-to-Database Mapping](docs/lei/GLEIF_SOURCE_TO_DATABASE_MAPPING.md): Concrete mapping from
+  GLEIF JSON and CSV payloads into `lei_raw` tables, audits, and derived UI fields
 - [GLEIF Reference Code Lists](docs/lei/GLEIF_REFERENCE_CODE_LISTS.md): Reference data ingestion for
   registration authorities, legal forms, organizational roles, and legal jurisdictions
 - [GLEIF Spec Files](docs/lei/gleif-specs/README.md): Local copies of GLEIF CDF XSDs, field references, code-list
@@ -142,6 +146,8 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
   branches
 - [CI Workflow](.github/workflows/ci.yml): Unified CI pipeline keyed off branch names for
   environment detection (main, dev, uat, prod)
+- [CodeQL Workflow](.github/workflows/codeql-static-analysis.yml): Advanced CodeQL analysis; Go scanning builds from
+  `backend/` so nested-module extraction works reliably
 - [Nightly Promotion Workflow](.github/workflows/promote-main-to-dev.yml): Scheduled workflow that
   opens a promotion PR from main → dev each night to prevent branch drift
 - [Weekly Promotion Workflow](.github/workflows/promote-dev-to-uat.yml): Scheduled workflow that

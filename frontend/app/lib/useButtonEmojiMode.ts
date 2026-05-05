@@ -17,6 +17,14 @@ function isEmojiMode(value: string): value is EmojiMode {
 const LEADING_EMOJI_RE = /^(\p{Extended_Pictographic}\uFE0F?\u20E3?\s*)+/u
 
 /**
+ * Ensures a label has a leading emoji. If one already exists, it is preserved
+ * even when it differs from the requested emoji.
+ */
+export function ensureLeadingEmoji(label: string, emoji: string): string {
+  return LEADING_EMOJI_RE.test(label) ? label : `${emoji} ${label}`
+}
+
+/**
  * Transforms a button/action label according to the user's emoji display preference.
  *
  * - `'both'`  – return the label unchanged (default, text + emoji)

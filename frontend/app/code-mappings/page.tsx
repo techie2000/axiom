@@ -1,34 +1,35 @@
 'use client'
 
-import { useCallback, useEffect, useState, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import Alert from '../components/Alert'
 import Badge from '../components/Badge'
 import LoadingSpinner from '../components/LoadingSpinner'
 import PageHeader from '../components/PageHeader'
+import PreferenceSavePrompt from '../components/PreferenceSavePrompt'
+import ReferencePageHeaderActions from '../components/ReferencePageHeaderActions'
 import SearchInputWithOverflowTooltip from '../components/SearchInputWithOverflowTooltip'
 import StatCard from '../components/StatCard'
+import { getApiBaseUrl } from '../lib/api-base'
+import { useButtonEmojiMode } from '../lib/useButtonEmojiMode'
+import { useDeferredBooleanPreference } from '../lib/useDeferredBooleanPreference'
+import { buildDocsUrl } from '../lib/docsLinks'
+import { buildCodeMappingsHeaders } from './request'
 import { useEnglishTooltips } from '../lib/useEnglishTooltips'
 import { useSearchFocusShortcut } from '../lib/useSearchFocusShortcut'
-
-interface CodeMapping {
-  id: string
-  from_system: string
-  to_system: string
-  from_code_type: string
-  to_code_type: string
-  from_code: string
-  to_code: string
-  description: string
-  active: boolean
-  created_by: string
-  created_at: string
-  updated_at: string
-}
+import {
+  countActiveCodeMappingFilters,
+  DEFAULT_CODE_MAPPING_FILTERS,
+  filterCodeMappings,
+  getCodeMappingFilterOptions,
+  type CodeMapping,
+  type CodeMappingColumnFilters,
+} from './filtering'
 
 export default function CodeMappingsPage() {
   const { t } = useTranslation('common')
   const { getEnglishTooltip } = useEnglishTooltips()
+  const { formatLabel } = useButtonEmojiMode()
   const searchInputRef = useRef<HTMLInputElement>(null)
   useSearchFocusShortcut(searchInputRef)
   const [mappings, setMappings] = useState<CodeMapping[]>([])
@@ -36,17 +37,23 @@ export default function CodeMappingsPage() {
   const [error, setError] = useState<string | null>(null)
   const [errorKind, setErrorKind] = useState<'noneConfigured' | 'authRequired' | 'apiError' | 'networkError' | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [filters, setFilters] = useState<CodeMappingColumnFilters>(DEFAULT_CODE_MAPPING_FILTERS)
+  const expandedWidthPreference = useDeferredBooleanPreference({
+    pageKey: 'code-mappings',
+    preferenceKey: 'expanded_width',
+    defaultValue: false,
+  })
+  const [hasHydrated, setHasHydrated] = useState(false)
+  useEffect(() => {
+    setHasHydrated(true)
+  }, [])
 
-  const API_BASE_URL = typeof window !== 'undefined'
-    ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080')
-    : 'http://backend:8080'
+  const API_BASE_URL = getApiBaseUrl()
 
   const fetchMappings = useCallback(async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/v1/code-mappings?limit=100`, {
-        headers: {
-          'Accept': 'application/json'
-        }
+        headers: buildCodeMappingsHeaders(),
       })
 
       if (response.ok) {
@@ -81,26 +88,39 @@ export default function CodeMappingsPage() {
     }
   }, [fetchMappings])
 
-  const filteredMappings = mappings.filter(m =>
-    m.from_system.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    m.to_system.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    m.from_code_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    m.to_code_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    m.from_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    m.to_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (m.description && m.description.toLowerCase().includes(searchTerm.toLowerCase()))
+  const filteredMappings = useMemo(
+    () => filterCodeMappings(mappings, searchTerm, filters),
+    [mappings, searchTerm, filters]
+  )
+  const activeFilterCount = useMemo(
+    () => countActiveCodeMappingFilters(filters),
+    [filters]
   )
 
   const activeMappings = mappings.filter(m => m.active)
-  const uniqueSystems = [...new Set(mappings.map(m => m.from_system))]
+  const { fromSystems, toSystems } = useMemo(
+    () => getCodeMappingFilterOptions(mappings),
+    [mappings]
+  )
+  const selectOptionClassName = 'bg-[rgb(var(--surface-rgb))] text-[rgb(var(--foreground-rgb))]'
+  const hasActiveFiltersOrSearch = searchTerm.trim().length > 0 || activeFilterCount > 0
+  const effectiveExpandedWidth = hasHydrated ? expandedWidthPreference.value : false
+
+  const setFilter = useCallback((key: keyof CodeMappingColumnFilters, value: string) => {
+    setFilters((previous) => ({ ...previous, [key]: value as CodeMappingColumnFilters[typeof key] }))
+  }, [])
+
+  const resetFilters = useCallback(() => {
+    setFilters(DEFAULT_CODE_MAPPING_FILTERS)
+  }, [])
 
   if (loading) {
     return <LoadingSpinner message={t('codeMappings.loading')} />
   }
 
   return (
-    <div className="min-h-screen p-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen p-8 pb-14">
+      <div className={`${effectiveExpandedWidth ? 'max-w-full' : 'max-w-7xl'} mx-auto transition-all duration-300`}>
         {/* Header */}
         <PageHeader
           title={t('codeMappings.title')}
@@ -108,14 +128,30 @@ export default function CodeMappingsPage() {
           titleTooltip={getEnglishTooltip('codeMappings.title')}
           subtitleTooltip={getEnglishTooltip('codeMappings.subtitle')}
           backHref="/dashboard"
+          docsHref={buildDocsUrl('workflows/code-mappings/')}
+          actions={
+            <ReferencePageHeaderActions
+              effectiveExpandedWidth={effectiveExpandedWidth}
+              normalTitle={getEnglishTooltip('referenceLayout.normalButton')}
+              expandTitle={getEnglishTooltip('referenceLayout.expandButton')}
+              normalLabel={t('referenceLayout.normalButton')}
+              expandLabel={t('referenceLayout.expandButton')}
+              saveWidthTitle={getEnglishTooltip('referenceLayout.savePageWidthDefault')}
+              saveWidthLabel={`💾 ${t('referenceLayout.savePageWidthDefault')}`}
+              hasUnsavedWidthChanges={expandedWidthPreference.hasUnsavedChanges}
+              onToggleExpandedWidth={expandedWidthPreference.toggle}
+              onSaveExpandedWidth={expandedWidthPreference.saveCurrentValue}
+              formatLabel={formatLabel}
+            />
+          }
         />
 
         {/* Info box explaining the feature */}
         <Alert variant="info" title={t('codeMappings.about.title')} className="mb-6">
-          This table maps codes from external systems (e.g., ALERT currency code &quot;SWE&quot;) to standardised
-          AXIOM identifiers (e.g., ISO country code &quot;SE&quot;). The combination of{' '}
-          <em>from_system</em>, <em>to_system</em>, <em>from_code_type</em>,{' '}
-          <em>to_code_type</em>, and <em>from_code</em> must be unique.
+          {t('codeMappings.about.bodyPrefix')}{' '}
+          <em>{t('codeMappings.fields.fromSystem')}</em>, <em>{t('codeMappings.fields.toSystem')}</em>,{' '}
+          <em>{t('codeMappings.fields.fromType')}</em>, <em>{t('codeMappings.fields.toType')}</em>,{' '}
+          {t('codeMappings.about.bodySuffix')}
         </Alert>
 
         {/* Error/Notice Alert */}
@@ -128,6 +164,13 @@ export default function CodeMappingsPage() {
             {error}
           </Alert>
         )}
+
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <StatCard title={t('codeMappings.stats.totalMappings')} titleTooltip={getEnglishTooltip('codeMappings.stats.totalMappings')} value={mappings.length} />
+          <StatCard title={t('codeMappings.stats.activeMappings')} titleTooltip={getEnglishTooltip('codeMappings.stats.activeMappings')} value={activeMappings.length} />
+          <StatCard title={t('codeMappings.stats.filteredResults')} titleTooltip={getEnglishTooltip('codeMappings.stats.filteredResults')} value={filteredMappings.length} />
+        </div>
 
         {/* Search */}
         <div className="mb-6">
@@ -142,13 +185,113 @@ export default function CodeMappingsPage() {
           />
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <StatCard title={t('codeMappings.stats.totalMappings')} titleTooltip={getEnglishTooltip('codeMappings.stats.totalMappings')} value={mappings.length} />
-          <StatCard title={t('codeMappings.stats.activeMappings')} titleTooltip={getEnglishTooltip('codeMappings.stats.activeMappings')} value={activeMappings.length} accent="green" />
-          <StatCard title={t('codeMappings.stats.sourceSystems')} titleTooltip={getEnglishTooltip('codeMappings.stats.sourceSystems')} value={uniqueSystems.length} />
-          <StatCard title={t('codeMappings.stats.filteredResults')} titleTooltip={getEnglishTooltip('codeMappings.stats.filteredResults')} value={filteredMappings.length} />
+        <div className="mb-6 theme-panel border-2 backdrop-blur-sm rounded-lg p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2 theme-text-muted">{t('codeMappings.columns.fromSystem')}</label>
+              <select
+                className="w-full px-3 py-2 rounded-lg border theme-input"
+                value={filters.fromSystem}
+                onChange={(event) => setFilter('fromSystem', event.target.value)}
+                aria-label={t('codeMappings.filters.fromSystemAria')}
+              >
+                <option value="" className={selectOptionClassName}>{t('codeMappings.filters.allFromSystems')}</option>
+                {fromSystems.map((value) => (
+                  <option key={value} value={value} className={selectOptionClassName}>{value}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2 theme-text-muted">{t('codeMappings.columns.toSystem')}</label>
+              <select
+                className="w-full px-3 py-2 rounded-lg border theme-input"
+                value={filters.toSystem}
+                onChange={(event) => setFilter('toSystem', event.target.value)}
+                aria-label={t('codeMappings.filters.toSystemAria')}
+              >
+                <option value="" className={selectOptionClassName}>{t('codeMappings.filters.allToSystems')}</option>
+                {toSystems.map((value) => (
+                  <option key={value} value={value} className={selectOptionClassName}>{value}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2 theme-text-muted">{t('codeMappings.columns.fromType')}</label>
+              <SearchInputWithOverflowTooltip
+                type="text"
+                value={filters.fromType}
+                onChange={(event) => setFilter('fromType', event.target.value)}
+                placeholder={t('codeMappings.filters.fromTypePlaceholder')}
+                className="w-full px-4 py-2 border rounded-lg theme-input"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2 theme-text-muted">{t('codeMappings.columns.toType')}</label>
+              <SearchInputWithOverflowTooltip
+                type="text"
+                value={filters.toType}
+                onChange={(event) => setFilter('toType', event.target.value)}
+                placeholder={t('codeMappings.filters.toTypePlaceholder')}
+                className="w-full px-4 py-2 border rounded-lg theme-input"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2 theme-text-muted">{t('codeMappings.columns.fromCode')}</label>
+              <SearchInputWithOverflowTooltip
+                type="text"
+                value={filters.fromCode}
+                onChange={(event) => setFilter('fromCode', event.target.value)}
+                placeholder={t('codeMappings.filters.fromCodePlaceholder')}
+                className="w-full px-4 py-2 border rounded-lg theme-input"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2 theme-text-muted">{t('codeMappings.columns.toCode')}</label>
+              <SearchInputWithOverflowTooltip
+                type="text"
+                value={filters.toCode}
+                onChange={(event) => setFilter('toCode', event.target.value)}
+                placeholder={t('codeMappings.filters.toCodePlaceholder')}
+                className="w-full px-4 py-2 border rounded-lg theme-input"
+              />
+            </div>
+            <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_auto] gap-4 items-end">
+              <div>
+              <label className="block text-sm font-medium mb-2 theme-text-muted">{t('codeMappings.columns.status')}</label>
+              <select
+                className="w-full px-3 py-2 rounded-lg border theme-input"
+                value={filters.status}
+                onChange={(event) => setFilter('status', event.target.value as CodeMappingColumnFilters['status'])}
+                aria-label={t('codeMappings.filters.statusAria')}
+              >
+                <option value="" className={selectOptionClassName}>{t('codeMappings.filters.allStatuses')}</option>
+                <option value="active" className={selectOptionClassName}>{t('codeMappings.status.active')}</option>
+                <option value="inactive" className={selectOptionClassName}>{t('codeMappings.status.inactive')}</option>
+              </select>
+            </div>
+              {hasActiveFiltersOrSearch && (
+                <div className="flex items-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      resetFilters()
+                      setSearchTerm('')
+                    }}
+                    className="theme-header-action rounded-lg theme-btn-neutral theme-focus w-full md:w-auto"
+                  >
+                    {formatLabel(t('codeMappings.filters.clearAll'))}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
+
+        {activeFilterCount > 0 && (
+          <div className="mb-4 rounded-lg px-4 py-2 text-sm theme-subtle border border-[rgb(var(--border-rgb))]">
+            {t('codeMappings.filters.activeFilters', { count: activeFilterCount })}
+          </div>
+        )}
 
         {/* Mappings Table */}
         <div className="theme-table-shell rounded-lg shadow overflow-hidden border-2">
@@ -156,27 +299,27 @@ export default function CodeMappingsPage() {
             <table className="min-w-full divide-y [--tw-divide-opacity:1] divide-[rgb(var(--border-rgb)/0.7)]">
               <thead className="theme-table-header">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell">
-                    <span title={getEnglishTooltip('codeMappings.columns.fromSystem')}>{t('codeMappings.columns.fromSystem')}</span>
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell">
-                    <span title={getEnglishTooltip('codeMappings.columns.fromType')}>{t('codeMappings.columns.fromType')}</span>
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell">
-                    <span title={getEnglishTooltip('codeMappings.columns.fromCode')}>{t('codeMappings.columns.fromCode')}</span>
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell">
-                    <span title={getEnglishTooltip('codeMappings.columns.toSystem')}>{t('codeMappings.columns.toSystem')}</span>
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell">
-                    <span title={getEnglishTooltip('codeMappings.columns.toType')}>{t('codeMappings.columns.toType')}</span>
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell">
-                    <span title={getEnglishTooltip('codeMappings.columns.toCode')}>{t('codeMappings.columns.toCode')}</span>
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell">
-                    <span title={getEnglishTooltip('codeMappings.columns.status')}>{t('codeMappings.columns.status')}</span>
-                  </th>
+                    <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell ${filters.fromSystem ? 'text-[rgb(var(--primary-rgb))]' : ''}`}>
+                      <span title={getEnglishTooltip('codeMappings.columns.fromSystem')}>{t('codeMappings.columns.fromSystem')}</span>
+                    </th>
+                    <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell ${filters.fromType ? 'text-[rgb(var(--primary-rgb))]' : ''}`}>
+                      <span title={getEnglishTooltip('codeMappings.columns.fromType')}>{t('codeMappings.columns.fromType')}</span>
+                    </th>
+                    <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell ${filters.fromCode ? 'text-[rgb(var(--primary-rgb))]' : ''}`}>
+                      <span title={getEnglishTooltip('codeMappings.columns.fromCode')}>{t('codeMappings.columns.fromCode')}</span>
+                    </th>
+                    <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell ${filters.toSystem ? 'text-[rgb(var(--primary-rgb))]' : ''}`}>
+                      <span title={getEnglishTooltip('codeMappings.columns.toSystem')}>{t('codeMappings.columns.toSystem')}</span>
+                    </th>
+                    <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell ${filters.toType ? 'text-[rgb(var(--primary-rgb))]' : ''}`}>
+                      <span title={getEnglishTooltip('codeMappings.columns.toType')}>{t('codeMappings.columns.toType')}</span>
+                    </th>
+                    <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell ${filters.toCode ? 'text-[rgb(var(--primary-rgb))]' : ''}`}>
+                      <span title={getEnglishTooltip('codeMappings.columns.toCode')}>{t('codeMappings.columns.toCode')}</span>
+                    </th>
+                    <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell ${filters.status ? 'text-[rgb(var(--primary-rgb))]' : ''}`}>
+                      <span title={getEnglishTooltip('codeMappings.columns.status')}>{t('codeMappings.columns.status')}</span>
+                    </th>
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell">
                     <span title={getEnglishTooltip('codeMappings.columns.description')}>{t('codeMappings.columns.description')}</span>
                   </th>
@@ -189,19 +332,19 @@ export default function CodeMappingsPage() {
                       <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-center">
                         <Badge variant="orange" mono>{mapping.from_system}</Badge>
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm theme-text-muted font-mono text-xs">
+                      <td className={`px-4 text-sm theme-text-muted font-mono text-xs ${effectiveExpandedWidth ? 'py-4 whitespace-normal break-words' : 'py-3 whitespace-nowrap'}`}>
                         {mapping.from_code_type}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
+                      <td className={`px-4 text-sm text-center ${effectiveExpandedWidth ? 'py-4 whitespace-normal break-words' : 'py-3 whitespace-nowrap'}`}>
                         <Badge variant="red" mono>{mapping.from_code}</Badge>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-center">
                         <Badge variant="blue" mono>{mapping.to_system}</Badge>
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm theme-text-muted font-mono text-xs">
+                      <td className={`px-4 text-sm theme-text-muted font-mono text-xs ${effectiveExpandedWidth ? 'py-4 whitespace-normal break-words' : 'py-3 whitespace-nowrap'}`}>
                         {mapping.to_code_type}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
+                      <td className={`px-4 text-sm text-center ${effectiveExpandedWidth ? 'py-4 whitespace-normal break-words' : 'py-3 whitespace-nowrap'}`}>
                         <Badge variant="green" mono>{mapping.to_code}</Badge>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
@@ -211,7 +354,7 @@ export default function CodeMappingsPage() {
                           </span>
                         </Badge>
                       </td>
-                      <td className="px-4 py-3 text-sm theme-text-muted max-w-xs truncate">
+                      <td className={`px-4 text-sm theme-text-muted max-w-xl ${effectiveExpandedWidth ? 'py-4 whitespace-normal break-words' : 'py-3 truncate'}`}>
                         {mapping.description || t('codeMappings.emptyDescription')}
                       </td>
                     </tr>
@@ -237,6 +380,19 @@ export default function CodeMappingsPage() {
           </p>
         </div>
       </div>
+
+      <PreferenceSavePrompt
+        visible={expandedWidthPreference.showPrompt}
+        resetKey={expandedWidthPreference.promptResetKey}
+        onSave={expandedWidthPreference.save}
+        onDismiss={expandedWidthPreference.dismiss}
+        label={t('referenceLayout.savePageWidthDefault')}
+        showUndo={expandedWidthPreference.showUndo}
+        undoResetKey={expandedWidthPreference.undoResetKey}
+        onUndo={expandedWidthPreference.undo}
+        onUndoDismiss={expandedWidthPreference.undoDismiss}
+        undoLabel={t('preferences.savedUndo')}
+      />
     </div>
   )
 }

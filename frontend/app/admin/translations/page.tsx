@@ -15,15 +15,13 @@ import SortableHeaderCell from '../../components/SortableHeaderCell'
 import SyncedWideTable from '../../components/SyncedWideTable'
 import TablePaginationControls from '../../components/TablePaginationControls'
 import ThemedSelect from '../../components/ThemedSelect'
+import { getApiBaseUrl } from '../../lib/api-base'
 import { getAuthToken } from '../../lib/auth-token'
 import { buildDocsUrl } from '../../lib/docsLinks'
 import { useEnglishTooltips } from '../../lib/useEnglishTooltips'
 import { useSearchFocusShortcut } from '../../lib/useSearchFocusShortcut'
 
-const API_BASE_URL =
-  typeof window !== 'undefined'
-    ? process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080'
-    : 'http://backend:8080'
+const API_BASE_URL = getApiBaseUrl()
 
 interface UITranslation {
   id: string
@@ -803,7 +801,7 @@ export default function AdminTranslationsPage() {
         )}
 
         {/* Filters */}
-        <div className="theme-panel backdrop-blur-sm border-2 rounded-lg p-4 mb-6 flex flex-wrap gap-3 items-end">
+        <div className="relative z-40 theme-panel backdrop-blur-sm border-2 rounded-lg p-4 mb-6 flex flex-wrap gap-3 items-end">
           <div>
             <label className="block text-xs theme-text-muted mb-1">
               {t('admin.translations.filterByLanguage')}

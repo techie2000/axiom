@@ -1,10 +1,22 @@
 'use client'
 
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import Alert from '../components/Alert'
 import LoadingSpinner from '../components/LoadingSpinner'
 import PageHeader from '../components/PageHeader'
+import { getApiBaseUrl } from '../lib/api-base'
+import { getAuthToken } from '../lib/auth-token'
+import { formatDateTimeDisplay, isPlaceholderDateValue } from '../lib/date-display'
 import { buildDocsUrl } from '../lib/docsLinks'
+import {
+  FAST_LEI_REFRESH_MS,
+  getLeiAutoRefreshIntervalMs,
+  type MasterDataCounts,
+  readCachedMasterDataCounts,
+  shouldRefreshMasterDataCounts,
+  writeCachedMasterDataCounts,
+} from '../lib/leiStatusRefresh'
 
 interface SourceFile {
   id: string
@@ -48,11 +60,13 @@ interface GleifSyncStats {
   lists?: Record<string, GleifListStats>
 }
 
-interface MasterDataCounts {
-  countries: number
-  currencies: number
-  languages: number
-  total: number
+interface ImportProgressStats {
+  kind?: string
+  evaluated?: number
+  upserted?: number
+  unchanged?: number
+  failed?: number
+  total?: number
 }
 
 interface Level2ProcessingFailure {
@@ -73,6 +87,7 @@ interface Level2ProcessingFailure {
 type ImportJobType = 'DAILY_FULL' | 'DAILY_DELTA' | 'LEVEL2_RR' | 'LEVEL2_REPEX'
 
 export default function LEIStatusPage() {
+  const { t } = useTranslation('common')
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [gleifReferenceStatus, setGleifReferenceStatus] = useState<ProcessingStatus | null>(null)
   const [masterDataStatus, setMasterDataStatus] = useState<ProcessingStatus | null>(null)
@@ -101,9 +116,7 @@ export default function LEIStatusPage() {
     LEVEL2_REPEX: true,
   })
 
-  const API_BASE_URL = typeof window !== 'undefined'
-    ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080')
-    : 'http://backend:8080'
+  const API_BASE_URL = getApiBaseUrl()
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -114,9 +127,6 @@ export default function LEIStatusPage() {
         deltaResponse,
         rrResponse,
         repexResponse,
-        countriesResponse,
-        currenciesResponse,
-        languagesResponse,
       ] = await Promise.all([
         fetch(`${API_BASE_URL}/api/v1/lei/status/GLEIF_REFERENCE_SYNC`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
         fetch(`${API_BASE_URL}/api/v1/lei/status/MASTER_DATA_SYNC`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
@@ -124,35 +134,57 @@ export default function LEIStatusPage() {
         fetch(`${API_BASE_URL}/api/v1/lei/status/DAILY_DELTA`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
         fetch(`${API_BASE_URL}/api/v1/lei/status/LEVEL2_RR`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
         fetch(`${API_BASE_URL}/api/v1/lei/status/LEVEL2_REPEX`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
-        fetch(`${API_BASE_URL}/api/v1/countries?limit=5000&offset=0`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
-        fetch(`${API_BASE_URL}/api/v1/currencies?limit=5000&offset=0`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
-        fetch(`${API_BASE_URL}/api/v1/languages?limit=5000&offset=0`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
       ])
 
       if (gleifReferenceResponse?.ok) setGleifReferenceStatus(await gleifReferenceResponse.json())
-      if (mdResponse?.ok) setMasterDataStatus(await mdResponse.json())
+      let latestMasterDataStatus: ProcessingStatus | null = null
+      if (mdResponse?.ok) {
+        latestMasterDataStatus = await mdResponse.json()
+        setMasterDataStatus(latestMasterDataStatus)
+      }
       if (fullResponse?.ok) setFullStatus(await fullResponse.json())
       if (deltaResponse?.ok) setDeltaStatus(await deltaResponse.json())
       if (rrResponse?.ok) setRrStatus(await rrResponse.json())
       if (repexResponse?.ok) setRepexStatus(await repexResponse.json())
 
-      if (countriesResponse?.ok && currenciesResponse?.ok && languagesResponse?.ok) {
-        const [countries, currencies, languages] = await Promise.all([
-          countriesResponse.json(),
-          currenciesResponse.json(),
-          languagesResponse.json(),
-        ])
+      const cachedMasterDataCounts = readCachedMasterDataCounts()
+      if (!latestMasterDataStatus) {
+        if (cachedMasterDataCounts) {
+          setMasterDataCounts(cachedMasterDataCounts.counts)
+        }
+      } else {
+        const latestMasterDataSuccessAt = latestMasterDataStatus.last_success_at ?? null
+        if (cachedMasterDataCounts && !shouldRefreshMasterDataCounts(latestMasterDataSuccessAt, cachedMasterDataCounts)) {
+        setMasterDataCounts(cachedMasterDataCounts.counts)
+        } else {
+          const [countriesResponse, currenciesResponse, languagesResponse] = await Promise.all([
+            fetch(`${API_BASE_URL}/api/v1/countries?limit=5000&offset=0`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
+            fetch(`${API_BASE_URL}/api/v1/currencies?limit=5000&offset=0`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
+            fetch(`${API_BASE_URL}/api/v1/languages?limit=5000&offset=0`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
+          ])
 
-        const countriesCount = Array.isArray(countries) ? countries.length : 0
-        const currenciesCount = Array.isArray(currencies) ? currencies.length : 0
-        const languagesCount = Array.isArray(languages) ? languages.length : 0
+          if (countriesResponse?.ok && currenciesResponse?.ok && languagesResponse?.ok) {
+            const [countries, currencies, languages] = await Promise.all([
+              countriesResponse.json(),
+              currenciesResponse.json(),
+              languagesResponse.json(),
+            ])
 
-        setMasterDataCounts({
-          countries: countriesCount,
-          currencies: currenciesCount,
-          languages: languagesCount,
-          total: countriesCount + currenciesCount + languagesCount,
-        })
+            const countriesCount = Array.isArray(countries) ? countries.length : 0
+            const currenciesCount = Array.isArray(currencies) ? currencies.length : 0
+            const languagesCount = Array.isArray(languages) ? languages.length : 0
+
+            const nextCounts: MasterDataCounts = {
+              countries: countriesCount,
+              currencies: currenciesCount,
+              languages: languagesCount,
+              total: countriesCount + currenciesCount + languagesCount,
+            }
+
+            setMasterDataCounts(nextCounts)
+            writeCachedMasterDataCounts(nextCounts, latestMasterDataSuccessAt)
+          }
+        }
       }
 
       setError(null)
@@ -162,18 +194,6 @@ export default function LEIStatusPage() {
       setLoading(false)
     }
   }, [API_BASE_URL])
-
-  const getAuthToken = (): string | null => {
-    const rawToken = localStorage.getItem('axiom_token')
-    if (!rawToken) return null
-
-    const normalizedToken = rawToken.replace(/^Bearer\s+/i, '').trim()
-    if (!normalizedToken || normalizedToken === 'undefined' || normalizedToken === 'null') {
-      return null
-    }
-
-    return normalizedToken
-  }
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -319,11 +339,20 @@ export default function LEIStatusPage() {
     }
   }, [fetchStatus])
 
+  const autoRefreshIntervalMs = getLeiAutoRefreshIntervalMs([
+    gleifReferenceStatus,
+    masterDataStatus,
+    fullStatus,
+    deltaStatus,
+    rrStatus,
+    repexStatus,
+  ])
+
   useEffect(() => {
     if (!autoRefresh) return
-    const interval = setInterval(fetchStatus, 5000)
+    const interval = setInterval(fetchStatus, autoRefreshIntervalMs)
     return () => clearInterval(interval)
-  }, [autoRefresh, fetchStatus])
+  }, [autoRefresh, autoRefreshIntervalMs, fetchStatus])
 
   useEffect(() => {
     const handleEscapeKey = (event: KeyboardEvent) => {
@@ -340,8 +369,7 @@ export default function LEIStatusPage() {
   }, [fullExpanded, rrExpanded])
 
   const formatDate = (dateString: string | null) => {
-    if (!dateString || dateString.startsWith('0001-')) return 'Never'
-    return new Date(dateString).toISOString().replace('T', ' ').substring(0, 19)
+    return formatDateTimeDisplay(dateString, 'Never')
   }
 
   const getStatusColor = (status: string) => {
@@ -372,17 +400,17 @@ export default function LEIStatusPage() {
   const getJobDisplayName = (jobType: string): string => {
     switch (jobType) {
       case 'GLEIF_REFERENCE_SYNC':
-        return 'GLEIF Reference Code Lists (GLEIF_REFERENCE_SYNC)'
+        return t('leiStatus.jobDisplay.gleifReferenceSync')
       case 'MASTER_DATA_SYNC':
-        return 'Reference Data (MASTER_DATA_SYNC)'
+        return t('leiStatus.jobDisplay.masterDataSync')
       case 'DAILY_FULL':
-        return 'Level 1 — LEI Records (DAILY_FULL)'
+        return t('leiStatus.jobDisplay.dailyFull')
       case 'DAILY_DELTA':
-        return 'Level 1 — LEI Records Delta (DAILY_DELTA)'
+        return t('leiStatus.jobDisplay.dailyDelta')
       case 'LEVEL2_RR':
-        return 'Level 2 — Relationship Records (LEVEL2_RR)'
+        return t('leiStatus.jobDisplay.level2Rr')
       case 'LEVEL2_REPEX':
-        return 'Level 2 — Reporting Exceptions (LEVEL2_REPEX)'
+        return t('leiStatus.jobDisplay.level2Repex')
       default:
         return jobType
     }
@@ -396,6 +424,44 @@ export default function LEIStatusPage() {
     const processed = file.processed_records || 0
     const total = file.total_records || 0
     return total > 0 ? (processed / total) * 100 : 0
+  }
+
+  const parseImportProgressStats = (progressMessage: string): ImportProgressStats | null => {
+    if (!progressMessage.startsWith('{')) {
+      return null
+    }
+
+    try {
+      const parsed = JSON.parse(progressMessage) as ImportProgressStats
+      if (parsed.kind !== 'level2-progress' && parsed.kind !== 'level1-progress') {
+        return null
+      }
+      return parsed
+    } catch {
+      return null
+    }
+  }
+
+  const formatImportProgressMessage = (progressMessage: string, stats: ImportProgressStats | null): string => {
+    if (!stats) {
+      return progressMessage
+    }
+
+    const parts: string[] = []
+
+    if (typeof stats.upserted === 'number') {
+      parts.push(`${stats.upserted.toLocaleString()} ${t('leiStatus.page.changedNew')}`)
+    }
+
+    if (typeof stats.unchanged === 'number') {
+      parts.push(`${stats.unchanged.toLocaleString()} ${t('leiStatus.page.noChangeLower')}`)
+    }
+
+    if (typeof stats.failed === 'number' && stats.failed > 0) {
+      parts.push(`${stats.failed.toLocaleString()} ${t('leiStatus.page.failedLower')}`)
+    }
+
+    return parts.length > 0 ? parts.join(' | ') : progressMessage
   }
 
   const getFrequencyLabel = (status: ProcessingStatus | null): string => {
@@ -413,7 +479,7 @@ export default function LEIStatusPage() {
   const getChainedNextRun = (status: ProcessingStatus | null): { nextRun: string | null; ultimateParent: string | null } => {
     if (!status) return { nextRun: null, ultimateParent: null }
 
-    if (status.next_run_at && !status.next_run_at.startsWith('0001-')) {
+    if (status.next_run_at && !isPlaceholderDateValue(status.next_run_at)) {
       return { nextRun: status.next_run_at, ultimateParent: null }
     }
 
@@ -440,7 +506,7 @@ export default function LEIStatusPage() {
       const parentSt: ProcessingStatus | null = statusByType[currentDep] ?? null
       if (!parentSt) break
 
-      if (parentSt.next_run_at && !parentSt.next_run_at.startsWith('0001-')) {
+      if (parentSt.next_run_at && !isPlaceholderDateValue(parentSt.next_run_at)) {
         return { nextRun: parentSt.next_run_at, ultimateParent }
       }
 
@@ -460,7 +526,7 @@ export default function LEIStatusPage() {
   const isRrRunning = rrStatus?.status === 'RUNNING'
   const isRepexRunning = repexStatus?.status === 'RUNNING'
   const hasGleifReferenceSuccess = Boolean(
-    gleifReferenceStatus?.last_success_at && !gleifReferenceStatus.last_success_at.startsWith('0001-'),
+    gleifReferenceStatus?.last_success_at && !isPlaceholderDateValue(gleifReferenceStatus.last_success_at),
   )
 
   const canTriggerGleifReference = !isGleifReferenceRunning && !isMasterDataRunning
@@ -484,11 +550,33 @@ export default function LEIStatusPage() {
     }))
   }
 
-  const getNextRunDisplay = (status: ProcessingStatus | null, dependency: string): string => {
+  const getNextRunDisplay = (status: ProcessingStatus | null): string => {
     const { nextRun, ultimateParent } = getChainedNextRun(status)
-    if (!nextRun) return dependency !== 'None' ? `After ${dependency}` : 'Never'
-    if (ultimateParent) return `≥ ${formatDate(nextRun)} (after ${ultimateParent})`
+    const dependsOn = status?.depends_on_job_type
+    const hasDependency = Boolean(dependsOn && dependsOn !== 'NONE')
+    if (!nextRun) {
+      return hasDependency && dependsOn ? `${t('leiStatus.page.after')} ${getJobDisplayName(dependsOn)}` : t('leiStatus.page.never')
+    }
+    if (ultimateParent) return `≥ ${formatDate(nextRun)} (${t('leiStatus.page.afterLower')} ${getJobDisplayName(ultimateParent)})`
     return formatDate(nextRun)
+  }
+
+  const formatGleifBreakdown = (lists?: Record<string, GleifListStats>): string => {
+    if (!lists || Object.keys(lists).length === 0) {
+      return '-'
+    }
+
+    return Object.entries(lists)
+      .map(([name, stats]) => `${name}: ${typeof stats.records === 'number' ? stats.records.toLocaleString() : 0}`)
+      .join(', ')
+  }
+
+  const formatGleifListNames = (lists?: Record<string, GleifListStats>): string => {
+    if (!lists || Object.keys(lists).length === 0) {
+      return t('leiStatus.page.gleifReferenceCodeLists')
+    }
+
+    return Object.keys(lists).join(', ')
   }
 
   const renderStatusCard = (
@@ -506,16 +594,20 @@ export default function LEIStatusPage() {
             : 'bg-white/5 backdrop-blur-sm border-white/10'
         }`}>
           <h2 className="text-2xl font-bold mb-4">{title}</h2>
-          <p className="opacity-70">No status data available</p>
+          <p className="opacity-70">{t('leiStatus.page.noStatusData')}</p>
         </div>
       )
     }
 
-    const progress = calculateProgress(status)
+    const fallbackProgress = calculateProgress(status)
     const file = status.current_source_file
     const isImportJob = jobKey === 'DAILY_FULL' || jobKey === 'DAILY_DELTA' || jobKey === 'LEVEL2_RR' || jobKey === 'LEVEL2_REPEX'
     const isMasterDataJob = jobKey === 'MASTER_DATA_SYNC'
     const progressMessage = status.progress_message?.trim() || ''
+    const importStats = (jobKey === 'DAILY_FULL' || jobKey === 'DAILY_DELTA' || jobKey === 'LEVEL2_RR' || jobKey === 'LEVEL2_REPEX')
+      ? parseImportProgressStats(progressMessage)
+      : null
+    const displayProgressMessage = formatImportProgressMessage(progressMessage, importStats)
     let gleifStats: GleifSyncStats | null = null
     if (jobKey === 'GLEIF_REFERENCE_SYNC' && progressMessage.startsWith('{')) {
       try {
@@ -526,17 +618,25 @@ export default function LEIStatusPage() {
     }
     const fallbackTotalRecords = isMasterDataJob ? (masterDataCounts?.total ?? 0) : 0
     const totalRecords = file ? file.total_records : (gleifStats?.total_records ?? fallbackTotalRecords)
-    const successfulProcessed = file
-      ? Math.max(file.processed_records - file.failed_records, 0)
-      : (gleifStats?.total_records ?? fallbackTotalRecords)
-    const failedRecords = file ? file.failed_records : 0
+    const evaluatedRecords = importStats?.evaluated ?? (file ? file.processed_records : (gleifStats?.total_records ?? fallbackTotalRecords))
+    const failedRecords = importStats?.failed ?? (file ? file.failed_records : 0)
+    const hasAuthoritativeImportBreakdown = Boolean(importStats && typeof importStats.upserted === 'number' && typeof importStats.unchanged === 'number')
+    const upsertedRecords = hasAuthoritativeImportBreakdown ? importStats?.upserted ?? null : null
+    const unchangedRecords = hasAuthoritativeImportBreakdown ? importStats?.unchanged ?? null : null
+    const progress = totalRecords > 0
+      ? (Math.min(evaluatedRecords, totalRecords) / totalRecords) * 100
+      : fallbackProgress
+    const gleifReferencePath = 'data/main/lei/gleif-reference'
     const currentFileLabel = file?.file_name || (isMasterDataJob
-      ? 'Master datasets (countries, currencies, languages)'
-      : (jobKey === 'GLEIF_REFERENCE_SYNC' ? 'Persisted under data/main/lei/gleif-reference' : '-'))
+      ? t('leiStatus.page.masterDatasetsSummary')
+      : (jobKey === 'GLEIF_REFERENCE_SYNC' ? t('leiStatus.page.persistedUnderPath', { path: gleifReferencePath }) : '-'))
+    const currentFileSummaryLabel = jobKey === 'GLEIF_REFERENCE_SYNC'
+      ? formatGleifListNames(gleifStats?.lists)
+      : currentFileLabel
     const frequency = getFrequencyLabel(status)
     const dependency = status.depends_on_job_type && status.depends_on_job_type !== 'NONE'
       ? getJobDisplayName(status.depends_on_job_type)
-      : 'None'
+      : t('leiStatus.page.none')
     const isExpanded = getCardExpandState(jobKey, status)
     const canToggle = status.status !== 'RUNNING'
     const level2JobKey = isImportJob ? (jobKey as ImportJobType) : null
@@ -560,9 +660,11 @@ export default function LEIStatusPage() {
               onClick={() => toggleCardExpand(jobKey)}
               disabled={!canToggle}
               className="px-3 py-1 rounded-full text-xs font-semibold border border-[rgb(var(--border-rgb))] text-[rgb(var(--muted-foreground-rgb))] hover:bg-[rgb(var(--surface-muted-rgb))] dark:border-[rgb(var(--border-rgb))] dark:text-[rgb(var(--muted-foreground-rgb))] dark:hover:bg-[rgb(var(--surface-muted-rgb))] disabled:opacity-60 disabled:cursor-not-allowed"
-              title={canToggle ? (isExpanded ? 'Collapse details' : 'Expand details') : 'Running jobs stay expanded'}
+              title={canToggle
+                ? (isExpanded ? t('leiStatus.page.collapseDetails') : t('leiStatus.page.expandDetails'))
+                : t('leiStatus.page.runningJobsStayExpanded')}
             >
-              {isExpanded ? 'Collapse' : 'Expand'}
+              {isExpanded ? t('leiStatus.page.collapse') : t('leiStatus.page.expand')}
             </button>
             <span className={`px-3 py-1 rounded-full text-sm font-semibold border-2 ${getStatusColor(status.status)}`}>
               {status.status}
@@ -573,11 +675,11 @@ export default function LEIStatusPage() {
         <div className="mb-4 bg-[rgb(var(--surface-muted-rgb))] rounded-lg p-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-[rgb(var(--muted-foreground-rgb))]">Schedule:</span>
-              <span className="font-medium text-[rgb(var(--foreground-rgb))]">{frequency || 'N/A'}</span>
+              <span className="text-[rgb(var(--muted-foreground-rgb))]">{t('leiStatus.page.schedule')}:</span>
+              <span className="font-medium text-[rgb(var(--foreground-rgb))]">{frequency || t('leiStatus.page.notAvailable')}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-[rgb(var(--muted-foreground-rgb))]">Depends On:</span>
+              <span className="text-[rgb(var(--muted-foreground-rgb))]">{t('leiStatus.page.dependsOn')}:</span>
               <span className="font-medium text-[rgb(var(--foreground-rgb))]">{dependency}</span>
             </div>
           </div>
@@ -585,23 +687,23 @@ export default function LEIStatusPage() {
 
         <div className="space-y-2 text-sm mb-4">
           <div className="flex justify-between">
-            <span className="text-[rgb(var(--muted-foreground-rgb))]">Last Run:</span>
+            <span className="text-[rgb(var(--muted-foreground-rgb))]">{t('leiStatus.page.lastRun')}:</span>
             <span className="font-medium text-[rgb(var(--foreground-rgb))]">{formatDate(status.last_run_at)}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-[rgb(var(--muted-foreground-rgb))]">Last Success:</span>
+            <span className="text-[rgb(var(--muted-foreground-rgb))]">{t('leiStatus.page.lastSuccess')}:</span>
             <span className="font-medium text-[rgb(var(--foreground-rgb))]">{formatDate(status.last_success_at)}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-[rgb(var(--muted-foreground-rgb))]">Next Run:</span>
+            <span className="text-[rgb(var(--muted-foreground-rgb))]">{t('leiStatus.page.nextRun')}:</span>
             <span className="font-medium text-[rgb(var(--foreground-rgb))]">
-              {getNextRunDisplay(status, dependency)}
+              {getNextRunDisplay(status)}
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-[rgb(var(--muted-foreground-rgb))]">Current File:</span>
+            <span className="text-[rgb(var(--muted-foreground-rgb))]">{t('leiStatus.page.currentFile')}:</span>
             <span className="font-medium text-[rgb(var(--foreground-rgb))] truncate max-w-[70%] text-right">
-              {currentFileLabel}
+              {currentFileSummaryLabel}
             </span>
           </div>
         </div>
@@ -611,14 +713,14 @@ export default function LEIStatusPage() {
             {file && status.status === 'RUNNING' && (
               <div className="mb-6">
                 {progressMessage && (
-                  <p className="text-sm text-[rgb(var(--primary-rgb))] dark:text-[rgb(var(--primary-rgb))] mb-2">⏳ {progressMessage}</p>
+                  <p className="text-sm text-[rgb(var(--primary-rgb))] dark:text-[rgb(var(--primary-rgb))] mb-2">⏳ {displayProgressMessage}</p>
                 )}
                 {file.total_records > 0 ? (
                   <>
                     <div className="flex justify-between text-sm mb-2">
-                      <span className="font-medium text-[rgb(var(--foreground-rgb))]">Processing Progress</span>
+                      <span className="font-medium text-[rgb(var(--foreground-rgb))]">{t('leiStatus.page.processingProgress')}:</span>
                       <span className="text-[rgb(var(--muted-foreground-rgb))]">
-                        {file.processed_records.toLocaleString()} / {file.total_records.toLocaleString()} records ({progress.toFixed(1)}%)
+                        {evaluatedRecords.toLocaleString()} / {file.total_records.toLocaleString()} {t('leiStatus.page.records')} ({progress.toFixed(1)}%)
                       </span>
                     </div>
                     <div className="w-full bg-[rgb(var(--surface-muted-rgb))] dark:bg-[rgb(var(--surface-muted-rgb))] rounded-full h-4 overflow-hidden">
@@ -631,7 +733,7 @@ export default function LEIStatusPage() {
                 ) : (
                   <div className="text-sm text-[rgb(var(--muted-foreground-rgb))]">
                     <p className="mb-2">
-                      ⏳ {progressMessage || 'Preparing file for processing...'} ({file.processed_records.toLocaleString()} records processed)
+                      ⏳ {displayProgressMessage || t('leiStatus.page.preparingFile')} ({evaluatedRecords.toLocaleString()} {t('leiStatus.page.recordsEvaluated')})
                     </p>
                     <div className="w-full bg-[rgb(var(--surface-muted-rgb))] dark:bg-[rgb(var(--surface-muted-rgb))] rounded-full h-4 overflow-hidden">
                       <div className="bg-[rgb(var(--primary-rgb))] dark:bg-[rgb(var(--surface-soft-rgb))]0 h-4 rounded-full animate-pulse" style={{ width: '30%' }} />
@@ -642,22 +744,38 @@ export default function LEIStatusPage() {
             )}
 
             <div className="mb-4 bg-[rgb(var(--surface-muted-rgb))] rounded-lg p-4">
-              <h3 className="font-semibold mb-2 text-sm text-[rgb(var(--muted-foreground-rgb))] dark:text-[rgb(var(--muted-foreground-rgb))]">Processing Summary</h3>
+              <h3 className="font-semibold mb-2 text-sm text-[rgb(var(--muted-foreground-rgb))] dark:text-[rgb(var(--muted-foreground-rgb))]">{t('leiStatus.page.processingSummary')}</h3>
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-[rgb(var(--muted-foreground-rgb))]">Total Records:</span>
+                  <span className="text-[rgb(var(--muted-foreground-rgb))]">{t('leiStatus.page.totalRecords')}:</span>
                   <span className="font-medium text-[rgb(var(--foreground-rgb))]">
                     {totalRecords > 0 ? totalRecords.toLocaleString() : '-'}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-[rgb(var(--muted-foreground-rgb))]">Successfully Processed:</span>
+                  <span className="text-[rgb(var(--muted-foreground-rgb))]">{t('leiStatus.page.recordsEvaluatedTitle')}:</span>
                   <span className="font-medium text-green-600 dark:text-green-400">
-                    {totalRecords > 0 ? successfulProcessed.toLocaleString() : '-'}
+                    {totalRecords > 0 ? evaluatedRecords.toLocaleString() : '-'}
                   </span>
                 </div>
+                {(jobKey === 'DAILY_FULL' || jobKey === 'DAILY_DELTA' || jobKey === 'LEVEL2_RR' || jobKey === 'LEVEL2_REPEX') && (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-[rgb(var(--muted-foreground-rgb))]">{t('leiStatus.page.upsertedChangedNew')}:</span>
+                      <span className="font-medium text-[rgb(var(--foreground-rgb))]">
+                        {totalRecords > 0 && typeof upsertedRecords === 'number' ? upsertedRecords.toLocaleString() : '-'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[rgb(var(--muted-foreground-rgb))]">{t('leiStatus.page.noChange')}:</span>
+                      <span className="font-medium text-[rgb(var(--foreground-rgb))]">
+                        {totalRecords > 0 && typeof unchangedRecords === 'number' ? unchangedRecords.toLocaleString() : '-'}
+                      </span>
+                    </div>
+                  </>
+                )}
                 <div className="flex justify-between">
-                  <span className="text-[rgb(var(--muted-foreground-rgb))]">Failed Records:</span>
+                  <span className="text-[rgb(var(--muted-foreground-rgb))]">{t('leiStatus.page.failedRecords')}:</span>
                   <div className="flex items-center gap-2">
                     <span className={`font-medium ${failedRecords > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-[rgb(var(--foreground-rgb))]'}`}>
                       {totalRecords > 0
@@ -670,7 +788,7 @@ export default function LEIStatusPage() {
                         onClick={() => void toggleLevel2Failures(level2JobKey)}
                         className="text-xs px-2 py-1 rounded border border-orange-300 text-orange-700 hover:bg-orange-50 dark:border-orange-700 dark:text-orange-300 dark:hover:bg-orange-900/20"
                       >
-                        {level2FailuresOpen ? 'Hide details' : 'View details'}
+                        {level2FailuresOpen ? t('leiStatus.page.hideDetails') : t('leiStatus.page.viewDetails')}
                       </button>
                     )}
                   </div>
@@ -678,13 +796,13 @@ export default function LEIStatusPage() {
                 {jobKey === 'GLEIF_REFERENCE_SYNC' && gleifStats && (
                   <>
                     <div className="flex justify-between">
-                      <span className="text-[rgb(var(--muted-foreground-rgb))]">Files Saved:</span>
+                      <span className="text-[rgb(var(--muted-foreground-rgb))]">{t('leiStatus.page.filesSaved')}:</span>
                       <span className="font-medium text-[rgb(var(--foreground-rgb))]">
                         {typeof gleifStats.files_saved === 'number' ? gleifStats.files_saved.toLocaleString() : '-'}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-[rgb(var(--muted-foreground-rgb))]">Bytes Saved:</span>
+                      <span className="text-[rgb(var(--muted-foreground-rgb))]">{t('leiStatus.page.bytesSaved')}:</span>
                       <span className="font-medium text-[rgb(var(--foreground-rgb))]">
                         {typeof gleifStats.bytes_saved === 'number' ? gleifStats.bytes_saved.toLocaleString() : '-'}
                       </span>
@@ -698,7 +816,7 @@ export default function LEIStatusPage() {
               <div className="bg-[rgb(var(--surface-muted-rgb))] rounded-lg p-4 mb-4">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="font-semibold text-sm text-[rgb(var(--muted-foreground-rgb))] dark:text-[rgb(var(--muted-foreground-rgb))]">
-                    Failed Records {level2OpenOnly ? '(Open)' : '(Open + Resolved)'}
+                    {t('leiStatus.page.failedRecords')} {level2OpenOnly ? t('leiStatus.page.openOnlySuffix') : t('leiStatus.page.openResolvedSuffix')}
                   </h3>
                   <div className="flex items-center gap-2">
                     <button
@@ -709,7 +827,7 @@ export default function LEIStatusPage() {
                         : 'theme-btn-neutral'
                       }`}
                     >
-                      Open only
+                      {t('leiStatus.page.openOnly')}
                     </button>
                     <button
                       type="button"
@@ -719,16 +837,19 @@ export default function LEIStatusPage() {
                         : 'theme-btn-neutral'
                       }`}
                     >
-                      Include resolved
+                      {t('leiStatus.page.includeResolved')}
                     </button>
                   </div>
                 </div>
                 <p className="text-xs text-[rgb(var(--muted-foreground-rgb))] mb-3">
-                  Showing {level2Failures.length.toLocaleString()} of {level2FailuresTotal.toLocaleString()} records
+                  {t('leiStatus.page.showingRecords', {
+                    shown: level2Failures.length.toLocaleString(),
+                    total: level2FailuresTotal.toLocaleString(),
+                  })}
                 </p>
 
                 {level2FailuresLoading && (
-                  <p className="text-sm text-[rgb(var(--muted-foreground-rgb))]">Loading failure details...</p>
+                  <p className="text-sm text-[rgb(var(--muted-foreground-rgb))]">{t('leiStatus.page.loadingFailureDetails')}</p>
                 )}
 
                 {!level2FailuresLoading && level2FailuresError && (
@@ -736,7 +857,7 @@ export default function LEIStatusPage() {
                 )}
 
                 {!level2FailuresLoading && !level2FailuresError && level2Failures.length === 0 && (
-                  <p className="text-sm text-[rgb(var(--muted-foreground-rgb))]">No matching failed records.</p>
+                  <p className="text-sm text-[rgb(var(--muted-foreground-rgb))]">{t('leiStatus.page.noMatchingFailedRecords')}</p>
                 )}
 
                 {!level2FailuresLoading && !level2FailuresError && level2Failures.length > 0 && (
@@ -749,16 +870,16 @@ export default function LEIStatusPage() {
                             ? 'border-green-300 text-green-700 dark:border-green-700 dark:text-green-300'
                             : 'border-orange-300 text-orange-700 dark:border-orange-700 dark:text-orange-300'
                           }`}>
-                            {failure.resolved ? 'RESOLVED' : 'OPEN'}
+                            {failure.resolved ? t('leiStatus.page.resolved') : t('leiStatus.page.open')}
                           </span>
                         </div>
                         <p className="text-xs text-[rgb(var(--muted-foreground-rgb))] dark:text-[rgb(var(--muted-foreground-rgb))] break-all">
-                          <span className="font-medium">Key:</span> {failure.natural_key || '(none)'}
+                          <span className="font-medium">{t('leiStatus.page.key')}:</span> {failure.natural_key || t('leiStatus.page.noneLower')}
                         </p>
                         <p className="text-xs text-red-600 dark:text-red-400 mt-1 break-words">{failure.error_message}</p>
                         <p className="text-[11px] text-[rgb(var(--muted-foreground-rgb))] mt-1">
-                          Raised: {formatDate(failure.created_at)}
-                          {failure.resolved_at ? ` • Resolved: ${formatDate(failure.resolved_at)}` : ''}
+                          {t('leiStatus.page.raised')}: {formatDate(failure.created_at)}
+                          {failure.resolved_at ? ` • ${t('leiStatus.page.resolvedAt')}: ${formatDate(failure.resolved_at)}` : ''}
                         </p>
                       </div>
                     ))}
@@ -768,42 +889,49 @@ export default function LEIStatusPage() {
             )}
 
             <div className="bg-[rgb(var(--surface-muted-rgb))] rounded-lg p-4 mb-4">
-              <h3 className="font-semibold mb-2 text-sm text-[rgb(var(--muted-foreground-rgb))] dark:text-[rgb(var(--muted-foreground-rgb))]">Current File</h3>
+              <h3 className="font-semibold mb-2 text-sm text-[rgb(var(--muted-foreground-rgb))] dark:text-[rgb(var(--muted-foreground-rgb))]">{t('leiStatus.page.currentFile')}</h3>
               <div className="space-y-1 text-sm text-[rgb(var(--foreground-rgb))]">
-                <p className="truncate"><span className="font-medium text-[rgb(var(--muted-foreground-rgb))]">Name:</span> {currentFileLabel}</p>
-                <p><span className="font-medium text-[rgb(var(--muted-foreground-rgb))]">Status:</span> {file?.processing_status || status.status}</p>
-                <p><span className="font-medium text-[rgb(var(--muted-foreground-rgb))]">Total Records:</span> {totalRecords > 0 ? totalRecords.toLocaleString() : '-'}</p>
-                <p><span className="font-medium text-[rgb(var(--muted-foreground-rgb))]">Processed:</span> {totalRecords > 0 ? `${successfulProcessed.toLocaleString()} records` : '-'}</p>
-                <p className="truncate"><span className="font-medium text-[rgb(var(--muted-foreground-rgb))]">Last LEI:</span> {file?.last_processed_lei || '-'}</p>
+                <p className="truncate"><span className="font-medium text-[rgb(var(--muted-foreground-rgb))]">{t('leiStatus.page.name')}:</span> {currentFileLabel}</p>
+                <p><span className="font-medium text-[rgb(var(--muted-foreground-rgb))]">{t('leiStatus.page.status')}:</span> {file?.processing_status || status.status}</p>
+                <p><span className="font-medium text-[rgb(var(--muted-foreground-rgb))]">{t('leiStatus.page.totalRecords')}:</span> {totalRecords > 0 ? totalRecords.toLocaleString() : '-'}</p>
+                <p><span className="font-medium text-[rgb(var(--muted-foreground-rgb))]">{t('leiStatus.page.processed')}:</span> {totalRecords > 0 ? `${evaluatedRecords.toLocaleString()} ${t('leiStatus.page.records')}` : '-'}</p>
+                {(jobKey === 'DAILY_FULL' || jobKey === 'DAILY_DELTA' || jobKey === 'LEVEL2_RR' || jobKey === 'LEVEL2_REPEX') && (
+                  <>
+                    <p><span className="font-medium text-[rgb(var(--muted-foreground-rgb))]">{t('leiStatus.page.upserted')}:</span> {totalRecords > 0 && typeof upsertedRecords === 'number' ? `${upsertedRecords.toLocaleString()} ${t('leiStatus.page.records')}` : '-'}</p>
+                    <p><span className="font-medium text-[rgb(var(--muted-foreground-rgb))]">{t('leiStatus.page.noChange')}:</span> {totalRecords > 0 && typeof unchangedRecords === 'number' ? `${unchangedRecords.toLocaleString()} ${t('leiStatus.page.records')}` : '-'}</p>
+                  </>
+                )}
+                {(jobKey === 'DAILY_FULL' || jobKey === 'DAILY_DELTA' || jobKey === 'LEVEL2_RR' || jobKey === 'LEVEL2_REPEX') && (
+                  <p className="truncate"><span className="font-medium text-[rgb(var(--muted-foreground-rgb))]">{t('leiStatus.page.lastLei')}:</span> {file?.last_processed_lei || '-'}</p>
+                )}
                 {jobKey === 'GLEIF_REFERENCE_SYNC' && gleifStats?.run_at_utc && (
-                  <p><span className="font-medium text-[rgb(var(--muted-foreground-rgb))]">Snapshot Run:</span> {formatDate(gleifStats.run_at_utc)}</p>
+                  <p><span className="font-medium text-[rgb(var(--muted-foreground-rgb))]">{t('leiStatus.page.snapshotRun')}:</span> {formatDate(gleifStats.run_at_utc)}</p>
                 )}
                 {status.status === 'RUNNING' && progressMessage && (
                   <p className="text-[rgb(var(--primary-rgb))] dark:text-[rgb(var(--primary-rgb))]">
-                    <span className="font-medium">Progress:</span> {progressMessage}
+                    <span className="font-medium">{t('leiStatus.page.progress')}:</span> {displayProgressMessage}
                   </p>
                 )}
                 {jobKey === 'GLEIF_REFERENCE_SYNC' && gleifStats?.lists && (
-                  <p className="text-xs text-[rgb(var(--muted-foreground-rgb))] mt-2 break-words">
-                    {Object.entries(gleifStats.lists)
-                      .map(([name, stats]) => `${name}: ${typeof stats.records === 'number' ? stats.records : 0}`)
-                      .join(' | ')}
+                  <p className="break-words">
+                    <span className="font-medium text-[rgb(var(--muted-foreground-rgb))]">{t('leiStatus.page.breakdown')}</span>{' '}
+                    {formatGleifBreakdown(gleifStats.lists)}
                   </p>
                 )}
                 {isMasterDataJob && masterDataCounts && (
                   <p>
-                    <span className="font-medium text-[rgb(var(--muted-foreground-rgb))]">Breakdown:</span>{' '}
+                    <span className="font-medium text-[rgb(var(--muted-foreground-rgb))]">{t('leiStatus.page.breakdown')}</span>{' '}
                     {`Countries ${masterDataCounts.countries.toLocaleString()}, Currencies ${masterDataCounts.currencies.toLocaleString()}, Languages ${masterDataCounts.languages.toLocaleString()}`}
                   </p>
                 )}
                 {file?.failure_category && (
                   <p className="text-red-600 dark:text-red-400">
-                    <span className="font-medium">Error Category:</span> {file.failure_category}
+                    <span className="font-medium">{t('leiStatus.page.errorCategory')}:</span> {file.failure_category}
                   </p>
                 )}
                 {file?.processing_error && (
                   <p className="text-red-600 dark:text-red-400 text-xs mt-2">
-                    <span className="font-medium">Error:</span> {file.processing_error}
+                    <span className="font-medium">{t('leiStatus.page.error')}:</span> {file.processing_error}
                   </p>
                 )}
               </div>
@@ -814,7 +942,7 @@ export default function LEIStatusPage() {
         {status.error_message && (
           <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
             <p className="text-sm text-red-800 dark:text-red-300">
-              <span className="font-semibold">Error:</span> {status.error_message}
+              <span className="font-semibold">{t('leiStatus.page.error')}:</span> {status.error_message}
             </p>
           </div>
         )}
@@ -861,10 +989,10 @@ export default function LEIStatusPage() {
   const renderRowTimestamps = (status: ProcessingStatus | null, className: string = 'mt-1') => (
     <div className={`${className} text-xs text-[rgb(var(--muted-foreground-rgb))]`}>
       <span>
-        Last run: <span className="font-mono text-[rgb(var(--muted-foreground-rgb))]">{formatDate(status?.last_run_at ?? null)}</span>
+        {t('leiStatus.page.lastRun')}: <span className="font-mono text-[rgb(var(--muted-foreground-rgb))]">{formatDate(status?.last_run_at ?? null)}</span>
       </span>
       <span className="ml-4">
-        Last success: <span className="font-mono text-[rgb(var(--muted-foreground-rgb))]">{formatDate(status?.last_success_at ?? null)}</span>
+        {t('leiStatus.page.lastSuccess')}: <span className="font-mono text-[rgb(var(--muted-foreground-rgb))]">{formatDate(status?.last_success_at ?? null)}</span>
       </span>
     </div>
   )
@@ -900,8 +1028,8 @@ export default function LEIStatusPage() {
             </p>
           )}
           {!status?.error_message && status?.status === 'RUNNING' && status?.progress_message && (
-            <p className="text-[rgb(var(--primary-rgb))] dark:text-[rgb(var(--primary-rgb))] text-xs mt-1 truncate" title={status.progress_message}>
-              ⏳ {status.progress_message}
+            <p className="text-[rgb(var(--primary-rgb))] dark:text-[rgb(var(--primary-rgb))] text-xs mt-1 truncate" title={formatImportProgressMessage(status.progress_message, parseImportProgressStats(status.progress_message))}>
+              ⏳ {formatImportProgressMessage(status.progress_message, parseImportProgressStats(status.progress_message))}
             </p>
           )}
         </div>
@@ -932,7 +1060,7 @@ export default function LEIStatusPage() {
                 onClick={fetchStatus}
                 className="h-9 px-3 inline-flex items-center justify-center theme-btn-primary rounded-lg transition-colors text-sm font-medium"
               >
-                🔄 Refresh Now
+                🔄 {t('leiStatus.page.refreshNow')}
               </button>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -941,17 +1069,21 @@ export default function LEIStatusPage() {
                   onChange={(e) => setAutoRefresh(e.target.checked)}
                   className="w-4 h-4"
                 />
-                <span className="text-sm opacity-70">Auto-refresh (5s)</span>
+                <span className="text-sm opacity-70">
+                  {t('leiStatus.page.autoRefresh')} ({t('leiStatus.page.autoRefreshIntervalSeconds', {
+                    count: Math.round(autoRefreshIntervalMs / 1000),
+                  })})
+                </span>
               </label>
             </>
           }
         />
 
         {error && (
-          <Alert variant="error" title="Connection Error:" className="mb-6">
+          <Alert variant="error" title={`${t('leiStatus.page.connectionError')}:`} className="mb-6">
             {error}
             <p className="text-sm mt-1 opacity-80">
-              Make sure the backend is running and you have proper authentication.
+              {t('leiStatus.page.connectionErrorHint')}
             </p>
           </Alert>
         )}
@@ -1052,14 +1184,18 @@ export default function LEIStatusPage() {
                   renderDisclosureButton(
                     showRrChild,
                     () => setRrExpanded((prev) => !prev),
-                    showRrChild ? 'Collapse REPEX job' : 'Expand REPEX job',
+                    showRrChild
+                      ? t('leiStatus.pipeline.collapseReportingExceptionsJob')
+                      : t('leiStatus.pipeline.expandReportingExceptionsJob'),
                   ),
                   !showRrChild ? '1 child job hidden' : undefined,
                   <div className="flex items-center gap-2">
                     {renderRowActionButton(
-                      () => triggerJob('/api/v1/lei/sync/level2/rr', 'Level 2 Relationship Records sync triggered (LEVEL2_RR)'),
+                      () => triggerJob('/api/v1/lei/sync/level2/rr', t('leiStatus.pipeline.rrTriggered')),
                       !canTriggerRr,
-                      !canTriggerRr ? 'Blocked while DAILY_FULL or LEVEL2_RR is running' : 'Trigger Level 2 Relationship Records sync only (LEVEL2_RR)',
+                      !canTriggerRr
+                        ? t('leiStatus.pipeline.rrBlocked')
+                        : t('leiStatus.pipeline.triggerOnlyRr'),
                     )}
                   </div>,
                 )}
@@ -1071,9 +1207,11 @@ export default function LEIStatusPage() {
                   renderControlSpacer(),
                   undefined,
                   renderRowActionButton(
-                    () => triggerJob('/api/v1/lei/sync/level2/repex', 'Level 2 Reporting Exceptions sync triggered (LEVEL2_REPEX)'),
+                    () => triggerJob('/api/v1/lei/sync/level2/repex', t('leiStatus.pipeline.repexTriggered')),
                     !canTriggerRepex,
-                    !canTriggerRepex ? 'Blocked while DAILY_FULL, LEVEL2_RR, or LEVEL2_REPEX is running' : 'Trigger Level 2 Reporting Exceptions sync only (LEVEL2_REPEX)',
+                    !canTriggerRepex
+                      ? t('leiStatus.pipeline.repexBlocked')
+                      : t('leiStatus.pipeline.triggerOnlyRepex'),
                   ),
                 )}
               </>
@@ -1122,25 +1260,25 @@ export default function LEIStatusPage() {
 
         {/* Legend */}
         <div className="bg-white dark:bg-white/5 rounded-lg shadow-md p-4 border-2 border-[rgb(var(--border-rgb))]">
-          <h3 className="font-semibold mb-3 text-[rgb(var(--muted-foreground-rgb))] dark:text-[rgb(var(--muted-foreground-rgb))]">Status Legend</h3>
+          <h3 className="font-semibold mb-3 text-[rgb(var(--muted-foreground-rgb))] dark:text-[rgb(var(--muted-foreground-rgb))]">{ t('leiStatus.page.legendTitle')}</h3>
           <div className="flex flex-wrap gap-4 text-sm">
             <div className="flex items-center gap-2">
-              <span className={`px-3 py-1 rounded-full font-semibold border-2 ${getStatusColor('IDLE')}`}>IDLE</span>
-              <span className="text-[rgb(var(--muted-foreground-rgb))]">Waiting for next scheduled run</span>
+              <span className={`px-3 py-1 rounded-full font-semibold border-2 ${getStatusColor('IDLE')}`}>{t('leiStatus.page.statusIdle')}</span>
+              <span className="text-[rgb(var(--muted-foreground-rgb))]">{t('leiStatus.page.legendIdle')}</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className={`px-3 py-1 rounded-full font-semibold border-2 ${getStatusColor('RUNNING')}`}>RUNNING</span>
-              <span className="text-[rgb(var(--muted-foreground-rgb))]">Currently processing data</span>
+              <span className={`px-3 py-1 rounded-full font-semibold border-2 ${getStatusColor('RUNNING')}`}>{t('leiStatus.page.statusRunning')}</span>
+              <span className="text-[rgb(var(--muted-foreground-rgb))]">{t('leiStatus.page.legendRunning')}</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className={`px-3 py-1 rounded-full font-semibold border-2 ${getStatusColor('FAILED')}`}>FAILED</span>
-              <span className="text-[rgb(var(--muted-foreground-rgb))]">Encountered an error (auto-recovery on next startup)</span>
+              <span className={`px-3 py-1 rounded-full font-semibold border-2 ${getStatusColor('FAILED')}`}>{t('leiStatus.page.statusFailed')}</span>
+              <span className="text-[rgb(var(--muted-foreground-rgb))]">{t('leiStatus.page.legendFailed')}</span>
             </div>
           </div>
         </div>
 
         <div className="mt-6 text-center text-sm text-[rgb(var(--muted-foreground-rgb))]">
-          <p>Data source: GLEIF Golden Copy Files • Updated every 5 seconds when auto-refresh is enabled</p>
+          <p>{t('leiStatus.page.dataSourceFooter')}</p>
         </div>
       </div>
     </div>

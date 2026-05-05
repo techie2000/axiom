@@ -8,11 +8,14 @@ import Badge from '../components/Badge'
 import LoadingSpinner from '../components/LoadingSpinner'
 import PageHeader from '../components/PageHeader'
 import PreferenceSavePrompt from '../components/PreferenceSavePrompt'
+import ReferencePageHeaderActions from '../components/ReferencePageHeaderActions'
 import SearchInputWithOverflowTooltip from '../components/SearchInputWithOverflowTooltip'
 import SortableHeaderCell from '../components/SortableHeaderCell'
 import StatCard from '../components/StatCard'
 import SyncedWideTable from '../components/SyncedWideTable'
 import ThemedSelect from '../components/ThemedSelect'
+import { getApiBaseUrl } from '../lib/api-base'
+import { getAuthToken } from '../lib/auth-token'
 import { useDeferredBooleanPreference } from '../lib/useDeferredBooleanPreference'
 import { useEnglishTooltips } from '../lib/useEnglishTooltips'
 import { useButtonEmojiMode } from '../lib/useButtonEmojiMode'
@@ -66,14 +69,10 @@ export default function LanguagesPage() {
     setHasHydrated(true)
   }, [])
 
-  const API_BASE_URL = typeof window !== 'undefined'
-    ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080')
-    : 'http://backend:8080'
+  const API_BASE_URL = getApiBaseUrl()
 
   useEffect(() => {
-    const rawToken = localStorage.getItem('axiom_token')
-    const normalizedToken = rawToken?.replace(/^Bearer\s+/i, '').trim() ?? ''
-    setIsLoggedIn(normalizedToken !== '' && normalizedToken !== 'undefined' && normalizedToken !== 'null')
+    setIsLoggedIn(getAuthToken() !== null)
   }, [])
 
   const fetchLanguages = useCallback(async () => {
@@ -219,33 +218,27 @@ export default function LanguagesPage() {
           subtitleTooltip={getEnglishTooltip('languages.subtitle')}
           backHref={backHref}
           actions={
-            <>
-              <button
-                onClick={expandedWidthPreference.toggle}
-                className="theme-header-action rounded-lg theme-btn-neutral theme-focus"
-                title={effectiveExpandedWidth ? getEnglishTooltip('referenceLayout.normalButton') : getEnglishTooltip('referenceLayout.expandButton')}
-                aria-label={effectiveExpandedWidth ? t('referenceLayout.normalButton') : t('referenceLayout.expandButton')}
-              >
-                {effectiveExpandedWidth ? formatLabel(t('referenceLayout.normalButton')) : formatLabel(t('referenceLayout.expandButton'))}
-              </button>
-              {expandedWidthPreference.hasUnsavedChanges && (
-                <button
-                  onClick={expandedWidthPreference.saveCurrentValue}
-                  className="theme-header-action rounded-lg theme-btn-primary theme-focus"
-                  title={getEnglishTooltip('referenceLayout.savePageWidthDefault')}
-                >
-                  {formatLabel('💾 Save width')}
-                </button>
-              )}
-              <button
-                onClick={referenceDisplayPreference.toggle}
-                className="theme-header-action rounded-lg theme-btn-neutral theme-focus"
-                title={showReferenceCodes ? getEnglishTooltip('referenceLayout.displayCodesButton') : getEnglishTooltip('referenceLayout.displayNamesButton')}
-                aria-label={showReferenceCodes ? t('referenceLayout.displayCodesButton') : t('referenceLayout.displayNamesButton')}
-              >
-                {formatLabel(showReferenceCodes ? t('referenceLayout.displayCodesButton') : t('referenceLayout.displayNamesButton'))}
-              </button>
-            </>
+            <ReferencePageHeaderActions
+              effectiveExpandedWidth={effectiveExpandedWidth}
+              normalTitle={getEnglishTooltip('referenceLayout.normalButton')}
+              expandTitle={getEnglishTooltip('referenceLayout.expandButton')}
+              normalLabel={t('referenceLayout.normalButton')}
+              expandLabel={t('referenceLayout.expandButton')}
+              saveWidthTitle={getEnglishTooltip('referenceLayout.savePageWidthDefault')}
+              saveWidthLabel={`💾 ${t('referenceLayout.savePageWidthDefault')}`}
+              hasUnsavedWidthChanges={expandedWidthPreference.hasUnsavedChanges}
+              onToggleExpandedWidth={expandedWidthPreference.toggle}
+              onSaveExpandedWidth={expandedWidthPreference.saveCurrentValue}
+              formatLabel={formatLabel}
+              secondaryToggle={{
+                isActive: showReferenceCodes,
+                onToggle: referenceDisplayPreference.toggle,
+                activeTitle: getEnglishTooltip('referenceLayout.displayCodesButton'),
+                inactiveTitle: getEnglishTooltip('referenceLayout.displayNamesButton'),
+                activeLabel: t('referenceLayout.displayCodesButton'),
+                inactiveLabel: t('referenceLayout.displayNamesButton'),
+              }}
+            />
           }
         />
 
@@ -282,7 +275,7 @@ export default function LanguagesPage() {
           />
         </div>
 
-        <div className="mb-6 theme-panel border-2 backdrop-blur-sm rounded-lg p-6">
+        <div className="relative z-40 mb-6 theme-panel border-2 backdrop-blur-sm rounded-lg p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             <div>
               <label className="block text-sm font-medium mb-2 theme-text-muted">{t('languages.filters.search')}</label>

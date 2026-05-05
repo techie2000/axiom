@@ -5,9 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/techie2000/axiom/internal/domain"
@@ -250,6 +253,108 @@ func TestLEICodeValue(t *testing.T) {
 	}
 }
 
+func TestCleanupOldFiles_RetainsLevel2FullFilesUsingFullRetentionRule(t *testing.T) {
+	tmpDir := t.TempDir()
+	svc := &leiService{dataDir: tmpDir}
+
+	writeFileWithModTime := func(name string, modTime time.Time) {
+		t.Helper()
+		path := filepath.Join(tmpDir, name)
+		if err := os.WriteFile(path, []byte(name), 0o644); err != nil {
+			t.Fatalf("WriteFile(%s): %v", name, err)
+		}
+		if err := os.Chtimes(path, modTime, modTime); err != nil {
+			t.Fatalf("Chtimes(%s): %v", name, err)
+		}
+	}
+
+	now := time.Now()
+	writeFileWithModTime("lei-FULL-20260413-120000.json.zip", now.Add(-1*time.Hour))
+	writeFileWithModTime("gleif-level2-rr_full-20260413-110000.zip", now.Add(-2*time.Hour))
+	writeFileWithModTime("gleif-level2-repex_full-20260413-100000.zip", now.Add(-3*time.Hour))
+	writeFileWithModTime("lei-DELTA-20260413-090000.json.zip", now.Add(-4*time.Hour))
+
+	if err := svc.CleanupOldFiles(2, 1); err != nil {
+		t.Fatalf("CleanupOldFiles returned error: %v", err)
+	}
+
+	assertExists := func(name string) {
+		t.Helper()
+		if _, err := os.Stat(filepath.Join(tmpDir, name)); err != nil {
+			t.Fatalf("expected %s to exist, got error: %v", name, err)
+		}
+	}
+
+	assertMissing := func(name string) {
+		t.Helper()
+		if _, err := os.Stat(filepath.Join(tmpDir, name)); !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("expected %s to be removed, got err=%v", name, err)
+		}
+	}
+
+	assertExists("lei-FULL-20260413-120000.json.zip")
+	assertExists("gleif-level2-rr_full-20260413-110000.zip")
+	assertExists("lei-DELTA-20260413-090000.json.zip")
+	assertMissing("gleif-level2-repex_full-20260413-100000.zip")
+}
+
+func TestCleanupOldFiles_PrunesGLEIFReferenceSnapshotsUsingFullRetentionRule(t *testing.T) {
+	tmpDir := t.TempDir()
+	svc := &leiService{dataDir: tmpDir}
+	listDir := filepath.Join(tmpDir, "gleif-reference", "entity_legal_forms")
+	if err := os.MkdirAll(listDir, 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+
+	writeSnapshotPair := func(baseName string, modTime time.Time) {
+		t.Helper()
+		payloadPath := filepath.Join(listDir, baseName+".csv")
+		metaPath := filepath.Join(listDir, baseName+".meta.json")
+		if err := os.WriteFile(payloadPath, []byte(baseName), 0o644); err != nil {
+			t.Fatalf("WriteFile payload %s: %v", payloadPath, err)
+		}
+		if err := os.WriteFile(metaPath, []byte(`{"payload":"`+baseName+`.csv"}`), 0o644); err != nil {
+			t.Fatalf("WriteFile meta %s: %v", metaPath, err)
+		}
+		if err := os.Chtimes(payloadPath, modTime, modTime); err != nil {
+			t.Fatalf("Chtimes payload %s: %v", payloadPath, err)
+		}
+		if err := os.Chtimes(metaPath, modTime, modTime); err != nil {
+			t.Fatalf("Chtimes meta %s: %v", metaPath, err)
+		}
+	}
+
+	now := time.Now()
+	writeSnapshotPair("20260413-120000_csv", now.Add(-1*time.Hour))
+	writeSnapshotPair("20260413-110000_csv", now.Add(-2*time.Hour))
+	writeSnapshotPair("20260413-100000_csv", now.Add(-3*time.Hour))
+
+	if err := svc.CleanupOldFiles(2, 1); err != nil {
+		t.Fatalf("CleanupOldFiles returned error: %v", err)
+	}
+
+	assertExists := func(relativePath string) {
+		t.Helper()
+		if _, err := os.Stat(filepath.Join(tmpDir, relativePath)); err != nil {
+			t.Fatalf("expected %s to exist, got error: %v", relativePath, err)
+		}
+	}
+
+	assertMissing := func(relativePath string) {
+		t.Helper()
+		if _, err := os.Stat(filepath.Join(tmpDir, relativePath)); !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("expected %s to be removed, got err=%v", relativePath, err)
+		}
+	}
+
+	assertExists(filepath.Join("gleif-reference", "entity_legal_forms", "20260413-120000_csv.csv"))
+	assertExists(filepath.Join("gleif-reference", "entity_legal_forms", "20260413-120000_csv.meta.json"))
+	assertExists(filepath.Join("gleif-reference", "entity_legal_forms", "20260413-110000_csv.csv"))
+	assertExists(filepath.Join("gleif-reference", "entity_legal_forms", "20260413-110000_csv.meta.json"))
+	assertMissing(filepath.Join("gleif-reference", "entity_legal_forms", "20260413-100000_csv.csv"))
+	assertMissing(filepath.Join("gleif-reference", "entity_legal_forms", "20260413-100000_csv.meta.json"))
+}
+
 func TestResolveProgressTotalRecords(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -349,11 +454,11 @@ func TestNormalizeProcessingJobType(t *testing.T) {
 		input string
 		want  string
 	}{
-		// Level-1 aliases
-		{input: "DAILY_FULL", want: "LEVEL1_FULL"},
-		{input: "LEVEL1_FULL", want: "LEVEL1_FULL"},
-		{input: "DAILY_DELTA", want: "LEVEL1_DELTA"},
-		{input: "LEVEL1_DELTA", want: "LEVEL1_DELTA"},
+		// Status-row aliases
+		{input: "DAILY_FULL", want: "DAILY_FULL"},
+		{input: "LEVEL1_FULL", want: "DAILY_FULL"},
+		{input: "DAILY_DELTA", want: "DAILY_DELTA"},
+		{input: "LEVEL1_DELTA", want: "DAILY_DELTA"},
 		// Level-2 pass-throughs
 		{input: "LEVEL2_RR", want: "LEVEL2_RR"},
 		{input: "LEVEL2_REPEX", want: "LEVEL2_REPEX"},
@@ -372,9 +477,61 @@ func TestNormalizeProcessingJobType(t *testing.T) {
 	}
 }
 
+func TestNormalizeProcessingFailureJobType(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		// Failure-row aliases
+		{input: "DAILY_FULL", want: "LEVEL1_FULL"},
+		{input: "LEVEL1_FULL", want: "LEVEL1_FULL"},
+		{input: "DAILY_DELTA", want: "LEVEL1_DELTA"},
+		{input: "LEVEL1_DELTA", want: "LEVEL1_DELTA"},
+		// Level-2 pass-throughs
+		{input: "LEVEL2_RR", want: "LEVEL2_RR"},
+		{input: "LEVEL2_REPEX", want: "LEVEL2_REPEX"},
+		// Unknown types → empty string
+		{input: "UNKNOWN", want: ""},
+		{input: "", want: ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := NormalizeProcessingFailureJobType(tt.input)
+			if got != tt.want {
+				t.Fatalf("NormalizeProcessingFailureJobType(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestNormalizeProcessingJobTypePrivateDelegates(t *testing.T) {
-	// The private function must map the same known aliases as the exported one
-	// and pass unknown / Level-2 types through unchanged.
+	// The private function must map the same known aliases as the exported status
+	// normalizer and pass unknown / Level-2 types through unchanged.
+	cases := []struct {
+		input string
+		want  string
+	}{
+		{"DAILY_FULL", "DAILY_FULL"},
+		{"LEVEL1_FULL", "DAILY_FULL"},
+		{"DAILY_DELTA", "DAILY_DELTA"},
+		{"LEVEL1_DELTA", "DAILY_DELTA"},
+		{"LEVEL2_RR", "LEVEL2_RR"},
+		{"LEVEL2_REPEX", "LEVEL2_REPEX"},
+		{"UNKNOWN_TYPE", "UNKNOWN_TYPE"}, // pass-through
+		{"", ""},                         // empty → empty
+	}
+	for _, c := range cases {
+		got := normalizeProcessingJobType(c.input)
+		if got != c.want {
+			t.Errorf("normalizeProcessingJobType(%q) = %q, want %q", c.input, got, c.want)
+		}
+	}
+}
+
+func TestNormalizeProcessingFailureJobTypePrivateDelegates(t *testing.T) {
+	// The private function must map the same known aliases as the exported
+	// failure normalizer and pass unknown / Level-2 types through unchanged.
 	cases := []struct {
 		input string
 		want  string
@@ -389,9 +546,9 @@ func TestNormalizeProcessingJobTypePrivateDelegates(t *testing.T) {
 		{"", ""},                         // empty → empty
 	}
 	for _, c := range cases {
-		got := normalizeProcessingJobType(c.input)
+		got := normalizeProcessingFailureJobType(c.input)
 		if got != c.want {
-			t.Errorf("normalizeProcessingJobType(%q) = %q, want %q", c.input, got, c.want)
+			t.Errorf("normalizeProcessingFailureJobType(%q) = %q, want %q", c.input, got, c.want)
 		}
 	}
 }
@@ -466,7 +623,7 @@ func TestBatchResolveOpenProcessingFailures_Service_ValidKeys(t *testing.T) {
 	if stub.callCount != 1 {
 		t.Fatalf("expected exactly 1 repo call, got %d", stub.callCount)
 	}
-	// Job type must be normalised (DAILY_FULL → LEVEL1_FULL).
+	// Failure job type must keep the Level-1 category.
 	if stub.calledJobType != "LEVEL1_FULL" {
 		t.Errorf("expected calledJobType LEVEL1_FULL, got %q", stub.calledJobType)
 	}
@@ -541,6 +698,10 @@ func (s *processRecordsRepoStub) UpdateSourceFile(file *domain.SourceFile) error
 }
 
 func (s *processRecordsRepoStub) CreateProcessingFailure(failure *domain.LEILevel2ProcessingFailure) error {
+	return nil
+}
+
+func (s *processRecordsRepoStub) UpdateProcessingProgressMessageByJobType(_ string, _ string) error {
 	return nil
 }
 
@@ -620,5 +781,104 @@ func TestProcessRecordsArray_FinalUpdatePersistsLastProcessedLEIForSmallFiles(t 
 	wantLastLEI := testLEICodeForIndex(recordCount - 1)
 	if *finalSnapshot.LastProcessedLEI != wantLastLEI {
 		t.Fatalf("expected LastProcessedLEI %q, got %q", wantLastLEI, *finalSnapshot.LastProcessedLEI)
+	}
+}
+
+type leiCountRepoStub struct {
+	repository.LEIRepository
+	counts    []int64
+	callCount int
+}
+
+func (s *leiCountRepoStub) CountLEIRecords() (int64, error) {
+	s.callCount++
+	if len(s.counts) == 0 {
+		return 0, nil
+	}
+
+	idx := s.callCount - 1
+	if idx >= len(s.counts) {
+		idx = len(s.counts) - 1
+	}
+
+	return s.counts[idx], nil
+}
+
+func TestCountLEIRecords_UsesCachedValueUntilExplicitRefresh(t *testing.T) {
+	repoStub := &leiCountRepoStub{counts: []int64{123, 999}}
+	svc := &leiService{repo: repoStub}
+
+	first, err := svc.CountLEIRecords()
+	if err != nil {
+		t.Fatalf("first CountLEIRecords returned error: %v", err)
+	}
+
+	second, err := svc.CountLEIRecords()
+	if err != nil {
+		t.Fatalf("second CountLEIRecords returned error: %v", err)
+	}
+
+	if first != 123 {
+		t.Fatalf("expected first count to be 123, got %d", first)
+	}
+	if second != 123 {
+		t.Fatalf("expected second count to use cached value 123, got %d", second)
+	}
+	if repoStub.callCount != 1 {
+		t.Fatalf("expected repository count to be called once, got %d", repoStub.callCount)
+	}
+}
+
+func TestRefreshLEICountCacheForJob_Level1JobUpdatesCachedValue(t *testing.T) {
+	repoStub := &leiCountRepoStub{counts: []int64{123, 456}}
+	svc := &leiService{repo: repoStub}
+
+	first, err := svc.CountLEIRecords()
+	if err != nil {
+		t.Fatalf("first CountLEIRecords returned error: %v", err)
+	}
+
+	svc.refreshLEICountCacheForJob("LEVEL1_FULL")
+
+	second, err := svc.CountLEIRecords()
+	if err != nil {
+		t.Fatalf("second CountLEIRecords returned error: %v", err)
+	}
+
+	if first != 123 {
+		t.Fatalf("expected first count to be 123, got %d", first)
+	}
+	if second != 456 {
+		t.Fatalf("expected refreshed count to be 456 after Level 1 refresh, got %d", second)
+	}
+	if repoStub.callCount != 2 {
+		t.Fatalf("expected repository count to be called twice, got %d", repoStub.callCount)
+	}
+}
+
+func TestRefreshLEICountCacheForJob_NonLevel1JobDoesNotUpdateCachedValue(t *testing.T) {
+	repoStub := &leiCountRepoStub{counts: []int64{123, 456}}
+	svc := &leiService{repo: repoStub}
+
+	first, err := svc.CountLEIRecords()
+	if err != nil {
+		t.Fatalf("first CountLEIRecords returned error: %v", err)
+	}
+
+	svc.refreshLEICountCacheForJob("LEVEL2_RR")
+
+	second, err := svc.CountLEIRecords()
+	if err != nil {
+		t.Fatalf("second CountLEIRecords returned error: %v", err)
+	}
+
+	if first != 123 {
+		t.Fatalf("expected first count to be 123, got %d", first)
+	}
+	if second != 123 {
+		t.Fatalf("expected cached count to remain 123 for non-Level 1 jobs, got %d", second)
+	}
+	if repoStub.callCount != 1 {
+		t.Fatalf("expected repository count to be called once, got %d", repoStub.callCount)
 	}
 }

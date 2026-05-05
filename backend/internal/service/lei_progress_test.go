@@ -1,9 +1,11 @@
 package service
 
 import (
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -86,6 +88,12 @@ func (s *progressMsgRepoStub) UpdateProcessingStatus(status *domain.FileProcessi
 	if status != nil {
 		s.capturedMessage = status.ProgressMessage
 	}
+	return s.updateErr
+}
+
+func (s *progressMsgRepoStub) UpdateProcessingProgressMessageByJobType(_ string, progressMessage string) error {
+	s.updateCallCount++
+	s.capturedMessage = progressMessage
 	return s.updateErr
 }
 
@@ -176,18 +184,18 @@ func TestSetProgressMessage_MessageIsTrimmed(t *testing.T) {
 func TestSetProgressMessage_NonRunningStatusClearsMessage(t *testing.T) {
 	completedStatus := &domain.FileProcessingStatus{
 		ID:      uuid.New(),
-		JobType: "DAILY_FULL",
+		JobType: "MASTER_DATA_SYNC",
 		Status:  "COMPLETED",
 	}
 	stub := &progressMsgRepoStub{statusToReturn: completedStatus}
 	svc := newProgressMsgService(stub)
 
-	svc.setProgressMessage("DAILY_FULL", "Downloading file")
+	svc.setProgressMessage("MASTER_DATA_SYNC", "Downloading file")
 
 	if stub.updateCallCount != 1 {
 		t.Fatalf("expected 1 update call, got %d", stub.updateCallCount)
 	}
-	// leiService.UpdateProcessingStatus clears ProgressMessage when Status != "RUNNING".
+	// MASTER_DATA_SYNC does not preserve post-completion progress payloads.
 	if stub.capturedMessage != "" {
 		t.Errorf("non-RUNNING status: want empty message (cleared by UpdateProcessingStatus), got %q", stub.capturedMessage)
 	}
@@ -212,7 +220,28 @@ func TestUpdateProcessingStatus_GLEIFReferenceSyncPreservesMessageWhenCompleted(
 	}
 }
 
-func TestUpdateProcessingStatus_NonGLEIFJobClearsMessageWhenCompleted(t *testing.T) {
+// TestUpdateProcessingStatus_GLEIFReferenceSyncPreservesMessageWhenIdle covers the actual
+// post-run terminal state written by RunGLEIFReferenceSync (IDLE, not COMPLETED).
+func TestUpdateProcessingStatus_GLEIFReferenceSyncPreservesMessageWhenIdle(t *testing.T) {
+	stub := &progressMsgRepoStub{}
+	svc := newProgressMsgService(stub)
+
+	status := &domain.FileProcessingStatus{
+		ID:              uuid.New(),
+		JobType:         "GLEIF_REFERENCE_SYNC",
+		Status:          "IDLE",
+		ProgressMessage: `{"total_records":7121,"files_saved":2}`,
+	}
+
+	if err := svc.UpdateProcessingStatus(status); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if stub.capturedMessage != `{"total_records":7121,"files_saved":2}` {
+		t.Errorf("GLEIF_REFERENCE_SYNC IDLE: want stats JSON preserved, got %q", stub.capturedMessage)
+	}
+}
+
+func TestUpdateProcessingStatus_Level1JobPreservesMessageWhenCompleted(t *testing.T) {
 	stub := &progressMsgRepoStub{}
 	svc := newProgressMsgService(stub)
 
@@ -220,14 +249,172 @@ func TestUpdateProcessingStatus_NonGLEIFJobClearsMessageWhenCompleted(t *testing
 		ID:              uuid.New(),
 		JobType:         "DAILY_FULL",
 		Status:          "COMPLETED",
-		ProgressMessage: "some progress text",
+		ProgressMessage: `{"kind":"level1-progress","evaluated":1000,"upserted":42,"unchanged":958,"failed":0,"total":1000}`,
+	}
+
+	if err := svc.UpdateProcessingStatus(status); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if stub.capturedMessage == "" {
+		t.Fatal("DAILY_FULL COMPLETED: expected progress message to be preserved")
+	}
+}
+
+func TestUpdateProcessingStatus_Level2IdleWithEmptyMessageKeepsExistingProgress(t *testing.T) {
+	stub := &progressMsgRepoStub{
+		statusToReturn: &domain.FileProcessingStatus{
+			ID:              uuid.New(),
+			JobType:         "LEVEL2_RR",
+			Status:          "RUNNING",
+			ProgressMessage: `{"kind":"level2-progress","evaluated":470868,"upserted":1464,"unchanged":469400,"failed":4,"total":470868}`,
+		},
+	}
+	svc := newProgressMsgService(stub)
+
+	status := &domain.FileProcessingStatus{
+		ID:              uuid.New(),
+		JobType:         "LEVEL2_RR",
+		Status:          "IDLE",
+		ProgressMessage: "",
+		ErrorMessage:    "",
+	}
+
+	if err := svc.UpdateProcessingStatus(status); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(stub.capturedMessage, `"kind":"level2-progress"`) {
+		t.Fatalf("expected existing level2 progress message to be preserved, got %q", stub.capturedMessage)
+	}
+}
+
+func TestUpdateProcessingStatus_Level1FailedWithErrorDoesNotReuseExistingProgress(t *testing.T) {
+	stub := &progressMsgRepoStub{
+		statusToReturn: &domain.FileProcessingStatus{
+			ID:              uuid.New(),
+			JobType:         "DAILY_FULL",
+			Status:          "RUNNING",
+			ProgressMessage: `{"kind":"level1-progress","evaluated":1000,"upserted":200,"unchanged":800,"failed":0,"total":1000}`,
+		},
+	}
+	svc := newProgressMsgService(stub)
+
+	status := &domain.FileProcessingStatus{
+		ID:              uuid.New(),
+		JobType:         "DAILY_FULL",
+		Status:          "FAILED",
+		ProgressMessage: "",
+		ErrorMessage:    "network timeout",
 	}
 
 	if err := svc.UpdateProcessingStatus(status); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if stub.capturedMessage != "" {
-		t.Errorf("DAILY_FULL COMPLETED: want empty progress message, got %q", stub.capturedMessage)
+		t.Fatalf("FAILED update with error should not reuse previous progress payload, got %q", stub.capturedMessage)
+	}
+}
+
+func TestBuildLevel1ProgressMessage(t *testing.T) {
+	raw := buildLevel1ProgressMessage(470651, 470651, 116, 4)
+	if raw == "" {
+		t.Fatal("expected non-empty progress message")
+	}
+
+	var payload level1ProgressMessage
+	if err := json.Unmarshal([]byte(raw), &payload); err != nil {
+		t.Fatalf("expected valid JSON payload, got error: %v", err)
+	}
+
+	if payload.Kind != "level1-progress" {
+		t.Fatalf("expected kind level1-progress, got %q", payload.Kind)
+	}
+	if payload.Evaluated != 470651 {
+		t.Fatalf("expected evaluated 470651, got %d", payload.Evaluated)
+	}
+	if payload.Upserted != 116 {
+		t.Fatalf("expected upserted 116, got %d", payload.Upserted)
+	}
+	if payload.Failed != 4 {
+		t.Fatalf("expected failed 4, got %d", payload.Failed)
+	}
+	if payload.Unchanged != 470531 {
+		t.Fatalf("expected unchanged 470531, got %d", payload.Unchanged)
+	}
+}
+
+func TestUpdateProcessingStatus_Level2RRPreservesMessageWhenCompleted(t *testing.T) {
+	stub := &progressMsgRepoStub{}
+	svc := newProgressMsgService(stub)
+
+	status := &domain.FileProcessingStatus{
+		ID:              uuid.New(),
+		JobType:         "LEVEL2_RR",
+		Status:          "COMPLETED",
+		ProgressMessage: `{"kind":"level2-progress","evaluated":1000,"upserted":42,"unchanged":958,"failed":0,"total":1000}`,
+	}
+
+	if err := svc.UpdateProcessingStatus(status); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if stub.capturedMessage == "" {
+		t.Fatal("LEVEL2_RR COMPLETED: expected progress message to be preserved")
+	}
+}
+
+func TestUpdateProcessingStatus_Level2REPEXPreservesMessageWhenCompleted(t *testing.T) {
+	stub := &progressMsgRepoStub{}
+	svc := newProgressMsgService(stub)
+
+	status := &domain.FileProcessingStatus{
+		ID:              uuid.New(),
+		JobType:         "LEVEL2_REPEX",
+		Status:          "COMPLETED",
+		ProgressMessage: `{"kind":"level2-progress","evaluated":2500,"upserted":77,"unchanged":2423,"failed":0,"total":2500}`,
+	}
+
+	if err := svc.UpdateProcessingStatus(status); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if stub.capturedMessage == "" {
+		t.Fatal("LEVEL2_REPEX COMPLETED: expected progress message to be preserved")
+	}
+}
+
+func TestFormatExtractionProgressMessage_IncludesPercentSpeedAndETA(t *testing.T) {
+	msg := formatExtractionProgressMessage(
+		"lei-FULL-20260413-085949.json.zip",
+		48.1507,
+		5947.78125,
+		12352.4264,
+		74.3462,
+		86.1461,
+	)
+
+	if !strings.Contains(msg, "Extracting lei-FULL-20260413-085949.json.zip") {
+		t.Fatalf("expected filename in message, got %q", msg)
+	}
+	if !strings.Contains(msg, "48.2%") {
+		t.Fatalf("expected rounded percent in message, got %q", msg)
+	}
+	if !strings.Contains(msg, "74.3 MB/s") {
+		t.Fatalf("expected rounded speed in message, got %q", msg)
+	}
+	if !strings.Contains(msg, "ETA 1m26s") {
+		t.Fatalf("expected ETA in message, got %q", msg)
+	}
+}
+
+func TestFormatExtractionProgressMessage_HandlesUnknownSpeedAndETA(t *testing.T) {
+	msg := formatExtractionProgressMessage("", 12.34, 12.0, 24.0, 0, 0)
+
+	if !strings.Contains(msg, "Extracting file") {
+		t.Fatalf("expected fallback file label, got %q", msg)
+	}
+	if !strings.Contains(msg, "ETA n/a") {
+		t.Fatalf("expected n/a ETA, got %q", msg)
+	}
+	if !strings.Contains(msg, ", n/a, ETA") {
+		t.Fatalf("expected n/a speed, got %q", msg)
 	}
 }
 

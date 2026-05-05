@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	docs "github.com/techie2000/axiom/docs"
 	"github.com/techie2000/axiom/internal/config"
 	"github.com/techie2000/axiom/internal/handler"
 	"github.com/techie2000/axiom/internal/middleware"
@@ -26,7 +27,6 @@ import (
 
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-	_ "github.com/techie2000/axiom/docs" // Swagger docs
 )
 
 // @title Axiom API
@@ -58,6 +58,10 @@ func main() {
 
 	// Initialize logger
 	logger.Init(cfg.Log.Level)
+
+	// Leave host/schemes empty so Swagger uses the request origin in deployed environments.
+	docs.SwaggerInfo.Host = ""
+	docs.SwaggerInfo.Schemes = nil
 
 	// Connect to database
 	db, err := connectDatabase(cfg)
@@ -257,6 +261,20 @@ func setupRouter(cfg *config.Config, h *handler.Handlers) *gin.Engine {
 	router.Use(middleware.RateLimit())
 
 	// Health check
+	router.GET("/", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"service": "Axiom API",
+			"status":  "running",
+			"routes": gin.H{
+				"health":  "/health",
+				"version": "/version",
+				"swagger": "/swagger/index.html",
+				"apiBase": "/api/v1",
+			},
+		})
+	})
+
+	// Health check
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "healthy"})
 	})
@@ -429,6 +447,31 @@ func setupRouter(cfg *config.Config, h *handler.Handlers) *gin.Engine {
 				lei.POST("/sync/level2/rr", h.LEI.TriggerLevel2RRSync)
 				lei.POST("/sync/level2/repex", h.LEI.TriggerLevel2REPEXSync)
 				lei.POST("/source-file/:id/resume", h.LEI.ResumeProcessing)
+			}
+
+			// Provisional LEI management routes (admin-only)
+			provisionalLEI := protected.Group("/lei/provisional")
+			provisionalLEI.Use(middleware.AdminRequired())
+			{
+				provisionalLEI.GET("", h.ProvisionalLEI.List)
+				provisionalLEI.GET("/:lei", h.ProvisionalLEI.Get)
+				provisionalLEI.POST("", h.ProvisionalLEI.Create)
+				provisionalLEI.PUT("/:lei", h.ProvisionalLEI.Update)
+				provisionalLEI.POST("/:lei/succeed", h.ProvisionalLEI.Succeed)
+			}
+
+			// User–entity identity link routes (admin-only)
+			userEntityLinks := protected.Group("/user-entity-links")
+			userEntityLinks.Use(middleware.AdminRequired())
+			{
+				userEntityLinks.GET("", h.UserEntityLink.ListActive)
+				userEntityLinks.GET("/user/:user_id", h.UserEntityLink.ListByUser)
+				userEntityLinks.GET("/lei/:lei", h.UserEntityLink.ListByLEI)
+				userEntityLinks.GET("/:id", h.UserEntityLink.Get)
+				userEntityLinks.POST("", h.UserEntityLink.Grant)
+				userEntityLinks.PUT("/:id", h.UserEntityLink.Update)
+				userEntityLinks.POST("/:id/revoke", h.UserEntityLink.Revoke)
+				userEntityLinks.POST("/:id/unrevoke", h.UserEntityLink.Unrevoke)
 			}
 
 			// Data acquisition routes

@@ -56,8 +56,10 @@ For each Copilot comment:
 
 **For each Copilot comment you've addressed**, automatically post a reply to that specific comment thread:
 
-```bash
-gh pr comment 261 --reply-to {comment_id} --body "✅ **RESOLVED**: [Brief explanation of fix]
+```powershell
+$bodyPath = Join-Path $env:TEMP "copilot-resolution-comment.md"
+$body = @'
+✅ **RESOLVED**: [Brief explanation of fix]
 
 **What changed:**
 - [Specific code change or reordering]
@@ -65,7 +67,25 @@ gh pr comment 261 --reply-to {comment_id} --body "✅ **RESOLVED**: [Brief expla
 
 **Validation:**
 - [How you validated the fix]
-- [Tests run or checks performed]"
+- [Tests run or checks performed]
+'@
+
+Set-Content -Path $bodyPath -Value $body -Encoding utf8
+
+# Prefer the safe helper to post + verify body fidelity and receive a stable URL.
+$commentUrl = pwsh ./scripts/post-gh-comment-safe.ps1 `
+  -Repo "{owner}/{repo}" `
+  -TargetType pr `
+  -PrNumber 261 `
+  -BodyFile "$bodyPath"
+
+Write-Host "Posted resolution comment: $commentUrl"
+
+# If posting a reply with gh directly, verify with issues/comments endpoint
+# because gh pr comment --reply-to creates an issue comment in the PR timeline.
+# $replyUrl = gh pr comment 261 --reply-to {comment_id} --body-file "$bodyPath"
+# $newCommentId = [regex]::Match(($replyUrl | Select-Object -Last 1), 'issuecomment-(\d+)$').Groups[1].Value
+# gh api repos/{owner}/{repo}/issues/comments/$newCommentId --jq .body
 ```
 
 ### Comment Template by Issue Type
@@ -131,9 +151,39 @@ gh pr comment 261 --reply-to {comment_id} --body "✅ **RESOLVED**: [Brief expla
 
 After pushing all fixes and individual resolution comments, **automatically post a comprehensive summary** on the main PR:
 
-```bash
-gh pr comment {pr_number} --body "[Generated summary from Step 5 below]"
+```powershell
+$summaryPath = Join-Path $env:TEMP "copilot-resolution-summary.md"
+Set-Content -Path $summaryPath -Value $summaryBody -Encoding utf8
+gh pr comment {pr_number} --body-file "$summaryPath"
+
+# Verify stored body immediately
+gh pr view {pr_number} --repo {owner}/{repo} --comments
 ```
+
+## Step 4.5: Mirror Updates To Linked Issues After Each Push
+
+After each push where you post PR status or resolution comments, automatically post concise status updates on each
+linked underlying issue (for example `Refs #123`, or `Fixes/Closes #123` when `#123` is confirmed to be an issue and
+not a pull request). Do not wait
+until the final PR summary comment.
+
+**Post on each linked issue after each relevant push:**
+
+```powershell
+$issuePath = Join-Path $env:TEMP "copilot-issue-status.md"
+Set-Content -Path $issuePath -Value $issueUpdateBody -Encoding utf8
+gh issue comment {issue_number} --repo {owner}/{repo} --body-file "$issuePath"
+
+# Verify stored body immediately
+gh api repos/{owner}/{repo}/issues/comments/{new_comment_id} --jq .body
+```
+
+Include:
+
+- implementation status,
+- validation/test results,
+- user/UAT testing guidance,
+- direct PR link.
 
 ## Step 5: Generate Comprehensive Summary
 
@@ -198,13 +248,16 @@ If any comments are deferred for later:
 ### Use Proper Markdown Formatting
 
 - Follow [github-comment-formatting.instructions.md](github-comment-formatting.instructions.md)
-- Use real multiline Markdown, not escaped `\n`
+- Prefer `pwsh ./scripts/post-gh-comment-safe.ps1` for PR/issue comments to auto-verify and patch in place
+- Use real multiline Markdown with UTF-8 files and `--body-file`
 - Test with `gh api ... --jq .body` to verify rendering before submitting
+- If malformed, patch the same comment in place; do not create duplicate replacement comments
 
 ### Comment in Correct Scope
 
 - **Individual resolutions**: Reply directly to the Copilot comment thread using `--reply-to {comment_id}`
 - **Summary comment**: Post as standalone comment on the PR using `gh pr comment`
+- **Issue updates**: Post concise mirrored updates on linked underlying issues using `gh issue comment`
 - **Never duplicate**: Don't post the same resolution in multiple places
 
 ## Error Handling
@@ -228,6 +281,10 @@ If you cannot locate a Copilot comment ID:
 
 - Post individual resolutions **immediately after pushing each fix**
 - Post comprehensive summary **after all fixes are pushed and CI has started**
+- Do not merge or close PRs until review completion is verified:
+  - all review threads resolved,
+  - no pending reviewer feedback for the latest commit,
+  - and no unaddressed Copilot comments remain.
 
 ### Clarity
 
@@ -256,7 +313,7 @@ If you cannot locate a Copilot comment ID:
 
 **Resolution Comment Posted:**
 
-```text
+```markdown
 ✅ **RESOLVED**: Transaction safety - Audit after UPDATE
 
 **Change**: Reordered audit write to occur after successful UPDATE
@@ -274,7 +331,7 @@ If you cannot locate a Copilot comment ID:
 
 **Resolution Comment Posted:**
 
-```text
+```markdown
 ✅ **RESOLVED**: Performance - Eliminated N+1 queries
 
 **Change**: Batch-load existing records into in-memory map

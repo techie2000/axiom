@@ -1,0 +1,226 @@
+name: Auto Label PRs
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+      - labeled
+      - unlabeled
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  auto-label-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Apply area and type labels from changed file paths
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request
+            const prNumber = pr.number
+            const actor = pr.user.login
+            const isBotActor = actor.endsWith('[bot]') || actor === 'dependabot'
+
+            const areaLabelDefs = [
+              { name: 'area:backend',      color: '2C5F8D', description: 'Backend Go services and API' },
+              { name: 'area:frontend',     color: '17A2B8', description: 'Frontend Next.js / React' },
+              { name: 'area:database',     color: '6f42c1', description: 'Database migrations and schema' },
+              { name: 'area:docs',         color: '0075ca', description: 'Documentation and guides' },
+              { name: 'area:infra',        color: '555555', description: 'Infrastructure and deployment' },
+              { name: 'area:ci',           color: 'e4e669', description: 'CI/CD pipelines and workflows' },
+              { name: 'area:lei',          color: 'D9534F', description: 'LEI data pipeline and GLEIF' },
+              { name: 'area:dependencies', color: '0366d6', description: 'Dependency updates' },
+            ]
+
+            const typeLabelDefs = [
+              { name: 'type:tests',    color: '28A745', description: 'Test coverage addition or fix' },
+              { name: 'type:refactor', color: 'f9d0c4', description: 'Code quality, no behavior change' },
+              { name: 'type:chore',    color: 'fef2c0', description: 'Maintenance, tooling, config' },
+            ]
+
+            const noIssueLabelDef = {
+              name: 'no-issue-needed',
+              color: 'cccccc',
+              description: 'PR does not require a backing issue',
+            }
+
+            const allDefs = [...areaLabelDefs, ...typeLabelDefs, noIssueLabelDef]
+
+            for (const def of allDefs) {
+              try {
+                await github.rest.issues.getLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: def.name,
+                })
+              } catch (e) {
+                if (e.status === 404) {
+                  await github.rest.issues.createLabel({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    name: def.name,
+                    color: def.color,
+                    description: def.description,
+                  })
+                } else {
+                  throw e
+                }
+              }
+            }
+
+            // Gather changed file paths (paginated)
+            const pageSize = 100
+            let page = 1
+            let allFiles = []
+            while (true) {
+              const { data } = await github.rest.pulls.listFiles({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber,
+                per_page: pageSize,
+                page,
+              })
+              allFiles = allFiles.concat(data.map((f) => f.filename))
+              if (data.length < pageSize) {
+                break
+              }
+              page++
+            }
+
+            const basename = (p) => p.split('/').pop() || p
+
+            // Rules are ordered from most specific to least specific.
+            // All matching area labels are applied (a PR can touch both backend and docs).
+            const areaPathRules = [
+              {
+                label: 'area:dependencies',
+                test: (p) => ['go.sum', 'package-lock.json'].includes(basename(p)) || p.endsWith('.lock'),
+              },
+              {
+                label: 'area:lei',
+                test: (p) => /lei|gleif/i.test(p),
+              },
+              {
+                label: 'area:database',
+                test: (p) => p.startsWith('backend/migrations/') || p.endsWith('.sql'),
+              },
+              {
+                label: 'area:docs',
+                test: (p) => p.startsWith('.github/instructions/'),
+              },
+              {
+                label: 'area:ci',
+                test: (p) => (p.startsWith('.github/') && !p.startsWith('.github/instructions/')) || basename(p) === 'Makefile',
+              },
+              {
+                label: 'area:infra',
+                test: (p) =>
+                  p.startsWith('docker/') || /^(docker-compose|dockerfile)/i.test(basename(p)),
+              },
+              {
+                label: 'area:docs',
+                test: (p) =>
+                  p.startsWith('docs/') ||
+                  p.startsWith('docs-user/') ||
+                  (p.endsWith('.md') && !p.startsWith('frontend/') && !p.startsWith('backend/')),
+              },
+              {
+                label: 'area:frontend',
+                test: (p) => p.startsWith('frontend/'),
+              },
+              {
+                label: 'area:backend',
+                test: (p) => p.startsWith('backend/'),
+              },
+            ]
+
+            const matchedAreas = new Set()
+            for (const file of allFiles) {
+              for (const rule of areaPathRules) {
+                if (rule.test(file)) {
+                  matchedAreas.add(rule.label)
+                }
+              }
+            }
+
+            // area:database is a sub-area of area:backend; keep both when both match so
+            // the database label is explicit, but drop area:backend when only migrations changed.
+            if (matchedAreas.has('area:database') && matchedAreas.has('area:backend')) {
+              const nonMigrationBackend = allFiles.some(
+                (f) => f.startsWith('backend/') && !f.startsWith('backend/migrations/') && !f.endsWith('.sql')
+              )
+              if (!nonMigrationBackend) {
+                matchedAreas.delete('area:backend')
+              }
+            }
+
+            // area:dependencies supersedes area-specific labels when ONLY dependency files changed.
+            // Dependency bumps across multiple areas (frontend/ backend/) should be labeled area:dependencies,
+            // not area:frontend + area:backend, since the semantic content is "dependency updates," not "backend work" or "frontend work."
+            if (matchedAreas.has('area:dependencies')) {
+              const isDependencyOnly = allFiles.every((f) =>
+                /^(?:(?:.*\/)?go\.(mod|sum)|(?:.*\/)?package(-lock)?\.json|.*\.lock)$/.test(f)
+              )
+              if (isDependencyOnly) {
+                matchedAreas.delete('area:backend')
+                matchedAreas.delete('area:frontend')
+                matchedAreas.delete('area:database')
+                matchedAreas.delete('area:infra')
+                matchedAreas.delete('area:ci')
+              }
+            }
+
+            // Type label inference
+            const isTestFile = (p) => /(_test\.go|\.test\.[jt]sx?|\.spec\.[jt]sx?)$/.test(p)
+            const allTest = allFiles.length > 0 && allFiles.every(isTestFile)
+            const onlyMeta =
+              matchedAreas.size > 0 &&
+              [...matchedAreas].every((a) => a === 'area:ci' || a === 'area:infra' || a === 'area:docs') &&
+              !allTest
+
+            const typeLabels = []
+            if (allTest) {
+              typeLabels.push('type:tests')
+            }
+            if (onlyMeta) {
+              typeLabels.push('type:chore')
+            }
+
+            // no-issue-needed for bots or checked override checkbox in PR body
+            const noIssueChecked = /- \[x\] no linked issue/i.test(pr.body || '')
+            const extraLabels = []
+            if (isBotActor || noIssueChecked) {
+              extraLabels.push('no-issue-needed')
+            }
+
+            const existingLabelNames = (pr.labels || []).map((l) =>
+              typeof l === 'string' ? l : l.name
+            )
+            const existingAreaLabels = existingLabelNames.filter((n) => n.startsWith('area:'))
+
+            // Only infer area labels when none have been set manually
+            const areaLabelsToAdd =
+              existingAreaLabels.length > 0 ? [] : [...matchedAreas]
+
+            const toAdd = [...new Set([...areaLabelsToAdd, ...typeLabels, ...extraLabels])].filter(
+              (l) => !existingLabelNames.includes(l)
+            )
+
+            if (toAdd.length > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                labels: toAdd,
+              })
+              core.info(`Applied to PR #${prNumber}: ${toAdd.join(', ')}`)
+            } else {
+              core.info('No new labels to apply')
+            }

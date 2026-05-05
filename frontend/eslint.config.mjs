@@ -5,6 +5,11 @@ import { fileURLToPath } from "node:url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// NOTE: eslint-config-next is intentionally pinned to 15.x (see .github/dependabot.yml).
+// eslint-config-next 16.x exports flat-config objects which cause a circular JSON
+// reference in @eslint/eslintrc's ConfigValidator when used via FlatCompat.
+// Before upgrading, verify that the new version ships a legacy-compatible export,
+// or migrate this config away from FlatCompat (compat.extends -> direct flat config).
 const compat = new FlatCompat({
   baseDirectory: __dirname,
 });

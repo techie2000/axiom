@@ -5,15 +5,20 @@
 ARG DOCKER_LIBRARY=public.ecr.aws/docker/library
 FROM ${DOCKER_LIBRARY}/golang:1.25.1-alpine3.21 AS builder
 
-# Security: Upgrade libssl3 to address CVE vulnerabilities (Alert #117)
-# Version 3.3.6-r0 addresses critical SSL/TLS vulnerabilities
+# Security: keep OpenSSL patched using latest package available in Alpine repo.
 # security-scan-managed
-RUN apk add --no-cache --upgrade libssl3=3.3.6-r0
+# hadolint ignore=DL3018
+RUN apk add --no-cache --upgrade libssl3
 
 WORKDIR /app
 
 # Install dependencies and ca-certificates for TLS
-RUN apk add --no-cache git=2.47.3-r0 make=4.4.1-r2 ca-certificates=20250911-r0 && update-ca-certificates
+# hadolint ignore=DL3018
+RUN apk add --no-cache \
+    ca-certificates \
+    git=2.47.3-r0 \
+    make=4.4.1-r2 \
+    && update-ca-certificates
 
 # Copy go mod files
 COPY go.mod ./
@@ -38,10 +43,10 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main cmd/api/main
 # Runtime stage
 FROM ${DOCKER_LIBRARY}/alpine:3.21
 
-# Security: Upgrade libssl3 to address CVE vulnerabilities (Alert #117)
-# Version 3.3.6-r0 addresses critical SSL/TLS vulnerabilities
+# Security: keep OpenSSL patched using latest package available in Alpine repo.
 # security-scan-managed
-RUN apk add --no-cache --upgrade libssl3=3.3.6-r0 ca-certificates=20250911-r0
+# hadolint ignore=DL3018
+RUN apk add --no-cache --upgrade libssl3 ca-certificates
 
 # Copy migrate from builder (compiled with current Go toolchain, no pre-built binary CVEs)
 COPY --from=builder /go/bin/migrate /usr/local/bin/migrate

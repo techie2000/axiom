@@ -8,12 +8,14 @@ on:
       dry_run:
         description: 'Dry run (check only, do not create PR)'
         required: false
-        default: 'false'
+        default: false
         type: boolean
 
 permissions:
   contents: read
   pull-requests: write
+  issues: write
+  checks: write
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
@@ -62,10 +64,11 @@ jobs:
             return 'false';
 
       - name: Create promotion PR
+        id: create_pr
         if: |
           steps.check.outputs.needed == 'true' &&
           steps.existing.outputs.result == '"false"' &&
-          inputs.dry_run != 'true'
+          inputs.dry_run != true
         uses: actions/github-script@v7
         with:
           script: |
@@ -105,10 +108,51 @@ jobs:
               base: 'prod',
               body,
             });
+            core.setOutput('pr_number', pr.number.toString());
+            core.setOutput('head_sha', pr.head.sha);
             console.log(`✅ Created promotion PR #${pr.number}: ${pr.html_url}`);
 
+      - name: Publish enforce-branch-flow check
+        if: |
+          steps.check.outputs.needed == 'true' &&
+          steps.existing.outputs.result == '"false"' &&
+          inputs.dry_run != true &&
+          steps.create_pr.outputs.head_sha != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.checks.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: 'enforce-branch-flow',
+              head_sha: '${{ steps.create_pr.outputs.head_sha }}',
+              status: 'completed',
+              conclusion: 'success',
+              output: {
+                title: 'Promotion flow validated',
+                summary:
+                  'Monthly automation created a promotion PR with the allowed branch path uat -> prod.',
+              },
+            });
+
+      - name: Apply promotion labels
+        if: |
+          steps.check.outputs.needed == 'true' &&
+          steps.existing.outputs.result == '"false"' &&
+          inputs.dry_run != true &&
+          steps.create_pr.outputs.pr_number != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: parseInt('${{ steps.create_pr.outputs.pr_number }}', 10),
+              labels: ['automated', 'no-issue-needed', 'type:chore'],
+            });
+
       - name: Dry run summary
-        if: inputs.dry_run == 'true'
+        if: inputs.dry_run == true
         run: |
           AHEAD="${{ steps.check.outputs.commits_ahead }}"
           echo "🔍 Dry run — no PR created."

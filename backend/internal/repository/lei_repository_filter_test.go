@@ -194,6 +194,43 @@ func TestValidateColumns_AlwaysIncludesIDForValidUserSelection(t *testing.T) {
 	}
 }
 
+func TestValidateColumns_AllowsRegistrationAndValidationFields(t *testing.T) {
+	t.Helper()
+
+	columns := validateColumns("lei,registration_status,legal_jurisdiction,validation_sources")
+
+	if !containsColumn(columns, "registration_status") {
+		t.Fatalf("expected registration_status to be allowed")
+	}
+	if !containsColumn(columns, "legal_jurisdiction") {
+		t.Fatalf("expected legal_jurisdiction to be allowed")
+	}
+	if !containsColumn(columns, "validation_sources") {
+		t.Fatalf("expected validation_sources to be allowed")
+	}
+}
+
+func TestValidateColumns_AlwaysIncludesProvisionalSemantics(t *testing.T) {
+	t.Helper()
+
+	columns := validateColumns("lei,legal_name")
+	if !containsColumn(columns, "is_provisional") {
+		t.Fatalf("expected validated columns to always include is_provisional")
+	}
+	if !containsColumn(columns, "provisioning_source") {
+		t.Fatalf("expected validated columns to always include provisioning_source")
+	}
+}
+
+func TestValidateColumns_AllowsProvisioningSourceSelection(t *testing.T) {
+	t.Helper()
+
+	columns := validateColumns("lei,provisioning_source")
+	if !containsColumn(columns, "provisioning_source") {
+		t.Fatalf("expected provisioning_source to be allowed")
+	}
+}
+
 func TestEnsureLinkedLEICodeColumns_AddsRequiredColumnsWithoutDuplicates(t *testing.T) {
 	t.Helper()
 

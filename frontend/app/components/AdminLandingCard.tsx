@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import Badge from './Badge'
 import { readStoredUser } from '../lib/stored-user'
 
@@ -15,6 +16,7 @@ interface AdminLandingCardProps {
 export default function AdminLandingCard({ href, title, description, icon }: AdminLandingCardProps) {
   const [isAdmin, setIsAdmin] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const { t } = useTranslation('common')
 
   useEffect(() => {
     setMounted(true)
@@ -38,7 +40,7 @@ export default function AdminLandingCard({ href, title, description, icon }: Adm
             {description}
           </p>
           <div className="mt-auto">
-            <Badge variant="orange">Admin Only</Badge>
+            <Badge variant="orange">{t('adminLanding.badge')}</Badge>
           </div>
         </div>
         <span className="text-3xl ml-4 shrink-0">{icon}</span>

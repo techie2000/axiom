@@ -3,6 +3,7 @@ import Script from 'next/script'
 import './globals.css'
 import Footer from './components/Footer'
 import I18nProvider from './components/I18nProvider'
+import LeftNavPanel from './components/LeftNavPanel'
 import PreferenceSaveErrorToast from './components/PreferenceSaveErrorToast'
 
 export const metadata: Metadata = {
@@ -42,6 +43,7 @@ export default function RootLayout({
 })();`}
         </Script>
         <I18nProvider>
+          <LeftNavPanel />
           {children}
           <PreferenceSaveErrorToast />
           <Footer />

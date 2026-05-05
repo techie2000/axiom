@@ -15,6 +15,21 @@ type schedulerGLEIFGateLEIStub struct {
 	downloadFullCalled  bool
 	downloadDeltaCalled bool
 	statusUpdates       []*domain.FileProcessingStatus
+	statusesByJob       map[string]*domain.FileProcessingStatus
+}
+
+func (s *schedulerGLEIFGateLEIStub) GetProcessingStatus(jobType string) (*domain.FileProcessingStatus, error) {
+	if s.statusesByJob == nil {
+		s.statusesByJob = map[string]*domain.FileProcessingStatus{}
+	}
+	if st, ok := s.statusesByJob[jobType]; ok {
+		cp := *st
+		return &cp, nil
+	}
+	st := &domain.FileProcessingStatus{JobType: jobType, Status: "IDLE"}
+	s.statusesByJob[jobType] = st
+	cp := *st
+	return &cp, nil
 }
 
 func (s *schedulerGLEIFGateLEIStub) DownloadFullFile() (*domain.SourceFile, error) {
@@ -31,8 +46,12 @@ func (s *schedulerGLEIFGateLEIStub) UpdateProcessingStatus(status *domain.FilePr
 	if status == nil {
 		return nil
 	}
+	if s.statusesByJob == nil {
+		s.statusesByJob = map[string]*domain.FileProcessingStatus{}
+	}
 	cp := *status
 	s.statusUpdates = append(s.statusUpdates, &cp)
+	s.statusesByJob[status.JobType] = &cp
 	return nil
 }
 
@@ -41,11 +60,16 @@ type schedulerGLEIFGateServiceStub struct {
 
 	syncErr   error
 	syncCalls int
+	stats     GLEIFSyncStats
 }
 
 func (s *schedulerGLEIFGateServiceStub) SyncAll() error {
 	s.syncCalls++
 	return s.syncErr
+}
+
+func (s *schedulerGLEIFGateServiceStub) LastSyncStats() GLEIFSyncStats {
+	return s.stats
 }
 
 func TestDoFullSyncWork_GLEIFPreSyncFailureStopsIngest(t *testing.T) {
@@ -112,5 +136,36 @@ func TestDoDeltaSyncWork_GLEIFPreSyncFailureStopsIngest(t *testing.T) {
 	}
 	if len(leiStub.statusUpdates) == 0 {
 		t.Fatal("expected status update on pre-sync failure")
+	}
+}
+
+func TestRunGLEIFReferenceSync_SuccessSetsIdleWithNextRun(t *testing.T) {
+	leiStub := &schedulerGLEIFGateLEIStub{}
+	gleifStub := &schedulerGLEIFGateServiceStub{}
+	svc := &schedulerService{
+		leiService:            leiStub,
+		gleifReferenceService: gleifStub,
+		fullSyncHour:          12,
+		fullSyncMinute:        0,
+	}
+
+	if err := svc.RunGLEIFReferenceSync(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if gleifStub.syncCalls != 1 {
+		t.Fatalf("expected SyncAll to be called once, got %d", gleifStub.syncCalls)
+	}
+	status, err := leiStub.GetProcessingStatus("GLEIF_REFERENCE_SYNC")
+	if err != nil {
+		t.Fatalf("unexpected status lookup error: %v", err)
+	}
+	if status.Status != "IDLE" {
+		t.Fatalf("expected GLEIF_REFERENCE_SYNC final status IDLE, got %q", status.Status)
+	}
+	if status.LastSuccessAt == nil {
+		t.Fatal("expected LastSuccessAt to be set after successful sync")
+	}
+	if status.NextRunAt == nil {
+		t.Fatal("expected NextRunAt to be set after successful sync")
 	}
 }

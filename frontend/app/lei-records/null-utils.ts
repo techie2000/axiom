@@ -1,3 +1,12 @@
+export const REGISTRATION_STATUS_BADGE_VARIANT: Record<RegistrationStatusVariant, 'green' | 'red' | 'yellow' | 'gray'> = {
+  success: 'green',
+  destructive: 'red',
+  warning: 'yellow',
+  muted: 'gray',
+}
+
+import { formatDateOnlyDisplay, isPlaceholderDateValue } from '../lib/date-display'
+
 export function isNullLikeValue(value: unknown): value is string {
   return typeof value === 'string' && value.trim().toLowerCase() === 'null'
 }
@@ -16,7 +25,7 @@ export function normalizeRecordNullLikeValues<T extends object>(record: T): T {
 }
 
 export function formatLEIDisplayValue(value: unknown): string {
-  if (!value || isNullLikeValue(value) || value === '0001-01-01T00:00:00Z') {
+  if (!value || isNullLikeValue(value) || isPlaceholderDateValue(value)) {
     return '-'
   }
 
@@ -37,11 +46,56 @@ export function formatEnumDisplayValue(value: unknown): string {
 }
 
 export function getStatusBadgePresentation(value: unknown): { label: string; isActive: boolean } {
-  const label = formatLEIDisplayValue(value)
+  const rawValue = formatLEIDisplayValue(value)
+  const normalized = rawValue === '-' ? '' : rawValue.toUpperCase()
   return {
-    label,
-    isActive: label === 'ACTIVE',
+    label: rawValue === '-' ? rawValue : formatEnumDisplayValue(normalized),
+    isActive: normalized === 'ACTIVE',
   }
+}
+
+export type RegistrationStatusVariant = 'success' | 'destructive' | 'warning' | 'muted'
+
+const REGISTRATION_STATUS_TOOLTIPS: Record<string, string> = {
+  ISSUED: 'Registration is active and valid',
+  LAPSED: 'Renewal is overdue — this registration is no longer active',
+  RETIRED: 'Registration has been permanently retired',
+  ANNULLED: 'Registration has been annulled and is considered invalid',
+  DUPLICATE: 'A duplicate superseded by another active registration',
+  PENDING_TRANSFER: 'Registration is being transferred to another operator',
+  PENDING_ARCHIVAL: 'Registration is pending archival',
+}
+
+export function getRegistrationStatusBadgePresentation(value: unknown): {
+  label: string
+  tooltip: string
+  variant: RegistrationStatusVariant
+} {
+  const rawValue = String(value || '').toUpperCase().trim()
+  const tooltip = REGISTRATION_STATUS_TOOLTIPS[rawValue] ?? 'Unknown registration status'
+
+  // Active status
+  if (rawValue === 'ISSUED') {
+    return { label: formatEnumDisplayValue(rawValue), tooltip, variant: 'success' }
+  }
+
+  // Invalid/lapsed statuses
+  if (
+    rawValue === 'LAPSED' ||
+    rawValue === 'RETIRED' ||
+    rawValue === 'ANNULLED' ||
+    rawValue === 'DUPLICATE'
+  ) {
+    return { label: formatEnumDisplayValue(rawValue), tooltip, variant: 'destructive' }
+  }
+
+  // In-transition statuses
+  if (rawValue === 'PENDING_TRANSFER' || rawValue === 'PENDING_ARCHIVAL') {
+    return { label: formatEnumDisplayValue(rawValue), tooltip, variant: 'warning' }
+  }
+
+  // Unknown/future values - defensive fallback
+  return { label: formatEnumDisplayValue(rawValue), tooltip, variant: 'muted' }
 }
 
 export function formatLEICellValue(value: unknown, key: string): string {
@@ -50,17 +104,12 @@ export function formatLEICellValue(value: unknown, key: string): string {
     return '-'
   }
 
-  if (key === 'entity_category' || key === 'entity_sub_category' || key === 'registration_status') {
+  if (key === 'entity_category' || key === 'entity_sub_category' || key === 'registration_status' || key === 'entity_status') {
     return formatEnumDisplayValue(baseDisplayValue)
   }
 
   if (key.includes('date') && typeof value === 'string') {
-    try {
-      const date = new Date(value)
-      return date.toISOString().split('T')[0]
-    } catch {
-      return baseDisplayValue
-    }
+    return formatDateOnlyDisplay(value, baseDisplayValue)
   }
 
   return baseDisplayValue

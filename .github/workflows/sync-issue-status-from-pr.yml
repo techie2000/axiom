@@ -1,0 +1,292 @@
+name: Sync Issue Status From PR
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - synchronize
+      - edited
+      - reopened
+      - ready_for_review
+      - closed
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+jobs:
+  sync-issue-status:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sync linked issue lifecycle labels
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request
+            if (pr?.head?.repo?.fork) {
+              core.info('Fork PR source detected; skipping issue status label sync.')
+              return
+            }
+
+            const statusLabels = [
+              {
+                name: 'status: triage',
+                color: 'ededed',
+                description: 'Needs initial review'
+              },
+              {
+                name: 'status: in progress',
+                color: 'fbca04',
+                description: 'Actively being worked on'
+              },
+              {
+                name: 'status: done',
+                color: '0e8a16',
+                description: 'Work completed or merged'
+              }
+            ]
+
+            for (const labelDef of statusLabels) {
+              try {
+                await github.rest.issues.getLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: labelDef.name
+                })
+              } catch (error) {
+                if (error.status === 404) {
+                  await github.rest.issues.createLabel({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    name: labelDef.name,
+                    color: labelDef.color,
+                    description: labelDef.description
+                  })
+                } else {
+                  throw error
+                }
+              }
+            }
+
+            const prNumber = pr.number
+            const { data: prDetails } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            })
+
+            const prTitle = prDetails?.title || pr?.title || ''
+            const prBody = prDetails?.body || pr?.body || ''
+
+            const query = `
+              query($owner: String!, $repo: String!, $number: Int!) {
+                repository(owner: $owner, name: $repo) {
+                  pullRequest(number: $number) {
+                    merged
+                    state
+                    closingIssuesReferences(first: 50) {
+                      nodes {
+                        number
+                        state
+                        labels(first: 20) {
+                          nodes {
+                            name
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            `
+
+            const result = await github.graphql(query, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              number: prNumber
+            })
+
+            const pullRequest = result.repository.pullRequest
+            const closingIssues = pullRequest.closingIssuesReferences.nodes || []
+
+            // Collect issue references from PR title/body so `Refs #N` and plain `#N`
+            // references are tracked, not only auto-closing keywords.
+            const prText = `${prTitle}\n${prBody}`
+            const explicitRefRegex = /\b(?:closes?|fixes?|resolves?|refs?|relates?\s+to)(?:\s+|:\s*)#(\d+)\b/gi
+            const anyIssueRefRegex = /(^|[^\w])#(\d+)\b/gm
+
+            const referencedIssueNumbers = new Set(
+              closingIssues.map((issue) => issue.number).filter((n) => Number.isInteger(n))
+            )
+
+            const explicitRefMatches = [...prText.matchAll(explicitRefRegex)]
+            for (const match of explicitRefMatches) {
+              const number = Number(match[1])
+              if (Number.isInteger(number)) {
+                referencedIssueNumbers.add(number)
+              }
+            }
+
+            const genericRefMatches = [...prText.matchAll(anyIssueRefRegex)]
+            for (const match of genericRefMatches) {
+              const number = Number(match[2])
+              if (Number.isInteger(number)) {
+                referencedIssueNumbers.add(number)
+              }
+            }
+
+            // Ignore self-references to the PR number.
+            referencedIssueNumbers.delete(prNumber)
+
+            // Resolve references to issues only (not pull requests), and recursively include
+            // child/sub-issues discovered from task lists or parent/children fields.
+            const linkedIssueByNumber = new Map()
+
+            function extractChildIssueNumbers(bodyText) {
+              const numbers = new Set()
+              if (!bodyText) {
+                return numbers
+              }
+
+              const taskListRefs = [...bodyText.matchAll(/-\s*\[[ xX]\]\s*(?:[^\n#]*?)#(\d+)\b/gm)]
+              for (const match of taskListRefs) {
+                const number = Number(match[1])
+                if (Number.isInteger(number)) {
+                  numbers.add(number)
+                }
+              }
+
+              const parentChildRefs = [...bodyText.matchAll(/\b(?:child(?:ren)?|sub-issues?)\s*:\s*([^\n]+)/gi)]
+              for (const match of parentChildRefs) {
+                const line = match[1] || ''
+                const inlineRefs = [...line.matchAll(/#(\d+)\b/g)]
+                for (const ref of inlineRefs) {
+                  const number = Number(ref[1])
+                  if (Number.isInteger(number)) {
+                    numbers.add(number)
+                  }
+                }
+              }
+
+              return numbers
+            }
+
+            for (const issueNumber of referencedIssueNumbers) {
+              try {
+                const { data } = await github.rest.issues.get({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNumber
+                })
+
+                if (data.pull_request) {
+                  continue
+                }
+
+                linkedIssueByNumber.set(data.number, {
+                  number: data.number,
+                  state: data.state,
+                  labels: {
+                    nodes: (data.labels || []).map((label) => ({
+                      name: typeof label === 'string' ? label : label.name
+                    }))
+                  }
+                })
+
+                const childIssueNumbers = extractChildIssueNumbers(data.body || '')
+                for (const childNumber of childIssueNumbers) {
+                  referencedIssueNumbers.add(childNumber)
+                }
+              } catch (error) {
+                if (error.status === 404) {
+                  core.info(`Referenced target #${issueNumber} not found; skipping.`)
+                  continue
+                }
+
+                throw error
+              }
+            }
+
+            for (const issueNumber of referencedIssueNumbers) {
+              if (linkedIssueByNumber.has(issueNumber) || issueNumber === prNumber) {
+                continue
+              }
+
+              try {
+                const { data } = await github.rest.issues.get({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNumber
+                })
+
+                if (data.pull_request) {
+                  continue
+                }
+
+                linkedIssueByNumber.set(data.number, {
+                  number: data.number,
+                  state: data.state,
+                  labels: {
+                    nodes: (data.labels || []).map((label) => ({
+                      name: typeof label === 'string' ? label : label.name
+                    }))
+                  }
+                })
+              } catch (error) {
+                if (error.status !== 404) {
+                  throw error
+                }
+              }
+            }
+
+            const linkedIssues = [...linkedIssueByNumber.values()]
+
+            if (linkedIssues.length === 0) {
+              core.info('No linked issues found for this pull request.')
+              return
+            }
+
+            const desiredStatus = pullRequest.merged
+              ? 'status: done'
+              : pullRequest.state === 'OPEN'
+                ? 'status: in progress'
+                : 'status: triage'
+
+            const allStatusNames = statusLabels.map((label) => label.name)
+
+            for (const issue of linkedIssues) {
+              const currentStatusNames = (issue.labels.nodes || [])
+                .map((label) => label.name)
+                .filter((name) => allStatusNames.includes(name))
+
+              for (const labelName of currentStatusNames) {
+                if (labelName === desiredStatus) {
+                  continue
+                }
+
+                try {
+                  await github.rest.issues.removeLabel({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    name: labelName
+                  })
+                } catch (error) {
+                  if (error.status !== 404) {
+                    throw error
+                  }
+                }
+              }
+
+              if (!currentStatusNames.includes(desiredStatus)) {
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  labels: [desiredStatus]
+                })
+              }
+
+              core.info(`Issue #${issue.number} set to ${desiredStatus}`)
+            }

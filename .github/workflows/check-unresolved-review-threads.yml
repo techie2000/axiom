@@ -1,0 +1,98 @@
+name: Check Unresolved Review Threads
+
+on:
+  push:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - edited
+      - reopened
+      - ready_for_review
+  pull_request_review:
+    types:
+      - submitted
+      - dismissed
+  pull_request_review_thread:
+    types:
+      - resolved
+      - unresolved
+
+permissions:
+  pull-requests: read
+
+jobs:
+  check-unresolved-review-threads:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail when unresolved review threads remain
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.payload.pull_request?.number
+            if (!prNumber) {
+              core.info('No pull_request context found (e.g., push event); skipping unresolved-thread check.')
+              return
+            }
+
+            const query = `
+              query($owner: String!, $repo: String!, $number: Int!, $cursor: String) {
+                repository(owner: $owner, name: $repo) {
+                  pullRequest(number: $number) {
+                    reviewThreads(first: 100, after: $cursor) {
+                      pageInfo {
+                        hasNextPage
+                        endCursor
+                      }
+                      nodes {
+                        isResolved
+                        isOutdated
+                        path
+                      }
+                    }
+                  }
+                }
+              }
+            `
+
+            const unresolved = []
+            let cursor = null
+            let hasNextPage = true
+
+            while (hasNextPage) {
+              const result = await github.graphql(query, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                number: prNumber,
+                cursor,
+              })
+
+              const threads = result.repository.pullRequest.reviewThreads
+              for (const thread of threads.nodes) {
+                // Outdated threads are kept out of the hard-fail set; active unresolved threads block merges.
+                if (!thread.isResolved && !thread.isOutdated) {
+                  unresolved.push(thread.path || '(unknown file)')
+                }
+              }
+
+              hasNextPage = threads.pageInfo.hasNextPage
+              cursor = threads.pageInfo.endCursor
+            }
+
+            if (unresolved.length === 0) {
+              core.info('No active unresolved review threads found.')
+              return
+            }
+
+            const counts = unresolved.reduce((acc, path) => {
+              acc[path] = (acc[path] || 0) + 1
+              return acc
+            }, {})
+
+            const summary = Object.entries(counts)
+              .map(([path, count]) => `${path}: ${count}`)
+              .join(', ')
+
+            core.setFailed(
+              `PR has unresolved review conversations. Resolve all active threads before merge. (${summary})`
+            )

@@ -2,7 +2,27 @@
   "chat.tools.terminal.autoApprove": {
     ".Name": true,
     ".vscode/settings.json": true,
+    "/^(cd \\.\\.; )?pwsh \\./scripts/run-main-compose\\.ps1 .*$/": {
+      "approve": true,
+      "matchCommandLine": true
+    },
+    "/^docker rm -f axiom-main-frontend; docker volume rm axiom-main_frontend_node_modules_main axiom-main_frontend_next_main; pwsh -NoProfile -ExecutionPolicy Bypass -File \\./scripts/run-main-compose\\.ps1 up -d frontend$/": {
+      "approve": true,
+      "matchCommandLine": true
+    },
     "/^node --check frontend/scripts/extract-i18n-keys\\.mjs$/": {
+      "approve": true,
+      "matchCommandLine": true
+    },
+    "/^pwsh -NoProfile -ExecutionPolicy Bypass -File \\./scripts/run-main-compose\\.ps1 stop -t 45 frontend backend$/": {
+      "approve": true,
+      "matchCommandLine": true
+    },
+    "/^pwsh -NoProfile -ExecutionPolicy Bypass -File \\./scripts/run-main-compose\\.ps1 stop frontend; docker volume rm axiom-main_frontend_node_modules_main axiom-main_frontend_next_main; pwsh -NoProfile -ExecutionPolicy Bypass -File \\./scripts/run-main-compose\\.ps1 up -d --build frontend$/": {
+      "approve": true,
+      "matchCommandLine": true
+    },
+    "/^pwsh -NoProfile -ExecutionPolicy Bypass -File \\./scripts/run-main-compose\\.ps1 up -d --build postgres rabbitmq backend frontend$/": {
       "approve": true,
       "matchCommandLine": true
     },
@@ -45,6 +65,8 @@
     "Get-Process": true,
     "Get-PSDrive": true,
     "gh": true,
+    "git -C ..": true,
+    "git -C $repo": true,
     "git add": true,
     "git check-ignore": true,
     "git checkout": true,
@@ -70,10 +92,15 @@
     "Move-Item": true,
     "npm --prefix frontend": true,
     "npm install": true,
+    "npm run -s i18n:verify": true,
     "npm run build": true,
+    "npm run docs:build": true,
+    "npm run i18n:verify": true,
     "npm run lint": true,
     "npm test": true,
+    "npx --no-install markdownlint-cli2": true,
     "npx --yes markdownlint-cli2": true,
+    "npx markdownlint-cli2": true,
     "Out-Null": true,
     "Pop-Location": true,
     "println": true,
@@ -100,6 +127,7 @@
     "asac",
     "asyncio",
     "AURSDO",
+    "AXIO",
     "Backpressure",
     "BARCGB",
     "Beego",
@@ -119,6 +147,7 @@
     "cusip",
     "Datenservice",
     "dbname",
+    "dedupe",
     "deltasyncinterval",
     "deque",
     "distroless",
@@ -172,6 +201,7 @@
     "isatty",
     "ISIN",
     "isready",
+    "issuecomment",
     "ITSM",
     "jackc",
     "jinzhu",
@@ -185,6 +215,7 @@
     "keepfullfiles",
     "KJTIIGC",
     "klauspost",
+    "languagedetector",
     "LASTEXITCODE",
     "LEIJSON",
     "leodido",
@@ -208,7 +239,9 @@
     "natefinch",
     "navbars",
     "noninteractive",
+    "noopener",
     "noqa",
+    "noreferrer",
     "NWBK",
     "ofac",
     "opencorporates",
@@ -255,6 +288,7 @@
     "sslmode",
     "stdlib",
     "subosito",
+    "subtag",
     "Sunbiz",
     "Supabase",
     "swaggo",
@@ -275,6 +309,8 @@
     "ugorji",
     "Unknownland",
     "unmarshal",
+    "unrevoke",
+    "Upserted",
     "Upserting",
     "upserts",
     "urlesc",
@@ -288,6 +324,7 @@
     "WHATIF",
     "Worktree",
     "worktrees",
+    "WTWWD",
     "XFRA",
     "xmldoc",
     "XNAS",
@@ -295,8 +332,29 @@
     "zerolog",
     "لوحة"
   ],
+  "files.exclude": {
+    "**/backups/**": true,
+    "**/worktrees/**": true
+  },
+  "files.watcherExclude": {
+    "**/backups/**": true,
+    "**/worktrees/**": true
+  },
   "go.toolsEnvVars": {
     "GOPROXY": "direct"
+  },
+  "gopls": {
+    "directoryFilters": [
+      "-worktrees",
+      "-backend/worktrees",
+      "-backups",
+      "-**/worktrees",
+      "-**/backups"
+    ]
+  },
+  "search.exclude": {
+    "**/backups/**": true,
+    "**/worktrees/**": true
   },
   "sqlfluff.dialect": "postgres",
   "sqlfluff.executablePath": "sqlfluff",

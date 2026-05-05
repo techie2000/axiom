@@ -19,5 +19,9 @@
 
 ## Linked Work
 
-- Issue(s):
+- Issue(s): <!-- Refs #N (preferred) | Closes/Fixes #N (ISSUES ONLY, never PRs) -->
 - ADR(s):
+
+<!-- No backing issue? Check the box and briefly explain. Bot-authored PRs are exempt automatically. -->
+
+- [ ] No linked issue — reason: <!-- hotfix / chore / Dependabot / etc. -->
