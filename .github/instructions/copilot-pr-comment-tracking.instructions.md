@@ -5,9 +5,17 @@ applyTo: '**'
 
 # Copilot PR Comment Thread ID Tracking
 
+## ⚡ Note: Use the Skill
+
+The `address-pr-comments` skill uses these patterns internally to track and
+manage comment IDs. You typically don't need to manually track IDs unless you're
+resolving feedback without the skill.
+
+---
+
 ## Overview
 
-When resolving multiple Copilot comments on a PR, tracking comment IDs and their
+When resolving multiple Copilot comments on a PR manually, tracking comment IDs and their
 resolution status prevents duplicate efforts and ensures no feedback is missed.
 This file provides structured patterns for identifying, organizing, and tracking
 comment threads.
