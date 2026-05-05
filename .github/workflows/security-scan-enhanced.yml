@@ -12,7 +12,7 @@ on:
         default: true
         type: boolean
   push:
-    branches: [main, dev]
+    branches: [main]
     paths:
       - 'docker/**'
       - 'backend/go.mod'
@@ -404,6 +404,7 @@ jobs:
           title: '🔒 Automated Security Updates - ${{ steps.parse-vulns.outputs.critical_count }} Critical, ${{ steps.parse-vulns.outputs.high_count }} High'
           body-path: 'pr_description.md'
           branch: 'security/automated-updates-${{ github.run_number }}'
+          base: 'main'
           delete-branch: true
           labels: |
             security
