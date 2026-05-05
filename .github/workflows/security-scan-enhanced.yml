@@ -393,9 +393,40 @@ jobs:
           git config --local --unset-all http.https://github.com/.extraheader || true
           git config --global --unset-all http.https://github.com/.extraheader || true
 
+      - name: Check existing open automated security PR for main
+        id: check-existing-pr
+        if: steps.parse-vulns.outputs.has_updates == 'true' && (github.event.inputs.create_pr == 'true' || github.event_name != 'workflow_dispatch')
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { owner, repo } = context.repo;
+            const openPrs = await github.paginate(github.rest.pulls.list, {
+              owner,
+              repo,
+              state: 'open',
+              base: 'main',
+              per_page: 100
+            });
+
+            const duplicate = openPrs.find((pr) => {
+              const titleMatches = (pr.title || '').startsWith('🔒 Automated Security Updates -');
+              const headMatches = (pr.head && pr.head.ref || '').startsWith('security/automated-updates-');
+              return titleMatches || headMatches;
+            });
+
+            if (duplicate) {
+              core.notice(`Found existing open automated security PR: ${duplicate.html_url}`);
+              core.setOutput('should_create_pr', 'false');
+              core.setOutput('existing_pr_url', duplicate.html_url);
+            } else {
+              core.setOutput('should_create_pr', 'true');
+              core.setOutput('existing_pr_url', '');
+            }
+
       - name: Create Pull Request
         id: create-pr
-        if: steps.parse-vulns.outputs.has_updates == 'true' && (github.event.inputs.create_pr == 'true' || github.event_name != 'workflow_dispatch')
+        if: steps.parse-vulns.outputs.has_updates == 'true' && (github.event.inputs.create_pr == 'true' || github.event_name != 'workflow_dispatch') && steps.check-existing-pr.outputs.should_create_pr == 'true'
         continue-on-error: true
         uses: peter-evans/create-pull-request@v6
         with:
@@ -443,6 +474,11 @@ jobs:
               fi
             elif [ "${{ steps.create-pr.outcome }}" == "failure" ]; then
               echo "- PR creation: ⚠️ Failed (scan completed; create PR manually if needed)" >> $GITHUB_STEP_SUMMARY
+            elif [ "${{ steps.check-existing-pr.outputs.should_create_pr }}" == "false" ]; then
+              echo "- PR creation: ⏭️ Skipped (existing automated PR already open for main)" >> $GITHUB_STEP_SUMMARY
+              if [ -n "${{ steps.check-existing-pr.outputs.existing_pr_url }}" ]; then
+                echo "- Existing PR: ${{ steps.check-existing-pr.outputs.existing_pr_url }}" >> $GITHUB_STEP_SUMMARY
+              fi
             fi
           else
             echo "✅ No fixable vulnerabilities found" >> $GITHUB_STEP_SUMMARY
