@@ -33,6 +33,20 @@ const DASHBOARD_ITEM: NavItem = {
 const ADMIN_ITEMS: NavItem[] = [
   { href: '/admin/users', icon: '👥', labelKey: 'leftNav.items.adminUsers', requiresAuth: true, requiresAdmin: true },
   {
+    href: '/admin/user-entity-links',
+    icon: '🔗',
+    labelKey: 'leftNav.items.userEntityLinks',
+    requiresAuth: true,
+    requiresAdmin: true,
+  },
+  {
+    href: '/admin/provisional-lei',
+    icon: '🔖',
+    labelKey: 'leftNav.items.provisionalLei',
+    requiresAuth: true,
+    requiresAdmin: true,
+  },
+  {
     href: '/admin/translations',
     icon: '🌐',
     labelKey: 'leftNav.items.adminTranslations',

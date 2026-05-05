@@ -81,6 +81,17 @@ type LEIRecord struct {
 	CreatedBy     string      `gorm:"size:100;not null;default:'system'" json:"created_by"`
 	UpdatedBy     string      `gorm:"size:100;not null;default:'system'" json:"updated_by"`
 
+	// Provisional LEI fields (migration 000062)
+	// IsProvisional is TRUE for Axiom-issued provisional LEI records (AXIO prefix).
+	// FALSE for all GLEIF-ingested records. Defaults to FALSE.
+	IsProvisional      bool   `gorm:"column:is_provisional;not null;default:false" json:"is_provisional"`
+	ProvisioningSource string `gorm:"column:provisioning_source;size:50" json:"provisioning_source,omitempty"`
+
+	// Relationship data hydrated from lei_relationship_records for provisional LEIs.
+	// Not stored in lei_records; populated by the provisional LEI service layer only.
+	ParentLEI string `gorm:"-" json:"parent_lei,omitempty"`
+	ChildLEI  string `gorm:"-" json:"child_lei,omitempty"`
+
 	// Standard fields
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
@@ -321,11 +332,11 @@ func (LEIRelationshipRecord) TableName() string {
 // Each record indicates that a legal entity cannot or will not disclose its parent ownership
 // relationship, along with the category and reason for that exception.
 type LEIReportingException struct {
-	ID                 uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
-	LEI                string    `gorm:"size:20;not null;index" json:"lei"`
+	ID                 uuid.UUID   `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	LEI                string      `gorm:"size:20;not null;index" json:"lei"`
 	ExceptionCategory  string      `gorm:"size:100;not null" json:"exception_category"`
 	ExceptionReasons   JSONBString `gorm:"type:jsonb;not null;default:'[]'" json:"exception_reasons"`
-	ExceptionReference string    `gorm:"size:500" json:"exception_reference"`
+	ExceptionReference string      `gorm:"size:500" json:"exception_reference"`
 
 	SourceFileID *uuid.UUID `gorm:"type:uuid" json:"source_file_id"`
 

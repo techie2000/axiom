@@ -72,6 +72,8 @@ export default defineConfig({
         collapsed: false,
         items: [
           { text: 'Overview', link: '/admin/' },
+          { text: 'Provisional LEI', link: '/admin/provisional-lei' },
+          { text: 'User-Entity Links', link: '/admin/user-entity-links' },
           { text: 'User Approvals', link: '/admin/user-approvals' },
           { text: 'Translation Review', link: '/admin/translation-review' },
           { text: 'Sync Triggers', link: '/admin/sync-triggers' },

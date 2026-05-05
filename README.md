@@ -223,8 +223,9 @@ For your primary main stack, use the wrapper command (or `make docker-main-up`) 
 The wrapper pins `POSTGRES_DATA_DIR` to the canonical root path so main never starts against a
 worktree-local empty database directory.
 
+#### Works from repo root or any git worktree
+
 ```bash
-# Works from repo root or any git worktree
 # Windows / PowerShell
 ./scripts/run-main-compose.ps1 up -d --build
 
@@ -237,11 +238,15 @@ Use an isolated env file per test stack so each run gets its own container/volum
 directory. LEI data (`./data/main/lei`) is intentionally shared across stacks so cached data does not have to
 be re-downloaded for each test run.
 
-```bash
-# Create an isolated env (example: pr107)
-./scripts/new-main-test-env.ps1 -Name pr107
+**Create an isolated env (example: pr107):**
 
-# Start isolated main-like stack
+```powershell
+./scripts/new-main-test-env.ps1 -Name pr107
+```
+
+**Start isolated main-like stack:**
+
+```bash
 docker compose --env-file .env.main.pr107 -f docker-compose.main.yml up -d --build
 
 # Stop isolated stack (non-destructive)

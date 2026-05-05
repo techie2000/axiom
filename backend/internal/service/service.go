@@ -26,6 +26,8 @@ type Services struct {
 	UserPreference UserPreferenceService
 	UITranslation  UITranslationService
 	GLEIFReference GLEIFReferenceService
+	ProvisionalLEI ProvisionalLEIService
+	UserEntityLink UserEntityLinkService
 }
 
 // NewServices creates a new services instance
@@ -53,6 +55,8 @@ func NewServices(repos *repository.Repositories, db *gorm.DB, leiDataDir string,
 			repos.GLEIFLegalJurisdiction,
 			leiDataDir,
 		),
+		ProvisionalLEI: NewProvisionalLEIService(repos.ProvisionalLEI, repos.LEI, repos.LEILevel2),
+		UserEntityLink: NewUserEntityLinkService(repos.UserEntityLink),
 	}
 }
 

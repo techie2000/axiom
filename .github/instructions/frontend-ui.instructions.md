@@ -61,6 +61,32 @@ For numbers (not dates), using `.toLocaleString()` is acceptable for thousand se
 <p>{amount.toLocaleString()}</p>        // 1,234,567.89
 ```
 
+## Status Presentation Standard
+
+### Status and Enum Label Casing (Required)
+
+Use a single presentation standard for user-facing status/enum labels across pages.
+
+- Display status and enum labels in **Title Case** (for example: `Active`, `Issued`, `Entity Admin`).
+- Do not render raw backend enum values directly (for example: `ACTIVE`, `active`, `entity_admin`).
+- Normalize display labels through shared helpers (for example `formatStatusLabel`) before rendering badges,
+  table cells, and filter options.
+- Keep canonical backend values unchanged in API payloads and filters; only normalize for display.
+
+#### ✅ CORRECT Examples
+
+```tsx
+<span>{formatStatusLabel('ACTIVE')}</span>        // Active
+<span>{formatStatusLabel('entity_admin')}</span>  // Entity Admin
+<span>{formatStatusLabel(t('user.status.issued'))}</span>
+```
+
+#### ❌ INCORRECT Examples
+
+```tsx
+<span>{status}</span>   // active, ACTIVE, entity_admin
+```
+
 ## React and TypeScript Best Practices
 
 ### Component Structure
@@ -68,6 +94,34 @@ For numbers (not dates), using `.toLocaleString()` is acceptable for thousand se
 - Use functional components with TypeScript
 - Define interfaces for all props and data structures
 - Use `'use client'` directive when component needs client-side interactivity
+
+### Standard Component Reuse (Required)
+
+- Reuse existing shared components from `frontend/app/components/` before creating page-local UI.
+- Reuse existing shared handlers/hooks from `frontend/app/lib/` before creating page-local event logic.
+- Do not re-implement behavior already provided by standard components used on reference pages (especially `lei-records`).
+- Do not re-implement behavior already provided by shared hooks/handlers used on reference pages.
+- If a suitable shared component exists, use it; do not copy/paste equivalent JSX with local styling variants.
+- If a suitable shared handler/hook exists, use it instead of page-local `addEventListener` logic.
+- Create a new shared component only when no existing component can satisfy the requirement without regressions.
+- Create a new shared hook/handler only when no existing one can satisfy the requirement without regressions.
+- When introducing a new shared component, place it under `frontend/app/components/` and migrate repeated page-local usages.
+
+Minimum baseline components to evaluate for list/data pages:
+
+- `PageHeader`
+- `Alert`
+- `PreferenceSavePrompt`
+- `SearchInputWithOverflowTooltip`
+- `ThemedSelect`
+- `SyncedWideTable`
+- `TablePaginationControls`
+
+Minimum baseline reusable handlers/hooks to evaluate for list/data pages:
+
+- `useSearchFocusShortcut`
+
+Before merge, verify the page did not reinvent any of the above patterns locally.
 
 ### State Management
 
@@ -242,9 +296,16 @@ EVERY visual change:
 - Do **not** place filter controls above stats cards on list/report pages.
 - Filter controls must be wrapped in a visible bordered container (LEI pattern), e.g.
   `bg-white border-2 border-gray-200 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm rounded-lg p-6`.
+- Filter bars that contain dropdown/select controls must be rendered in a higher stacking layer
+  than table headers (for example `relative z-40`) so option menus are never hidden behind sticky
+  or themed table headers.
 - Provide a `Clear Filters` action whenever a page has two or more filters (search counts as a filter).
 - Show `Clear Filters` only when at least one filter is active (LEI Records behavior).
 - `Clear Filters` should reset all filter inputs to default values in one click.
+- For paired transformation filters (for example `From *` and `To *` groups), align paired fields on
+  the same row (`From System` with `To System`, etc.) to improve scannability.
+- Reserve accent/border emphasis for actionable cards only (cards that toggle a filter). Avoid
+  accent styling on informational, non-clickable cards.
 - For dark mode readability, all `<select>` controls must style both the `<select>` and each `<option>` explicitly.
 - Search inputs with long placeholder guidance must show a tooltip when placeholder text is clipped.
 - Use shared component `frontend/app/components/SearchInputWithOverflowTooltip.tsx` for search/filter text inputs.
@@ -258,6 +319,9 @@ EVERY visual change:
 - Include `Select All` and `Reset Default` actions in the selector.
 - The `Columns` count should reflect current visible column count.
 - Use the LEI Records pattern as the baseline implementation for grouped or ungrouped column selectors.
+- For grouped selectors, group header rows must match LEI Records flavor:
+  tri-state indicator (`☑`/`◐`/`☐`), translated group label, and visible/total counter
+  on the right (for example `3/7`).
 - **Column visibility must be backed by `useUserPreference`** (see User Preference Standard below).
 - All visible selector labels/actions must be rendered through i18n keys (`t('...')`).
   Do not hardcode user-facing labels such as `Save as default`, `Select All`, `Reset`, `Columns`, or group names.
@@ -298,6 +362,21 @@ for columns whose `labelKey` is already correct.
 2. Set the column's `labelKey` to that full dotted key path.
 3. Render via `t(column.labelKey)` (table) and `t('the.key')` (modal) — never a string literal.
 4. Run `npm run i18n:verify` to confirm no missing keys.
+
+### Shared Header Action Labels (Required)
+
+For page header action buttons, always reuse canonical translation keys before adding page-specific keys.
+
+Canonical key set:
+
+- `referenceLayout.displayNamesButton`
+- `referenceLayout.displayCodesButton`
+- `referenceLayout.expandButton`
+- `referenceLayout.normalButton`
+- `buttons.columnsWithCount`
+
+Do not introduce new page-local keys with equivalent meaning (for example `*.controls.displayNames`,
+`*.controls.displayCodes`, or `*.controls.columns`) unless the wording is intentionally different.
 
 ### Table Width Toggle Standard (Required)
 
@@ -428,6 +507,7 @@ step-by-step guide and integration checklist.
   so horizontally scrolled cells cannot bleed through divider boundaries.
 - Use the **same seam rendering technique** for both frozen header (`th`) and body (`td`) cells;
   do not mix different seam primitives between header and body.
+
 - Prefer an **inset right-edge seam** (for example an inset box-shadow) rendered inside frozen cells
   over offset pseudo-elements.
 - Avoid negative-offset pseudo-element seams (`right: -1px` style patterns) on frozen cells because
@@ -456,6 +536,9 @@ step-by-step guide and integration checklist.
 - Use consistent keyboard shortcuts for interactive overlays across pages (column selectors,
   dropdown panels, popovers, dialogs).
 - Pressing `Escape` must close the top-most open overlay element first.
+- On searchable list/report pages, `Ctrl+F`/`Cmd+F` must focus the page's primary search field
+  instead of opening browser find.
+- Implement this behavior via shared `useSearchFocusShortcut` unless there is an explicit exception.
 - Implement keyboard handlers with proper cleanup (`addEventListener`/`removeEventListener`)
   to avoid leaks and duplicate bindings.
 - Do not create page-specific shortcut behavior that conflicts with existing LEI patterns unless explicitly required.
@@ -927,6 +1010,12 @@ import Badge from '../components/Badge'
 ```
 
 Variants: `blue | green | red | yellow | orange | purple | gray`
+
+#### Provisional LEI Badge Standard (Required)
+
+- `PROVISIONAL` markers must use shared `<Badge>` styling, not page-local `<span>` chips.
+- Use `variant="blue"` for `PROVISIONAL` on both `lei-records` and `admin/provisional-lei`.
+- Reuse `frontend/app/lib/badge-presets.ts` (`PROVISIONAL_BADGE_VARIANT`) to keep pages aligned.
 
 ### StatCard
 

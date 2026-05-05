@@ -36,9 +36,10 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: 'backend/go.mod'
           cache-dependency-path: backend/go.sum
@@ -388,8 +389,17 @@ jobs:
           echo -e "$PR_BODY" > pr_description.md
           cat pr_description.md
 
-      - name: Create Pull Request
+      - name: Normalize git auth headers
         if: steps.parse-vulns.outputs.has_updates == 'true' && (github.event.inputs.create_pr == 'true' || github.event_name != 'workflow_dispatch')
+        run: |
+          # Avoid duplicate Authorization headers that can break git remote operations.
+          git config --local --unset-all http.https://github.com/.extraheader || true
+          git config --global --unset-all http.https://github.com/.extraheader || true
+
+      - name: Create Pull Request
+        id: create-pr
+        if: steps.parse-vulns.outputs.has_updates == 'true' && (github.event.inputs.create_pr == 'true' || github.event_name != 'workflow_dispatch')
+        continue-on-error: true
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -426,6 +436,15 @@ jobs:
             fi
             if [ "${{ steps.parse-vulns.outputs.has_npm_updates }}" == "true" ]; then
               echo "- npm packages updated" >> $GITHUB_STEP_SUMMARY
+            fi
+
+            if [ "${{ steps.create-pr.outcome }}" == "success" ]; then
+              echo "- PR creation: ✅ Success" >> $GITHUB_STEP_SUMMARY
+              if [ -n "${{ steps.create-pr.outputs.pull-request-url }}" ]; then
+                echo "- PR URL: ${{ steps.create-pr.outputs.pull-request-url }}" >> $GITHUB_STEP_SUMMARY
+              fi
+            elif [ "${{ steps.create-pr.outcome }}" == "failure" ]; then
+              echo "- PR creation: ⚠️ Failed (scan completed; create PR manually if needed)" >> $GITHUB_STEP_SUMMARY
             fi
           else
             echo "✅ No fixable vulnerabilities found" >> $GITHUB_STEP_SUMMARY

@@ -28,6 +28,8 @@ type Repositories struct {
 	GLEIFEntityLegalFormAudit  GLEIFEntityLegalFormAuditRepository
 	GLEIFOrganizationalRole    GLEIFOrganizationalRoleRepository
 	GLEIFLegalJurisdiction     GLEIFLegalJurisdictionRepository
+	ProvisionalLEI             ProvisionalLEIRepository
+	UserEntityLink             UserEntityLinkRepository
 }
 
 // NewRepositories creates a new repositories instance
@@ -52,6 +54,8 @@ func NewRepositories(db *gorm.DB) *Repositories {
 		GLEIFEntityLegalFormAudit:  NewGLEIFEntityLegalFormAuditRepository(db),
 		GLEIFOrganizationalRole:    NewGLEIFOrganizationalRoleRepository(db),
 		GLEIFLegalJurisdiction:     NewGLEIFLegalJurisdictionRepository(db),
+		ProvisionalLEI:             NewProvisionalLEIRepository(db),
+		UserEntityLink:             NewUserEntityLinkRepository(db),
 	}
 }
 

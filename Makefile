@@ -3,8 +3,67 @@
 .PHONY: help build run test clean migrate-up migrate-down docker-up docker-down
 .PHONY: docker-main-up docker-main-down docker-main-rebuild-safe docker-dev-up docker-dev-down docker-dev-rebuild-safe docker-uat-up docker-uat-down docker-uat-rebuild-safe docker-prod-up docker-prod-down docker-prod-rebuild-safe
 .PHONY: docker-all-up docker-all-down docker-all-status validate-env
+.PHONY: docker-main-frontend-reset docker-dev-frontend-reset docker-uat-frontend-reset docker-prod-frontend-reset
 .PHONY: lint lint-docs lint-docs-fix docs-check docs-check-fix lint-all install-hooks settings-sort settings-sort-check
 .PHONY: smoke-api smoke-ssi cleanup-stale-translations docs-user-install docs-user-ci-install docs-user-build docs-user-check docs-user-dev
+
+ifeq ($(OS),Windows_NT)
+MAIN_COMPOSE_WRAPPER := pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/run-main-compose.ps1
+MAIN_PG_UPGRADE := pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/upgrade-postgres.ps1 -Environment main -Yes
+DEV_ENV_PRECHECK := pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/ensure-bind-mounts.ps1 -Environment dev; pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/upgrade-postgres.ps1 -Environment dev -Yes
+UAT_PG_UPGRADE := pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/upgrade-postgres.ps1 -Environment uat -Yes
+PROD_PG_UPGRADE := pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/upgrade-postgres.ps1 -Environment prod -Yes
+FRONTEND_RESET_MAIN := pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/reset-frontend-state.ps1 -Environment main
+FRONTEND_RESET_DEV := pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/reset-frontend-state.ps1 -Environment dev
+FRONTEND_RESET_UAT := pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/reset-frontend-state.ps1 -Environment uat
+FRONTEND_RESET_PROD := pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/reset-frontend-state.ps1 -Environment prod
+else
+MAIN_COMPOSE_WRAPPER := $(shell if command -v bash >/dev/null 2>&1; then echo "bash scripts/run-main-compose.sh"; elif command -v pwsh >/dev/null 2>&1; then echo "pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/run-main-compose.ps1"; else echo ""; fi)
+MAIN_PG_UPGRADE := $(shell if command -v bash >/dev/null 2>&1; then echo "bash scripts/upgrade-postgres.sh main --yes"; elif command -v pwsh >/dev/null 2>&1; then echo "pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/upgrade-postgres.ps1 -Environment main -Yes"; else echo ""; fi)
+DEV_ENV_PRECHECK := $(shell if command -v bash >/dev/null 2>&1; then echo "bash scripts/ensure-bind-mounts.sh dev && bash scripts/upgrade-postgres.sh dev --yes"; elif command -v pwsh >/dev/null 2>&1; then echo "pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/ensure-bind-mounts.ps1 -Environment dev; pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/upgrade-postgres.ps1 -Environment dev -Yes"; else echo ""; fi)
+UAT_PG_UPGRADE := $(shell if command -v bash >/dev/null 2>&1; then echo "bash scripts/upgrade-postgres.sh uat --yes"; elif command -v pwsh >/dev/null 2>&1; then echo "pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/upgrade-postgres.ps1 -Environment uat -Yes"; else echo ""; fi)
+PROD_PG_UPGRADE := $(shell if command -v bash >/dev/null 2>&1; then echo "bash scripts/upgrade-postgres.sh prod --yes"; elif command -v pwsh >/dev/null 2>&1; then echo "pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/upgrade-postgres.ps1 -Environment prod -Yes"; else echo ""; fi)
+FRONTEND_RESET_MAIN := $(shell if command -v bash >/dev/null 2>&1; then echo "bash scripts/reset-frontend-state.sh main"; elif command -v pwsh >/dev/null 2>&1; then echo "pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/reset-frontend-state.ps1 -Environment main"; else echo ""; fi)
+FRONTEND_RESET_DEV := $(shell if command -v bash >/dev/null 2>&1; then echo "bash scripts/reset-frontend-state.sh dev"; elif command -v pwsh >/dev/null 2>&1; then echo "pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/reset-frontend-state.ps1 -Environment dev"; else echo ""; fi)
+FRONTEND_RESET_UAT := $(shell if command -v bash >/dev/null 2>&1; then echo "bash scripts/reset-frontend-state.sh uat"; elif command -v pwsh >/dev/null 2>&1; then echo "pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/reset-frontend-state.ps1 -Environment uat"; else echo ""; fi)
+FRONTEND_RESET_PROD := $(shell if command -v bash >/dev/null 2>&1; then echo "bash scripts/reset-frontend-state.sh prod"; elif command -v pwsh >/dev/null 2>&1; then echo "pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/reset-frontend-state.ps1 -Environment prod"; else echo ""; fi)
+
+ifeq ($(strip $(MAIN_COMPOSE_WRAPPER)),)
+$(error Neither 'bash' nor 'pwsh' was found. Cannot run main compose wrapper.)
+endif
+
+ifeq ($(strip $(MAIN_PG_UPGRADE)),)
+$(error Neither 'bash' nor 'pwsh' was found. Cannot run PostgreSQL upgrade precheck.)
+endif
+
+ifeq ($(strip $(DEV_ENV_PRECHECK)),)
+$(error Neither 'bash' nor 'pwsh' was found. Cannot run dev bind-mount setup or PostgreSQL upgrade precheck.)
+endif
+
+ifeq ($(strip $(UAT_PG_UPGRADE)),)
+$(error Neither 'bash' nor 'pwsh' was found. Cannot run UAT PostgreSQL upgrade precheck.)
+endif
+
+ifeq ($(strip $(PROD_PG_UPGRADE)),)
+$(error Neither 'bash' nor 'pwsh' was found. Cannot run prod PostgreSQL upgrade precheck.)
+endif
+
+ifeq ($(strip $(FRONTEND_RESET_MAIN)),)
+$(error Neither 'bash' nor 'pwsh' was found. Cannot reset main frontend state.)
+endif
+
+ifeq ($(strip $(FRONTEND_RESET_DEV)),)
+$(error Neither 'bash' nor 'pwsh' was found. Cannot reset dev frontend state.)
+endif
+
+ifeq ($(strip $(FRONTEND_RESET_UAT)),)
+$(error Neither 'bash' nor 'pwsh' was found. Cannot reset uat frontend state.)
+endif
+
+ifeq ($(strip $(FRONTEND_RESET_PROD)),)
+$(error Neither 'bash' nor 'pwsh' was found. Cannot reset prod frontend state.)
+endif
+endif
 
 build: ## Build the backend application
 	cd backend && go build -o bin/api cmd/api/main.go
@@ -74,30 +133,12 @@ docker-dev-logs: ## Show logs from development environment
 	docker-compose --env-file .env.dev -f docker-compose.dev.yml logs -f
 
 docker-dev-restart: ## Restart development environment
-	@if command -v bash >/dev/null 2>&1; then \
-		bash scripts/ensure-bind-mounts.sh dev; \
-		bash scripts/upgrade-postgres.sh dev --yes; \
-	elif command -v pwsh >/dev/null 2>&1; then \
-		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/ensure-bind-mounts.ps1 -Environment dev; \
-		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/upgrade-postgres.ps1 -Environment dev -Yes; \
-	else \
-		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run bind-mount setup or PostgreSQL upgrade precheck."; \
-		exit 1; \
-	fi
+	@$(DEV_ENV_PRECHECK)
 	docker-compose --env-file .env.dev -f docker-compose.dev.yml restart
 
 # Development environment
 docker-dev-up: ## Start development environment (ports: 18080, 13000, 15432)
-	@if command -v bash >/dev/null 2>&1; then \
-		bash scripts/ensure-bind-mounts.sh dev; \
-		bash scripts/upgrade-postgres.sh dev --yes; \
-	elif command -v pwsh >/dev/null 2>&1; then \
-		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/ensure-bind-mounts.ps1 -Environment dev; \
-		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/upgrade-postgres.ps1 -Environment dev -Yes; \
-	else \
-		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run bind-mount setup or PostgreSQL upgrade precheck."; \
-		exit 1; \
-	fi
+	@$(DEV_ENV_PRECHECK)
 	docker-compose --env-file .env.dev -f docker-compose.dev.yml up -d
 
 docker-down: ## Stop all services (default/legacy)
@@ -107,78 +148,39 @@ docker-logs: ## Show logs from all services (default/legacy)
 	docker-compose logs -f
 
 docker-main-down: ## Stop main branch environment
-	@if command -v bash >/dev/null 2>&1; then \
-		bash scripts/run-main-compose.sh down; \
-	elif command -v pwsh >/dev/null 2>&1; then \
-		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/run-main-compose.ps1 down; \
-	else \
-		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run main compose wrapper."; \
-		exit 1; \
-	fi
+	@$(MAIN_COMPOSE_WRAPPER) down
 
 docker-main-rebuild-safe: ## Gracefully rebuild main backend/frontend while reducing DB crash-recovery risk
 	@echo "Gracefully stopping app services first (frontend/backend)..."
-	@if command -v bash >/dev/null 2>&1; then \
-		bash scripts/run-main-compose.sh stop -t 45 frontend backend; \
-	elif command -v pwsh >/dev/null 2>&1; then \
-		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/run-main-compose.ps1 stop -t 45 frontend backend; \
-	else \
-		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run main compose wrapper."; \
-		exit 1; \
-	fi
+	@$(MAIN_COMPOSE_WRAPPER) stop -t 45 frontend backend
 	@echo "Stopping stateful services with extended timeout (postgres/rabbitmq)..."
-	@if command -v bash >/dev/null 2>&1; then \
-		bash scripts/run-main-compose.sh stop -t 120 postgres rabbitmq; \
-	elif command -v pwsh >/dev/null 2>&1; then \
-		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/run-main-compose.ps1 stop -t 120 postgres rabbitmq; \
-	else \
-		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run main compose wrapper."; \
-		exit 1; \
-	fi
+	@$(MAIN_COMPOSE_WRAPPER) stop -t 120 postgres rabbitmq
 	@echo "Rebuilding and starting services..."
-	@if command -v bash >/dev/null 2>&1; then \
-		bash scripts/run-main-compose.sh up -d --build postgres rabbitmq backend frontend; \
-	elif command -v pwsh >/dev/null 2>&1; then \
-		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/run-main-compose.ps1 up -d --build postgres rabbitmq backend frontend; \
-	else \
-		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run main compose wrapper."; \
-		exit 1; \
-	fi
+	@$(MAIN_COMPOSE_WRAPPER) up -d --build postgres rabbitmq backend frontend
 
 docker-main-logs: ## Show logs from main branch environment
-	@if command -v bash >/dev/null 2>&1; then \
-		bash scripts/run-main-compose.sh logs -f; \
-	elif command -v pwsh >/dev/null 2>&1; then \
-		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/run-main-compose.ps1 logs -f; \
-	else \
-		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run main compose wrapper."; \
-		exit 1; \
-	fi
+	@$(MAIN_COMPOSE_WRAPPER) logs -f
 
 docker-main-restart: ## Restart main branch environment
-	@if command -v bash >/dev/null 2>&1; then \
-		bash scripts/upgrade-postgres.sh main --yes; \
-		bash scripts/run-main-compose.sh restart; \
-	elif command -v pwsh >/dev/null 2>&1; then \
-		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/upgrade-postgres.ps1 -Environment main -Yes; \
-		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/run-main-compose.ps1 restart; \
-	else \
-		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run main compose wrapper."; \
-		exit 1; \
-	fi
+	@$(MAIN_PG_UPGRADE)
+	@$(MAIN_COMPOSE_WRAPPER) restart
+
+docker-main-frontend-reset: ## Reset main frontend node_modules/.next volumes and recreate the frontend service
+	@$(FRONTEND_RESET_MAIN)
+
+docker-dev-frontend-reset: ## Reset dev frontend node_modules/.next volumes and recreate the frontend service
+	@$(FRONTEND_RESET_DEV)
+
+docker-uat-frontend-reset: ## Recreate UAT frontend service with a fresh image
+	@$(FRONTEND_RESET_UAT)
+
+docker-prod-frontend-reset: ## Recreate prod frontend service with a fresh image
+	@$(FRONTEND_RESET_PROD)
 
 # Main branch environment (intraday development/fixes)
 docker-main-up: ## Start main branch environment (ports: 48080, 43000, 45432)
-	@if command -v bash >/dev/null 2>&1; then \
-		bash scripts/upgrade-postgres.sh main --yes; \
-		bash scripts/run-main-compose.sh up -d; \
-	elif command -v pwsh >/dev/null 2>&1; then \
-		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/upgrade-postgres.ps1 -Environment main -Yes; \
-		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/run-main-compose.ps1 up -d; \
-	else \
-		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run main compose wrapper."; \
-		exit 1; \
-	fi
+	@$(MAIN_PG_UPGRADE)
+	@$(MAIN_COMPOSE_WRAPPER) up -d
 
 docker-prod-down: ## Stop production environment
 	docker-compose --env-file .env.prod -f docker-compose.prod.yml down
@@ -195,26 +197,12 @@ docker-prod-logs: ## Show logs from production environment
 	docker-compose --env-file .env.prod -f docker-compose.prod.yml logs -f
 
 docker-prod-restart: ## Restart production environment
-	@if command -v bash >/dev/null 2>&1; then \
-		bash scripts/upgrade-postgres.sh prod --yes; \
-	elif command -v pwsh >/dev/null 2>&1; then \
-		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/upgrade-postgres.ps1 -Environment prod -Yes; \
-	else \
-		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run PostgreSQL upgrade precheck."; \
-		exit 1; \
-	fi
+	@$(PROD_PG_UPGRADE)
 	docker-compose --env-file .env.prod -f docker-compose.prod.yml restart
 
 # Production environment
 docker-prod-up: ## Start production environment (ports: 38080, 33000, 35432)
-	@if command -v bash >/dev/null 2>&1; then \
-		bash scripts/upgrade-postgres.sh prod --yes; \
-	elif command -v pwsh >/dev/null 2>&1; then \
-		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/upgrade-postgres.ps1 -Environment prod -Yes; \
-	else \
-		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run PostgreSQL upgrade precheck."; \
-		exit 1; \
-	fi
+	@$(PROD_PG_UPGRADE)
 	docker-compose --env-file .env.prod -f docker-compose.prod.yml up -d
 
 docker-uat-down: ## Stop UAT environment
@@ -232,26 +220,12 @@ docker-uat-logs: ## Show logs from UAT environment
 	docker-compose --env-file .env.uat -f docker-compose.uat.yml logs -f
 
 docker-uat-restart: ## Restart UAT environment
-	@if command -v bash >/dev/null 2>&1; then \
-		bash scripts/upgrade-postgres.sh uat --yes; \
-	elif command -v pwsh >/dev/null 2>&1; then \
-		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/upgrade-postgres.ps1 -Environment uat -Yes; \
-	else \
-		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run PostgreSQL upgrade precheck."; \
-		exit 1; \
-	fi
+	@$(UAT_PG_UPGRADE)
 	docker-compose --env-file .env.uat -f docker-compose.uat.yml restart
 
 # UAT environment
 docker-uat-up: ## Start UAT environment (ports: 28080, 23000, 25432)
-	@if command -v bash >/dev/null 2>&1; then \
-		bash scripts/upgrade-postgres.sh uat --yes; \
-	elif command -v pwsh >/dev/null 2>&1; then \
-		pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/upgrade-postgres.ps1 -Environment uat -Yes; \
-	else \
-		echo "❌ Neither 'bash' nor 'pwsh' was found. Cannot run PostgreSQL upgrade precheck."; \
-		exit 1; \
-	fi
+	@$(UAT_PG_UPGRADE)
 	docker-compose --env-file .env.uat -f docker-compose.uat.yml up -d
 
 docker-up: ## Start all services with Docker Compose (default/legacy)

@@ -16,6 +16,7 @@ import TablePaginationControls from '../components/TablePaginationControls'
 import ThemedSelect from '../components/ThemedSelect'
 import { getApiBaseUrl } from '../lib/api-base'
 import { getAuthToken } from '../lib/auth-token'
+import { PROVISIONAL_BADGE_VARIANT } from '../lib/badge-presets'
 import { useDeferredBooleanPreference } from '../lib/useDeferredBooleanPreference'
 import { buildDocsUrl } from '../lib/docsLinks'
 import { useButtonEmojiMode } from '../lib/useButtonEmojiMode'
@@ -111,6 +112,9 @@ interface LEIRecord {
   // Validation
   validation_sources: string
   validation_authority: string
+  
+  // Provisional LEI fields (Axiom-issued)
+  is_provisional: boolean
 }
 
 interface RelatedLEIReference {
@@ -1773,8 +1777,13 @@ export default function LEIRecordsPage() {
                               })()}
                             >
                               {isLeiColumn ? (
-                                <div>
+                                <div className="flex flex-col gap-2">
                                   <div className="font-mono">{formatCellValue(value, column.key)}</div>
+                                  {record.is_provisional && (
+                                    <Badge variant={PROVISIONAL_BADGE_VARIANT} className="w-fit">
+                                      {t('leiRecords.badges.provisional')}
+                                    </Badge>
+                                  )}
                                 </div>
                               ) : isStatus ? (
                                 (() => {
@@ -2108,6 +2117,16 @@ export default function LEIRecordsPage() {
                       })()}
                     </p>
                   </div>
+                  {selectedRecord.is_provisional && (
+                    <div>
+                      <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">{t('leiRecords.modal.type')}</span>
+                      <p className="mt-1">
+                        <Badge variant={PROVISIONAL_BADGE_VARIANT}>
+                          {t('leiRecords.badges.provisional')}
+                        </Badge>
+                      </p>
+                    </div>
+                  )}
                   <div>
                     <span className="text-xs font-medium text-[rgb(var(--muted-foreground-rgb))] uppercase">Category</span>
                     <p className="text-sm text-[rgb(var(--foreground-rgb))] mt-1">{selectedRecord.entity_category || '-'}</p>
