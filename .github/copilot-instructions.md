@@ -623,7 +623,8 @@ This repository configuration is designed to make AI coding agents immediately p
 
 ## PR Finalization Default (Team Preference)
 
-**Use the `create-pull-request` skill to automatically handle PR creation with labels, reviewer assignment, and verification checklist.**
+**Use the `create-pull-request` skill to automatically handle PR creation with labels,
+reviewer assignment, and verification checklist.**
 
 The skill encodes these Axiom-specific workflows and posts all required comments automatically without asking for confirmation.
 
@@ -632,6 +633,7 @@ The skill encodes these Axiom-specific workflows and posts all required comments
 If manually applying labels (not using the skill), follow this taxonomy:
 
 **Categories** (optional, max one):
+
 - `bug` — defect fix
 - `enhancement` — new feature or capability
 - `security` — security issue or fix
@@ -639,6 +641,7 @@ If manually applying labels (not using the skill), follow this taxonomy:
 - `question` — unclear or needs clarification
 
 **Area** (required, exactly one):
+
 - `area:backend` — Go backend code changes
 - `area:frontend` — React/Next.js frontend changes
 - `area:database` — migrations, schema, or DB-related
@@ -649,16 +652,19 @@ If manually applying labels (not using the skill), follow this taxonomy:
 - `area:dependencies` — dependency updates
 
 **Type** (optional secondary, one or two):
+
 - `type:tests` — test additions or modifications
 - `type:refactor` — code restructuring without behavior change
 - `type:chore` — maintenance, tooling
 
 **Special Labels**:
+
 - `automated` — mark AI-created PRs
 - `no-issue-needed` — for PRs with no backing issue
 - `hotfix` — for replacement promotion branches (`fix/sync-*` branches). Apply **with** `no-issue-needed` at PR creation time to bypass branch-flow checks.
 
 **Notes**:
+
 - The CI workflow (`auto-label-prs.yml`) auto-applies Area labels; do not manually duplicate.
 - Avoid duplicate semantics: do not add `documentation` when `area:docs` is present.
 - Category labels are only needed when orthogonal to Area (e.g., `area:backend` change that is also `security` should add `security`).
