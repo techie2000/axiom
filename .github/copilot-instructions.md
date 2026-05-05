@@ -669,6 +669,33 @@ If manually applying labels (not using the skill), follow this taxonomy:
 - Avoid duplicate semantics: do not add `documentation` when `area:docs` is present.
 - Category labels are only needed when orthogonal to Area (e.g., `area:backend` change that is also `security` should add `security`).
 
+### Hotfix Backport Gate (REQUIRED)
+
+When a PR merges directly into `dev`, `uat`, or `prod` using `hotfix` or `emergency` labels,
+the agent must ensure those changes are not lost in later promotions.
+
+Workflow:
+
+1. Identify whether the merged PR introduced changes that are not already on `main`:
+   - `gh pr view <pr> --repo <owner>/<repo> --json files,commits`
+   - `git fetch origin --prune`
+   - `git cherry -v origin/main origin/<target-env-branch>`
+2. For each substantive change missing from `main`, create a backport PR targeting `main`.
+   - Prefer cherry-picking focused fix commits.
+   - Do **not** blindly cherry-pick merge commits; extract intentional edits instead.
+3. Cross-link the PRs:
+   - In the env hotfix PR, post `Backport PR: #<id>`.
+   - In the backport PR, post `Backports hotfix PR: #<id>`.
+4. Treat the hotfix as incomplete until either:
+   - the backport PR to `main` exists, or
+   - a documented waiver explains why backport is not required.
+
+Rules:
+
+- Apply this gate to direct env hotfixes for `dev`, `uat`, and `prod`.
+- Backport only meaningful fixes. Avoid noisy backports for pure promotion-sync merges.
+- If a fix already exists on `main` with equivalent patch content, do not duplicate it.
+
 ### Required Check Context Fallback (REQUIRED)
 
 If a required check shows `Expected — Waiting for status to be reported` while the corresponding
