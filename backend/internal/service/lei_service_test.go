@@ -673,12 +673,18 @@ type processRecordsRepoStub struct {
 	updateCalls           int
 	updateSnapshots       []domain.SourceFile
 	batchUpsertCallCount  int
+	batchLinkUpdateCalls  int
 	batchResolveCallCount int
 }
 
 func (s *processRecordsRepoStub) BatchUpsertLEIRecords(records []*domain.LEIRecord) (int, int, error) {
 	s.batchUpsertCallCount++
 	return len(records), 0, nil
+}
+
+func (s *processRecordsRepoStub) BatchUpdateLEILinkReferences(records []*domain.LEIRecord) (int, error) {
+	s.batchLinkUpdateCalls++
+	return len(records), nil
 }
 
 func (s *processRecordsRepoStub) BatchResolveOpenProcessingFailures(jobType string, naturalKeys []string, resolvedSourceFileID *uuid.UUID, resolvedNote string) error {
@@ -746,6 +752,10 @@ func TestProcessRecordsArray_CheckpointUpdatesAtConfiguredInterval(t *testing.T)
 		t.Fatalf("expected 11 batch upsert calls for 10001 records at batchSize=1000, got %d", repoStub.batchUpsertCallCount)
 	}
 
+	if repoStub.batchLinkUpdateCalls != 0 {
+		t.Fatalf("expected no link reconciliation calls during processRecordsArray, got %d", repoStub.batchLinkUpdateCalls)
+	}
+
 	finalSnapshot := repoStub.updateSnapshots[len(repoStub.updateSnapshots)-1]
 	if finalSnapshot.LastProcessedLEI == nil {
 		t.Fatalf("expected final LastProcessedLEI to be persisted")
@@ -781,6 +791,43 @@ func TestProcessRecordsArray_FinalUpdatePersistsLastProcessedLEIForSmallFiles(t 
 	wantLastLEI := testLEICodeForIndex(recordCount - 1)
 	if *finalSnapshot.LastProcessedLEI != wantLastLEI {
 		t.Fatalf("expected LastProcessedLEI %q, got %q", wantLastLEI, *finalSnapshot.LastProcessedLEI)
+	}
+}
+
+func TestProcessJSONFile_ReconcilesSelfReferencesAfterPrimaryLoad(t *testing.T) {
+	repoStub := &processRecordsRepoStub{}
+	svc := &leiService{repo: repoStub}
+
+	jsonPath := filepath.Join(t.TempDir(), "records.json")
+	jsonBody := `{"header":{"contentDate":"2026-05-06"},"records":[{"LEI":{"$":"5493001KJTIIGC8Y1R12"},"Entity":{"LegalName":{"$":"Alpha Ltd"},"SuccessorEntity":[{"SuccessorLEI":{"$":"549300PSS2MPL4W02719"}}]},"Registration":{"ManagingLOU":{"$":"549300PSS2MPL4W02719"}}},{"LEI":{"$":"549300PSS2MPL4W02719"},"Entity":{"LegalName":{"$":"Beta Ltd"}},"Registration":{}}]}`
+	if err := os.WriteFile(jsonPath, []byte(jsonBody), 0o600); err != nil {
+		t.Fatalf("WriteFile failed: %v", err)
+	}
+
+	sourceFile := &domain.SourceFile{ID: uuid.New(), TotalRecords: 2}
+	if err := svc.processJSONFile(jsonPath, sourceFile, ""); err != nil {
+		t.Fatalf("processJSONFile returned error: %v", err)
+	}
+
+	if repoStub.batchUpsertCallCount != 1 {
+		t.Fatalf("expected 1 primary batch upsert call, got %d", repoStub.batchUpsertCallCount)
+	}
+
+	if repoStub.batchLinkUpdateCalls != 1 {
+		t.Fatalf("expected 1 link reconciliation call, got %d", repoStub.batchLinkUpdateCalls)
+	}
+
+	if repoStub.updateCalls == 0 {
+		t.Fatalf("expected source file updates to be persisted")
+	}
+
+	finalSnapshot := repoStub.updateSnapshots[len(repoStub.updateSnapshots)-1]
+	if finalSnapshot.LastProcessedLEI == nil || *finalSnapshot.LastProcessedLEI != "549300PSS2MPL4W02719" {
+		t.Fatalf("expected final LastProcessedLEI to be last record, got %+v", finalSnapshot.LastProcessedLEI)
+	}
+
+	if finalSnapshot.ProcessedRecords != 2 {
+		t.Fatalf("expected ProcessedRecords=2, got %d", finalSnapshot.ProcessedRecords)
 	}
 }
 
