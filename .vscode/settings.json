@@ -6,14 +6,6 @@
       "approve": true,
       "matchCommandLine": true
     },
-    "/^& \\./scripts/run-main-compose\\.ps1 build backend$/": {
-      "approve": true,
-      "matchCommandLine": true
-    },
-    "/^& \\./scripts/run-main-compose\\.ps1 ps$/": {
-      "approve": true,
-      "matchCommandLine": true
-    },
     "/^docker rm -f axiom-main-frontend; docker volume rm axiom-main_frontend_node_modules_main axiom-main_frontend_next_main; pwsh -NoProfile -ExecutionPolicy Bypass -File \\./scripts/run-main-compose\\.ps1 up -d frontend$/": {
       "approve": true,
       "matchCommandLine": true
