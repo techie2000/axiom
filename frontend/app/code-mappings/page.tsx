@@ -407,25 +407,25 @@ export default function CodeMappingsPage() {
             dependencyKey={`${effectiveExpandedWidth}-${filteredMappings.length}`}
             headerRow={(
               <tr>
-                <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell ${filters.fromSystem ? 'text-[rgb(var(--primary-rgb))]' : ''}`}>
+                <th className={`px-4 py-3 text-center text-xs font-medium uppercase tracking-wider theme-table-header-cell ${filters.fromSystem ? 'text-[rgb(var(--primary-rgb))]' : ''}`}>
                   <span title={getEnglishTooltip('codeMappings.columns.fromSystem')}>{t('codeMappings.columns.fromSystem')}</span>
                 </th>
                 <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell ${filters.fromType ? 'text-[rgb(var(--primary-rgb))]' : ''}`}>
                   <span title={getEnglishTooltip('codeMappings.columns.fromType')}>{t('codeMappings.columns.fromType')}</span>
                 </th>
-                <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell ${filters.fromCode ? 'text-[rgb(var(--primary-rgb))]' : ''}`}>
+                <th className={`px-4 py-3 text-center text-xs font-medium uppercase tracking-wider theme-table-header-cell ${filters.fromCode ? 'text-[rgb(var(--primary-rgb))]' : ''}`}>
                   <span title={getEnglishTooltip('codeMappings.columns.fromCode')}>{t('codeMappings.columns.fromCode')}</span>
                 </th>
-                <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell ${filters.toSystem ? 'text-[rgb(var(--primary-rgb))]' : ''}`}>
+                <th className={`px-4 py-3 text-center text-xs font-medium uppercase tracking-wider theme-table-header-cell ${filters.toSystem ? 'text-[rgb(var(--primary-rgb))]' : ''}`}>
                   <span title={getEnglishTooltip('codeMappings.columns.toSystem')}>{t('codeMappings.columns.toSystem')}</span>
                 </th>
                 <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell ${filters.toType ? 'text-[rgb(var(--primary-rgb))]' : ''}`}>
                   <span title={getEnglishTooltip('codeMappings.columns.toType')}>{t('codeMappings.columns.toType')}</span>
                 </th>
-                <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell ${filters.toCode ? 'text-[rgb(var(--primary-rgb))]' : ''}`}>
+                <th className={`px-4 py-3 text-center text-xs font-medium uppercase tracking-wider theme-table-header-cell ${filters.toCode ? 'text-[rgb(var(--primary-rgb))]' : ''}`}>
                   <span title={getEnglishTooltip('codeMappings.columns.toCode')}>{t('codeMappings.columns.toCode')}</span>
                 </th>
-                <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell ${filters.status ? 'text-[rgb(var(--primary-rgb))]' : ''}`}>
+                <th className={`px-4 py-3 text-center text-xs font-medium uppercase tracking-wider theme-table-header-cell ${filters.status ? 'text-[rgb(var(--primary-rgb))]' : ''}`}>
                   <span title={getEnglishTooltip('codeMappings.columns.status')}>{t('codeMappings.columns.status')}</span>
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell">
