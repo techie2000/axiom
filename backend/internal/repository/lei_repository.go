@@ -1424,8 +1424,15 @@ func (r *leiRepository) BatchUpdateLEILinkReferences(records []*domain.LEIRecord
 
 func buildLEILinkReferenceUpdateSQL(values string) string {
 	return fmt.Sprintf(`
-		WITH link_updates (lei, successor_lei, managing_lou) AS (
+		WITH link_updates_raw (lei, successor_lei, managing_lou) AS (
 			VALUES %s
+		),
+		link_updates AS (
+			SELECT
+				BTRIM(lei::text) AS lei,
+				NULLIF(BTRIM(successor_lei::text), '') AS successor_lei,
+				NULLIF(BTRIM(managing_lou::text), '') AS managing_lou
+			FROM link_updates_raw
 		)
 		UPDATE lei_raw.lei_records AS current
 		SET
@@ -1436,8 +1443,8 @@ func buildLEILinkReferenceUpdateSQL(values string) string {
 		FROM link_updates
 		WHERE current.lei = link_updates.lei
 			AND (
-				current.successor_lei,
-				current.managing_lou
+				NULLIF(BTRIM(COALESCE(current.successor_lei, '')), ''),
+				NULLIF(BTRIM(COALESCE(current.managing_lou, '')), '')
 			) IS DISTINCT FROM (
 				link_updates.successor_lei,
 				link_updates.managing_lou
