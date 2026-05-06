@@ -82,6 +82,7 @@ func TestValidateSecrets_AllSecretsPresent(t *testing.T) {
 
 func TestSetDefaults_NoHardCodedSecrets(t *testing.T) {
 	resetViper()
+	defer resetViper()
 	setDefaults()
 
 	// Database password must have no default (empty string)
