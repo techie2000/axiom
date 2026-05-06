@@ -1363,6 +1363,7 @@ func (r *leiRepository) BatchUpdateLEILinkReferences(records []*domain.LEIRecord
 		batch := records[i:end]
 		valueStrings := make([]string, 0, len(batch))
 		valueArgs := make([]interface{}, 0, len(batch)*3)
+		affectedLEIs := make([]string, 0, len(batch))
 
 		for _, record := range batch {
 			valueStrings = append(valueStrings, "(?, ?, ?)")
@@ -1371,16 +1372,53 @@ func (r *leiRepository) BatchUpdateLEILinkReferences(records []*domain.LEIRecord
 				nullableLEICode(record.SuccessorLEI),
 				nullableCode(record.ManagingLOU),
 			)
+			affectedLEIs = append(affectedLEIs, record.LEI)
 		}
 
 		stmt := buildLEILinkReferenceUpdateSQL(strings.Join(valueStrings, ","))
 
-		result := r.db.Exec(stmt, valueArgs...)
+		// Execute the UPDATE and capture which records were actually modified
+		var updatedRecords []struct {
+			ID  uuid.UUID
+			LEI string
+		}
+		result := r.db.Raw(stmt, valueArgs...).Scan(&updatedRecords)
 		if result.Error != nil {
 			return updatedCount, fmt.Errorf("failed to reconcile LEI link references for records %d-%d: %w", i, end, result.Error)
 		}
 
-		updatedCount += int(result.RowsAffected)
+		batchUpdatedCount := len(updatedRecords)
+		updatedCount += batchUpdatedCount
+
+		// Create audit records for updated links
+		if batchUpdatedCount > 0 {
+			auditRecords := make([]domain.LEIRecordAudit, 0, len(updatedRecords))
+			changedFieldsJSON := []byte(`{"successor_lei":true,"managing_lou":true}`)
+
+			for _, rec := range updatedRecords {
+				auditRecords = append(auditRecords, domain.LEIRecordAudit{
+					LEIRecordID:    rec.ID,
+					LEI:            rec.LEI,
+					Action:         "UPDATE",
+					RecordSnapshot: "{}",
+					ChangedFields:  domain.JSONBString(changedFieldsJSON),
+					ChangedBy:      "system",
+				})
+			}
+
+			// Batch insert audit records
+			auditBatchSize := 100
+			for j := 0; j < len(auditRecords); j += auditBatchSize {
+				auditEnd := j + auditBatchSize
+				if auditEnd > len(auditRecords) {
+					auditEnd = len(auditRecords)
+				}
+
+				if err := r.db.Create(auditRecords[j:auditEnd]).Error; err != nil {
+					return updatedCount, fmt.Errorf("failed to create link update audit records: %w", err)
+				}
+			}
+		}
 	}
 
 	return updatedCount, nil
@@ -1388,24 +1426,25 @@ func (r *leiRepository) BatchUpdateLEILinkReferences(records []*domain.LEIRecord
 
 func buildLEILinkReferenceUpdateSQL(values string) string {
 	return fmt.Sprintf(`
-			WITH link_updates (lei, successor_lei, managing_lou) AS (
-				VALUES %s
+		WITH link_updates (lei, successor_lei, managing_lou) AS (
+			VALUES %s
+		)
+		UPDATE lei_raw.lei_records AS current
+		SET
+			successor_lei = link_updates.successor_lei,
+			managing_lou = link_updates.managing_lou,
+			updated_at = NOW(),
+			updated_by = 'system'
+		FROM link_updates
+		WHERE current.lei = link_updates.lei
+			AND (
+				current.successor_lei,
+				current.managing_lou
+			) IS DISTINCT FROM (
+				link_updates.successor_lei,
+				link_updates.managing_lou
 			)
-			UPDATE lei_raw.lei_records AS current
-			SET
-				successor_lei = link_updates.successor_lei,
-				managing_lou = link_updates.managing_lou,
-				updated_at = NOW(),
-				updated_by = 'system'
-			FROM link_updates
-			WHERE current.lei = link_updates.lei
-				AND (
-					current.successor_lei,
-					current.managing_lou
-				) IS DISTINCT FROM (
-					link_updates.successor_lei,
-					link_updates.managing_lou
-				)
+		RETURNING current.id, current.lei
 	`, values)
 }
 
@@ -1675,10 +1714,13 @@ func (r *leiRepository) detectChanges(old, new *domain.LEIRecord) map[string]dom
 		field := oldType.Field(i)
 		fieldName := field.Name
 
-		// Skip internal fields and timestamps
-		if fieldName == "ID" || fieldName == "CreatedAt" || fieldName == "UpdatedAt" ||
-			fieldName == "DeletedAt" || fieldName == "CreatedBy" || fieldName == "UpdatedBy" ||
-			fieldName == "ChangedFields" || fieldName == "SourceFile" || fieldName == "SourceFileID" {
+// Skip internal fields, timestamps, and deferred self-referential link fields
+	// (successor_lei and managing_lou are reconciled in a separate post-pass, so they
+	// should not trigger change detection during the primary upsert)
+	if fieldName == "ID" || fieldName == "CreatedAt" || fieldName == "UpdatedAt" ||
+		fieldName == "DeletedAt" || fieldName == "CreatedBy" || fieldName == "UpdatedBy" ||
+		fieldName == "ChangedFields" || fieldName == "SourceFile" || fieldName == "SourceFileID" ||
+		fieldName == "SuccessorLEI" || fieldName == "ManagingLOU" {
 			continue
 		}
 
