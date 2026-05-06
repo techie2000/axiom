@@ -91,6 +91,13 @@ export default function CodeMappingsPage() {
     }
   }, [fetchMappings])
 
+  const activeFilterCount = useMemo(
+    () => countActiveCodeMappingFilters(filters),
+    [filters]
+  )
+
+  const hasActiveFiltersOrSearch = searchTerm.trim().length > 0 || activeFilterCount > 0
+
   useEffect(() => {
     if (hasActiveFiltersOrSearch && filterBarRef.current) {
       setFilterBarHeight(filterBarRef.current.offsetHeight)
@@ -104,10 +111,6 @@ export default function CodeMappingsPage() {
     () => filterCodeMappings(mappings, searchTerm, filters),
     [mappings, searchTerm, filters]
   )
-  const activeFilterCount = useMemo(
-    () => countActiveCodeMappingFilters(filters),
-    [filters]
-  )
 
   const activeMappings = mappings.filter(m => m.active)
   const { fromSystems, toSystems } = useMemo(
@@ -115,7 +118,6 @@ export default function CodeMappingsPage() {
     [mappings]
   )
   const selectOptionClassName = 'bg-[rgb(var(--surface-rgb))] text-[rgb(var(--foreground-rgb))]'
-  const hasActiveFiltersOrSearch = searchTerm.trim().length > 0 || activeFilterCount > 0
   const effectiveExpandedWidth = hasHydrated ? expandedWidthPreference.value : false
 
   const setFilter = useCallback((key: keyof CodeMappingColumnFilters, value: string) => {
