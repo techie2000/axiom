@@ -1,6 +1,7 @@
 package config
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/spf13/viper"
@@ -105,20 +106,8 @@ func TestSetDefaults_NoHardCodedSecrets(t *testing.T) {
 	}
 	// The default should not contain a username:password pair
 	for _, credPattern := range []string{"guest:guest", "guest@", ":@"} {
-		if contains(mqURL, credPattern) {
+		if strings.Contains(mqURL, credPattern) {
 			t.Errorf("rabbitmq.url default %q contains embedded credentials (pattern %q)", mqURL, credPattern)
 		}
 	}
-}
-
-// contains is a simple string-contains helper to avoid importing strings in tests.
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && (func() bool {
-		for i := 0; i <= len(s)-len(substr); i++ {
-			if s[i:i+len(substr)] == substr {
-				return true
-			}
-		}
-		return false
-	})())
 }
