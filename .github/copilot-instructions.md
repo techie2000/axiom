@@ -661,7 +661,8 @@ If manually applying labels (not using the skill), follow this taxonomy:
 
 - `automated` — mark AI-created PRs
 - `no-issue-needed` — for PRs with no backing issue
-- `hotfix` — for replacement promotion branches (`fix/sync-*` branches). Apply **with** `no-issue-needed` at PR creation time to bypass branch-flow checks.
+- `hotfix` — for replacement promotion branches (`fix/sync-*` branches). Apply **with** `no-issue-needed`
+  at PR creation time to bypass branch-flow checks.
 
 **Notes**:
 
@@ -759,7 +760,8 @@ When posting PR/issue comments, checklists, PR descriptions, or review summaries
    - `gh api ... --method PATCH/POST -f "body=..."` where the body variable already contains real newlines.
 4. Immediately verify the posted body (for example with `gh api ... --jq .body` or
    `gh pr view --comments`) and fix in-place if formatting is not human-readable.
-5. For checklist comments, keep concise one-line bullets and avoid shell-escaped artifacts in the final rendered text.
+5. For checklist comments, keep concise one-line bullets and avoid shell-escaped artifacts in the
+   final rendered text.
 6. Keep comments actionable: include decisions, code/test results, or explicit next actions.
 7. Do not add non-actionable filler such as "checks are in progress" or equivalent queue/waiting notes in public comments.
 

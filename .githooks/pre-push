@@ -18,7 +18,7 @@ while read -r local_ref local_sha remote_ref remote_sha; do
         range="$remote_sha..$local_sha"
     fi
 
-    if [ -z "$(git rev-list $range)" ]; then
+    if [ -z "$(git rev-list -n 1 $range)" ]; then
         continue
     fi
 
