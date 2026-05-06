@@ -99,12 +99,18 @@ export default function CodeMappingsPage() {
   const hasActiveFiltersOrSearch = searchTerm.trim().length > 0 || activeFilterCount > 0
 
   useEffect(() => {
-    if (hasActiveFiltersOrSearch && filterBarRef.current) {
-      setFilterBarHeight(filterBarRef.current.offsetHeight)
+    if (!hasActiveFiltersOrSearch) {
+      setFilterBarHeight(0)
       return
     }
 
-    setFilterBarHeight(0)
+    const updateHeight = () => {
+      setFilterBarHeight(filterBarRef.current?.offsetHeight || 0)
+    }
+
+    updateHeight()
+    window.addEventListener('resize', updateHeight)
+    return () => window.removeEventListener('resize', updateHeight)
   }, [hasActiveFiltersOrSearch, searchTerm, filters])
 
   const filteredMappings = useMemo(
