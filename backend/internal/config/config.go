@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -71,7 +72,7 @@ type TestingConfig struct {
 	// Controlled by PLAYWRIGHT_USER_EMAIL; defaults to playwright@axiom.local.
 	PlaywrightUserEmail string `mapstructure:"playwrightuseremail"`
 	// PlaywrightUserPassword is the password for the Playwright test user.
-	// Controlled by PLAYWRIGHT_USER_PASSWORD; defaults to Playwright1!
+	// Controlled by PLAYWRIGHT_USER_PASSWORD; must be set explicitly when PlaywrightSeedUser is true.
 	PlaywrightUserPassword string `mapstructure:"playwrightuserpassword"`
 }
 
@@ -126,6 +127,10 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 
+	if err := validateSecrets(&config); err != nil {
+		return nil, err
+	}
+
 	return &config, nil
 }
 
@@ -135,20 +140,21 @@ func setDefaults() {
 	viper.SetDefault("server.mode", "debug")
 
 	// Database defaults
+	// NOTE: database.password has no default; set DATABASE_PASSWORD env var (required).
 	viper.SetDefault("database.host", "localhost")
 	viper.SetDefault("database.port", 5432)
 	viper.SetDefault("database.user", "axiom")
-	viper.SetDefault("database.password", "axiom")
 	viper.SetDefault("database.name", "axiom")
 	viper.SetDefault("database.sslmode", "disable")
 	viper.SetDefault("database.loglevel", "warn") // warn suppresses 'record not found' info messages
 
 	// JWT defaults
-	viper.SetDefault("jwt.secret", "change-this-secret-in-production")
+	// NOTE: jwt.secret has no default; set JWT_SECRET env var to a strong random value (required).
 	viper.SetDefault("jwt.expiry", "24h")
 
 	// RabbitMQ defaults
-	viper.SetDefault("rabbitmq.url", "amqp://guest:guest@localhost:5672/")
+	// NOTE: rabbitmq.url has no credential defaults; set RABBITMQ_URL with credentials (required).
+	viper.SetDefault("rabbitmq.url", "amqp://localhost:5672/")
 
 	// Log defaults
 	viper.SetDefault("log.level", "info")
@@ -168,7 +174,23 @@ func setDefaults() {
 	viper.SetDefault("lei.keepdeltafiles", 5)       // Keep 5 delta files (~65MB)
 
 	// Testing defaults (only active when PLAYWRIGHT_SEED_USER=true)
+	// NOTE: testing.playwrightuserpassword has no default; set PLAYWRIGHT_USER_PASSWORD env var.
 	viper.SetDefault("testing.playwrightseeduser", false)
 	viper.SetDefault("testing.playwrightuseremail", "playwright@axiom.local")
-	viper.SetDefault("testing.playwrightuserpassword", "Playwright1!")
+}
+
+// validateSecrets returns an error if required secret environment variables are missing.
+// This provides fail-fast startup rather than allowing the application to run with
+// insecure or missing credentials.
+func validateSecrets(cfg *Config) error {
+	if cfg.JWT.Secret == "" {
+		return fmt.Errorf("JWT_SECRET is required: set the JWT_SECRET environment variable to a strong random secret")
+	}
+	if cfg.Database.Password == "" {
+		return fmt.Errorf("DATABASE_PASSWORD is required: set the DATABASE_PASSWORD environment variable")
+	}
+	if cfg.Testing.PlaywrightSeedUser && cfg.Testing.PlaywrightUserPassword == "" {
+		return fmt.Errorf("PLAYWRIGHT_USER_PASSWORD is required when PLAYWRIGHT_SEED_USER=true: set the PLAYWRIGHT_USER_PASSWORD environment variable")
+	}
+	return nil
 }

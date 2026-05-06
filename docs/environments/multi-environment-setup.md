@@ -164,11 +164,11 @@ DOCS_USER_PORT={prefix}5173  # optional docs profile in main/dev
 
 # Database credentials
 POSTGRES_USER=axiom
-POSTGRES_PASSWORD=axiom_{env}_pass
+POSTGRES_PASSWORD=axiom_{env}_pass   # dev/main: change for production environments
 POSTGRES_DB=axiom_{env}
 
 # Application configuration
-JWT_SECRET={env}-secret-change-in-production
+JWT_SECRET=<set-a-long-random-secret-here>   # REQUIRED — never use placeholder in production
 SERVER_MODE=debug|release
 ```
 
@@ -307,10 +307,10 @@ psql -h localhost -p 35432 -U axiom -d axiom_prod
 
 ### RabbitMQ Management UI
 
-- Main: http://localhost:45673 (guest/guest)
-- Development: http://localhost:15673 (guest/guest)
-- UAT: http://localhost:25673 (guest/guest)
-- Production: http://localhost:35673 (guest/guest)
+- Main: http://localhost:45673 (axiom_main / see `.env.main` for password)
+- Development: http://localhost:15673 (axiom_dev / see `.env.dev` for password)
+- UAT: http://localhost:25673 (credentials set in `.env.uat` — `CHANGE_ME_REQUIRED`)
+- Production: http://localhost:35673 (credentials set in `.env.prod` — `CHANGE_ME_REQUIRED`)
 
 ## Container Naming
 

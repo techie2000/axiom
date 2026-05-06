@@ -73,12 +73,16 @@ func CORS(cfg *config.Config) gin.HandlerFunc {
 		// Set CORS headers if origin is allowed
 		if allowed {
 			if origin != "" {
+				// Reflect the specific requesting origin and allow credentials.
+				// Never combine Access-Control-Allow-Origin: * with Allow-Credentials: true (CORS spec).
 				c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+				c.Writer.Header().Set("Vary", "Origin")
+				c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
 			} else if len(cfg.CORS.AllowedOrigins) > 0 && cfg.CORS.AllowedOrigins[0] == "*" {
+				// No specific origin to reflect; use wildcard without credentials
+				// (combining * with Allow-Credentials is invalid per RFC 6454).
 				c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 			}
-			c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
-			c.Writer.Header().Set("Vary", "Origin")
 			c.Writer.Header().Set("Access-Control-Allow-Methods", strings.Join(cfg.CORS.AllowedMethods, ","))
 			c.Writer.Header().Set("Access-Control-Allow-Headers", strings.Join(cfg.CORS.AllowedHeaders, ","))
 		}

@@ -3,15 +3,15 @@ services:
     image: public.ecr.aws/docker/library/postgres:17-alpine
     container_name: axiom-postgres
     environment:
-      POSTGRES_USER: axiom
-      POSTGRES_PASSWORD: axiom
-      POSTGRES_DB: axiom
+      POSTGRES_USER: ${POSTGRES_USER:-axiom}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set (copy .env.example to .env)}
+      POSTGRES_DB: ${POSTGRES_DB:-axiom}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U axiom"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-axiom}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -20,8 +20,8 @@ services:
     image: public.ecr.aws/docker/library/rabbitmq:4.2-management-alpine
     container_name: axiom-rabbitmq
     environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-axiom}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:?RABBITMQ_DEFAULT_PASS must be set (copy .env.example to .env)}
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -39,11 +39,11 @@ services:
     environment:
       DATABASE_HOST: postgres
       DATABASE_PORT: 5432
-      DATABASE_USER: axiom
-      DATABASE_PASSWORD: axiom
-      DATABASE_NAME: axiom
-      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
-      JWT_SECRET: development-secret-change-in-production
+      DATABASE_USER: ${DATABASE_USER:-axiom}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD must be set (copy .env.example to .env)}
+      DATABASE_NAME: ${DATABASE_NAME:-axiom}
+      RABBITMQ_URL: ${RABBITMQ_URL:?RABBITMQ_URL must be set (copy .env.example to .env)}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set (copy .env.example to .env)}
       SERVER_PORT: 8080
       SERVER_MODE: debug
     ports:
