@@ -8,7 +8,7 @@
 --      scheduler resumes from the failed step rather than restarting from DAILY_FULL.
 
 ALTER TABLE lei_raw.file_processing_status
-    ADD COLUMN IF NOT EXISTS depends_on_job_type VARCHAR(50);
+ADD COLUMN IF NOT EXISTS depends_on_job_type VARCHAR(50);
 
 COMMENT ON COLUMN lei_raw.file_processing_status.depends_on_job_type IS
 'Optional job_type of the upstream (parent) job that must complete successfully before this job
@@ -23,25 +23,39 @@ before considering whether to re-run its parent. Known dependency chain:
 -- (They are created lazily by the scheduler the first time it runs, but seeding them here
 --  ensures the dependency metadata is visible from the very first migration run.)
 INSERT INTO lei_raw.file_processing_status (job_type, status, depends_on_job_type, created_at, updated_at)
-SELECT 'LEVEL2_RR', 'IDLE', 'DAILY_FULL', NOW(), NOW()
+SELECT
+    'LEVEL2_RR' AS job_type,
+    'IDLE' AS status,
+    'DAILY_FULL' AS depends_on_job_type,
+    NOW() AS created_at,
+    NOW() AS updated_at
 WHERE NOT EXISTS (
-    SELECT 1 FROM lei_raw.file_processing_status WHERE job_type = 'LEVEL2_RR'
+    SELECT 1 AS col1 FROM lei_raw.file_processing_status
+    WHERE job_type = 'LEVEL2_RR'
 );
 
 INSERT INTO lei_raw.file_processing_status (job_type, status, depends_on_job_type, created_at, updated_at)
-SELECT 'LEVEL2_REPEX', 'IDLE', 'LEVEL2_RR', NOW(), NOW()
+SELECT
+    'LEVEL2_REPEX' AS job_type,
+    'IDLE' AS status,
+    'LEVEL2_RR' AS depends_on_job_type,
+    NOW() AS created_at,
+    NOW() AS updated_at
 WHERE NOT EXISTS (
-    SELECT 1 FROM lei_raw.file_processing_status WHERE job_type = 'LEVEL2_REPEX'
+    SELECT 1 AS col1 FROM lei_raw.file_processing_status
+    WHERE job_type = 'LEVEL2_REPEX'
 );
 
 -- For rows already created lazily by the scheduler (depends_on_job_type is still NULL),
 -- backfill the dependency metadata.
 UPDATE lei_raw.file_processing_status
-    SET depends_on_job_type = 'DAILY_FULL'
-WHERE job_type = 'LEVEL2_RR'
-  AND depends_on_job_type IS NULL;
+SET depends_on_job_type = 'DAILY_FULL'
+WHERE
+    job_type = 'LEVEL2_RR'
+    AND depends_on_job_type IS NULL;
 
 UPDATE lei_raw.file_processing_status
-    SET depends_on_job_type = 'LEVEL2_RR'
-WHERE job_type = 'LEVEL2_REPEX'
-  AND depends_on_job_type IS NULL;
+SET depends_on_job_type = 'LEVEL2_RR'
+WHERE
+    job_type = 'LEVEL2_REPEX'
+    AND depends_on_job_type IS NULL;

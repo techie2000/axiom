@@ -1,6 +1,6 @@
 ALTER TABLE lei_raw.lei_records
-    ADD COLUMN IF NOT EXISTS legal_jurisdiction VARCHAR(20),
-    ADD COLUMN IF NOT EXISTS registration_status VARCHAR(50);
+ADD COLUMN IF NOT EXISTS legal_jurisdiction VARCHAR(20),
+ADD COLUMN IF NOT EXISTS registration_status VARCHAR(50);
 
 COMMENT ON COLUMN lei_raw.lei_records.legal_jurisdiction IS
 'ISO 3166-1/3166-2 code for entity legal formation jurisdiction from LEI-CDF Entity.LegalJurisdiction.';

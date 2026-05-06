@@ -9,22 +9,22 @@
 -- docs/lei/ to diagnose before retrying.
 
 ALTER TABLE lei_raw.lei_records
-    VALIDATE CONSTRAINT fk_lei_records_registration_authority;
+VALIDATE CONSTRAINT fk_lei_records_registration_authority;
 
 ALTER TABLE lei_raw.lei_records
-    VALIDATE CONSTRAINT fk_lei_records_entity_legal_form;
+VALIDATE CONSTRAINT fk_lei_records_entity_legal_form;
 
 ALTER TABLE lei_raw.lei_records
-    VALIDATE CONSTRAINT fk_lei_records_validation_authority;
+VALIDATE CONSTRAINT fk_lei_records_validation_authority;
 
 ALTER TABLE lei_raw.lei_records
-    VALIDATE CONSTRAINT fk_lei_records_successor_lei;
+VALIDATE CONSTRAINT fk_lei_records_successor_lei;
 
 ALTER TABLE lei_raw.lei_records
-    VALIDATE CONSTRAINT fk_lei_records_managing_lou;
+VALIDATE CONSTRAINT fk_lei_records_managing_lou;
 
 ALTER TABLE lei_raw.lei_relationship_records
-    VALIDATE CONSTRAINT fk_lei_rr_start_node_lei;
+VALIDATE CONSTRAINT fk_lei_rr_start_node_lei;
 
 ALTER TABLE lei_raw.lei_reporting_exceptions
-    VALIDATE CONSTRAINT fk_lei_repex_lei;
+VALIDATE CONSTRAINT fk_lei_repex_lei;
