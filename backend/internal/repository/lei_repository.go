@@ -33,6 +33,7 @@ type LEIRepository interface {
 	UpdateLEIRecord(record *domain.LEIRecord) error
 	UpsertLEIRecord(record *domain.LEIRecord) (bool, error)              // Returns true if updated, false if created
 	BatchUpsertLEIRecords(records []*domain.LEIRecord) (int, int, error) // Returns (created, updated, error)
+	BatchUpdateLEILinkReferences(records []*domain.LEIRecord) (int, error)
 	DeleteLEI(id string) error
 
 	// Source File operations
@@ -1049,7 +1050,7 @@ func (r *leiRepository) BatchUpsertLEIRecords(records []*domain.LEIRecord) (crea
 		}
 
 		valueStrings := make([]string, 0, len(plans))
-		valueArgs := make([]interface{}, 0, len(plans)*44)
+		valueArgs := make([]interface{}, 0, len(plans)*41)
 
 		// Generate all values in Go, use placeholders for everything
 		now := time.Now()
@@ -1057,8 +1058,9 @@ func (r *leiRepository) BatchUpsertLEIRecords(records []*domain.LEIRecord) (crea
 
 		for _, plan := range plans {
 			record := plan.record
-			// Use placeholders for ALL fields (43 total)
-			valueStrings = append(valueStrings, "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+			// Self-referential link fields are reconciled after the full file load so
+			// forward references do not fail mid-import.
+			valueStrings = append(valueStrings, "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
 
 			// Generate ID and timestamps in Go
 			insertID := uuid.New()
@@ -1097,12 +1099,10 @@ func (r *leiRepository) BatchUpsertLEIRecords(records []*domain.LEIRecord) (crea
 				record.EntityStatus,                        // entity_status
 				record.LegalJurisdiction,                   // legal_jurisdiction
 				record.RegistrationStatus,                  // registration_status
-				nullableLEICode(record.SuccessorLEI),       // successor_lei
 				nullableCode(record.ValidationAuthority),   // validation_authority
 				record.InitialRegistrationDate,             // initial_registration_date
 				record.LastUpdateDate,                      // last_update_date
 				record.NextRenewalDate,                     // next_renewal_date
-				nullableCode(record.ManagingLOU),           // managing_lou
 				record.ValidationSources,                   // validation_sources
 				record.SourceFileID,                        // source_file_id
 				now,                                        // created_at
@@ -1114,138 +1114,7 @@ func (r *leiRepository) BatchUpsertLEIRecords(records []*domain.LEIRecord) (crea
 		}
 
 		// Execute upsert with RETURNING to get IDs
-		stmt := fmt.Sprintf(`
-			INSERT INTO lei_raw.lei_records (
-				id, lei, legal_name, transliterated_legal_name, other_names,
-				legal_address_line_1, legal_address_line_2, legal_address_line_3, legal_address_line_4,
-				legal_address_city, legal_address_region, legal_address_country, legal_address_postal_code,
-				hq_address_line_1, hq_address_line_2, hq_address_line_3, hq_address_line_4,
-				hq_address_city, hq_address_region, hq_address_country, hq_address_postal_code,
-				registration_authority, registration_authority_id, registration_number,
-				entity_category, entity_sub_category, entity_legal_form,
-				entity_status, legal_jurisdiction, registration_status,
-				successor_lei, validation_authority,
-				initial_registration_date, last_update_date, next_renewal_date,
-				managing_lou, validation_sources,
-				source_file_id,
-				created_at, updated_at, created_by, updated_by, changed_fields
-			) VALUES %s
-			ON CONFLICT (lei) DO UPDATE SET
-				legal_name = EXCLUDED.legal_name,
-				transliterated_legal_name = EXCLUDED.transliterated_legal_name,
-				other_names = EXCLUDED.other_names,
-				entity_status = EXCLUDED.entity_status,
-				legal_address_line_1 = EXCLUDED.legal_address_line_1,
-				legal_address_line_2 = EXCLUDED.legal_address_line_2,
-				legal_address_line_3 = EXCLUDED.legal_address_line_3,
-				legal_address_line_4 = EXCLUDED.legal_address_line_4,
-				legal_address_city = EXCLUDED.legal_address_city,
-				legal_address_region = EXCLUDED.legal_address_region,
-				legal_address_country = EXCLUDED.legal_address_country,
-				legal_address_postal_code = EXCLUDED.legal_address_postal_code,
-				hq_address_line_1 = EXCLUDED.hq_address_line_1,
-				hq_address_line_2 = EXCLUDED.hq_address_line_2,
-				hq_address_line_3 = EXCLUDED.hq_address_line_3,
-				hq_address_line_4 = EXCLUDED.hq_address_line_4,
-				hq_address_city = EXCLUDED.hq_address_city,
-				hq_address_region = EXCLUDED.hq_address_region,
-				hq_address_country = EXCLUDED.hq_address_country,
-				hq_address_postal_code = EXCLUDED.hq_address_postal_code,
-				registration_authority = EXCLUDED.registration_authority,
-				registration_authority_id = EXCLUDED.registration_authority_id,
-				registration_number = EXCLUDED.registration_number,
-				entity_category = EXCLUDED.entity_category,
-				entity_sub_category = EXCLUDED.entity_sub_category,
-				entity_legal_form = EXCLUDED.entity_legal_form,
-				legal_jurisdiction = EXCLUDED.legal_jurisdiction,
-				registration_status = EXCLUDED.registration_status,
-				successor_lei = EXCLUDED.successor_lei,
-				validation_authority = EXCLUDED.validation_authority,
-				initial_registration_date = EXCLUDED.initial_registration_date,
-				last_update_date = EXCLUDED.last_update_date,
-				next_renewal_date = EXCLUDED.next_renewal_date,
-				managing_lou = EXCLUDED.managing_lou,
-				validation_sources = EXCLUDED.validation_sources,
-				source_file_id = EXCLUDED.source_file_id,
-				updated_at = NOW(),
-				updated_by = 'system'
-			WHERE
-			(
-				lei_raw.lei_records.legal_name,
-				lei_raw.lei_records.transliterated_legal_name,
-				lei_raw.lei_records.other_names,
-				lei_raw.lei_records.entity_status,
-				lei_raw.lei_records.legal_address_line_1,
-				lei_raw.lei_records.legal_address_line_2,
-				lei_raw.lei_records.legal_address_line_3,
-				lei_raw.lei_records.legal_address_line_4,
-				lei_raw.lei_records.legal_address_city,
-				lei_raw.lei_records.legal_address_region,
-				lei_raw.lei_records.legal_address_country,
-				lei_raw.lei_records.legal_address_postal_code,
-				lei_raw.lei_records.hq_address_line_1,
-				lei_raw.lei_records.hq_address_line_2,
-				lei_raw.lei_records.hq_address_line_3,
-				lei_raw.lei_records.hq_address_line_4,
-				lei_raw.lei_records.hq_address_city,
-				lei_raw.lei_records.hq_address_region,
-				lei_raw.lei_records.hq_address_country,
-				lei_raw.lei_records.hq_address_postal_code,
-				lei_raw.lei_records.registration_authority,
-				lei_raw.lei_records.registration_authority_id,
-				lei_raw.lei_records.registration_number,
-				lei_raw.lei_records.entity_category,
-				lei_raw.lei_records.entity_sub_category,
-				lei_raw.lei_records.entity_legal_form,
-				lei_raw.lei_records.legal_jurisdiction,
-				lei_raw.lei_records.registration_status,
-				lei_raw.lei_records.successor_lei,
-				lei_raw.lei_records.validation_authority,
-				lei_raw.lei_records.initial_registration_date,
-				lei_raw.lei_records.last_update_date,
-				lei_raw.lei_records.next_renewal_date,
-				lei_raw.lei_records.managing_lou,
-				lei_raw.lei_records.validation_sources,
-				lei_raw.lei_records.source_file_id
-			) IS DISTINCT FROM (
-				EXCLUDED.legal_name,
-				EXCLUDED.transliterated_legal_name,
-				EXCLUDED.other_names,
-				EXCLUDED.entity_status,
-				EXCLUDED.legal_address_line_1,
-				EXCLUDED.legal_address_line_2,
-				EXCLUDED.legal_address_line_3,
-				EXCLUDED.legal_address_line_4,
-				EXCLUDED.legal_address_city,
-				EXCLUDED.legal_address_region,
-				EXCLUDED.legal_address_country,
-				EXCLUDED.legal_address_postal_code,
-				EXCLUDED.hq_address_line_1,
-				EXCLUDED.hq_address_line_2,
-				EXCLUDED.hq_address_line_3,
-				EXCLUDED.hq_address_line_4,
-				EXCLUDED.hq_address_city,
-				EXCLUDED.hq_address_region,
-				EXCLUDED.hq_address_country,
-				EXCLUDED.hq_address_postal_code,
-				EXCLUDED.registration_authority,
-				EXCLUDED.registration_authority_id,
-				EXCLUDED.registration_number,
-				EXCLUDED.entity_category,
-				EXCLUDED.entity_sub_category,
-				EXCLUDED.entity_legal_form,
-				EXCLUDED.legal_jurisdiction,
-				EXCLUDED.registration_status,
-				EXCLUDED.successor_lei,
-				EXCLUDED.validation_authority,
-				EXCLUDED.initial_registration_date,
-				EXCLUDED.last_update_date,
-				EXCLUDED.next_renewal_date,
-				EXCLUDED.managing_lou,
-				EXCLUDED.validation_sources,
-				EXCLUDED.source_file_id
-			)
-	`, strings.Join(valueStrings, ","))
+		stmt := buildLEIRecordBatchUpsertSQL(strings.Join(valueStrings, ","))
 
 		// Execute batch upsert using Exec (better placeholder handling than Raw)
 		result := tx.Exec(stmt, valueArgs...)
@@ -1346,6 +1215,198 @@ func (r *leiRepository) BatchUpsertLEIRecords(records []*domain.LEIRecord) (crea
 		Msg("Batch upsert with full audit trail completed successfully")
 
 	return createdCount, updatedCount, nil
+}
+
+func buildLEIRecordBatchUpsertSQL(values string) string {
+	return fmt.Sprintf(`
+			INSERT INTO lei_raw.lei_records (
+				id, lei, legal_name, transliterated_legal_name, other_names,
+				legal_address_line_1, legal_address_line_2, legal_address_line_3, legal_address_line_4,
+				legal_address_city, legal_address_region, legal_address_country, legal_address_postal_code,
+				hq_address_line_1, hq_address_line_2, hq_address_line_3, hq_address_line_4,
+				hq_address_city, hq_address_region, hq_address_country, hq_address_postal_code,
+				registration_authority, registration_authority_id, registration_number,
+				entity_category, entity_sub_category, entity_legal_form,
+				entity_status, legal_jurisdiction, registration_status,
+				validation_authority,
+				initial_registration_date, last_update_date, next_renewal_date,
+				validation_sources,
+				source_file_id,
+				created_at, updated_at, created_by, updated_by, changed_fields
+			) VALUES %s
+			ON CONFLICT (lei) DO UPDATE SET
+				legal_name = EXCLUDED.legal_name,
+				transliterated_legal_name = EXCLUDED.transliterated_legal_name,
+				other_names = EXCLUDED.other_names,
+				entity_status = EXCLUDED.entity_status,
+				legal_address_line_1 = EXCLUDED.legal_address_line_1,
+				legal_address_line_2 = EXCLUDED.legal_address_line_2,
+				legal_address_line_3 = EXCLUDED.legal_address_line_3,
+				legal_address_line_4 = EXCLUDED.legal_address_line_4,
+				legal_address_city = EXCLUDED.legal_address_city,
+				legal_address_region = EXCLUDED.legal_address_region,
+				legal_address_country = EXCLUDED.legal_address_country,
+				legal_address_postal_code = EXCLUDED.legal_address_postal_code,
+				hq_address_line_1 = EXCLUDED.hq_address_line_1,
+				hq_address_line_2 = EXCLUDED.hq_address_line_2,
+				hq_address_line_3 = EXCLUDED.hq_address_line_3,
+				hq_address_line_4 = EXCLUDED.hq_address_line_4,
+				hq_address_city = EXCLUDED.hq_address_city,
+				hq_address_region = EXCLUDED.hq_address_region,
+				hq_address_country = EXCLUDED.hq_address_country,
+				hq_address_postal_code = EXCLUDED.hq_address_postal_code,
+				registration_authority = EXCLUDED.registration_authority,
+				registration_authority_id = EXCLUDED.registration_authority_id,
+				registration_number = EXCLUDED.registration_number,
+				entity_category = EXCLUDED.entity_category,
+				entity_sub_category = EXCLUDED.entity_sub_category,
+				entity_legal_form = EXCLUDED.entity_legal_form,
+				legal_jurisdiction = EXCLUDED.legal_jurisdiction,
+				registration_status = EXCLUDED.registration_status,
+				validation_authority = EXCLUDED.validation_authority,
+				initial_registration_date = EXCLUDED.initial_registration_date,
+				last_update_date = EXCLUDED.last_update_date,
+				next_renewal_date = EXCLUDED.next_renewal_date,
+				validation_sources = EXCLUDED.validation_sources,
+				source_file_id = EXCLUDED.source_file_id,
+				updated_at = NOW(),
+				updated_by = 'system'
+			WHERE
+			(
+				lei_raw.lei_records.legal_name,
+				lei_raw.lei_records.transliterated_legal_name,
+				lei_raw.lei_records.other_names,
+				lei_raw.lei_records.entity_status,
+				lei_raw.lei_records.legal_address_line_1,
+				lei_raw.lei_records.legal_address_line_2,
+				lei_raw.lei_records.legal_address_line_3,
+				lei_raw.lei_records.legal_address_line_4,
+				lei_raw.lei_records.legal_address_city,
+				lei_raw.lei_records.legal_address_region,
+				lei_raw.lei_records.legal_address_country,
+				lei_raw.lei_records.legal_address_postal_code,
+				lei_raw.lei_records.hq_address_line_1,
+				lei_raw.lei_records.hq_address_line_2,
+				lei_raw.lei_records.hq_address_line_3,
+				lei_raw.lei_records.hq_address_line_4,
+				lei_raw.lei_records.hq_address_city,
+				lei_raw.lei_records.hq_address_region,
+				lei_raw.lei_records.hq_address_country,
+				lei_raw.lei_records.hq_address_postal_code,
+				lei_raw.lei_records.registration_authority,
+				lei_raw.lei_records.registration_authority_id,
+				lei_raw.lei_records.registration_number,
+				lei_raw.lei_records.entity_category,
+				lei_raw.lei_records.entity_sub_category,
+				lei_raw.lei_records.entity_legal_form,
+				lei_raw.lei_records.legal_jurisdiction,
+				lei_raw.lei_records.registration_status,
+				lei_raw.lei_records.validation_authority,
+				lei_raw.lei_records.initial_registration_date,
+				lei_raw.lei_records.last_update_date,
+				lei_raw.lei_records.next_renewal_date,
+				lei_raw.lei_records.validation_sources,
+				lei_raw.lei_records.source_file_id
+			) IS DISTINCT FROM (
+				EXCLUDED.legal_name,
+				EXCLUDED.transliterated_legal_name,
+				EXCLUDED.other_names,
+				EXCLUDED.entity_status,
+				EXCLUDED.legal_address_line_1,
+				EXCLUDED.legal_address_line_2,
+				EXCLUDED.legal_address_line_3,
+				EXCLUDED.legal_address_line_4,
+				EXCLUDED.legal_address_city,
+				EXCLUDED.legal_address_region,
+				EXCLUDED.legal_address_country,
+				EXCLUDED.legal_address_postal_code,
+				EXCLUDED.hq_address_line_1,
+				EXCLUDED.hq_address_line_2,
+				EXCLUDED.hq_address_line_3,
+				EXCLUDED.hq_address_line_4,
+				EXCLUDED.hq_address_city,
+				EXCLUDED.hq_address_region,
+				EXCLUDED.hq_address_country,
+				EXCLUDED.hq_address_postal_code,
+				EXCLUDED.registration_authority,
+				EXCLUDED.registration_authority_id,
+				EXCLUDED.registration_number,
+				EXCLUDED.entity_category,
+				EXCLUDED.entity_sub_category,
+				EXCLUDED.entity_legal_form,
+				EXCLUDED.legal_jurisdiction,
+				EXCLUDED.registration_status,
+				EXCLUDED.validation_authority,
+				EXCLUDED.initial_registration_date,
+				EXCLUDED.last_update_date,
+				EXCLUDED.next_renewal_date,
+				EXCLUDED.validation_sources,
+				EXCLUDED.source_file_id
+			)
+	`, values)
+}
+
+func (r *leiRepository) BatchUpdateLEILinkReferences(records []*domain.LEIRecord) (int, error) {
+	if len(records) == 0 {
+		return 0, nil
+	}
+
+	updatedCount := 0
+	const batchSize = 250
+
+	for i := 0; i < len(records); i += batchSize {
+		end := i + batchSize
+		if end > len(records) {
+			end = len(records)
+		}
+
+		batch := records[i:end]
+		valueStrings := make([]string, 0, len(batch))
+		valueArgs := make([]interface{}, 0, len(batch)*3)
+
+		for _, record := range batch {
+			valueStrings = append(valueStrings, "(?, ?, ?)")
+			valueArgs = append(valueArgs,
+				record.LEI,
+				nullableLEICode(record.SuccessorLEI),
+				nullableCode(record.ManagingLOU),
+			)
+		}
+
+		stmt := buildLEILinkReferenceUpdateSQL(strings.Join(valueStrings, ","))
+
+		result := r.db.Exec(stmt, valueArgs...)
+		if result.Error != nil {
+			return updatedCount, fmt.Errorf("failed to reconcile LEI link references for records %d-%d: %w", i, end, result.Error)
+		}
+
+		updatedCount += int(result.RowsAffected)
+	}
+
+	return updatedCount, nil
+}
+
+func buildLEILinkReferenceUpdateSQL(values string) string {
+	return fmt.Sprintf(`
+			WITH link_updates (lei, successor_lei, managing_lou) AS (
+				VALUES %s
+			)
+			UPDATE lei_raw.lei_records AS current
+			SET
+				successor_lei = link_updates.successor_lei,
+				managing_lou = link_updates.managing_lou,
+				updated_at = NOW(),
+				updated_by = 'system'
+			FROM link_updates
+			WHERE current.lei = link_updates.lei
+				AND (
+					current.successor_lei,
+					current.managing_lou
+				) IS DISTINCT FROM (
+					link_updates.successor_lei,
+					link_updates.managing_lou
+				)
+	`, values)
 }
 
 // DeleteLEI soft deletes an LEI record
