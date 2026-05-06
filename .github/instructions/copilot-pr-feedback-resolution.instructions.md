@@ -5,7 +5,23 @@ applyTo: '**'
 
 # Copilot PR Feedback Resolution Workflow
 
+## ⚡ Quick Start
+
+**Use the `address-pr-comments` skill to automatically resolve review feedback.**
+
+The skill handles the complete workflow: identify unresolved threads, implement
+fixes, post individual resolution replies, create comprehensive summary, and
+mirror updates to linked issues—all without asking for confirmation.
+
+**Skill triggers**: "Address PR comments", "Resolve review feedback",
+"Fix Copilot feedback"
+
+---
+
 ## Overview
+
+This page documents the manual workflow for resolving Copilot PR review feedback.
+For automated execution, use the `address-pr-comments` skill (see Quick Start above).
 
 When Copilot provides review feedback on a pull request, implement fixes and
 automatically manage feedback resolution without requiring explicit user prompts
