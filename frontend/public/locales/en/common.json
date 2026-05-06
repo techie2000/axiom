@@ -413,7 +413,14 @@
       "toTypePlaceholder": "Filter to type...",
       "toCodePlaceholder": "Filter to code...",
       "clearAll": "🧹 Clear filters",
-      "activeFilters": "🔍 Active column filters: {{count}}"
+      "activeFilters": "🔍 Active column filters: {{count}}",
+      "fromSystemChip": "From System: {{value}}",
+      "toSystemChip": "To System: {{value}}",
+      "fromTypeChip": "From Type: {{value}}",
+      "toTypeChip": "To Type: {{value}}",
+      "fromCodeChip": "From Code: {{value}}",
+      "toCodeChip": "To Code: {{value}}",
+      "statusChip": "Status: {{value}}"
     },
     "stats": {
       "totalMappings": "Total Mappings",
