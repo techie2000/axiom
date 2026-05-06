@@ -10,6 +10,7 @@ import PreferenceSavePrompt from '../components/PreferenceSavePrompt'
 import ReferencePageHeaderActions from '../components/ReferencePageHeaderActions'
 import SearchInputWithOverflowTooltip from '../components/SearchInputWithOverflowTooltip'
 import StatCard from '../components/StatCard'
+import SyncedWideTable from '../components/SyncedWideTable'
 import { getApiBaseUrl } from '../lib/api-base'
 import { useButtonEmojiMode } from '../lib/useButtonEmojiMode'
 import { useDeferredBooleanPreference } from '../lib/useDeferredBooleanPreference'
@@ -31,6 +32,7 @@ export default function CodeMappingsPage() {
   const { getEnglishTooltip } = useEnglishTooltips()
   const { formatLabel } = useButtonEmojiMode()
   const searchInputRef = useRef<HTMLInputElement>(null)
+  const filterBarRef = useRef<HTMLDivElement>(null)
   useSearchFocusShortcut(searchInputRef)
   const [mappings, setMappings] = useState<CodeMapping[]>([])
   const [loading, setLoading] = useState(true)
@@ -44,6 +46,7 @@ export default function CodeMappingsPage() {
     defaultValue: false,
   })
   const [hasHydrated, setHasHydrated] = useState(false)
+  const [filterBarHeight, setFilterBarHeight] = useState(0)
   useEffect(() => {
     setHasHydrated(true)
   }, [])
@@ -87,6 +90,15 @@ export default function CodeMappingsPage() {
       fetchMappings()
     }
   }, [fetchMappings])
+
+  useEffect(() => {
+    if (hasActiveFiltersOrSearch && filterBarRef.current) {
+      setFilterBarHeight(filterBarRef.current.offsetHeight)
+      return
+    }
+
+    setFilterBarHeight(0)
+  }, [hasActiveFiltersOrSearch, searchTerm, filters])
 
   const filteredMappings = useMemo(
     () => filterCodeMappings(mappings, searchTerm, filters),
@@ -185,7 +197,7 @@ export default function CodeMappingsPage() {
           />
         </div>
 
-        <div className="mb-6 theme-panel border-2 backdrop-blur-sm rounded-lg p-6">
+        <div className="relative z-40 mb-6 theme-panel border-2 backdrop-blur-sm rounded-lg p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-2 theme-text-muted">{t('codeMappings.columns.fromSystem')}</label>
@@ -287,45 +299,142 @@ export default function CodeMappingsPage() {
           </div>
         </div>
 
-        {activeFilterCount > 0 && (
-          <div className="mb-4 rounded-lg px-4 py-2 text-sm theme-subtle border border-[rgb(var(--border-rgb))]">
-            {t('codeMappings.filters.activeFilters', { count: activeFilterCount })}
+        {hasActiveFiltersOrSearch && (
+          <div
+            ref={filterBarRef}
+            className="sticky top-0 z-40 mb-1 theme-filterbar border-2 border-[rgb(var(--ring-rgb)/0.35)] px-4 py-2 shadow-md rounded-lg"
+          >
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-semibold theme-link">{t('filters.activeFilters')}</span>
+                {searchTerm && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchTerm('')}
+                    className="px-2 py-1 rounded text-xs font-medium transition-colors theme-filterchip"
+                    title={getEnglishTooltip('filters.searchChip', { value: searchTerm })}
+                  >
+                    {t('filters.searchChip', { value: searchTerm })}
+                  </button>
+                )}
+                {filters.fromSystem && (
+                  <button
+                    type="button"
+                    onClick={() => setFilter('fromSystem', '')}
+                    className="px-2 py-1 rounded text-xs font-medium transition-colors theme-filterchip"
+                    title={getEnglishTooltip('codeMappings.filters.fromSystemChip', { value: filters.fromSystem })}
+                  >
+                    {t('codeMappings.filters.fromSystemChip', { value: filters.fromSystem })}
+                  </button>
+                )}
+                {filters.fromType && (
+                  <button
+                    type="button"
+                    onClick={() => setFilter('fromType', '')}
+                    className="px-2 py-1 rounded text-xs font-medium transition-colors theme-filterchip"
+                    title={getEnglishTooltip('codeMappings.filters.fromTypeChip', { value: filters.fromType })}
+                  >
+                    {t('codeMappings.filters.fromTypeChip', { value: filters.fromType })}
+                  </button>
+                )}
+                {filters.fromCode && (
+                  <button
+                    type="button"
+                    onClick={() => setFilter('fromCode', '')}
+                    className="px-2 py-1 rounded text-xs font-medium transition-colors theme-filterchip"
+                    title={getEnglishTooltip('codeMappings.filters.fromCodeChip', { value: filters.fromCode })}
+                  >
+                    {t('codeMappings.filters.fromCodeChip', { value: filters.fromCode })}
+                  </button>
+                )}
+                {filters.toSystem && (
+                  <button
+                    type="button"
+                    onClick={() => setFilter('toSystem', '')}
+                    className="px-2 py-1 rounded text-xs font-medium transition-colors theme-filterchip"
+                    title={getEnglishTooltip('codeMappings.filters.toSystemChip', { value: filters.toSystem })}
+                  >
+                    {t('codeMappings.filters.toSystemChip', { value: filters.toSystem })}
+                  </button>
+                )}
+                {filters.toType && (
+                  <button
+                    type="button"
+                    onClick={() => setFilter('toType', '')}
+                    className="px-2 py-1 rounded text-xs font-medium transition-colors theme-filterchip"
+                    title={getEnglishTooltip('codeMappings.filters.toTypeChip', { value: filters.toType })}
+                  >
+                    {t('codeMappings.filters.toTypeChip', { value: filters.toType })}
+                  </button>
+                )}
+                {filters.toCode && (
+                  <button
+                    type="button"
+                    onClick={() => setFilter('toCode', '')}
+                    className="px-2 py-1 rounded text-xs font-medium transition-colors theme-filterchip"
+                    title={getEnglishTooltip('codeMappings.filters.toCodeChip', { value: filters.toCode })}
+                  >
+                    {t('codeMappings.filters.toCodeChip', { value: filters.toCode })}
+                  </button>
+                )}
+                {filters.status && (
+                  <button
+                    type="button"
+                    onClick={() => setFilter('status', '')}
+                    className="px-2 py-1 rounded text-xs font-medium transition-colors theme-filterchip"
+                    title={getEnglishTooltip('codeMappings.filters.statusChip', { value: filters.status === 'active' ? t('codeMappings.status.active', { lng: 'en' }) : t('codeMappings.status.inactive', { lng: 'en' }) })}
+                  >
+                    {t('codeMappings.filters.statusChip', { value: filters.status === 'active' ? t('codeMappings.status.active') : t('codeMappings.status.inactive') })}
+                  </button>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => { resetFilters(); setSearchTerm('') }}
+                className="px-3 py-1 text-xs rounded-lg transition-colors font-medium shadow-sm theme-filterchip-clear"
+                title={getEnglishTooltip('filters.clearAll')}
+              >
+                {t('filters.clearAll')}
+              </button>
+            </div>
           </div>
         )}
 
         {/* Mappings Table */}
-        <div className="theme-table-shell rounded-lg shadow overflow-hidden border-2">
-          <div className="overflow-x-auto theme-scrollbar">
-            <table className="min-w-full divide-y [--tw-divide-opacity:1] divide-[rgb(var(--border-rgb)/0.7)]">
-              <thead className="theme-table-header">
-                <tr>
-                    <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell ${filters.fromSystem ? 'text-[rgb(var(--primary-rgb))]' : ''}`}>
-                      <span title={getEnglishTooltip('codeMappings.columns.fromSystem')}>{t('codeMappings.columns.fromSystem')}</span>
-                    </th>
-                    <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell ${filters.fromType ? 'text-[rgb(var(--primary-rgb))]' : ''}`}>
-                      <span title={getEnglishTooltip('codeMappings.columns.fromType')}>{t('codeMappings.columns.fromType')}</span>
-                    </th>
-                    <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell ${filters.fromCode ? 'text-[rgb(var(--primary-rgb))]' : ''}`}>
-                      <span title={getEnglishTooltip('codeMappings.columns.fromCode')}>{t('codeMappings.columns.fromCode')}</span>
-                    </th>
-                    <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell ${filters.toSystem ? 'text-[rgb(var(--primary-rgb))]' : ''}`}>
-                      <span title={getEnglishTooltip('codeMappings.columns.toSystem')}>{t('codeMappings.columns.toSystem')}</span>
-                    </th>
-                    <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell ${filters.toType ? 'text-[rgb(var(--primary-rgb))]' : ''}`}>
-                      <span title={getEnglishTooltip('codeMappings.columns.toType')}>{t('codeMappings.columns.toType')}</span>
-                    </th>
-                    <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell ${filters.toCode ? 'text-[rgb(var(--primary-rgb))]' : ''}`}>
-                      <span title={getEnglishTooltip('codeMappings.columns.toCode')}>{t('codeMappings.columns.toCode')}</span>
-                    </th>
-                    <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell ${filters.status ? 'text-[rgb(var(--primary-rgb))]' : ''}`}>
-                      <span title={getEnglishTooltip('codeMappings.columns.status')}>{t('codeMappings.columns.status')}</span>
-                    </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell">
-                    <span title={getEnglishTooltip('codeMappings.columns.description')}>{t('codeMappings.columns.description')}</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="theme-table-shell divide-y [--tw-divide-opacity:1] divide-[rgb(var(--border-rgb)/0.7)]">
+        <div className="theme-table-shell rounded-lg shadow border-2">
+          <SyncedWideTable
+            stickyTopOffset={hasActiveFiltersOrSearch ? filterBarHeight : 0}
+            dependencyKey={`${effectiveExpandedWidth}-${filteredMappings.length}`}
+            headerRow={(
+              <tr>
+                <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell ${filters.fromSystem ? 'text-[rgb(var(--primary-rgb))]' : ''}`}>
+                  <span title={getEnglishTooltip('codeMappings.columns.fromSystem')}>{t('codeMappings.columns.fromSystem')}</span>
+                </th>
+                <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell ${filters.fromType ? 'text-[rgb(var(--primary-rgb))]' : ''}`}>
+                  <span title={getEnglishTooltip('codeMappings.columns.fromType')}>{t('codeMappings.columns.fromType')}</span>
+                </th>
+                <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell ${filters.fromCode ? 'text-[rgb(var(--primary-rgb))]' : ''}`}>
+                  <span title={getEnglishTooltip('codeMappings.columns.fromCode')}>{t('codeMappings.columns.fromCode')}</span>
+                </th>
+                <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell ${filters.toSystem ? 'text-[rgb(var(--primary-rgb))]' : ''}`}>
+                  <span title={getEnglishTooltip('codeMappings.columns.toSystem')}>{t('codeMappings.columns.toSystem')}</span>
+                </th>
+                <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell ${filters.toType ? 'text-[rgb(var(--primary-rgb))]' : ''}`}>
+                  <span title={getEnglishTooltip('codeMappings.columns.toType')}>{t('codeMappings.columns.toType')}</span>
+                </th>
+                <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell ${filters.toCode ? 'text-[rgb(var(--primary-rgb))]' : ''}`}>
+                  <span title={getEnglishTooltip('codeMappings.columns.toCode')}>{t('codeMappings.columns.toCode')}</span>
+                </th>
+                <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell ${filters.status ? 'text-[rgb(var(--primary-rgb))]' : ''}`}>
+                  <span title={getEnglishTooltip('codeMappings.columns.status')}>{t('codeMappings.columns.status')}</span>
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider theme-table-header-cell">
+                  <span title={getEnglishTooltip('codeMappings.columns.description')}>{t('codeMappings.columns.description')}</span>
+                </th>
+              </tr>
+            )}
+            bodyRows={(
+              <>
                 {filteredMappings.length > 0 ? (
                   filteredMappings.map((mapping) => (
                     <tr key={mapping.id} className="theme-table-row-hover transition-colors">
@@ -366,9 +475,9 @@ export default function CodeMappingsPage() {
                     </td>
                   </tr>
                 )}
-              </tbody>
-            </table>
-          </div>
+              </>
+            )}
+          />
         </div>
 
         {/* Footer Note */}
