@@ -1363,7 +1363,6 @@ func (r *leiRepository) BatchUpdateLEILinkReferences(records []*domain.LEIRecord
 		batch := records[i:end]
 		valueStrings := make([]string, 0, len(batch))
 		valueArgs := make([]interface{}, 0, len(batch)*3)
-		affectedLEIs := make([]string, 0, len(batch))
 
 		for _, record := range batch {
 			valueStrings = append(valueStrings, "(?, ?, ?)")
@@ -1372,7 +1371,6 @@ func (r *leiRepository) BatchUpdateLEILinkReferences(records []*domain.LEIRecord
 				nullableLEICode(record.SuccessorLEI),
 				nullableCode(record.ManagingLOU),
 			)
-			affectedLEIs = append(affectedLEIs, record.LEI)
 		}
 
 		stmt := buildLEILinkReferenceUpdateSQL(strings.Join(valueStrings, ","))
