@@ -16,7 +16,7 @@ SET
                     NULLIF(BTRIM(reason_part), '') AS trimmed_reason -- noqa: RF04
                 FROM
                     UNNEST(STRING_TO_ARRAY(COALESCE(exception_reason, ''), ',')) WITH ORDINALITY -- noqa: RF04
-                        AS parsed_parts (reason_part, ordinality) -- noqa: RF04
+                    AS parsed_parts (reason_part, ordinality) -- noqa: RF04
             ) AS parsed
             WHERE trimmed_reason IS NOT NULL
         ),
