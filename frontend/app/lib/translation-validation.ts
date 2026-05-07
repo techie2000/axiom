@@ -5,7 +5,7 @@
  * like $t(key, {...}) from being stored in translation inputs.
  */
 
-export const validateTranslationValue = (value: string): { valid: boolean; error?: string } => {
+export const validateTranslationValue = (value: string): { valid: boolean; errorKey?: string } => {
   if (!value) return { valid: true }
 
   // Check if value contains $t(...) nesting syntax
@@ -20,9 +20,7 @@ export const validateTranslationValue = (value: string): { valid: boolean; error
       if (content.includes(',') || content.includes('{') || content.includes('[')) {
         return {
           valid: false,
-          error:
-            'Unsafe nesting options detected. Use simple pointer form: $t(key) or $t(some.nested.key). ' +
-            'Option blocks like $t(key, {...}) are not allowed.',
+          errorKey: 'admin.translations.errors.validation.unsafeNestingOptions',
         }
       }
     }

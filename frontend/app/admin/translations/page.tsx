@@ -486,7 +486,7 @@ export default function AdminTranslationsPage() {
     // Validate translation value for unsafe nesting patterns
     const validation = validateTranslationValue(formData.translation_value)
     if (!validation.valid) {
-      setFormError(validation.error || t('admin.translations.errors.submitFailed'))
+      setFormError(validation.errorKey ? t(validation.errorKey) : t('admin.translations.errors.submitFailed'))
       return
     }
 
