@@ -12,7 +12,7 @@ Hooks run automatically once installed — no manual steps required per commit.
 
 ### pre-commit
 
-Runs three checks on every commit attempt:
+Runs four checks on every commit attempt:
 
 #### 1. VS Code settings sort (when `pwsh` is available)
 

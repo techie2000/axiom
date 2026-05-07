@@ -16,6 +16,8 @@ jobs:
   close-superseded:
     name: Close older open promotion PRs superseded by this one
     runs-on: ubuntu-latest
+    # Skip fork PRs: the token is read-only for forks and the close/comment calls would fail.
+    if: github.event.pull_request.head.repo.full_name == github.repository
     steps:
       - name: Detect if this PR is a promotion or replacement PR
         id: detect

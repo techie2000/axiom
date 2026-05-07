@@ -317,8 +317,13 @@ jobs:
             exit 1
           fi
 
+      - name: Set up Python for sqlfluff
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
       - name: Install sqlfluff
-        run: pip install sqlfluff
+        run: python -m pip install sqlfluff==3.3.0
 
       - name: Run sqlfluff lint on migration files
         run: sqlfluff lint backend/migrations/ --dialect postgres
