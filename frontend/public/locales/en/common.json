@@ -182,6 +182,12 @@
     "translations": {
       "title": "$t(leftNav.items.adminTranslations)",
       "subtitle": "Manage UI translation strings across all supported languages",
+      "errors": {
+        "submitFailed": "Failed to save translation",
+        "validation": {
+          "unsafeNestingOptions": "Unsafe nesting options detected. Use simple pointer form: $t(key) or $t(some.nested.key). Option blocks like $t(key, {...}) are not allowed."
+        }
+      },
       "addTranslation": "Add Translation",
       "searchPlaceholder": "Search by key or value…",
       "filterByLanguage": "Filter by language",
