@@ -194,12 +194,18 @@ export default function LanguagesPage() {
   }
 
   useEffect(() => {
-    if (hasActiveFilters && filterBarRef.current) {
-      setFilterBarHeight(filterBarRef.current.offsetHeight)
+    if (!hasActiveFilters) {
+      setFilterBarHeight(0)
       return
     }
 
-    setFilterBarHeight(0)
+    const updateHeight = () => {
+      setFilterBarHeight(filterBarRef.current?.offsetHeight || 0)
+    }
+
+    updateHeight()
+    window.addEventListener('resize', updateHeight)
+    return () => window.removeEventListener('resize', updateHeight)
   }, [hasActiveFilters, searchTerm, directionFilter])
 
   if (loading) {

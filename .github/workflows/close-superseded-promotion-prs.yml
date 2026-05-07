@@ -1,0 +1,114 @@
+name: Close Superseded Promotion PRs
+
+on:
+  pull_request:
+    types: [opened]
+    branches:
+      - dev
+      - uat
+      - prod
+
+permissions:
+  pull-requests: write
+  issues: write
+
+jobs:
+  close-superseded:
+    name: Close older open promotion PRs superseded by this one
+    runs-on: ubuntu-latest
+    # Skip fork PRs: the token is read-only for forks and the close/comment calls would fail.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - name: Detect if this PR is a promotion or replacement PR
+        id: detect
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const headRef = pr.head.ref;
+            const baseRef = pr.base.ref;
+            const title = pr.title;
+
+            // Standard promotion: head branch is main, dev, or uat
+            const isStandardPromotion = ['main', 'dev', 'uat'].includes(headRef);
+
+            // Replacement/conflict-resolution branch: fix/sync-{env}-from-*
+            const isReplacementBranch = /^fix\/sync-[^/]+-from-/.test(headRef);
+
+            // Title matches automated promotion pattern
+            const isTitlePromotion = /^chore:\s+(nightly|weekly|monthly)\s+promotion\s+\S+\s*[→>]\s*\S+/.test(title);
+
+            const isPromotion = isStandardPromotion || isReplacementBranch || isTitlePromotion;
+
+            console.log(`PR #${pr.number}: head=${headRef} base=${baseRef} title="${title}"`);
+            console.log(`isStandardPromotion=${isStandardPromotion} isReplacementBranch=${isReplacementBranch} isTitlePromotion=${isTitlePromotion}`);
+            console.log(`isPromotion=${isPromotion}`);
+
+            core.setOutput('is_promotion', isPromotion.toString());
+            core.setOutput('head_ref', headRef);
+            core.setOutput('base_ref', baseRef);
+            core.setOutput('new_pr_number', pr.number.toString());
+
+      - name: Find and close older open promotion PRs targeting the same base
+        if: steps.detect.outputs.is_promotion == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const newPrNumber = parseInt('${{ steps.detect.outputs.new_pr_number }}', 10);
+            const baseRef = '${{ steps.detect.outputs.base_ref }}';
+            const headRef = '${{ steps.detect.outputs.head_ref }}';
+
+            // Fetch all open PRs targeting the same base branch
+            const { data: openPrs } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              base: baseRef,
+              per_page: 100,
+            });
+
+            const promotionHeads = new Set(['main', 'dev', 'uat']);
+            const superseded = [];
+
+            for (const pr of openPrs) {
+              if (pr.number === newPrNumber) continue;
+
+              const prHeadRef = pr.head.ref;
+              const prTitle = pr.title;
+
+              // Check if the older PR is also a promotion or replacement PR
+              const isStdPromotion = promotionHeads.has(prHeadRef);
+              const isReplacement = /^fix\/sync-[^/]+-from-/.test(prHeadRef);
+              const isTitleMatch = /^chore:\s+(nightly|weekly|monthly)\s+promotion\s+\S+\s*[→>]\s*\S+/.test(prTitle);
+
+              if (isStdPromotion || isReplacement || isTitleMatch) {
+                superseded.push(pr);
+              }
+            }
+
+            if (superseded.length === 0) {
+              console.log('No older open promotion PRs found to close.');
+              return;
+            }
+
+            for (const pr of superseded) {
+              console.log(`Closing PR #${pr.number}: "${pr.title}" (superseded by #${newPrNumber})`);
+
+              // Post a comment before closing
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                body: `Superseded by #${newPrNumber} — closing automatically.`,
+              });
+
+              // Close the PR
+              await github.rest.pulls.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr.number,
+                state: 'closed',
+              });
+
+              console.log(`Closed PR #${pr.number}`);
+            }

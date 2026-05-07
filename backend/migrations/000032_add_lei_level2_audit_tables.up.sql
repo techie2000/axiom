@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS lei_raw.lei_relationship_records_audit (
     start_node_lei VARCHAR(20) NOT NULL,
     end_node_lei VARCHAR(20) NOT NULL,
     relationship_type VARCHAR(100) NOT NULL,
-    action VARCHAR(20) NOT NULL,
+    action VARCHAR(20) NOT NULL, -- noqa: RF04
     record_snapshot JSONB NOT NULL,
     changed_fields JSONB,
     source_file_id UUID,
@@ -39,7 +39,7 @@ COMMENT ON COLUMN lei_raw.lei_relationship_records_audit.end_node_lei IS
 COMMENT ON COLUMN lei_raw.lei_relationship_records_audit.relationship_type IS
 'GLEIF relationship type (e.g. IS_DIRECTLY_CONSOLIDATED_BY) at the time of the change.';
 
-COMMENT ON COLUMN lei_raw.lei_relationship_records_audit.action IS
+COMMENT ON COLUMN lei_raw.lei_relationship_records_audit.action IS -- noqa: RF04
 'Type of change: CREATE (first ingestion of the record) or UPDATE (subsequent change detected).';
 
 COMMENT ON COLUMN lei_raw.lei_relationship_records_audit.record_snapshot IS
@@ -68,7 +68,7 @@ CREATE INDEX IF NOT EXISTS idx_lei_rr_audit_end_node_lei
 ON lei_raw.lei_relationship_records_audit (end_node_lei);
 
 CREATE INDEX IF NOT EXISTS idx_lei_rr_audit_action
-ON lei_raw.lei_relationship_records_audit (action);
+ON lei_raw.lei_relationship_records_audit (action); -- noqa: RF04
 
 CREATE INDEX IF NOT EXISTS idx_lei_rr_audit_created_at
 ON lei_raw.lei_relationship_records_audit (created_at);
@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS lei_raw.lei_reporting_exceptions_audit (
     repex_record_id UUID NOT NULL,
     lei VARCHAR(20) NOT NULL,
     exception_category VARCHAR(100) NOT NULL,
-    action VARCHAR(20) NOT NULL,
+    action VARCHAR(20) NOT NULL, -- noqa: RF04
     record_snapshot JSONB NOT NULL,
     changed_fields JSONB,
     source_file_id UUID,
@@ -111,7 +111,7 @@ COMMENT ON COLUMN lei_raw.lei_reporting_exceptions_audit.exception_category IS
 'Exception category (DIRECT_ACCOUNTING_CONSOLIDATION_PARENT or ULTIMATE_ACCOUNTING_CONSOLIDATION_PARENT)
 at the time of the change.';
 
-COMMENT ON COLUMN lei_raw.lei_reporting_exceptions_audit.action IS
+COMMENT ON COLUMN lei_raw.lei_reporting_exceptions_audit.action IS -- noqa: RF04
 'Type of change: CREATE (first ingestion of the record) or UPDATE (subsequent change detected).';
 
 COMMENT ON COLUMN lei_raw.lei_reporting_exceptions_audit.record_snapshot IS
@@ -140,7 +140,7 @@ CREATE INDEX IF NOT EXISTS idx_lei_repex_audit_exception_category
 ON lei_raw.lei_reporting_exceptions_audit (exception_category);
 
 CREATE INDEX IF NOT EXISTS idx_lei_repex_audit_action
-ON lei_raw.lei_reporting_exceptions_audit (action);
+ON lei_raw.lei_reporting_exceptions_audit (action); -- noqa: RF04
 
 CREATE INDEX IF NOT EXISTS idx_lei_repex_audit_created_at
 ON lei_raw.lei_reporting_exceptions_audit (created_at);
