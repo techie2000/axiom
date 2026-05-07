@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/google/uuid"
@@ -16,6 +17,7 @@ var (
 	errTranslationKeyRequired  = errors.New("translation key is required")
 	errLanguageCodeRequired    = errors.New("language code is required")
 	errTranslationValueRequired = errors.New("translation value is required")
+	errUnsafeNestingOptions    = errors.New("unsafe nesting options detected: use simple pointer form $t(key) or $t(some.nested.key); option blocks like $t(key, {...}) are not allowed")
 )
 
 // UITranslationService manages community-contributed UI translation strings.
@@ -50,6 +52,32 @@ func normalizeLanguageCode(languageCode string) string {
 	}
 	parts := strings.SplitN(normalized, "-", 2)
 	return parts[0]
+}
+
+// validateTranslationValueNesting checks that translation values do not contain
+// unsafe i18next nesting option patterns like $t(key, {...}) or $t(key, [...]).
+// Safe patterns like $t(reference.key) are allowed.
+func validateTranslationValueNesting(value string) error {
+	if !strings.Contains(value, "$t(") {
+		return nil
+	}
+
+	// Pattern to find $t(...) expressions
+	nestingPattern := regexp.MustCompile(`\$t\(([^)]*)\)`)
+	matches := nestingPattern.FindAllStringSubmatch(value, -1)
+
+	for _, match := range matches {
+		if len(match) < 2 {
+			continue
+		}
+		content := match[1]
+		// Check for unsafe patterns: commas, braces, or brackets indicate option blocks
+		if strings.Contains(content, ",") || strings.Contains(content, "{") || strings.Contains(content, "[") {
+			return errUnsafeNestingOptions
+		}
+	}
+
+	return nil
 }
 
 func validateTranslationID(id string) (string, error) {
@@ -106,6 +134,11 @@ func (s *uiTranslationService) Submit(translationKey, languageCode, value, notes
 	trimmedValue := strings.TrimSpace(value)
 	if trimmedValue == "" {
 		return nil, errTranslationValueRequired
+	}
+
+	// Validate for unsafe nesting options
+	if err := validateTranslationValueNesting(trimmedValue); err != nil {
+		return nil, err
 	}
 
 	t := &domain.UITranslation{

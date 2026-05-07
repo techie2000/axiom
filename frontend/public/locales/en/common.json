@@ -28,16 +28,14 @@
       "codeMappings": "Code Mappings",
       "syncTriggers": "Sync Triggers",
       "adminUsers": "User Management",
-      "adminTranslations": "Translations",
-      "provisionalLei": "Provisional LEIs",
-      "userEntityLinks": "User–Entity Links"
+      "adminTranslations": "Translations"
     }
   },
   "nav": {
-    "breadcrumbs": "Breadcrumbs",
     "backToHome": "← Back to Home",
     "backToDashboard": "← Back to Dashboard",
     "backToLogin": "← Back to Login",
+    "breadcrumbs": "Breadcrumbs",
     "signIn": "Sign In",
     "requestAccess": "Request Access",
     "documentation": "📖 Documentation"
@@ -163,8 +161,8 @@
     "required": "Required",
     "errorTitle": "⚠️ Error:",
     "noticeTitle": "📋 Notice:",
-    "saving": "Saving...",
-    "columns": "Columns"
+    "columns": "Columns",
+    "saving": "Saving..."
   },
   "admin": {
     "translations": {
@@ -369,59 +367,14 @@
     "loading": "Loading code mappings...",
     "title": "Code Mappings",
     "subtitle": "Cross-system code translation — map external codes (e.g., ALERT) to internal AXIOM identifiers",
-    "widthNormalBtn": "↔️ Normal",
-    "widthExpandBtn": "↕️ Expand",
-    "docsToggle": "📘 Documentation",
-    "docsToggleAria": "Toggle code mappings documentation",
     "about": {
       "title": "💡 About Code Mappings:",
       "bodyPrefix": "This table maps codes from external systems to standardised AXIOM identifiers. The combination of",
       "bodySuffix": "and from_code must be unique."
     },
-    "docs": {
-      "title": "📘 Code Mappings Documentation",
-      "summary": "Use code mappings to translate source-system values into canonical destination-system values for downstream processing.",
-      "fields": {
-        "fromSystem": "from_system: source system that produced the incoming code.",
-        "toSystem": "to_system: target system that receives the translated code.",
-        "fromCode": "from_code: source value from the origin system.",
-        "toCode": "to_code: mapped destination value consumed by AXIOM or external integrations.",
-        "fromType": "from_code_type: source code domain (for example currency, country, instrument).",
-        "toType": "to_code_type: destination code domain after translation.",
-        "status": "status: Active mappings participate in translation; Inactive mappings are retained for audit history."
-      },
-      "uniqueness": "Uniqueness rule: from_system + to_system + from_code_type + to_code_type + from_code must be unique."
-    },
-    "fields": {
-      "fromSystem": "from_system",
-      "toSystem": "to_system",
-      "fromType": "from_code_type",
-      "toType": "to_code_type"
-    },
     "noticeTitle": "$t(common.noticeTitle)",
     "errorTitle": "$t(common.errorTitle)",
     "searchPlaceholder": "Search by system, code type, or code value...",
-    "filters": {
-      "fromSystemAria": "Filter by source system",
-      "toSystemAria": "Filter by destination system",
-      "statusAria": "Filter by mapping status",
-      "allFromSystems": "All from systems",
-      "allToSystems": "All to systems",
-      "allStatuses": "All statuses",
-      "fromTypePlaceholder": "Filter from type...",
-      "fromCodePlaceholder": "Filter from code...",
-      "toTypePlaceholder": "Filter to type...",
-      "toCodePlaceholder": "Filter to code...",
-      "clearAll": "🧹 Clear filters",
-      "activeFilters": "🔍 Active column filters: {{count}}",
-      "fromSystemChip": "From System: {{value}}",
-      "toSystemChip": "To System: {{value}}",
-      "fromTypeChip": "From Type: {{value}}",
-      "toTypeChip": "To Type: {{value}}",
-      "fromCodeChip": "From Code: {{value}}",
-      "toCodeChip": "To Code: {{value}}",
-      "statusChip": "Status: {{value}}"
-    },
     "stats": {
       "totalMappings": "Total Mappings",
       "activeMappings": "Active Mappings",
@@ -454,6 +407,32 @@
       "authRequired": "Authentication required. Please log in to view code mappings.",
       "apiReturned": "API returned {{status}}: {{statusText}}",
       "unableToConnect": "Unable to connect to backend API. Please ensure the backend service is running at {{apiBaseUrl}}"
+    },
+    "fields": {
+      "fromSystem": "from_system",
+      "fromType": "from_code_type",
+      "toSystem": "to_system",
+      "toType": "to_code_type"
+    },
+    "filters": {
+      "allFromSystems": "All from systems",
+      "allStatuses": "All statuses",
+      "allToSystems": "All to systems",
+      "clearAll": "🧹 Clear filters",
+      "fromCodeChip": "From Code: {{value}}",
+      "fromCodePlaceholder": "Filter from code...",
+      "fromSystemAria": "Filter by source system",
+      "fromSystemChip": "From System: {{value}}",
+      "fromTypeChip": "From Type: {{value}}",
+      "fromTypePlaceholder": "Filter from type...",
+      "statusAria": "Filter by mapping status",
+      "statusChip": "Status: {{value}}",
+      "toCodeChip": "To Code: {{value}}",
+      "toCodePlaceholder": "Filter to code...",
+      "toSystemAria": "Filter by destination system",
+      "toSystemChip": "To System: {{value}}",
+      "toTypeChip": "To Type: {{value}}",
+      "toTypePlaceholder": "Filter to type..."
     }
   },
   "dashboard": {
@@ -682,9 +661,6 @@
       "pageOf": "Page {{page}} of {{total}}",
       "itemsPerPage": "Items per page:"
     },
-    "badges": {
-      "provisional": "PROVISIONAL"
-    },
     "modal": {
       "title": "LEI Record Details",
       "close": "✕ Close",
@@ -693,7 +669,6 @@
       "dateDaysOnly": "🔢 Days only",
       "display": "Display:",
       "coreInformation": "Core Information",
-      "type": "Type",
       "addresses": "Addresses",
       "legalAddress": "Legal Address",
       "hqAddress": "Headquarters Address",
@@ -713,7 +688,8 @@
       "nameUnavailable": "Name unavailable.",
       "validation": "Validation",
       "validationSources": "Validation Sources",
-      "validationAuthority": "Validation Authority"
+      "validationAuthority": "Validation Authority",
+      "type": "leiRecords.modal.type"
     },
     "widthNormal": "$t(referenceLayout.normalWidth)",
     "widthExpand": "$t(referenceLayout.expandedWidth)",
@@ -721,7 +697,10 @@
     "widthExpandBtn": "$t(referenceLayout.expandButton)",
     "saveColumnPrompt": "Save column selection as your default?",
     "saveWidthPrompt": "$t(referenceLayout.savePageWidthDefault)",
-    "saveDisplayPrompt": "$t(referenceLayout.saveDisplayModeDefault)"
+    "saveDisplayPrompt": "$t(referenceLayout.saveDisplayModeDefault)",
+    "badges": {
+      "provisional": "leiRecords.badges.provisional"
+    }
   },
   "leiAudit": {
     "title": "📋 Audit / Change History",
@@ -910,12 +889,9 @@
   "actions": {
     "clearFilters": "$t(common.clearFilters)"
   },
-  "buttons": {
-    "columnsWithCount": "⚙️ Columns ({{count}})"
-  },
   "countries": {
     "actions": {
-      "columns": "$t(buttons.columnsWithCount)",
+      "columns": "⚙️ Columns ({{count}})",
       "reset": "Reset",
       "saveAsDefault": "Save as default",
       "selectAll": "Select All"
@@ -1085,215 +1061,179 @@
     }
   },
   "adminLanding": {
-    "title": "Administration",
-    "subtitle": "System configuration and user management • Admin access required",
-    "badge": "Admin Only",
+    "badge": "adminLanding.badge",
     "cards": {
-      "users": {
-        "title": "User Management",
-        "description": "Review registration requests, approve or deactivate accounts, and manage user roles"
-      },
-      "userEntityLinks": {
-        "title": "User–Entity Links",
-        "description": "Grant and revoke entity-scoped access links that associate users with specific LEI entities and roles"
-      },
       "provisionalLei": {
-        "title": "Provisional LEI Records",
-        "description": "Issue and manage Axiom-assigned provisional LEI codes for entities not yet registered with GLEIF, and link them to official LEIs when available"
+        "description": "adminLanding.cards.provisionalLei.description",
+        "title": "adminLanding.cards.provisionalLei.title"
       },
       "translations": {
-        "title": "Translations",
-        "description": "Review community-contributed UI translations, approve or reject pending strings, and add new translations"
+        "description": "adminLanding.cards.translations.description",
+        "title": "adminLanding.cards.translations.title"
+      },
+      "userEntityLinks": {
+        "description": "adminLanding.cards.userEntityLinks.description",
+        "title": "adminLanding.cards.userEntityLinks.title"
+      },
+      "users": {
+        "description": "adminLanding.cards.users.description",
+        "title": "adminLanding.cards.users.title"
       }
-    }
+    },
+    "subtitle": "adminLanding.subtitle",
+    "title": "adminLanding.title"
+  },
+  "buttons": {
+    "columnsWithCount": "buttons.columnsWithCount"
   },
   "provisionalLei": {
-    "title": "Provisional LEI Records",
-    "subtitle": "Issue and manage Axiom-assigned provisional LEI codes for entities without official GLEIF identifiers",
-    "loading": "Loading provisional LEI records…",
-    "empty": "No provisional LEI records found.",
-    "totalCount": "{{count}} record(s)",
-    "badge": "PROVISIONAL",
+    "actions": {
+      "clone": "provisionalLei.actions.clone",
+      "create": "provisionalLei.actions.create",
+      "edit": "provisionalLei.actions.edit",
+      "save": "provisionalLei.actions.save",
+      "succeed": "provisionalLei.actions.succeed",
+      "succeedDisabledReason": "provisionalLei.actions.succeedDisabledReason"
+    },
+    "badge": "provisionalLei.badge",
     "columns": {
-      "lei": "LEI",
-      "legalName": "Legal Name",
-      "source": "Source",
-      "status": "Status",
-      "successorLei": "Successor LEI",
-      "parentLei": "Parent LEI",
-      "childLei": "Child LEI",
-      "country": "Country",
-      "city": "City",
-      "jurisdiction": "Jurisdiction",
-      "notes": "Notes",
-      "created": "Created",
-      "updated": "Updated",
-      "actions": "Actions",
-      "groups": {
-        "core": "Core Fields",
-        "associated": "Associated Entities",
-        "address": "Address",
-        "metadata": "Metadata",
-        "dates": "Dates",
-        "hierarchy": "Hierarchy"
-      }
+      "actions": "provisionalLei.columns.actions"
     },
     "controls": {
-      "columns": "$t(buttons.columnsWithCount)",
-      "chooseColumns": "Choose visible columns",
-      "selectAll": "Select All",
-      "resetToDefault": "Reset to Default",
-      "expandedView": "Expanded View",
-      "normalView": "Normal View",
-      "displayNames": "$t(referenceLayout.displayNamesButton)",
-      "displayCodes": "$t(referenceLayout.displayCodesButton)",
-      "displayMode": "Toggle names or codes",
-      "viewMode": "Toggle page width"
+      "chooseColumns": "provisionalLei.controls.chooseColumns",
+      "resetToDefault": "provisionalLei.controls.resetToDefault",
+      "selectAll": "provisionalLei.controls.selectAll"
     },
-    "form": {
-      "createTitle": "Issue New Provisional LEI",
-      "editTitle": "Edit Provisional LEI Record",
-      "succeedTitle": "Link Successor LEI",
-      "succeedHint": "Enter the successor LEI for provisional record {{lei}} ({{name}}). This can be another provisional LEI or an official GLEIF LEI.",
-      "legalName": "Legal Name",
-      "legalNamePlaceholder": "Full legal entity name",
-      "provisioningSource": "Source",
-      "provisioningSourcePlaceholder": "e.g. onboarding, counterparty",
-      "country": "Country (ISO 2)",
-      "city": "City",
-      "jurisdiction": "Jurisdiction",
-      "entityStatus": "Entity Status",
-      "officialLEI": "Successor LEI (20 characters)",
-      "successorLeiPlaceholder": "20-character successor LEI",
-      "parentLei": "Parent LEI (optional)",
-      "parentLeiPlaceholder": "20-character parent LEI",
-      "childLei": "Child LEI (optional)",
-      "childLeiPlaceholder": "20-character child LEI",
-      "fixRelatedLeiBeforeSave": "Resolve parent/child LEI validation errors before saving.",
-      "notes": "Notes",
-      "notesPlaceholder": "Optional internal notes"
-    },
-    "actions": {
-      "create": "+ New Provisional LEI",
-      "edit": "$t(common.edit)",
-      "clone": "Clone",
-      "save": "$t(common.save)",
-      "succeed": "Link Successor LEI",
-      "succeedDisabledReason": "This record already has a successor LEI linked."
+    "empty": "provisionalLei.empty",
+    "errors": {
+      "createFailed": "provisionalLei.errors.createFailed",
+      "loadFailed": "provisionalLei.errors.loadFailed",
+      "network": "provisionalLei.errors.network",
+      "parentLeiNotFound": "provisionalLei.errors.parentLeiNotFound",
+      "succeedFailed": "provisionalLei.errors.succeedFailed",
+      "successorLeiNotFound": "provisionalLei.errors.successorLeiNotFound",
+      "updateFailed": "provisionalLei.errors.updateFailed"
     },
     "filters": {
-      "search": "$t(common.search)",
-      "searchPlaceholder": "Search by name, LEI, or source…",
-      "status": "Status",
-      "allStatuses": "All Statuses",
-      "source": "Source",
-      "allSources": "All sources",
-      "country": "Country",
-      "allCountries": "All countries",
-      "statusActive": "Active",
-      "statusInactive": "Inactive",
-      "statusMerged": "Merged",
-      "noResults": "No records match the current filters.",
-      "resultCount": "Showing {{shown}} of {{total}} record(s)"
+      "allCountries": "provisionalLei.filters.allCountries",
+      "allSources": "provisionalLei.filters.allSources",
+      "allStatuses": "provisionalLei.filters.allStatuses",
+      "country": "provisionalLei.filters.country",
+      "noResults": "provisionalLei.filters.noResults",
+      "resultCount": "provisionalLei.filters.resultCount",
+      "search": "provisionalLei.filters.search",
+      "searchPlaceholder": "provisionalLei.filters.searchPlaceholder",
+      "source": "provisionalLei.filters.source",
+      "status": "provisionalLei.filters.status",
+      "statusActive": "provisionalLei.filters.statusActive",
+      "statusInactive": "provisionalLei.filters.statusInactive",
+      "statusMerged": "provisionalLei.filters.statusMerged"
     },
+    "form": {
+      "city": "provisionalLei.form.city",
+      "country": "provisionalLei.form.country",
+      "createTitle": "provisionalLei.form.createTitle",
+      "editTitle": "provisionalLei.form.editTitle",
+      "entityStatus": "provisionalLei.form.entityStatus",
+      "fixRelatedLeiBeforeSave": "provisionalLei.form.fixRelatedLeiBeforeSave",
+      "jurisdiction": "provisionalLei.form.jurisdiction",
+      "legalName": "provisionalLei.form.legalName",
+      "legalNamePlaceholder": "provisionalLei.form.legalNamePlaceholder",
+      "notes": "provisionalLei.form.notes",
+      "notesPlaceholder": "provisionalLei.form.notesPlaceholder",
+      "officialLEI": "provisionalLei.form.officialLEI",
+      "parentLei": "provisionalLei.form.parentLei",
+      "parentLeiPlaceholder": "provisionalLei.form.parentLeiPlaceholder",
+      "provisioningSource": "provisionalLei.form.provisioningSource",
+      "provisioningSourcePlaceholder": "provisionalLei.form.provisioningSourcePlaceholder",
+      "succeedHint": "provisionalLei.form.succeedHint",
+      "succeedTitle": "provisionalLei.form.succeedTitle",
+      "successorLeiPlaceholder": "provisionalLei.form.successorLeiPlaceholder"
+    },
+    "loading": "provisionalLei.loading",
+    "subtitle": "provisionalLei.subtitle",
     "success": {
-      "created": "Provisional LEI issued successfully.",
-      "updated": "Record updated.",
-      "succeeded": "Provisional LEI linked to successor LEI."
+      "created": "provisionalLei.success.created",
+      "succeeded": "provisionalLei.success.succeeded",
+      "updated": "provisionalLei.success.updated"
     },
-    "errors": {
-      "loadFailed": "Failed to load provisional LEI records.",
-      "createFailed": "Failed to issue provisional LEI.",
-      "updateFailed": "Failed to update record.",
-      "succeedFailed": "Failed to link successor LEI.",
-      "parentLeiNotFound": "Parent LEI not found. Please enter a valid, registered 20-character LEI.",
-      "childLeiNotFound": "Child LEI not found. Please enter a valid, registered 20-character LEI.",
-      "successorLeiNotFound": "Successor LEI not found. Enter a valid, existing 20-character LEI.",
-      "network": "Network error — please try again."
-    }
+    "title": "provisionalLei.title",
+    "totalCount": "provisionalLei.totalCount"
   },
   "userEntityLinks": {
-    "title": "User–Entity Links",
-    "subtitle": "Grant and manage entity-scoped access links associating users with LEI entities",
-    "loading": "Loading user–entity links…",
-    "empty": "No links found.",
+    "actions": {
+      "disabledRevokedReason": "userEntityLinks.actions.disabledRevokedReason",
+      "edit": "userEntityLinks.actions.edit",
+      "grant": "userEntityLinks.actions.grant",
+      "grantSave": "userEntityLinks.actions.grantSave",
+      "revoke": "userEntityLinks.actions.revoke",
+      "unrevoke": "userEntityLinks.actions.unrevoke",
+      "unrevokeOnlyForRevoked": "userEntityLinks.actions.unrevokeOnlyForRevoked"
+    },
     "columns": {
-      "userId": "User ID",
-      "lei": "LEI",
-      "role": "Role",
-      "children": "Children",
-      "grantedAt": "Granted",
-      "expiresAt": "Expires",
-      "status": "Status",
-      "actions": "Actions"
+      "actions": "userEntityLinks.columns.actions",
+      "children": "userEntityLinks.columns.children",
+      "expiresAt": "userEntityLinks.columns.expiresAt",
+      "grantedAt": "userEntityLinks.columns.grantedAt",
+      "lei": "userEntityLinks.columns.lei",
+      "role": "userEntityLinks.columns.role",
+      "status": "userEntityLinks.columns.status",
+      "userId": "userEntityLinks.columns.userId"
+    },
+    "empty": "userEntityLinks.empty",
+    "errors": {
+      "duplicateActiveLink": "userEntityLinks.errors.duplicateActiveLink",
+      "grantFailed": "userEntityLinks.errors.grantFailed",
+      "invalidDateFormat": "userEntityLinks.errors.invalidDateFormat",
+      "leiNotFound": "userEntityLinks.errors.leiNotFound",
+      "loadFailed": "userEntityLinks.errors.loadFailed",
+      "network": "userEntityLinks.errors.network",
+      "revokeFailed": "userEntityLinks.errors.revokeFailed",
+      "unrevokeFailed": "userEntityLinks.errors.unrevokeFailed",
+      "updateFailed": "userEntityLinks.errors.updateFailed",
+      "userLoadFailed": "userEntityLinks.errors.userLoadFailed",
+      "userLoadUnauthorized": "userEntityLinks.errors.userLoadUnauthorized"
     },
     "filters": {
-      "byUser": "Filter by User ID…",
-      "byLEI": "Filter by LEI…",
-      "status": "Status",
-      "allStatuses": "All Statuses",
-      "role": "Role",
-      "allRoles": "All Roles",
-      "clear": "$t(common.clear)",
-      "activeOnly": "Active only"
+      "activeOnly": "userEntityLinks.filters.activeOnly",
+      "allRoles": "userEntityLinks.filters.allRoles",
+      "allStatuses": "userEntityLinks.filters.allStatuses",
+      "byLEI": "userEntityLinks.filters.byLEI",
+      "byUser": "userEntityLinks.filters.byUser",
+      "clear": "userEntityLinks.filters.clear",
+      "role": "userEntityLinks.filters.role",
+      "status": "userEntityLinks.filters.status"
     },
     "form": {
-      "grantTitle": "Grant Entity Access",
-      "editTitle": "Edit Link",
-      "userId": "User ID",
-      "user": "User",
-      "userPickerSearch": "Search by username, full name, or email...",
-      "selectUserPlaceholder": "Select a user",
-      "selectedUserSummary": "Selected: {{username}} ({{name}})",
-      "lei": "LEI",
-      "role": "Role",
-      "expiresAt": "Expires At (optional)",
-      "datePlaceholder": "yyyy-mm-dd",
-      "openCalendar": "Open calendar",
-      "notes": "Notes",
-      "includeChildren": "Include child entities",
-      "childrenScope": "Entity hierarchy scope",
-      "childrenScopeNoneHint": "Access limited to the selected entity only.",
-      "childrenScopeDirectHint": "Access includes the selected entity and its direct children only.",
-      "childrenScopeAllHint": "Access includes the selected entity and all descendants (full tree). Note: closer/lower privileges override higher/parent privileges."
+      "childrenScope": "userEntityLinks.form.childrenScope",
+      "childrenScopeAllHint": "userEntityLinks.form.childrenScopeAllHint",
+      "childrenScopeDirectHint": "userEntityLinks.form.childrenScopeDirectHint",
+      "childrenScopeNoneHint": "userEntityLinks.form.childrenScopeNoneHint",
+      "datePlaceholder": "userEntityLinks.form.datePlaceholder",
+      "editTitle": "userEntityLinks.form.editTitle",
+      "expiresAt": "userEntityLinks.form.expiresAt",
+      "grantTitle": "userEntityLinks.form.grantTitle",
+      "lei": "userEntityLinks.form.lei",
+      "notes": "userEntityLinks.form.notes",
+      "openCalendar": "userEntityLinks.form.openCalendar",
+      "role": "userEntityLinks.form.role",
+      "selectUserPlaceholder": "userEntityLinks.form.selectUserPlaceholder",
+      "user": "userEntityLinks.form.user",
+      "userPickerSearch": "userEntityLinks.form.userPickerSearch"
     },
-    "childrenScope": {
-      "none": "None (entity only)",
-      "direct": "Direct children only",
-      "all": "All descendants"
-    },
+    "loading": "userEntityLinks.loading",
     "status": {
-      "active": "Active",
-      "expired": "Expired",
-      "revoked": "Revoked"
+      "active": "userEntityLinks.status.active",
+      "expired": "userEntityLinks.status.expired",
+      "revoked": "userEntityLinks.status.revoked"
     },
-    "actions": {
-      "grant": "+ Grant Access",
-      "grantSave": "Grant",
-      "edit": "$t(common.edit)",
-      "revoke": "Revoke",
-      "unrevoke": "Unrevoke",
-      "disabledRevokedReason": "This link is already revoked, so these actions are unavailable.",
-      "unrevokeOnlyForRevoked": "Unrevoke is only available for revoked links."
-    },
+    "subtitle": "userEntityLinks.subtitle",
     "success": {
-      "granted": "Access granted.",
-      "updated": "Link updated.",
-      "revoked": "Link revoked.",
-      "unrevoked": "Link unrevoked."
+      "granted": "userEntityLinks.success.granted",
+      "revoked": "userEntityLinks.success.revoked",
+      "unrevoked": "userEntityLinks.success.unrevoked",
+      "updated": "userEntityLinks.success.updated"
     },
-    "errors": {
-      "loadFailed": "Failed to load user–entity links.",
-      "grantFailed": "Failed to grant access.",
-      "duplicateActiveLink": "Active user-entity link already exists for {{user}} and LEI {{lei}}.",
-      "updateFailed": "Failed to update link.",
-      "revokeFailed": "Failed to revoke link.",
-      "unrevokeFailed": "Failed to unrevoke link.",
-      "invalidDateFormat": "Invalid date format. Use yyyy-mm-dd.",
-      "leiNotFound": "LEI not found. Please enter a valid, registered 20-character LEI.",
-      "userLoadFailed": "Failed to load users for the picker.",
-      "userLoadUnauthorized": "You do not have permission to list users. Please sign in as an admin.",
-      "network": "Network error — please try again."
-    }
+    "title": "userEntityLinks.title"
   }
 }
