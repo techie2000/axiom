@@ -10,11 +10,11 @@ export const validateTranslationValue = (value: string): { valid: boolean; error
 
   // Check if value contains $t(...) nesting syntax
   if (value.includes('$t(')) {
-    // Extract the content inside $t(...) to validate it's safe
-    const nestingPattern = /\$t\(([^)]*)\)/
-    const match = value.match(nestingPattern)
+    // Extract all $t(...) occurrences to validate they're safe
+    const nestingPattern = /\$t\(([^)]*)\)/g
+    const matches = Array.from(value.matchAll(nestingPattern))
 
-    if (match) {
+    for (const match of matches) {
       const content = match[1]
       // Check for unsafe patterns: commas or braces indicate option blocks like $t(key, {...})
       if (content.includes(',') || content.includes('{') || content.includes('[')) {

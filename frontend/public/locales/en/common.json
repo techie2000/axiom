@@ -161,8 +161,8 @@
     "required": "Required",
     "errorTitle": "⚠️ Error:",
     "noticeTitle": "📋 Notice:",
-    "columns": "common.columns",
-    "saving": "common.saving"
+    "columns": "Columns",
+    "saving": "Saving..."
   },
   "admin": {
     "translations": {
@@ -369,8 +369,8 @@
     "subtitle": "Cross-system code translation — map external codes (e.g., ALERT) to internal AXIOM identifiers",
     "about": {
       "title": "💡 About Code Mappings:",
-      "bodyPrefix": "codeMappings.about.bodyPrefix",
-      "bodySuffix": "codeMappings.about.bodySuffix"
+      "bodyPrefix": "This table maps codes from external systems to standardised AXIOM identifiers. The combination of",
+      "bodySuffix": "and from_code must be unique."
     },
     "noticeTitle": "$t(common.noticeTitle)",
     "errorTitle": "$t(common.errorTitle)",
@@ -409,30 +409,30 @@
       "unableToConnect": "Unable to connect to backend API. Please ensure the backend service is running at {{apiBaseUrl}}"
     },
     "fields": {
-      "fromSystem": "codeMappings.fields.fromSystem",
-      "fromType": "codeMappings.fields.fromType",
-      "toSystem": "codeMappings.fields.toSystem",
-      "toType": "codeMappings.fields.toType"
+      "fromSystem": "from_system",
+      "fromType": "from_code_type",
+      "toSystem": "to_system",
+      "toType": "to_code_type"
     },
     "filters": {
-      "allFromSystems": "codeMappings.filters.allFromSystems",
-      "allStatuses": "codeMappings.filters.allStatuses",
-      "allToSystems": "codeMappings.filters.allToSystems",
-      "clearAll": "codeMappings.filters.clearAll",
-      "fromCodeChip": "codeMappings.filters.fromCodeChip",
-      "fromCodePlaceholder": "codeMappings.filters.fromCodePlaceholder",
-      "fromSystemAria": "codeMappings.filters.fromSystemAria",
-      "fromSystemChip": "codeMappings.filters.fromSystemChip",
-      "fromTypeChip": "codeMappings.filters.fromTypeChip",
-      "fromTypePlaceholder": "codeMappings.filters.fromTypePlaceholder",
-      "statusAria": "codeMappings.filters.statusAria",
-      "statusChip": "codeMappings.filters.statusChip",
-      "toCodeChip": "codeMappings.filters.toCodeChip",
-      "toCodePlaceholder": "codeMappings.filters.toCodePlaceholder",
-      "toSystemAria": "codeMappings.filters.toSystemAria",
-      "toSystemChip": "codeMappings.filters.toSystemChip",
-      "toTypeChip": "codeMappings.filters.toTypeChip",
-      "toTypePlaceholder": "codeMappings.filters.toTypePlaceholder"
+      "allFromSystems": "All from systems",
+      "allStatuses": "All statuses",
+      "allToSystems": "All to systems",
+      "clearAll": "🧹 Clear filters",
+      "fromCodeChip": "From Code: {{value}}",
+      "fromCodePlaceholder": "Filter from code...",
+      "fromSystemAria": "Filter by source system",
+      "fromSystemChip": "From System: {{value}}",
+      "fromTypeChip": "From Type: {{value}}",
+      "fromTypePlaceholder": "Filter from type...",
+      "statusAria": "Filter by mapping status",
+      "statusChip": "Status: {{value}}",
+      "toCodeChip": "To Code: {{value}}",
+      "toCodePlaceholder": "Filter to code...",
+      "toSystemAria": "Filter by destination system",
+      "toSystemChip": "To System: {{value}}",
+      "toTypeChip": "To Type: {{value}}",
+      "toTypePlaceholder": "Filter to type..."
     }
   },
   "dashboard": {
@@ -739,7 +739,7 @@
     "displayToggleNamesTitle": "Switch to display country names instead of codes",
     "displayToggleCodes": "🏷️ Display: Codes",
     "displayToggleCodesTitle": "Switch to display country codes instead of names",
-    "columns": "Columns",
+    "columns": "$t(common.columns)",
     "selectColumns": "Select columns to display",
     "timelineSlider": "Navigate audit history timeline",
     "viewAuditHistory": "📋 View Audit History",
