@@ -5,7 +5,11 @@ UPDATE lei_raw.lei_reporting_exceptions
 SET
     exception_reasons = COALESCE(
         (
-            SELECT JSONB_AGG(trimmed_reason ORDER BY ordinality) AS agg_reasons -- noqa: RF04
+            SELECT
+                JSONB_AGG(
+                    trimmed_reason
+                    ORDER BY ordinality -- noqa: RF04
+                ) AS agg_reasons -- noqa: RF04
             FROM (
                 SELECT
                     ordinality, -- noqa: RF04
