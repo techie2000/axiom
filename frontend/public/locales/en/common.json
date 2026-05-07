@@ -1,4 +1,37 @@
 {
+  "common": {
+    "loading": "Loading…",
+    "error": "Error",
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "search": "Search",
+    "filter": "Filter",
+    "clear": "Clear",
+    "clearFilters": "Clear Filters",
+    "filteredResults": "Filtered Results",
+    "noResults": "No results found",
+    "required": "Required",
+    "errorTitle": "⚠️ Error:",
+    "noticeTitle": "📋 Notice:",
+    "columns": "Columns",
+    "saving": "Saving...",
+    "comingSoon": "Coming Soon",
+    "status": "Status",
+    "validation": "Validation",
+    "filters": {
+      "active": "Active",
+      "all": "All",
+      "inactive": "Inactive",
+      "search": "$t(common.search)",
+      "status": "$t(common.status)",
+      "statusChip": "Status: {{value}}",
+      "${activeFilter}": "common.filters.${activeFilter}"
+    }
+  },
   "leftNav": {
     "title": "Navigation",
     "open": "Open navigation panel",
@@ -28,20 +61,22 @@
       "codeMappings": "Code Mappings",
       "syncTriggers": "Sync Triggers",
       "adminUsers": "User Management",
-      "adminTranslations": "Translations"
+      "adminTranslations": "Translations",
+      "provisionalLei": "Provisional LEIs",
+      "userEntityLinks": "User–Entity Links"
     }
   },
   "nav": {
+    "breadcrumbs": "Breadcrumbs",
     "backToHome": "← Back to Home",
     "backToDashboard": "← Back to Dashboard",
     "backToLogin": "← Back to Login",
-    "breadcrumbs": "Breadcrumbs",
     "signIn": "Sign In",
     "requestAccess": "Request Access",
     "documentation": "📖 Documentation"
   },
   "login": {
-    "title": "Sign In",
+    "title": "$t(nav.signIn)",
     "subtitle": "Sign in to access protected Axiom features",
     "emailLabel": "Email address",
     "emailPlaceholder": "you@example.com",
@@ -55,26 +90,26 @@
     "errorNetwork": "Network error – please try again"
   },
   "register": {
-    "title": "Request Access",
+    "title": "$t(nav.requestAccess)",
     "subtitle": "Submit a request for an Axiom account. An administrator will review and approve it.",
     "fullNameLabel": "Full name",
     "fullNamePlaceholder": "Jane Smith",
-    "emailLabel": "Email address",
+    "emailLabel": "$t(login.emailLabel)",
     "emailPlaceholder": "jane@example.com",
     "usernameLabel": "Username",
     "usernamePlaceholder": "jsmith",
-    "passwordLabel": "Password",
+    "passwordLabel": "$t(login.passwordLabel)",
     "passwordPlaceholder": "At least 8 characters",
     "confirmPasswordLabel": "Confirm password",
     "confirmPasswordPlaceholder": "Repeat password",
     "submitButton": "Submit request",
     "submittingButton": "Submitting…",
     "alreadyHaveAccount": "Already have an account?",
-    "signInLink": "Sign in",
+    "signInLink": "$t(login.submitButton)",
     "errorPasswordMatch": "Passwords do not match",
     "errorPasswordLength": "Password must be at least 8 characters",
     "errorGeneric": "Registration failed",
-    "errorNetwork": "Network error – please try again",
+    "errorNetwork": "$t(login.errorNetwork)",
     "required": "*"
   },
   "register_success": {
@@ -100,7 +135,7 @@
     "toggle": "Toggle theme"
   },
   "preferences": {
-    "language": "Language",
+    "language": "$t(language.currentLanguage)",
     "theme": "Theme",
     "signOut": "Sign out",
     "englishTooltips": "English tooltips",
@@ -143,30 +178,9 @@
     "mapProvider": "Map provider",
     "mapProviderDescription": "Default map service used when clicking \"View on Map\"."
   },
-  "common": {
-    "loading": "Loading…",
-    "error": "Error",
-    "save": "Save",
-    "cancel": "Cancel",
-    "close": "Close",
-    "delete": "Delete",
-    "edit": "Edit",
-    "add": "Add",
-    "search": "Search",
-    "filter": "Filter",
-    "clear": "Clear",
-    "clearFilters": "Clear Filters",
-    "filteredResults": "Filtered Results",
-    "noResults": "No results found",
-    "required": "Required",
-    "errorTitle": "⚠️ Error:",
-    "noticeTitle": "📋 Notice:",
-    "columns": "Columns",
-    "saving": "Saving..."
-  },
   "admin": {
     "translations": {
-      "title": "Translations",
+      "title": "$t(leftNav.items.adminTranslations)",
       "subtitle": "Manage UI translation strings across all supported languages",
       "addTranslation": "Add Translation",
       "searchPlaceholder": "Search by key or value…",
@@ -175,9 +189,9 @@
       "allLanguages": "All Languages",
       "allStatuses": "All Statuses",
       "keyColumn": "Key",
-      "languageColumn": "Language",
+      "languageColumn": "$t(language.currentLanguage)",
       "valueColumn": "Value",
-      "statusColumn": "Status",
+      "statusColumn": "$t(common.status)",
       "actionsColumn": "Actions",
       "statusPending": "Pending Review",
       "statusApproved": "Approved",
@@ -189,7 +203,7 @@
       "newTranslation": "New Translation",
       "keyLabel": "Translation Key",
       "keyPlaceholder": "e.g. login.title",
-      "languageLabel": "Language",
+      "languageLabel": "$t(language.currentLanguage)",
       "valueLabel": "Translated Value",
       "valuePlaceholder": "Enter translation…",
       "notesLabel": "Notes (optional)",
@@ -245,20 +259,20 @@
       }
     },
     "users": {
-      "title": "User Management",
+      "title": "$t(leftNav.items.adminUsers)",
       "subtitle": "Review and approve user account requests",
       "loadingUsers": "Loading users...",
       "filters": {
-        "all": "All"
+        "all": "$t(common.filters.all)"
       },
       "emptyWithStatus": "No {{status}} users found.",
       "columns": {
         "user": "User",
-        "username": "Username",
+        "username": "$t(register.usernameLabel)",
         "role": "Role",
-        "status": "Status",
+        "status": "$t(admin.translations.statusColumn)",
         "requested": "Requested",
-        "actions": "Actions"
+        "actions": "$t(admin.translations.actionsColumn)"
       },
       "bootstrapWarning": {
         "title": "⚠️ You are logged in with the default bootstrap administrator account.",
@@ -266,17 +280,17 @@
         "bodyAfter": "button to grant them admin rights. Once that real admin logs in, the bootstrap account will be deactivated automatically."
       },
       "roles": {
-        "admin": "Admin",
-        "user": "User"
+        "admin": "$t(leftNav.sections.admin)",
+        "user": "$t(admin.users.columns.user)"
       },
       "status": {
         "pending": "Pending",
-        "active": "Active",
-        "inactive": "Inactive",
+        "active": "$t(common.filters.active)",
+        "inactive": "$t(common.filters.inactive)",
         "permanentlyLocked": "Permanently locked"
       },
       "actions": {
-        "approve": "Approve",
+        "approve": "$t(admin.translations.approve)",
         "deactivate": "Deactivate",
         "reactivate": "Reactivate",
         "demote": "Demote",
@@ -302,7 +316,7 @@
     }
   },
   "accounts": {
-    "title": "Accounts",
+    "title": "$t(leftNav.items.accounts)",
     "subtitle": "Trading accounts and settlement instructions",
     "comingSoon": {
       "title": "Accounts Management",
@@ -320,12 +334,12 @@
     }
   },
   "instruments": {
-    "title": "Instruments",
+    "title": "$t(leftNav.items.instruments)",
     "subtitle": "Financial instruments and securities reference data",
     "comingSoon": {
       "title": "Instruments Management",
       "description": "This page will display financial instruments including securities, bonds, derivatives, and other trading instruments managed in Axiom.",
-      "authRequired": "This is protected data requiring user authentication.",
+      "authRequired": "$t(accounts.comingSoon.authRequired)",
       "featureSummary": "Features coming soon: Browse instruments, search by ISIN/CUSIP, view instrument details, manage reference data"
     },
     "cards": {
@@ -341,7 +355,7 @@
     "title": "Standard Settlement Instructions (SSI)",
     "subtitle": "Manage settlement instructions for securities trading counterparties",
     "comingSoon": {
-      "title": "Coming Soon",
+      "title": "$t(common.comingSoon)",
       "description": "The SSI module is currently under development. This feature will provide:",
       "points": {
         "templates": "Settlement instruction templates for multiple asset classes",
@@ -365,16 +379,61 @@
   },
   "codeMappings": {
     "loading": "Loading code mappings...",
-    "title": "Code Mappings",
+    "title": "$t(leftNav.items.codeMappings)",
     "subtitle": "Cross-system code translation — map external codes (e.g., ALERT) to internal AXIOM identifiers",
+    "widthNormalBtn": "↔️ Normal",
+    "widthExpandBtn": "↕️ Expand",
+    "docsToggle": "📘 Documentation",
+    "docsToggleAria": "Toggle code mappings documentation",
     "about": {
       "title": "💡 About Code Mappings:",
       "bodyPrefix": "This table maps codes from external systems to standardised AXIOM identifiers. The combination of",
       "bodySuffix": "and from_code must be unique."
     },
+    "docs": {
+      "title": "📘 Code Mappings Documentation",
+      "summary": "Use code mappings to translate source-system values into canonical destination-system values for downstream processing.",
+      "fields": {
+        "fromSystem": "from_system: source system that produced the incoming code.",
+        "toSystem": "to_system: target system that receives the translated code.",
+        "fromCode": "from_code: source value from the origin system.",
+        "toCode": "to_code: mapped destination value consumed by AXIOM or external integrations.",
+        "fromType": "from_code_type: source code domain (for example currency, country, instrument).",
+        "toType": "to_code_type: destination code domain after translation.",
+        "status": "status: Active mappings participate in translation; Inactive mappings are retained for audit history."
+      },
+      "uniqueness": "Uniqueness rule: from_system + to_system + from_code_type + to_code_type + from_code must be unique."
+    },
+    "fields": {
+      "fromSystem": "from_system",
+      "toSystem": "to_system",
+      "fromType": "from_code_type",
+      "toType": "to_code_type"
+    },
     "noticeTitle": "$t(common.noticeTitle)",
     "errorTitle": "$t(common.errorTitle)",
     "searchPlaceholder": "Search by system, code type, or code value...",
+    "filters": {
+      "fromSystemAria": "Filter by source system",
+      "toSystemAria": "Filter by destination system",
+      "statusAria": "Filter by mapping status",
+      "allFromSystems": "All from systems",
+      "allToSystems": "All to systems",
+      "allStatuses": "All statuses",
+      "fromTypePlaceholder": "Filter from type...",
+      "fromCodePlaceholder": "Filter from code...",
+      "toTypePlaceholder": "Filter to type...",
+      "toCodePlaceholder": "Filter to code...",
+      "clearAll": "🧹 Clear filters",
+      "activeFilters": "🔍 Active column filters: {{count}}",
+      "fromSystemChip": "From System: {{value}}",
+      "toSystemChip": "To System: {{value}}",
+      "fromTypeChip": "From Type: {{value}}",
+      "toTypeChip": "To Type: {{value}}",
+      "fromCodeChip": "From Code: {{value}}",
+      "toCodeChip": "To Code: {{value}}",
+      "statusChip": "Status: {{value}}"
+    },
     "stats": {
       "totalMappings": "Total Mappings",
       "activeMappings": "Active Mappings",
@@ -388,12 +447,12 @@
       "toSystem": "To System",
       "toType": "To Type",
       "toCode": "To Code",
-      "status": "Status",
+      "status": "$t(admin.translations.statusColumn)",
       "description": "Description"
     },
     "status": {
-      "active": "Active",
-      "inactive": "Inactive"
+      "active": "$t(admin.users.status.active)",
+      "inactive": "$t(admin.users.status.inactive)"
     },
     "emptyDescription": "—",
     "emptyWithSearch": "No mappings found matching your search",
@@ -407,32 +466,6 @@
       "authRequired": "Authentication required. Please log in to view code mappings.",
       "apiReturned": "API returned {{status}}: {{statusText}}",
       "unableToConnect": "Unable to connect to backend API. Please ensure the backend service is running at {{apiBaseUrl}}"
-    },
-    "fields": {
-      "fromSystem": "from_system",
-      "fromType": "from_code_type",
-      "toSystem": "to_system",
-      "toType": "to_code_type"
-    },
-    "filters": {
-      "allFromSystems": "All from systems",
-      "allStatuses": "All statuses",
-      "allToSystems": "All to systems",
-      "clearAll": "🧹 Clear filters",
-      "fromCodeChip": "From Code: {{value}}",
-      "fromCodePlaceholder": "Filter from code...",
-      "fromSystemAria": "Filter by source system",
-      "fromSystemChip": "From System: {{value}}",
-      "fromTypeChip": "From Type: {{value}}",
-      "fromTypePlaceholder": "Filter from type...",
-      "statusAria": "Filter by mapping status",
-      "statusChip": "Status: {{value}}",
-      "toCodeChip": "To Code: {{value}}",
-      "toCodePlaceholder": "Filter to code...",
-      "toSystemAria": "Filter by destination system",
-      "toSystemChip": "To System: {{value}}",
-      "toTypeChip": "To Type: {{value}}",
-      "toTypePlaceholder": "Filter to type..."
     }
   },
   "dashboard": {
@@ -445,36 +478,36 @@
       "subtitle": "Choose the area you want to manage"
     },
     "publicReferenceData": {
-      "title": "Public Reference Data",
+      "title": "$t(leftNav.sections.publicData)",
       "subtitle": "Publicly accessible ISO standards and reference data"
     },
     "masterData": {
-      "title": "Master Data Management",
+      "title": "$t(leftNav.sections.masterData)",
       "subtitle": "Core financial entities and reference data • Authentication required"
     },
     "dataAcquisition": {
-      "title": "Data Acquisition & Processing",
+      "title": "$t(leftNav.sections.dataAcquisition)",
       "subtitle": "External data ingestion and processing pipelines"
     },
     "dataImport": {
       "title": "Data Import 🔒",
       "description": "Manual data import and validation tools",
-      "comingSoon": "Coming Soon"
+      "comingSoon": "$t(ssi.comingSoon.title)"
     },
     "instruments": {
-      "title": "Instruments",
+      "title": "$t(leftNav.items.instruments)",
       "description": "Securities, bonds, and derivatives"
     },
     "accounts": {
-      "title": "Accounts",
-      "description": "Trading accounts and settlement instructions"
+      "title": "$t(leftNav.items.accounts)",
+      "description": "$t(accounts.subtitle)"
     },
     "ssi": {
-      "title": "SSI",
+      "title": "$t(leftNav.items.ssi)",
       "description": "Standard Settlement Instructions"
     },
     "codeMappings": {
-      "title": "Code Mappings",
+      "title": "$t(leftNav.items.codeMappings)",
       "description": "Cross-system code translation"
     },
     "redirecting": "Redirecting to sign in..."
@@ -495,7 +528,7 @@
   },
   "publicHub": {
     "platformLabel": "$t(dashboard.platformLabel)",
-    "title": "Public Reference Data",
+    "title": "$t(leftNav.sections.publicData)",
     "subtitle": "Publicly accessible ISO standards and LEI reference datasets.",
     "catalogTitle": "Data Catalog",
     "catalogSubtitle": "Browse available public datasets",
@@ -505,7 +538,7 @@
     "leiRecordsTag": "$t(leiRecords.title)"
   },
   "leiRecords": {
-    "title": "LEI Records",
+    "title": "$t(leftNav.items.leiRecords)",
     "subtitle": "GLEIF Legal Entity Identifiers (ISO 17442)",
     "loading": "Loading LEI records...",
     "loadingResults": "Loading results...",
@@ -528,8 +561,8 @@
     "filters": {
       "search": "$t(common.search)",
       "searchPlaceholder": "LEI code, legal name, or other names...",
-      "status": "Status",
-      "allStatuses": "All Statuses",
+      "status": "$t(admin.translations.statusColumn)",
+      "allStatuses": "$t(admin.translations.allStatuses)",
       "category": "Category",
       "allCategories": "All Categories",
       "country": "Country",
@@ -539,7 +572,7 @@
       "filteredBy": "Filtered by: {{name}}",
       "activeFilters": "🔍 Active Filters:",
       "searchChip": "Search: \"{{value}}\"",
-      "statusChip": "Status: {{value}}",
+      "statusChip": "$t(common.filters.statusChip)",
       "categoryChip": "Category: {{value}}",
       "countryChip": "Country: {{name}}"
     },
@@ -603,13 +636,13 @@
         "hqAddress": "HQ Address",
         "registration": "Registration",
         "associated": "Associated",
-        "validation": "Validation"
+        "validation": "$t(common.validation)"
       },
       "labels": {
         "lei": "LEI",
         "legalName": "Legal Name",
         "otherNames": "Other Names",
-        "status": "Status",
+        "status": "$t(admin.translations.statusColumn)",
         "category": "$t(leiRecords.filters.category)",
         "countryFlag": "Country Flag",
         "lastUpdated": "Last Updated",
@@ -655,11 +688,14 @@
     },
     "pagination": {
       "previous": "← Previous",
-      "next": "Next →",
+      "next": "$t(admin.translations.pagination.next)",
       "page": "Page {{page}}",
       "pageFiltered": "Page {{page}} (showing {{count}})",
       "pageOf": "Page {{page}} of {{total}}",
       "itemsPerPage": "Items per page:"
+    },
+    "badges": {
+      "provisional": "PROVISIONAL"
     },
     "modal": {
       "title": "LEI Record Details",
@@ -669,27 +705,27 @@
       "dateDaysOnly": "🔢 Days only",
       "display": "Display:",
       "coreInformation": "Core Information",
+      "type": "leiRecords.modal.type",
       "addresses": "Addresses",
-      "legalAddress": "Legal Address",
+      "legalAddress": "$t(leiRecords.columns.groups.legalAddress)",
       "hqAddress": "Headquarters Address",
       "sameAsLegal": "Same as Legal Address",
       "viewOnMap": "View on Map",
       "registrationInformation": "Registration Information",
-      "registrationAuthority": "Registration Authority",
-      "registrationNumber": "Registration Number",
+      "registrationAuthority": "$t(leiRecords.columns.labels.registrationAuthority)",
+      "registrationNumber": "$t(leiRecords.columns.labels.registrationNumber)",
       "associatedEntities": "Associated Entities",
       "predecessorLei": "Predecessor LEI",
       "checkingPredecessorLinks": "Checking predecessor links...",
       "noPredecessorLinks": "No predecessor links found.",
-      "successorLei": "Successor LEI",
+      "successorLei": "$t(leiRecords.columns.labels.successorLei)",
       "noSuccessorLink": "No successor link found.",
-      "managingLou": "Managing LOU",
+      "managingLou": "$t(leiRecords.columns.labels.managingLou)",
       "loadingName": "Loading name...",
       "nameUnavailable": "Name unavailable.",
-      "validation": "Validation",
-      "validationSources": "Validation Sources",
-      "validationAuthority": "Validation Authority",
-      "type": "leiRecords.modal.type"
+      "validation": "$t(leiRecords.columns.groups.validation)",
+      "validationSources": "$t(leiRecords.columns.labels.validationSources)",
+      "validationAuthority": "$t(leiRecords.columns.labels.validationAuthority)"
     },
     "widthNormal": "$t(referenceLayout.normalWidth)",
     "widthExpand": "$t(referenceLayout.expandedWidth)",
@@ -697,10 +733,7 @@
     "widthExpandBtn": "$t(referenceLayout.expandButton)",
     "saveColumnPrompt": "Save column selection as your default?",
     "saveWidthPrompt": "$t(referenceLayout.savePageWidthDefault)",
-    "saveDisplayPrompt": "$t(referenceLayout.saveDisplayModeDefault)",
-    "badges": {
-      "provisional": "leiRecords.badges.provisional"
-    }
+    "saveDisplayPrompt": "$t(referenceLayout.saveDisplayModeDefault)"
   },
   "leiAudit": {
     "title": "📋 Audit / Change History",
@@ -718,7 +751,7 @@
     "changedFieldsCount": "Fields changed",
     "changedFields": "Changed Fields",
     "field": "Field",
-    "value": "Value",
+    "value": "$t(admin.translations.valueColumn)",
     "oldValue": "Old value",
     "newValue": "New value",
     "recordState": "Record state at this point in time",
@@ -735,9 +768,9 @@
     "pinForCompare": "Pin this version as comparison target",
     "unpin": "Unpin this version",
     "pinned": "📌 Pinned",
-    "displayToggleNames": "🏷️ Display: Names",
+    "displayToggleNames": "$t(leiRecords.display.names)",
     "displayToggleNamesTitle": "Switch to display country names instead of codes",
-    "displayToggleCodes": "🏷️ Display: Codes",
+    "displayToggleCodes": "$t(leiRecords.display.codes)",
     "displayToggleCodesTitle": "Switch to display country codes instead of names",
     "columns": "$t(common.columns)",
     "selectColumns": "Select columns to display",
@@ -828,7 +861,7 @@
       "recordsEvaluated": "records evaluated",
       "preparingFile": "Preparing file",
       "processingSummary": "Processing Summary",
-      "totalRecords": "Total Records",
+      "totalRecords": "$t(leiRecords.stats.totalRecords)",
       "recordsEvaluatedTitle": "Records Evaluated",
       "upsertedChangedNew": "Upserted (Changed/New)",
       "upserted": "Upserted",
@@ -847,11 +880,11 @@
       "noMatchingFailedRecords": "No matching failed records.",
       "resolved": "RESOLVED",
       "open": "OPEN",
-      "key": "Key",
+      "key": "$t(admin.translations.keyColumn)",
       "raised": "Raised",
       "resolvedAt": "Resolved",
       "name": "Name",
-      "status": "Status",
+      "status": "$t(admin.translations.statusColumn)",
       "processed": "Processed",
       "lastLei": "Last LEI",
       "snapshotRun": "Snapshot Run",
@@ -889,28 +922,31 @@
   "actions": {
     "clearFilters": "$t(common.clearFilters)"
   },
+  "buttons": {
+    "columnsWithCount": "⚙️ Columns ({{count}})"
+  },
   "countries": {
     "actions": {
-      "columns": "⚙️ Columns ({{count}})",
+      "columns": "$t(buttons.columnsWithCount)",
       "reset": "Reset",
       "saveAsDefault": "Save as default",
-      "selectAll": "Select All"
+      "selectAll": "$t(leiRecords.columns.selector.selectAll)"
     },
     "columns": {
-      "active": "Active",
+      "active": "$t(admin.users.status.active)",
       "alpha2Primary": "Alpha-2 (Primary)",
       "alpha3Secondary": "Alpha-3 (Secondary)",
       "capital": "Capital",
       "continent": "Continent",
       "continentCode": "Continent Code",
-      "continentName": "Continent",
+      "continentName": "$t(countries.columns.continent)",
       "currencyCodes": "Currency Codes",
       "currencyNames": "Currency Names",
       "flag": "Flag",
       "languageCodes": "Language Codes",
       "languageNames": "Language Names",
-      "languages": "Languages",
-      "name": "Name",
+      "languages": "$t(leftNav.items.languages)",
+      "name": "$t(leiStatus.page.name)",
       "nativeName": "Native Name",
       "numeric": "Numeric",
       "phoneCodes": "Phone Codes",
@@ -920,19 +956,19 @@
     "emptyWithSearch": "No countries found matching your search",
     "errorTitle": "$t(common.errorTitle)",
     "filters": {
-      "active": "Active",
-      "all": "All",
+      "active": "$t(admin.users.status.active)",
+      "all": "$t(admin.users.filters.all)",
       "allContinentCodes": "All Continent Codes",
       "allContinents": "All Continents",
       "allRegions": "All Regions",
-      "continent": "Continent",
-      "continentChip": "Continent: {{value}}",
-      "inactive": "Inactive",
-      "region": "Region",
-      "regionChip": "Region: {{value}}",
+      "continent": "$t(countries.columns.continent)",
+      "continentChip": "$t(countries.columns.continent): {{value}}",
+      "inactive": "$t(admin.users.status.inactive)",
+      "region": "$t(countries.columns.region)",
+      "regionChip": "$t(countries.columns.region): {{value}}",
       "search": "$t(common.search)",
-      "status": "Status",
-      "statusChip": "Status: {{value}}",
+      "status": "$t(admin.translations.statusColumn)",
+      "statusChip": "$t(common.filters.statusChip)",
       "${activeFilter}": "countries.filters.${activeFilter}"
     },
     "footer": "Countries data source: ISO 3166 reference data",
@@ -950,7 +986,7 @@
       "totalCountries": "Total Countries"
     },
     "subtitle": "Browse ISO 3166 country codes and reference data",
-    "title": "Countries"
+    "title": "$t(leftNav.items.countries)"
   },
   "currencies": {
     "aria": {
@@ -961,7 +997,7 @@
       "alertCls": "ALERT CLS",
       "code": "Code",
       "decimals": "Decimals",
-      "name": "Name",
+      "name": "$t(leiStatus.page.name)",
       "ofac": "OFAC",
       "symbol": "Symbol"
     },
@@ -989,7 +1025,7 @@
       "sanctioned": "Sanctioned"
     },
     "subtitle": "Browse ISO 4217 currency codes and compliance metadata",
-    "title": "Currencies"
+    "title": "$t(leftNav.items.currencies)"
   },
   "filters": {
     "activeFilters": "Active Filters:",
@@ -1002,16 +1038,16 @@
       "filterRtl": "Filter right-to-left languages"
     },
     "columns": {
-      "code": "Code",
+      "code": "$t(currencies.columns.code)",
       "direction": "Direction",
       "languageName": "Language Name",
-      "nativeName": "Native Name"
+      "nativeName": "$t(countries.columns.nativeName)"
     },
     "emptyWithSearch": "No languages found matching your search",
     "errorTitle": "$t(common.errorTitle)",
     "filters": {
-      "all": "All",
-      "direction": "Direction",
+      "all": "$t(admin.users.filters.all)",
+      "direction": "$t(languages.columns.direction)",
       "directionChip": "Direction: {{value}}",
       "ltr": "LTR",
       "rtl": "RTL",
@@ -1028,18 +1064,18 @@
       "totalLanguages": "Total Languages"
     },
     "subtitle": "Browse supported language codes and metadata",
-    "title": "Languages"
+    "title": "$t(leftNav.items.languages)"
   },
   "referenceRecordsCard": {
     "loading": "Loading...",
-    "noData": "—",
+    "noData": "$t(codeMappings.emptyDescription)",
     "totalRecords": "Total Records:"
   },
   "referenceLayout": {
-    "displayCodesButton": "🏷️ Display: Codes",
+    "displayCodesButton": "$t(leiRecords.display.codes)",
     "displayModeCodes": "Display code values",
     "displayModeNames": "Display localized names",
-    "displayNamesButton": "🏷️ Display: Names",
+    "displayNamesButton": "$t(leiRecords.display.names)",
     "expandButton": "↔️ Expand",
     "expandedWidth": "Expanded Width",
     "normalButton": "⬅️ Normal",
@@ -1061,179 +1097,215 @@
     }
   },
   "adminLanding": {
-    "badge": "adminLanding.badge",
+    "title": "Administration",
+    "subtitle": "System configuration and user management • Admin access required",
+    "badge": "Admin Only",
     "cards": {
-      "provisionalLei": {
-        "description": "adminLanding.cards.provisionalLei.description",
-        "title": "adminLanding.cards.provisionalLei.title"
-      },
-      "translations": {
-        "description": "adminLanding.cards.translations.description",
-        "title": "adminLanding.cards.translations.title"
+      "users": {
+        "title": "$t(leftNav.items.adminUsers)",
+        "description": "Review registration requests, approve or deactivate accounts, and manage user roles"
       },
       "userEntityLinks": {
-        "description": "adminLanding.cards.userEntityLinks.description",
-        "title": "adminLanding.cards.userEntityLinks.title"
+        "title": "$t(leftNav.items.userEntityLinks)",
+        "description": "Grant and revoke entity-scoped access links that associate users with specific LEI entities and roles"
       },
-      "users": {
-        "description": "adminLanding.cards.users.description",
-        "title": "adminLanding.cards.users.title"
+      "provisionalLei": {
+        "title": "Provisional LEI Records",
+        "description": "Issue and manage Axiom-assigned provisional LEI codes for entities not yet registered with GLEIF, and link them to official LEIs when available"
+      },
+      "translations": {
+        "title": "$t(leftNav.items.adminTranslations)",
+        "description": "Review community-contributed UI translations, approve or reject pending strings, and add new translations"
       }
-    },
-    "subtitle": "adminLanding.subtitle",
-    "title": "adminLanding.title"
-  },
-  "buttons": {
-    "columnsWithCount": "buttons.columnsWithCount"
+    }
   },
   "provisionalLei": {
-    "actions": {
-      "clone": "provisionalLei.actions.clone",
-      "create": "provisionalLei.actions.create",
-      "edit": "provisionalLei.actions.edit",
-      "save": "provisionalLei.actions.save",
-      "succeed": "provisionalLei.actions.succeed",
-      "succeedDisabledReason": "provisionalLei.actions.succeedDisabledReason"
-    },
-    "badge": "provisionalLei.badge",
+    "title": "$t(adminLanding.cards.provisionalLei.title)",
+    "subtitle": "Issue and manage Axiom-assigned provisional LEI codes for entities without official GLEIF identifiers",
+    "loading": "Loading provisional LEI records…",
+    "empty": "No provisional LEI records found.",
+    "totalCount": "{{count}} record(s)",
+    "badge": "$t(leiRecords.badges.provisional)",
     "columns": {
-      "actions": "provisionalLei.columns.actions"
+      "lei": "$t(leiRecords.columns.labels.lei)",
+      "legalName": "$t(leiRecords.columns.labels.legalName)",
+      "source": "Source",
+      "status": "$t(common.status)",
+      "successorLei": "$t(leiRecords.columns.labels.successorLei)",
+      "parentLei": "Parent LEI",
+      "childLei": "Child LEI",
+      "country": "$t(leiRecords.filters.country)",
+      "city": "$t(leiRecords.columns.labels.legalCity)",
+      "jurisdiction": "Jurisdiction",
+      "notes": "Notes",
+      "created": "Created",
+      "updated": "Updated",
+      "actions": "$t(admin.translations.actionsColumn)",
+      "groups": {
+        "core": "Core Fields",
+        "associated": "$t(leiRecords.modal.associatedEntities)",
+        "address": "Address",
+        "metadata": "Metadata",
+        "dates": "Dates",
+        "hierarchy": "Hierarchy"
+      }
     },
     "controls": {
-      "chooseColumns": "provisionalLei.controls.chooseColumns",
-      "resetToDefault": "provisionalLei.controls.resetToDefault",
-      "selectAll": "provisionalLei.controls.selectAll"
-    },
-    "empty": "provisionalLei.empty",
-    "errors": {
-      "createFailed": "provisionalLei.errors.createFailed",
-      "loadFailed": "provisionalLei.errors.loadFailed",
-      "network": "provisionalLei.errors.network",
-      "parentLeiNotFound": "provisionalLei.errors.parentLeiNotFound",
-      "succeedFailed": "provisionalLei.errors.succeedFailed",
-      "successorLeiNotFound": "provisionalLei.errors.successorLeiNotFound",
-      "updateFailed": "provisionalLei.errors.updateFailed"
-    },
-    "filters": {
-      "allCountries": "provisionalLei.filters.allCountries",
-      "allSources": "provisionalLei.filters.allSources",
-      "allStatuses": "provisionalLei.filters.allStatuses",
-      "country": "provisionalLei.filters.country",
-      "noResults": "provisionalLei.filters.noResults",
-      "resultCount": "provisionalLei.filters.resultCount",
-      "search": "provisionalLei.filters.search",
-      "searchPlaceholder": "provisionalLei.filters.searchPlaceholder",
-      "source": "provisionalLei.filters.source",
-      "status": "provisionalLei.filters.status",
-      "statusActive": "provisionalLei.filters.statusActive",
-      "statusInactive": "provisionalLei.filters.statusInactive",
-      "statusMerged": "provisionalLei.filters.statusMerged"
+      "columns": "$t(buttons.columnsWithCount)",
+      "chooseColumns": "Choose visible columns",
+      "selectAll": "$t(leiRecords.columns.selector.selectAll)",
+      "resetToDefault": "$t(leiRecords.columns.selector.resetToDefault)",
+      "expandedView": "Expanded View",
+      "normalView": "Normal View",
+      "displayNames": "$t(referenceLayout.displayNamesButton)",
+      "displayCodes": "$t(referenceLayout.displayCodesButton)",
+      "displayMode": "Toggle names or codes",
+      "viewMode": "Toggle page width"
     },
     "form": {
-      "city": "provisionalLei.form.city",
-      "country": "provisionalLei.form.country",
-      "createTitle": "provisionalLei.form.createTitle",
-      "editTitle": "provisionalLei.form.editTitle",
-      "entityStatus": "provisionalLei.form.entityStatus",
-      "fixRelatedLeiBeforeSave": "provisionalLei.form.fixRelatedLeiBeforeSave",
-      "jurisdiction": "provisionalLei.form.jurisdiction",
-      "legalName": "provisionalLei.form.legalName",
-      "legalNamePlaceholder": "provisionalLei.form.legalNamePlaceholder",
-      "notes": "provisionalLei.form.notes",
-      "notesPlaceholder": "provisionalLei.form.notesPlaceholder",
-      "officialLEI": "provisionalLei.form.officialLEI",
-      "parentLei": "provisionalLei.form.parentLei",
-      "parentLeiPlaceholder": "provisionalLei.form.parentLeiPlaceholder",
-      "provisioningSource": "provisionalLei.form.provisioningSource",
-      "provisioningSourcePlaceholder": "provisionalLei.form.provisioningSourcePlaceholder",
-      "succeedHint": "provisionalLei.form.succeedHint",
-      "succeedTitle": "provisionalLei.form.succeedTitle",
-      "successorLeiPlaceholder": "provisionalLei.form.successorLeiPlaceholder"
+      "createTitle": "Issue New Provisional LEI",
+      "editTitle": "Edit Provisional LEI Record",
+      "succeedTitle": "Link Successor LEI",
+      "succeedHint": "Enter the successor LEI for provisional record {{lei}} ({{name}}). This can be another provisional LEI or an official GLEIF LEI.",
+      "legalName": "$t(leiRecords.columns.labels.legalName)",
+      "legalNamePlaceholder": "Full legal entity name",
+      "provisioningSource": "$t(provisionalLei.columns.source)",
+      "provisioningSourcePlaceholder": "e.g. onboarding, counterparty",
+      "country": "Country (ISO 2)",
+      "city": "$t(leiRecords.columns.labels.legalCity)",
+      "jurisdiction": "$t(provisionalLei.columns.jurisdiction)",
+      "entityStatus": "Entity Status",
+      "officialLEI": "Successor LEI (20 characters)",
+      "successorLeiPlaceholder": "20-character successor LEI",
+      "parentLei": "Parent LEI (optional)",
+      "parentLeiPlaceholder": "20-character parent LEI",
+      "childLei": "Child LEI (optional)",
+      "childLeiPlaceholder": "20-character child LEI",
+      "fixRelatedLeiBeforeSave": "Resolve parent/child LEI validation errors before saving.",
+      "notes": "$t(provisionalLei.columns.notes)",
+      "notesPlaceholder": "Optional internal notes"
     },
-    "loading": "provisionalLei.loading",
-    "subtitle": "provisionalLei.subtitle",
+    "actions": {
+      "create": "+ New Provisional LEI",
+      "edit": "$t(common.edit)",
+      "clone": "Clone",
+      "save": "$t(common.save)",
+      "succeed": "$t(provisionalLei.form.succeedTitle)",
+      "succeedDisabledReason": "This record already has a successor LEI linked."
+    },
+    "filters": {
+      "search": "$t(common.search)",
+      "searchPlaceholder": "Search by name, LEI, or source…",
+      "status": "$t(common.status)",
+      "allStatuses": "$t(admin.translations.allStatuses)",
+      "source": "$t(provisionalLei.columns.source)",
+      "allSources": "All sources",
+      "country": "$t(leiRecords.filters.country)",
+      "allCountries": "All countries",
+      "statusActive": "$t(common.filters.active)",
+      "statusInactive": "$t(common.filters.inactive)",
+      "statusMerged": "Merged",
+      "noResults": "No records match the current filters.",
+      "resultCount": "Showing {{shown}} of {{total}} record(s)"
+    },
     "success": {
-      "created": "provisionalLei.success.created",
-      "succeeded": "provisionalLei.success.succeeded",
-      "updated": "provisionalLei.success.updated"
+      "created": "Provisional LEI issued successfully.",
+      "updated": "Record updated.",
+      "succeeded": "Provisional LEI linked to successor LEI."
     },
-    "title": "provisionalLei.title",
-    "totalCount": "provisionalLei.totalCount"
+    "errors": {
+      "loadFailed": "Failed to load provisional LEI records.",
+      "createFailed": "Failed to issue provisional LEI.",
+      "updateFailed": "Failed to update record.",
+      "succeedFailed": "Failed to link successor LEI.",
+      "parentLeiNotFound": "Parent LEI not found. Please enter a valid, registered 20-character LEI.",
+      "childLeiNotFound": "Child LEI not found. Please enter a valid, registered 20-character LEI.",
+      "successorLeiNotFound": "Successor LEI not found. Enter a valid, existing 20-character LEI.",
+      "network": "Network error — please try again."
+    }
   },
   "userEntityLinks": {
-    "actions": {
-      "disabledRevokedReason": "userEntityLinks.actions.disabledRevokedReason",
-      "edit": "userEntityLinks.actions.edit",
-      "grant": "userEntityLinks.actions.grant",
-      "grantSave": "userEntityLinks.actions.grantSave",
-      "revoke": "userEntityLinks.actions.revoke",
-      "unrevoke": "userEntityLinks.actions.unrevoke",
-      "unrevokeOnlyForRevoked": "userEntityLinks.actions.unrevokeOnlyForRevoked"
-    },
+    "title": "$t(leftNav.items.userEntityLinks)",
+    "subtitle": "Grant and manage entity-scoped access links associating users with LEI entities",
+    "loading": "Loading user–entity links…",
+    "empty": "No links found.",
     "columns": {
-      "actions": "userEntityLinks.columns.actions",
-      "children": "userEntityLinks.columns.children",
-      "expiresAt": "userEntityLinks.columns.expiresAt",
-      "grantedAt": "userEntityLinks.columns.grantedAt",
-      "lei": "userEntityLinks.columns.lei",
-      "role": "userEntityLinks.columns.role",
-      "status": "userEntityLinks.columns.status",
-      "userId": "userEntityLinks.columns.userId"
-    },
-    "empty": "userEntityLinks.empty",
-    "errors": {
-      "duplicateActiveLink": "userEntityLinks.errors.duplicateActiveLink",
-      "grantFailed": "userEntityLinks.errors.grantFailed",
-      "invalidDateFormat": "userEntityLinks.errors.invalidDateFormat",
-      "leiNotFound": "userEntityLinks.errors.leiNotFound",
-      "loadFailed": "userEntityLinks.errors.loadFailed",
-      "network": "userEntityLinks.errors.network",
-      "revokeFailed": "userEntityLinks.errors.revokeFailed",
-      "unrevokeFailed": "userEntityLinks.errors.unrevokeFailed",
-      "updateFailed": "userEntityLinks.errors.updateFailed",
-      "userLoadFailed": "userEntityLinks.errors.userLoadFailed",
-      "userLoadUnauthorized": "userEntityLinks.errors.userLoadUnauthorized"
+      "userId": "User ID",
+      "lei": "$t(leiRecords.columns.labels.lei)",
+      "role": "$t(admin.users.columns.role)",
+      "children": "Children",
+      "grantedAt": "Granted",
+      "expiresAt": "Expires",
+      "status": "$t(common.status)",
+      "actions": "$t(admin.translations.actionsColumn)"
     },
     "filters": {
-      "activeOnly": "userEntityLinks.filters.activeOnly",
-      "allRoles": "userEntityLinks.filters.allRoles",
-      "allStatuses": "userEntityLinks.filters.allStatuses",
-      "byLEI": "userEntityLinks.filters.byLEI",
-      "byUser": "userEntityLinks.filters.byUser",
-      "clear": "userEntityLinks.filters.clear",
-      "role": "userEntityLinks.filters.role",
-      "status": "userEntityLinks.filters.status"
+      "byUser": "Filter by User ID…",
+      "byLEI": "Filter by LEI…",
+      "status": "$t(common.status)",
+      "allStatuses": "$t(admin.translations.allStatuses)",
+      "role": "$t(admin.users.columns.role)",
+      "allRoles": "All Roles",
+      "clear": "$t(common.clear)",
+      "activeOnly": "Active only"
     },
     "form": {
-      "childrenScope": "userEntityLinks.form.childrenScope",
-      "childrenScopeAllHint": "userEntityLinks.form.childrenScopeAllHint",
-      "childrenScopeDirectHint": "userEntityLinks.form.childrenScopeDirectHint",
-      "childrenScopeNoneHint": "userEntityLinks.form.childrenScopeNoneHint",
-      "datePlaceholder": "userEntityLinks.form.datePlaceholder",
-      "editTitle": "userEntityLinks.form.editTitle",
-      "expiresAt": "userEntityLinks.form.expiresAt",
-      "grantTitle": "userEntityLinks.form.grantTitle",
-      "lei": "userEntityLinks.form.lei",
-      "notes": "userEntityLinks.form.notes",
-      "openCalendar": "userEntityLinks.form.openCalendar",
-      "role": "userEntityLinks.form.role",
-      "selectUserPlaceholder": "userEntityLinks.form.selectUserPlaceholder",
-      "user": "userEntityLinks.form.user",
-      "userPickerSearch": "userEntityLinks.form.userPickerSearch"
+      "grantTitle": "Grant Entity Access",
+      "editTitle": "Edit Link",
+      "userId": "$t(userEntityLinks.columns.userId)",
+      "user": "$t(admin.users.columns.user)",
+      "userPickerSearch": "Search by username, full name, or email...",
+      "selectUserPlaceholder": "Select a user",
+      "selectedUserSummary": "Selected: {{username}} ({{name}})",
+      "lei": "$t(leiRecords.columns.labels.lei)",
+      "role": "$t(admin.users.columns.role)",
+      "expiresAt": "Expires At (optional)",
+      "datePlaceholder": "yyyy-mm-dd",
+      "openCalendar": "Open calendar",
+      "notes": "$t(provisionalLei.columns.notes)",
+      "includeChildren": "Include child entities",
+      "childrenScope": "Entity hierarchy scope",
+      "childrenScopeNoneHint": "Access limited to the selected entity only.",
+      "childrenScopeDirectHint": "Access includes the selected entity and its direct children only.",
+      "childrenScopeAllHint": "Access includes the selected entity and all descendants (full tree). Note: closer/lower privileges override higher/parent privileges."
     },
-    "loading": "userEntityLinks.loading",
+    "childrenScope": {
+      "none": "None (entity only)",
+      "direct": "Direct children only",
+      "all": "All descendants"
+    },
     "status": {
-      "active": "userEntityLinks.status.active",
-      "expired": "userEntityLinks.status.expired",
-      "revoked": "userEntityLinks.status.revoked"
+      "active": "$t(common.filters.active)",
+      "expired": "Expired",
+      "revoked": "Revoked"
     },
-    "subtitle": "userEntityLinks.subtitle",
+    "actions": {
+      "grant": "+ Grant Access",
+      "grantSave": "Grant",
+      "edit": "$t(common.edit)",
+      "revoke": "Revoke",
+      "unrevoke": "Unrevoke",
+      "disabledRevokedReason": "This link is already revoked, so these actions are unavailable.",
+      "unrevokeOnlyForRevoked": "Unrevoke is only available for revoked links."
+    },
     "success": {
-      "granted": "userEntityLinks.success.granted",
-      "revoked": "userEntityLinks.success.revoked",
-      "unrevoked": "userEntityLinks.success.unrevoked",
-      "updated": "userEntityLinks.success.updated"
+      "granted": "Access granted.",
+      "updated": "Link updated.",
+      "revoked": "Link revoked.",
+      "unrevoked": "Link unrevoked."
     },
-    "title": "userEntityLinks.title"
+    "errors": {
+      "loadFailed": "Failed to load user–entity links.",
+      "grantFailed": "Failed to grant access.",
+      "duplicateActiveLink": "Active user-entity link already exists for {{user}} and LEI {{lei}}.",
+      "updateFailed": "Failed to update link.",
+      "revokeFailed": "Failed to revoke link.",
+      "unrevokeFailed": "Failed to unrevoke link.",
+      "invalidDateFormat": "Invalid date format. Use yyyy-mm-dd.",
+      "leiNotFound": "LEI not found. Please enter a valid, registered 20-character LEI.",
+      "userLoadFailed": "Failed to load users for the picker.",
+      "userLoadUnauthorized": "You do not have permission to list users. Please sign in as an admin.",
+      "network": "$t(provisionalLei.errors.network)"
+    }
   }
 }

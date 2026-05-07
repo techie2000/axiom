@@ -95,6 +95,7 @@
     "npm run -s i18n:verify": true,
     "npm run build": true,
     "npm run docs:build": true,
+    "npm run i18n:check": true,
     "npm run i18n:verify": true,
     "npm run lint": true,
     "npm test": true,
