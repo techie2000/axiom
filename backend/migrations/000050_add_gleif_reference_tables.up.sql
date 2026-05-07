@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS lei_raw.gleif_registration_authorities (
     international_name VARCHAR(500),
     languages_used VARCHAR(100),
     website VARCHAR(500),
-    comments TEXT,
+    comments TEXT, -- noqa: RF04
     active BOOLEAN NOT NULL DEFAULT TRUE,
     created_by VARCHAR(100) NOT NULL DEFAULT 'system',
     updated_by VARCHAR(100) NOT NULL DEFAULT 'system',
@@ -88,7 +88,7 @@ COMMENT ON COLUMN lei_raw.gleif_entity_legal_forms.status IS
 -- Source: https://www.gleif.org/en/lei-data/code-lists/iso-5009-official-organizational-roles-code-list
 CREATE TABLE IF NOT EXISTS lei_raw.gleif_organizational_roles (
     id UUID PRIMARY KEY DEFAULT GEN_RANDOM_UUID(),
-    role_code VARCHAR(50) NOT NULL UNIQUE,
+    role_code VARCHAR(50) NOT NULL UNIQUE, -- noqa: RF04
     role_name VARCHAR(500) NOT NULL,
     description TEXT,
     active BOOLEAN NOT NULL DEFAULT TRUE,

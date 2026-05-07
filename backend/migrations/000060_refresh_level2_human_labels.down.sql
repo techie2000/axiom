@@ -2,21 +2,23 @@
 -- GLEIF mnemonics.
 
 UPDATE lei_raw.file_processing_status
-SET job_label = CASE job_type
-    WHEN 'LEVEL2_RR' THEN 'Level 2 — Relationship Records (LEVEL2_RR)'
-    WHEN 'LEVEL2_REPEX' THEN 'Level 2 — Reporting Exceptions (LEVEL2_REPEX)'
-    ELSE job_label
-END,
-updated_at = NOW()
+SET
+    job_label = CASE job_type
+        WHEN 'LEVEL2_RR' THEN 'Level 2 — Relationship Records (LEVEL2_RR)'
+        WHEN 'LEVEL2_REPEX' THEN 'Level 2 — Reporting Exceptions (LEVEL2_REPEX)'
+        ELSE job_label
+    END,
+    updated_at = NOW()
 WHERE job_type IN ('LEVEL2_RR', 'LEVEL2_REPEX');
 
 UPDATE lei_raw.source_files
-SET job_label = CASE job_type
-    WHEN 'LEVEL2_RR' THEN 'Level 2 — Relationship Records (LEVEL2_RR)'
-    WHEN 'LEVEL2_REPEX' THEN 'Level 2 — Reporting Exceptions (LEVEL2_REPEX)'
-    ELSE job_label
-END,
-updated_at = NOW()
+SET
+    job_label = CASE job_type
+        WHEN 'LEVEL2_RR' THEN 'Level 2 — Relationship Records (LEVEL2_RR)'
+        WHEN 'LEVEL2_REPEX' THEN 'Level 2 — Reporting Exceptions (LEVEL2_REPEX)'
+        ELSE job_label
+    END,
+    updated_at = NOW()
 WHERE job_type IN ('LEVEL2_RR', 'LEVEL2_REPEX');
 
 COMMENT ON TABLE lei_raw.lei_relationship_records IS

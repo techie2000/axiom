@@ -3,8 +3,8 @@
 -- is_ofac_sanctioned:   marks currencies associated with OFAC-sanctioned countries.
 
 ALTER TABLE currencies
-    ADD COLUMN IF NOT EXISTS is_alert_cls_allowed BOOLEAN NOT NULL DEFAULT FALSE,
-    ADD COLUMN IF NOT EXISTS is_ofac_sanctioned BOOLEAN NOT NULL DEFAULT FALSE;
+ADD COLUMN IF NOT EXISTS is_alert_cls_allowed BOOLEAN NOT NULL DEFAULT FALSE,
+ADD COLUMN IF NOT EXISTS is_ofac_sanctioned BOOLEAN NOT NULL DEFAULT FALSE;
 
 COMMENT ON COLUMN currencies.is_alert_cls_allowed IS
 'TRUE when this currency is permitted for the ALERT CLS settlement method. '
@@ -51,5 +51,5 @@ WHERE code IN (
 
 -- Mirror new columns in the audit table so snapshots remain complete
 ALTER TABLE currencies_audit
-    ADD COLUMN IF NOT EXISTS is_alert_cls_allowed BOOLEAN,
-    ADD COLUMN IF NOT EXISTS is_ofac_sanctioned BOOLEAN;
+ADD COLUMN IF NOT EXISTS is_alert_cls_allowed BOOLEAN,
+ADD COLUMN IF NOT EXISTS is_ofac_sanctioned BOOLEAN;

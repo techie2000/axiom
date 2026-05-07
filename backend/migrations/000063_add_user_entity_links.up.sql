@@ -1,10 +1,10 @@
 CREATE TABLE IF NOT EXISTS user_entity_links (
     id UUID PRIMARY KEY DEFAULT GEN_RANDOM_UUID(),
-    user_id UUID NOT NULL REFERENCES users (id),
+    user_id UUID NOT NULL REFERENCES users (id), -- noqa: RF04
     lei VARCHAR(20) NOT NULL,
     entity_role VARCHAR(50) NOT NULL DEFAULT 'viewer',
     include_children BOOLEAN NOT NULL DEFAULT FALSE,
-    granted_by UUID NOT NULL REFERENCES users (id),
+    granted_by UUID NOT NULL REFERENCES users (id), -- noqa: RF04
     granted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     expires_at TIMESTAMPTZ,
     revoked_at TIMESTAMPTZ,

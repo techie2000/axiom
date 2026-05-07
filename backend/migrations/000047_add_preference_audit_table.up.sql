@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS user_preferences_audit (
     id UUID PRIMARY KEY DEFAULT GEN_RANDOM_UUID(),
-    user_id UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE, -- noqa: RF04
     page_key VARCHAR(100) NOT NULL,
     preference_key VARCHAR(100) NOT NULL,
     old_value TEXT,
