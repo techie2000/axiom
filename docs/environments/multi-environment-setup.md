@@ -531,22 +531,47 @@ The backend **refuses to start** if:
 
 ### Rotating secrets
 
-1. Generate a new secret value (example using OpenSSL):
+1. Generate a new secret value:
+
+   **Bash:**
 
    ```bash
    openssl rand -base64 48
    ```
 
+   **PowerShell:**
+
+   ```powershell
+   [Convert]::ToBase64String([System.Security.Cryptography.RandomNumberGenerator]::GetBytes(36))
+   ```
+
 2. Update the value in your secrets manager or `.env.*` file (never commit real values).
+
 3. Restart the affected service:
+
+   **Bash:**
 
    ```bash
    docker compose --env-file .env.prod restart backend
    ```
 
+   **PowerShell:**
+
+   ```powershell
+   docker compose --env-file .env.prod restart backend
+   ```
+
 4. Verify the service starts cleanly by checking logs:
 
+   **Bash:**
+
    ```bash
+   docker compose --env-file .env.prod logs --tail 20 backend
+   ```
+
+   **PowerShell:**
+
+   ```powershell
    docker compose --env-file .env.prod logs --tail 20 backend
    ```
 
