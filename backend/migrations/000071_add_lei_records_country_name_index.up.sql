@@ -16,3 +16,5 @@
 CREATE INDEX IF NOT EXISTS idx_lei_records_country_legal_name_active
 ON lei_raw.lei_records (legal_address_country, legal_name)
 WHERE (deleted_at IS NULL);
+
+ANALYZE lei_raw.lei_records;
