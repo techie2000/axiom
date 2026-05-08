@@ -130,7 +130,7 @@ pwsh ./scripts/bump-version.ps1 -Part patch  # or -Part minor, -Part major
 **On Linux/macOS:**
 
 ```bash
-bash scripts/bump-version.sh --part patch   # or --part minor, --part major
+bash scripts/bump-version.sh patch   # or minor, major
 ```
 
 Then tag the promoted commit with that version. For exact test-state traceability, use the footer build
