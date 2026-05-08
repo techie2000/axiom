@@ -13,7 +13,7 @@
 #     --repo <owner/repo> \
 #     --target-type pr|issue \
 #     --number <N> \
-#     --body-file <path> \
+#     { --body-file <path> | --body <text> } \
 #     [--dry-run]
 
 set -euo pipefail
@@ -22,8 +22,10 @@ REPO=""
 TARGET_TYPE=""
 NUMBER=""
 BODY_FILE=""
+BODY_TEXT=""
 DRY_RUN=false
 KEEP_TEMP=false
+_TEMP_BODY_FILE=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -31,14 +33,34 @@ while [[ $# -gt 0 ]]; do
     --target-type)  TARGET_TYPE="$2"; shift 2 ;;
     --number)       NUMBER="$2"; shift 2 ;;
     --body-file)    BODY_FILE="$2"; shift 2 ;;
+    --body)         BODY_TEXT="$2"; shift 2 ;;
     --dry-run)      DRY_RUN=true; shift ;;
     --keep-temp)    KEEP_TEMP=true; shift ;;
     *) echo "Unknown argument: $1"; exit 1 ;;
   esac
 done
 
+# If --body provided, write to a temp file and treat it as --body-file
+if [[ -n "$BODY_TEXT" && -n "$BODY_FILE" ]]; then
+  echo "Error: --body and --body-file are mutually exclusive."
+  exit 1
+fi
+
+if [[ -n "$BODY_TEXT" && -z "$BODY_FILE" ]]; then
+  _TEMP_BODY_FILE="$(mktemp "${TMPDIR:-/tmp}/post-gh-comment-safe.XXXXXX.md")"
+  printf '%s' "$BODY_TEXT" > "$_TEMP_BODY_FILE"
+  BODY_FILE="$_TEMP_BODY_FILE"
+fi
+
+cleanup_temp() {
+  if [[ -n "$_TEMP_BODY_FILE" && -f "$_TEMP_BODY_FILE" ]] && ! $KEEP_TEMP; then
+    rm -f "$_TEMP_BODY_FILE"
+  fi
+}
+trap cleanup_temp EXIT
+
 if [[ -z "$REPO" || -z "$TARGET_TYPE" || -z "$NUMBER" || -z "$BODY_FILE" ]]; then
-  echo "Usage: $0 --repo <owner/repo> --target-type pr|issue --number <N> --body-file <path> [--dry-run]"
+  echo "Usage: $0 --repo <owner/repo> --target-type pr|issue --number <N> { --body-file <path> | --body <text> } [--dry-run]"
   exit 1
 fi
 

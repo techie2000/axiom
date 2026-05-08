@@ -9,6 +9,7 @@
 #   bash scripts/cleanup-git-refs.sh [--repo-path PATH]
 #       [--namespaces "ns1 ns2 ..."]
 #       [--max-retries N]
+#       [--retry-delay-ms N]
 #       [--prune-empty-parents]
 #       [--workspace-dirs "dir1 dir2 ..."]
 #
@@ -31,6 +32,7 @@ NAMESPACES=(
   "refs/remotes/origin/chore"
 )
 MAX_RETRIES=8
+RETRY_DELAY_MS=250
 PRUNE_EMPTY_PARENTS=false
 WORKSPACE_DIRS=("backups")
 
@@ -39,6 +41,7 @@ while [[ $# -gt 0 ]]; do
     --repo-path)          REPO_PATH="$2"; shift 2 ;;
     --namespaces)         IFS=' ' read -ra NAMESPACES <<< "$2"; shift 2 ;;
     --max-retries)        MAX_RETRIES="$2"; shift 2 ;;
+    --retry-delay-ms)     RETRY_DELAY_MS="$2"; shift 2 ;;
     --prune-empty-parents) PRUNE_EMPTY_PARENTS=true; shift ;;
     --workspace-dirs)     IFS=' ' read -ra WORKSPACE_DIRS <<< "$2"; shift 2 ;;
     *) echo "Unknown argument: $1"; exit 1 ;;
@@ -55,6 +58,9 @@ if [[ -z "$REPO_ROOT" ]]; then
 fi
 
 GIT_DIR="$(git rev-parse --absolute-git-dir 2>/dev/null)"
+
+# Pre-compute sleep delay once (avoids spawning awk on every retry iteration)
+RETRY_DELAY_SEC="$(awk -v delay="$RETRY_DELAY_MS" 'BEGIN {printf "%.3f", delay / 1000}')"
 
 # Normalise a path (resolve trailing slashes, etc.)
 normalize_path() {
@@ -84,7 +90,7 @@ remove_empty_dir_with_retry() {
       return
     fi
 
-    sleep 0.1
+    sleep "$RETRY_DELAY_SEC"
   done
 
   echo "STILL_PRESENT"
