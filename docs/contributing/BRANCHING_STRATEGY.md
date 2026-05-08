@@ -119,8 +119,21 @@ opens a pull request titled `chore: monthly promotion uat → prod (YYYY-MM-DD)`
 least two reviews** before merging. Coordinate with the team before merging — production
 deployments should be planned and communicated in advance. Version bumps are intentional and
 manual. If the release warrants a `PATCH`, `MINOR`, or `MAJOR` bump, apply it before the release
-merge using `pwsh ./scripts/bump-version.ps1 -Part patch`, `-Part minor`, or `-Part major`, then
-tag the promoted commit with that version. For exact test-state traceability, use the footer build
+merge using:
+
+**On Windows (PowerShell):**
+
+```powershell
+pwsh ./scripts/bump-version.ps1 -Part patch  # or -Part minor, -Part major
+```
+
+**On Linux/macOS:**
+
+```bash
+bash scripts/bump-version.sh --part patch   # or --part minor, --part major
+```
+
+Then tag the promoted commit with that version. For exact test-state traceability, use the footer build
 metadata tooltip (commit SHA + build timestamp).
 
 You can also trigger the workflow manually from **Actions → Monthly Promote uat → prod →
@@ -212,8 +225,16 @@ The following settings should be applied to `main`, `dev`, `uat`, and `prod` via
 Run the provided script. It requires the [GitHub CLI (`gh`)](https://cli.github.com/) and a token
 with `repo` and `admin:repo_hook` scopes:
 
+**On Linux/macOS:**
+
 ```bash
 bash scripts/setup-branches.sh
+```
+
+**On Windows (PowerShell):**
+
+```powershell
+pwsh ./scripts/setup-branches.ps1
 ```
 
 The script creates `dev`, `uat`, and `prod` from the current `main` HEAD and applies the branch

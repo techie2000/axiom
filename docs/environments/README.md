@@ -62,6 +62,9 @@ make smoke-api env=dev startup_wait=120
 # PowerShell: wait longer for API readiness before smoke checks
 ./scripts/smoke-api.ps1 -Environment dev -StartupWaitSec 120
 
+# Bash: wait longer for API readiness before smoke checks
+bash scripts/smoke-api.sh --environment dev --startup-wait-sec 120
+
 # Validate setup
 make validate-env
 
