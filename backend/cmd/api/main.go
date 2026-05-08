@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -196,6 +197,24 @@ func connectDatabase(cfg *config.Config) (*gorm.DB, error) {
 	sqlDB.SetMaxOpenConns(100)
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
+	// Pre-warm connection pool to avoid high latency on first user request
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var wg sync.WaitGroup
+	for i := 0; i < 5; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			var dummy int
+			if err := db.WithContext(ctx).Raw("SELECT 1").Scan(&dummy).Error; err != nil {
+				logger.Warn().Err(err).Msg("Connection pool warm-up failed")
+			}
+		}()
+	}
+	wg.Wait()
+
+	logger.Info().Msg("Connection pool warmed up")
 	logger.Info().Msgf("Database connection established (log level: %s)", cfg.Database.LogLevel)
 	return db, nil
 }
