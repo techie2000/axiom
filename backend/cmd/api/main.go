@@ -206,13 +206,15 @@ func connectDatabase(cfg *config.Config) (*gorm.DB, error) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			if err := db.WithContext(ctx).Raw("SELECT 1").Scan(nil).Error; err != nil {
+			var dummy int
+			if err := db.WithContext(ctx).Raw("SELECT 1").Scan(&dummy).Error; err != nil {
 				logger.Warn().Err(err).Msg("Connection pool warm-up failed")
 			}
 		}()
 	}
 	wg.Wait()
 
+	logger.Info().Msg("Connection pool warmed up")
 	logger.Info().Msgf("Database connection established (log level: %s)", cfg.Database.LogLevel)
 	return db, nil
 }
