@@ -182,12 +182,6 @@
     "translations": {
       "title": "$t(leftNav.items.adminTranslations)",
       "subtitle": "Manage UI translation strings across all supported languages",
-      "errors": {
-        "submitFailed": "Failed to save translation",
-        "validation": {
-          "unsafeNestingOptions": "Unsafe nesting options detected. Use simple pointer form: $t(key) or $t(some.nested.key). Option blocks like $t(key, {...}) are not allowed."
-        }
-      },
       "addTranslation": "Add Translation",
       "searchPlaceholder": "Search by key or value…",
       "filterByLanguage": "Filter by language",
@@ -261,7 +255,10 @@
         "approveFailed": "Failed to approve translation",
         "rejectFailed": "Failed to reject translation",
         "deleteFailed": "Failed to delete translation",
-        "submitFailed": "Failed to submit"
+        "submitFailed": "Failed to save translation",
+        "validation": {
+          "unsafeNestingOptions": "Unsafe nesting options detected. Use simple pointer form: $t(key) or $t(some.nested.key). Option blocks like $t(key, {...}) are not allowed."
+        }
       }
     },
     "users": {

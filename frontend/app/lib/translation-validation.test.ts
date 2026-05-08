@@ -6,43 +6,43 @@ describe('validateTranslationValue', () => {
     it('accepts empty string', () => {
       const result = validateTranslationValue('')
       expect(result.valid).toBe(true)
-      expect(result.error).toBeUndefined()
+      expect(result.errorKey).toBeUndefined()
     })
 
     it('accepts plain translation text without nesting', () => {
       const result = validateTranslationValue('Hello World')
       expect(result.valid).toBe(true)
-      expect(result.error).toBeUndefined()
+      expect(result.errorKey).toBeUndefined()
     })
 
     it('accepts simple $t() pointer with single key', () => {
       const result = validateTranslationValue('$t(home.title)')
       expect(result.valid).toBe(true)
-      expect(result.error).toBeUndefined()
+      expect(result.errorKey).toBeUndefined()
     })
 
     it('accepts $t() pointer with nested dot-separated key', () => {
       const result = validateTranslationValue('$t(reference.layout.header)')
       expect(result.valid).toBe(true)
-      expect(result.error).toBeUndefined()
+      expect(result.errorKey).toBeUndefined()
     })
 
     it('accepts plain text with spaces and special characters', () => {
       const result = validateTranslationValue('Welcome to Axiom! Please sign in.')
       expect(result.valid).toBe(true)
-      expect(result.error).toBeUndefined()
+      expect(result.errorKey).toBeUndefined()
     })
 
     it('accepts interpolation variables', () => {
       const result = validateTranslationValue('Hello {{name}}, welcome to {{appName}}')
       expect(result.valid).toBe(true)
-      expect(result.error).toBeUndefined()
+      expect(result.errorKey).toBeUndefined()
     })
 
     it('accepts multiple $t() pointers in same string', () => {
       const result = validateTranslationValue('$t(prefix.label) - $t(suffix.label)')
       expect(result.valid).toBe(true)
-      expect(result.error).toBeUndefined()
+      expect(result.errorKey).toBeUndefined()
     })
   })
 
