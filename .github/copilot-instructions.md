@@ -747,6 +747,18 @@ Use this gate even when checks are green. CI success alone is not sufficient for
 
 Only ask follow-up questions if required metadata cannot be applied (for example, reviewer handle is unavailable).
 
+### Issue Close Gate (REQUIRED)
+
+Never close a GitHub issue solely because a fix has been applied locally or to a running container.
+An issue may only be closed when **all** of the following are true:
+
+1. The fix is committed to a branch (not just applied ad-hoc via CLI/psql/docker exec).
+2. A PR exists that references the issue (`Fixes #N` or `Closes #N`).
+3. The PR has been merged to the default branch (`main`).
+
+If the fix is live in a running environment but the migration/code is uncommitted, the issue must
+remain open with a comment noting the current state (e.g. "Applied to axiom_main; pending PR").
+
 ## GitHub Comment Formatting (REQUIRED)
 
 When posting PR/issue comments, checklists, PR descriptions, or review summaries via CLI/API:
@@ -763,11 +775,25 @@ When posting PR/issue comments, checklists, PR descriptions, or review summaries
 6. Keep comments actionable: include decisions, code/test results, or explicit next actions.
 7. Do not add non-actionable filler such as "checks are in progress" or equivalent queue/waiting notes in public comments.
 
-### Comment Deduplication Guardrail (REQUIRED)
+### Comment and Issue Deduplication Guardrail (REQUIRED)
 
-Before posting any PR/issue comment from an AI agent, perform a dedupe check to avoid duplicate comments.
+Before posting any PR/issue comment **or creating any issue/PR** from an AI agent, follow the
+steps below to avoid duplicates.
 
-Workflow:
+#### Issue / PR creation
+
+1. **Always search before creating**:
+   - `gh issue list --repo <owner>/<repo> --search "<topic keywords>" --limit 5`
+   - If a recently created issue with the same intent appears, do not create another.
+2. **Never combine file-write and create/post commands in one terminal call.** Split them:
+   - Call 1: write the body file and verify it exists (`Test-Path $bodyPath`).
+   - Call 2: run the `gh issue create` / `gh pr create` command and capture the URL output.
+3. **If the create command's output is not visible** (terminal truncated or returned early), call
+   `get_terminal_output` to retrieve it before retrying. Do not assume failure and rerun.
+4. After creation, record the returned URL/number. If the URL is missing, verify with
+   `gh issue list --limit 3` before creating again.
+
+#### PR/issue comment deduplication
 
 1. Read recent comments first:
    - `gh pr view <pr> --repo <owner>/<repo> --comments`
@@ -783,6 +809,10 @@ Rules:
 
 - Never post the same checklist/summary twice on the same PR/issue.
 - Prefer one canonical checklist comment per PR and update it, rather than posting replacements.
+- Never combine file-write + gh create/post in a single terminal call; split into two calls and
+  confirm success after each.
+- After posting any comment, immediately verify with `gh api repos/<owner>/<repo>/issues/comments/<id> --jq .body`
+  or `gh issue view <issue> --comments` to confirm exactly one copy was posted before proceeding.
 
 ## Markdown Authoring Guardrail (REQUIRED)
 
