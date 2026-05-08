@@ -788,8 +788,9 @@ steps below to avoid duplicates.
 2. **Never combine file-write and create/post commands in one terminal call.** Split them:
    - Call 1: write the body file and verify it exists (`Test-Path $bodyPath`).
    - Call 2: run the `gh issue create` / `gh pr create` command and capture the URL output.
-3. **If the create command's output is not visible** (terminal truncated or returned early), call
-   `get_terminal_output` to retrieve it before retrying. Do not assume failure and rerun.
+3. **If the create command's output is not visible** (terminal truncated or returned early), do not
+   assume failure and rerun. First verify whether the object already exists via `gh issue list`
+   / `gh pr list` (or `gh api`), then proceed.
 4. After creation, record the returned URL/number. If the URL is missing, verify with
    `gh issue list --limit 3` before creating again.
 
