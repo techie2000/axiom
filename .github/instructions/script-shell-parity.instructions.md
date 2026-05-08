@@ -30,10 +30,10 @@ The following scripts are **intentionally PowerShell-only** because the project'
 `.githooks` explicitly require `pwsh` and document this requirement.  No bash
 counterpart is expected:
 
-| Script                        | Reason                                          |
-|-------------------------------|-------------------------------------------------|
-| `sort-ra-urls.ps1`            | Git hook utility — hook mandates `pwsh`         |
-| `sort-vscode-settings.ps1`    | Git hook utility — hook mandates `pwsh`         |
+| Script                             | Reason                                  |
+|------------------------------------|-----------------------------------------|
+| `scripts/sort-ra-urls.ps1`         | Git hook utility - hook mandates `pwsh` |
+| `scripts/sort-vscode-settings.ps1` | Git hook utility - hook mandates `pwsh` |
 
 If you add a new script that is intentionally platform-specific, add a row to the
 table above with a clear justification and get it reviewed in the PR.
@@ -50,7 +50,7 @@ Refer to these paired scripts as style references when writing a new counterpart
 ## Checklist (apply when adding or reviewing scripts)
 
 - [ ] Both `.sh` and `.ps1` variants exist for the new script
-- [ ] Both variants implement the same flags / exit codes / output messages
+- [ ] Both variants implement functionally equivalent flags / exit codes and comparable output messages
 - [ ] `Makefile` references both (using the `ifeq ($(OS),Windows_NT)` or
   `command -v bash / pwsh` detection pattern already in the file)
 - [ ] Any new exception is documented in the table above

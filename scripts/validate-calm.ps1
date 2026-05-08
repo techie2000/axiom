@@ -5,7 +5,7 @@ Validates all CALM architecture model files found under docs/architecture-as-cod
 
 .DESCRIPTION
 Runs `npx @finos/calm-cli validate` against every *.architecture.json file.
-Exits 1 (or warns and exits 0 with --warn) if any model fails validation.
+Exits 1 (or warns and exits 0 with -Warn) if any model fails validation.
 
 .PARAMETER Warn
 Treat validation failures as warnings and exit 0 instead of failing.

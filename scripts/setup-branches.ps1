@@ -48,13 +48,13 @@ function Ok   { param([string]$Msg) Write-Host "OK  $Msg" -ForegroundColor Green
 function Warn { param([string]$Msg) Write-Host "WARN  $Msg" -ForegroundColor Yellow }
 
 function Invoke-Gh {
-    param([string[]]$Args)
+    param([string[]]$GhArgs)
     if ($DryRun) {
-        Write-Host "[dry-run] gh $($Args -join ' ')"
+        Write-Host "[dry-run] gh $($GhArgs -join ' ')"
     } else {
-        & gh @Args
+        & gh @GhArgs
         if ($LASTEXITCODE -ne 0) {
-            throw "gh command failed: gh $($Args -join ' ')"
+            throw "gh command failed: gh $($GhArgs -join ' ')"
         }
     }
 }
@@ -103,7 +103,7 @@ if ($LASTEXITCODE -ne 0) {
 # Step 1 – Create branches (skip if they already exist)
 # ---------------------------------------------------------------------------
 Write-Host "-- Step 1: Create branches -------------------------------------------------"
-$existingBranches = & gh api "repos/$Repo/branches" --jq '.[].name' 2>$null
+$existingBranches = & gh api --paginate "repos/$Repo/branches" --jq '.[].name' 2>$null
 
 foreach ($branch in $Branches) {
     if ($existingBranches -contains $branch) {
