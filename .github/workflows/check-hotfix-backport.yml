@@ -28,6 +28,7 @@ jobs:
           script: |
             const pr = context.payload.pull_request
             const base = pr.base.ref
+            const head = pr.head.ref
             const labels = (pr.labels || []).map((l) =>
               (typeof l === 'string' ? l : l.name).toLowerCase()
             )
@@ -45,6 +46,23 @@ jobs:
 
             if (!isEnvTarget || !isHotfix) {
               core.info('Not a hotfix/emergency PR targeting an env branch; skipping backport check.')
+              return
+            }
+
+            // Skip backport check for forward-merge promotion PRs.
+            // These PRs merge changes from source branch into destination env branch atomically.
+            // All changes are already on source; destination gets them via the merge.
+            // No backport needed because the merge IS the promotion.
+            const isForwardMerge =
+              (base === 'dev' && head === 'main') ||
+              (base === 'uat' && head === 'dev') ||
+              (base === 'prod' && head === 'uat')
+
+            if (isForwardMerge) {
+              core.info(
+                `Forward-merge promotion PR (${head} → ${base}); backport check skipped. ` +
+                `Changes are promoted atomically via the merge.`
+              )
               return
             }
 
