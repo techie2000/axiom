@@ -19,11 +19,13 @@
 --   3. ANALYZE to refresh statistics immediately (autovacuum was not keeping up
 --      with the insert rate; planner estimated 2 rows, actual was 24+).
 --
--- CONCURRENTLY on both CREATE and DROP avoids table locks on the live database.
+-- NOTE: This repository runs migrations inside a transaction in CI smoke tests.
+-- PostgreSQL does not allow CREATE/DROP INDEX CONCURRENTLY inside a transaction,
+-- so this migration intentionally uses transactional index operations.
 
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_lei_records_audit_lei_created_at_desc ON
+CREATE INDEX IF NOT EXISTS idx_lei_records_audit_lei_created_at_desc ON
 lei_raw.lei_records_audit (lei, created_at DESC);
 
-DROP INDEX CONCURRENTLY IF EXISTS lei_raw.idx_lei_records_audit_lei;
+DROP INDEX IF EXISTS lei_raw.idx_lei_records_audit_lei;
 
 ANALYZE lei_raw.lei_records_audit;
