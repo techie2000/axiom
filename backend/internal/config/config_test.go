@@ -112,3 +112,38 @@ func TestSetDefaults_NoHardCodedSecrets(t *testing.T) {
 		}
 	}
 }
+
+func TestValidateSecrets_PlaywrightSeedBlockedInReleaseMode(t *testing.T) {
+	cfg := &Config{
+		JWT:      JWTConfig{Secret: "some-secret"},
+		Database: DatabaseConfig{Password: "somepass"},
+		Server:   ServerConfig{Mode: "release"},
+		Testing: TestingConfig{
+			PlaywrightSeedUser:     true,
+			PlaywrightUserPassword: "test-password",
+		},
+	}
+	err := validateSecrets(cfg)
+	if err == nil {
+		t.Fatal("expected error when PLAYWRIGHT_SEED_USER=true in release mode, got nil")
+	}
+	if !strings.Contains(err.Error(), "release") {
+		t.Errorf("error message should mention 'release', got: %v", err)
+	}
+}
+
+func TestValidateSecrets_PlaywrightSeedAllowedInDebugMode(t *testing.T) {
+	cfg := &Config{
+		JWT:      JWTConfig{Secret: "some-secret"},
+		Database: DatabaseConfig{Password: "somepass"},
+		Server:   ServerConfig{Mode: "debug"},
+		Testing: TestingConfig{
+			PlaywrightSeedUser:     true,
+			PlaywrightUserPassword: "test-password",
+		},
+	}
+	err := validateSecrets(cfg)
+	if err != nil {
+		t.Fatalf("expected no error when PLAYWRIGHT_SEED_USER=true in debug mode, got: %v", err)
+	}
+}

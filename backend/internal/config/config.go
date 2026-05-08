@@ -179,7 +179,8 @@ func setDefaults() {
 	viper.SetDefault("testing.playwrightuseremail", "playwright@axiom.local")
 }
 
-// validateSecrets returns an error if required secret environment variables are missing.
+// validateSecrets returns an error if required secret environment variables are missing,
+// or if test-only features are enabled in a production environment.
 // This provides fail-fast startup rather than allowing the application to run with
 // insecure or missing credentials.
 func validateSecrets(cfg *Config) error {
@@ -188,6 +189,9 @@ func validateSecrets(cfg *Config) error {
 	}
 	if cfg.Database.Password == "" {
 		return fmt.Errorf("DATABASE_PASSWORD is required: set the DATABASE_PASSWORD environment variable")
+	}
+	if cfg.Testing.PlaywrightSeedUser && cfg.Server.Mode == "release" {
+		return fmt.Errorf("PLAYWRIGHT_SEED_USER=true is not permitted when SERVER_MODE=release: test fixtures must never run in UAT or production environments")
 	}
 	if cfg.Testing.PlaywrightSeedUser && cfg.Testing.PlaywrightUserPassword == "" {
 		return fmt.Errorf("PLAYWRIGHT_USER_PASSWORD is required when PLAYWRIGHT_SEED_USER=true: set the PLAYWRIGHT_USER_PASSWORD environment variable")
