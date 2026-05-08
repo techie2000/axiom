@@ -12,5 +12,7 @@
 -- inflation observed in issue #521 (planner estimated 2 rows, actual was 24+).
 
 ALTER TABLE lei_raw.lei_records_audit
-    SET (autovacuum_analyze_scale_factor = 0.01,
-         autovacuum_analyze_threshold    = 10000);
+SET (
+    autovacuum_analyze_scale_factor = 0.01,
+    autovacuum_analyze_threshold = 10000
+);

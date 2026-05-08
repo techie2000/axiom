@@ -21,8 +21,8 @@
 --
 -- CONCURRENTLY on both CREATE and DROP avoids table locks on the live database.
 
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_lei_records_audit_lei_created_at_desc
-    ON lei_raw.lei_records_audit (lei, created_at DESC);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_lei_records_audit_lei_created_at_desc ON
+lei_raw.lei_records_audit (lei, created_at DESC);
 
 DROP INDEX CONCURRENTLY IF EXISTS lei_raw.idx_lei_records_audit_lei;
 
