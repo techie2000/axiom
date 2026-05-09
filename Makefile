@@ -293,11 +293,11 @@ lint-all: lint lint-docs ## Run all linters (Go + Markdown)
 
 lint-docs: ## Lint markdown documentation
 	@echo "Linting markdown files..."
-	@npx --yes markdownlint-cli2 --config .markdownlint.yaml "**/*.md" "!**/node_modules/**" "!**/vendor/**" "!**/.git/**" "!**/.tmp/**" "!**/.venv/**" || (echo "❌ markdownlint-cli2 failed. Ensure Node.js/npm is installed, then rerun make lint-docs" && exit 1)
+	@npx --yes markdownlint-cli2 --config .markdownlint.yaml "**/*.md" "!**/node_modules/**" "!**/vendor/**" "!**/.git/**" || (echo "❌ markdownlint-cli2 failed. Ensure Node.js/npm is installed, then rerun make lint-docs" && exit 1)
 
 lint-docs-fix: ## Auto-fix markdown linting issues
 	@echo "Auto-fixing markdown files..."
-	@npx --yes markdownlint-cli2 --config .markdownlint.yaml --fix "**/*.md" "!**/node_modules/**" "!**/vendor/**" "!**/.git/**" "!**/.tmp/**" "!**/.venv/**" || (echo "❌ markdownlint-cli2 failed. Ensure Node.js/npm is installed, then rerun make lint-docs-fix" && exit 1)
+	@npx --yes markdownlint-cli2 --config .markdownlint.yaml --fix "**/*.md" "!**/node_modules/**" "!**/vendor/**" "!**/.git/**" || (echo "❌ markdownlint-cli2 failed. Ensure Node.js/npm is installed, then rerun make lint-docs-fix" && exit 1)
 	@echo "✅ Markdown auto-fix complete"
 
 migrate-create: ## Create a new migration (usage: make migrate-create name=create_users_table)
