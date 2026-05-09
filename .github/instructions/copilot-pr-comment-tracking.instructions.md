@@ -131,7 +131,7 @@ Set-Content -Path $bodyPath -Value "✅ **RESOLVED**: [Your resolution message]"
 
 Get-Content /tmp/copilot_comment_ids.txt | ForEach-Object {
   $commentId = $_.Trim()
-  gh pr comment 261 --reply-to "$commentId" --body-file "$bodyPath"
+  gh api repos/techie2000/axiom/pulls/261/comments/$commentId/replies -X POST -F "body=@$bodyPath"
 }
 ```
 
@@ -256,7 +256,7 @@ Set-Content -Path $replyPath -Value @'
 
 **Validation**: Tests pass, behavior maintained
 '@ -Encoding utf8
-gh pr comment 261 --reply-to 3045230708 --body-file "$replyPath"
+gh api repos/techie2000/axiom/pulls/261/comments/3045230708/replies -X POST -F "body=@$replyPath"
 
 # Reply to comment 3045230751
 Set-Content -Path $replyPath -Value @'
@@ -268,7 +268,7 @@ Set-Content -Path $replyPath -Value @'
 
 **Validation**: Tests pass, audit consistency verified
 '@ -Encoding utf8
-gh pr comment 261 --reply-to 3045230751 --body-file "$replyPath"
+gh api repos/techie2000/axiom/pulls/261/comments/3045230751/replies -X POST -F "body=@$replyPath"
 ```
 
 ### Step 4: Verify All Replied
@@ -313,7 +313,7 @@ gh api repos/techie2000/axiom/pulls/261/comments/$COMMENT_ID \
   --jq '{id: .id, path: .path, line: .line, preview: .body[0:80]}'
 
 # Review output before posting reply
-gh pr comment 261 --reply-to $COMMENT_ID --body "[Your reply]"
+gh api repos/techie2000/axiom/pulls/261/comments/$COMMENT_ID/replies -X POST -f body='[Your reply]'
 ```
 
 ### Mistake 3: Missing Comments in Pagination
