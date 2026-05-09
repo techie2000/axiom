@@ -95,49 +95,49 @@ git fetch origin --prune
 ### Single PR Merge
 
 **User announces:**
-> "PR #220 merged"
+> "PR #{PR_NUMBER} merged"
 
 **Cleanup:**
 
 ```bash
-gh api repos/techie2000/axiom/pulls/220 --jq '{merged}'
+gh api repos/techie2000/axiom/pulls/{PR_NUMBER} --jq '{merged}'
 # Verify: "merged": true
 
-git branch -D pr-220  # or branch tracking the PR
+git branch -D pr-{PR_NUMBER}  # or branch tracking the PR
 git fetch origin --prune
 ```
 
 ### Multiple PRs Merged
 
 **User announces:**
-> "PRs #155, #220, #272 merged"
+> "PRs #{PR_1}, #{PR_2}, #{PR_3} merged"
 
 **Cleanup:**
 
 ```powershell
-foreach ($pr in @(155, 220, 272)) {
+foreach ($pr in @({PR_1}, {PR_2}, {PR_3})) {
     gh api repos/techie2000/axiom/pulls/$pr --jq '{number, merged}'
 }
 # Verify all show "merged": true
 
-git branch -D pr-155 pr-220 pr-272
+git branch -D pr-{PR_1} pr-{PR_2} pr-{PR_3}
 git fetch origin --prune
 ```
 
 ### PR with Associated Worktrees
 
 **User announces:**
-> "PR #352 for LEI status badge merged"
+> "PR #{PR_NUMBER} for LEI status badge merged"
 
 **Cleanup:**
 
 ```bash
 # Confirm merge
-gh api repos/techie2000/axiom/pulls/352 --jq '{merged}'
+gh api repos/techie2000/axiom/pulls/{PR_NUMBER} --jq '{merged}'
 
 # Remove worktrees
 git worktree list | grep -i "lei.*badge"
-git worktree remove worktrees/issue-352-lei-status-badge --force
+git worktree remove worktrees/issue-{PR_NUMBER}-lei-status-badge --force
 
 # Delete branches
 git branch -D feat/lei-status-badge fix/lei-status-badge-copilot-feedback
