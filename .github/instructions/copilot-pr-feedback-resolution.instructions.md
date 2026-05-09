@@ -92,12 +92,12 @@ Set-Content -Path $bodyPath -Value $body -Encoding utf8
 # - If `gh pr comment --help` includes `--reply-to`, that command is usable.
 # - Otherwise (or by default), use the API endpoint below.
 
-gh api repos/{owner}/{repo}/pulls/comments/{comment_id}/replies `
+gh api repos/{owner}/{repo}/pulls/{pr_number}/comments/{comment_id}/replies `
   -X POST `
   -F "body=@$bodyPath"
 
 # Verify reply exists on thread
-gh api repos/{owner}/{repo}/pulls/comments/{comment_id}/replies --jq '.[-1].body'
+gh api repos/{owner}/{repo}/pulls/{pr_number}/comments/{comment_id}/replies --jq '.[-1].body'
 ```
 
 ### Comment Template by Issue Type
@@ -268,7 +268,7 @@ If any comments are deferred for later:
 ### Comment in Correct Scope
 
 - **Individual resolutions**: Reply directly to the Copilot comment thread using
-  `POST /repos/{owner}/{repo}/pulls/comments/{comment_id}/replies`
+  `POST /repos/{owner}/{repo}/pulls/{pr}/comments/{comment_id}/replies`
 - **Summary comment**: Post as standalone comment on the PR using `gh pr comment`
 - **Issue updates**: Post concise mirrored updates on linked underlying issues using `gh issue comment`
 - **Never duplicate**: Don't post the same resolution in multiple places
