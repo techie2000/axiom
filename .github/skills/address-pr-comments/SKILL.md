@@ -96,17 +96,8 @@ Maintain a list of comment IDs and their resolution status:
 **DO NOT ask for confirmation.** For each resolved comment, post a reply to that thread:
 
 ```bash
-# Preferred, gh-version-independent method:
-gh api repos/<owner>/<repo>/pulls/<pr-number>/comments/<comment-id>/replies \
-   -X POST \
-   -F "body=@/path/to/resolution.md"
+gh pr comment <pr-number> --reply-to <comment-id> --body-file "/path/to/resolution.md"
 ```
-
-Compatibility gate:
-
-- First run `gh pr comment --help`.
-- Only use `gh pr comment --reply-to ...` if `--reply-to` appears in help output.
-- If `--reply-to` is not supported, use the API method above.
 
 #### Resolution Comment Template by Type
 
@@ -177,14 +168,16 @@ Compatibility gate:
 **Validation**: `make docs-check`, linters pass
 ```
 
-Use the safe comment helper for top-level PR/issue comments only.
-For inline thread replies, use GitHub API `pulls/comments/{comment_id}/replies`.
+Use the safe comment helper if available to verify rendered body before posting.
+For Bash shells, use the `gh pr comment --reply-to` command shown above.
 
 ```powershell
-$replyPath = "path/to/resolution.md"
-gh api repos/<owner>/<repo>/pulls/<pr-number>/comments/<comment-id>/replies `
-   -X POST `
-   -F "body=@$replyPath"
+pwsh ./scripts/post-gh-comment-safe.ps1 `
+  -Repo "techie2000/axiom" `
+  -TargetType pr `
+  -PrNumber <pr-number> `
+  -ReplyToId <comment-id> `
+  -BodyFile "path/to/resolution.md"
 ```
 
 ### 8. Push and Verify (Automatic)
