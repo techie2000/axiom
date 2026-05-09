@@ -34,6 +34,7 @@ jobs:
             )
             const title = (pr.title || '').toLowerCase()
             const body = pr.body || ''
+            const bodyLower = body.toLowerCase()
 
             const isEnvTarget =
               base === 'dev' || base === 'uat' || base === 'prod'
@@ -49,14 +50,41 @@ jobs:
               return
             }
 
+            const matchesPromotionText = (text, from, to) => {
+              if (!text) {
+                return false
+              }
+
+              return [
+                `${from} -> ${to}`,
+                `${from} → ${to}`,
+                `${from} to ${to}`,
+                `${from} into ${to}`,
+                `promotion ${from} -> ${to}`,
+                `promotion ${from} → ${to}`,
+                `promotion ${from} to ${to}`,
+                `from ${from} to ${to}`,
+              ].some((pattern) => text.includes(pattern))
+            }
+
             // Skip backport check for forward-merge promotion PRs.
             // These PRs merge changes from source branch into destination env branch atomically.
             // All changes are already on source; destination gets them via the merge.
             // No backport needed because the merge IS the promotion.
-            const isForwardMerge =
-              (base === 'dev' && head === 'main') ||
-              (base === 'uat' && head === 'dev') ||
-              (base === 'prod' && head === 'uat')
+            const promotionPairs = [
+              { from: 'main', to: 'dev' },
+              { from: 'dev', to: 'uat' },
+              { from: 'uat', to: 'prod' },
+            ]
+
+            const isForwardMerge = promotionPairs.some(({ from, to }) =>
+              base === to && (
+                head === from ||
+                head.startsWith(`fix/sync-${from}-${to}-`) ||
+                matchesPromotionText(title, from, to) ||
+                matchesPromotionText(bodyLower, from, to)
+              )
+            )
 
             if (isForwardMerge) {
               core.info(
