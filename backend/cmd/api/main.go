@@ -9,7 +9,6 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strings"
-	"sync"
 	"syscall"
 	"time"
 
@@ -60,9 +59,9 @@ func main() {
 	// Initialize logger
 	logger.Init(cfg.Log.Level)
 
-	// Configure Swagger metadata once at startup to avoid request-time global mutations.
-	docs.SwaggerInfo.Host = fmt.Sprintf("localhost:%d", cfg.Server.Port)
-	docs.SwaggerInfo.Schemes = []string{"http"}
+	// Leave host/schemes empty so Swagger uses the request origin in deployed environments.
+	docs.SwaggerInfo.Host = ""
+	docs.SwaggerInfo.Schemes = nil
 
 	// Connect to database
 	db, err := connectDatabase(cfg)
@@ -197,24 +196,6 @@ func connectDatabase(cfg *config.Config) (*gorm.DB, error) {
 	sqlDB.SetMaxOpenConns(100)
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
-	// Pre-warm connection pool to avoid high latency on first user request
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	var wg sync.WaitGroup
-	for i := 0; i < 5; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			var dummy int
-			if err := db.WithContext(ctx).Raw("SELECT 1").Scan(&dummy).Error; err != nil {
-				logger.Warn().Err(err).Msg("Connection pool warm-up failed")
-			}
-		}()
-	}
-	wg.Wait()
-
-	logger.Info().Msg("Connection pool warmed up")
 	logger.Info().Msgf("Database connection established (log level: %s)", cfg.Database.LogLevel)
 	return db, nil
 }
