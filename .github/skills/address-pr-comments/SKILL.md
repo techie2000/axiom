@@ -82,13 +82,13 @@ Maintain a list of comment IDs and their resolution status:
 
 ```text
 ✅ RESOLVED (4)
-├─ 3045230708 - Transaction Safety - [description]
-├─ 3045230751 - Transaction Safety - [description]
-├─ 3045230772 - Performance - [description]
-└─ 3046789012 - Code Quality - [description]
+├─ {comment_id_1} - Transaction Safety - [description]
+├─ {comment_id_2} - Transaction Safety - [description]
+├─ {comment_id_3} - Performance - [description]
+└─ {comment_id_4} - Code Quality - [description]
 
 ⏳ DEFERRED (1)
-└─ 3045230787 - Test Coverage - [Reason: Requires test DB setup]
+└─ {comment_id_5} - Test Coverage - [Reason: Requires test DB setup]
 ```
 
 ### 7. Post Individual Resolution Comments (Automatic)
