@@ -97,7 +97,7 @@ Maintain a list of comment IDs and their resolution status:
 
 ```bash
 # Preferred, gh-version-independent method:
-gh api repos/<owner>/<repo>/pulls/<pr-number>/comments/<comment-id>/replies \
+gh api repos/<owner>/<repo>/pulls/comments/<comment-id>/replies \
    -X POST \
    -F "body=@/path/to/resolution.md"
 ```
@@ -182,7 +182,7 @@ For inline thread replies, use GitHub API `pulls/comments/{comment_id}/replies`.
 
 ```powershell
 $replyPath = "path/to/resolution.md"
-gh api repos/<owner>/<repo>/pulls/<pr-number>/comments/<comment-id>/replies `
+gh api repos/<owner>/<repo>/pulls/comments/<comment-id>/replies `
    -X POST `
    -F "body=@$replyPath"
 ```
