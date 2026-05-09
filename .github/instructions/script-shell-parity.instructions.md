@@ -13,10 +13,10 @@ applyTo: 'scripts/**'
 Every script added to `scripts/` **must ship with a counterpart in the other shell
 flavour** in the same commit/PR:
 
-| New file         | Required counterpart |
-|------------------|----------------------|
-| `scripts/foo.sh` | `scripts/foo.ps1`    |
-| `scripts/foo.ps1`| `scripts/foo.sh`     |
+| New file | Required counterpart |
+| --- | --- |
+| `scripts/foo.sh` | `scripts/foo.ps1` |
+| `scripts/foo.ps1` | `scripts/foo.sh` |
 
 ## Rationale
 
@@ -30,9 +30,9 @@ The following scripts are **intentionally PowerShell-only** because the project'
 `.githooks` explicitly require `pwsh` and document this requirement.  No bash
 counterpart is expected:
 
-| Script                             | Reason                                  |
-|------------------------------------|-----------------------------------------|
-| `scripts/sort-ra-urls.ps1`         | Git hook utility - hook mandates `pwsh` |
+| Script | Reason |
+| --- | --- |
+| `scripts/sort-ra-urls.ps1` | Git hook utility - hook mandates `pwsh` |
 | `scripts/sort-vscode-settings.ps1` | Git hook utility - hook mandates `pwsh` |
 
 If you add a new script that is intentionally platform-specific, add a row to the
