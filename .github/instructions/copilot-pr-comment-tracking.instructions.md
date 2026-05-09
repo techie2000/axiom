@@ -50,27 +50,27 @@ gh api repos/{owner}/{repo}/pulls/{pr_number}/comments \
 Use this in your session memory or as inline comments during work:
 
 ```markdown
-## PR #261 Copilot Feedback Tracking
+## PR #{pr_number} Copilot Feedback Tracking
 
 ### Transaction Safety Issues
-- **Comment ID 3045230708** (Line 473, currencies.go)
+- **Comment ID {comment_id_1}** (Line 473, currencies.go)
   - Status: ✅ FIXED
   - Fix: Moved audit write after UPDATE
   - Post: Posted as reply 14:32 UTC
   
-- **Comment ID 3045230751** (Line 217, continents.go)
+- **Comment ID {comment_id_2}** (Line 217, continents.go)
   - Status: ✅ FIXED
   - Fix: Moved audit write after DELETE
   - Post: Posted as reply 14:35 UTC
 
 ### Performance Issues
-- **Comment ID 3045230772** (Line 662, code_mappings.go)
+- **Comment ID {comment_id_3}** (Line 662, code_mappings.go)
   - Status: ✅ FIXED
   - Fix: Batch-load instead of per-row SELECT
   - Post: Posted as reply 14:38 UTC
 
 ### Test Coverage
-- **Comment ID 3045230787** (Line 204)
+- **Comment ID {comment_id_4}** (Line 204)
   - Status: ⏳ DEFERRED
   - Reason: Requires test DB infrastructure
   - Follow-up: Next PR
@@ -81,27 +81,27 @@ Use this in your session memory or as inline comments during work:
 
 ```json
 {
-  "pr_number": 261,
+  "pr_number": "{pr_number}",
   "copilot_comments": [
     {
-      "id": 3045230708,
+      "id": "{comment_id_1}",
       "file": "backend/internal/service/masterdata_service.go",
       "line": 473,
       "category": "Transaction Safety",
       "issue": "Audit write before UPDATE",
       "status": "resolved",
-      "fix_commit": "5340e2c",
+      "fix_commit": "{fix_commit_sha}",
       "reply_posted": true,
       "reply_time": "2026-04-07T14:32:00Z"
     },
     {
-      "id": 3045230751,
+      "id": "{comment_id_2}",
       "file": "backend/internal/service/masterdata_service.go",
       "line": 217,
       "category": "Transaction Safety",
       "issue": "Audit write before DELETE",
       "status": "resolved",
-      "fix_commit": "5340e2c",
+      "fix_commit": "{fix_commit_sha}",
       "reply_posted": true,
       "reply_time": "2026-04-07T14:35:00Z"
     }
@@ -118,7 +118,7 @@ Use this in your session memory or as inline comments during work:
 **Setup - Get all comment IDs first:**
 
 ```bash
-gh api repos/techie2000/axiom/pulls/261/comments \
+gh api repos/{owner}/{repo}/pulls/{pr_number}/comments \
   --jq '.[] | select(.user.login == "Copilot") | .id' \
   > /tmp/copilot_comment_ids.txt
 ```
@@ -131,7 +131,7 @@ Set-Content -Path $bodyPath -Value "✅ **RESOLVED**: [Your resolution message]"
 
 Get-Content /tmp/copilot_comment_ids.txt | ForEach-Object {
   $commentId = $_.Trim()
-  gh pr comment 261 --reply-to "$commentId" --body-file "$bodyPath"
+  gh api repos/{owner}/{repo}/pulls/{pr_number}/comments/$commentId/replies -X POST -F "body=@$bodyPath"
 }
 ```
 
@@ -139,7 +139,7 @@ Get-Content /tmp/copilot_comment_ids.txt | ForEach-Object {
 
 ```bash
 # Get all comments organized by file and category
-gh api repos/techie2000/axiom/pulls/261/comments \
+gh api repos/{owner}/{repo}/pulls/{pr_number}/comments \
   --jq 'group_by(.path) | map({
     file: .[0].path,
     count: length,
@@ -154,17 +154,17 @@ gh api repos/techie2000/axiom/pulls/261/comments \
 ```text
 TRANSACTION SAFETY (3 comments)
 ├─ masterdata_service.go (3)
-│  ├─ Comment 3045230708 - Line 473
-│  ├─ Comment 3045230751 - Line 217
-│  └─ Comment 3046789012 - Line 345
+│  ├─ Comment {comment_id_1} - Line 473
+│  ├─ Comment {comment_id_2} - Line 217
+│  └─ Comment {comment_id_5} - Line 345
 │
 PERFORMANCE (1 comment)
 ├─ masterdata_service.go (1)
-│  └─ Comment 3045230772 - Line 662
+│  └─ Comment {comment_id_3} - Line 662
 │
 TEST COVERAGE (1 comment)
 ├─ masterdata_service_test.go (1)
-│  └─ Comment 3045230787 - Line 204
+│  └─ Comment {comment_id_4} - Line 204
 │
 MARKDOWN LINT (3 comments) - N/A
 ├─ frontend-ui.instructions.md
@@ -176,13 +176,13 @@ MARKDOWN LINT (3 comments) - N/A
 
 ```text
 ✅ RESOLVED (4)
-├─ 3045230708 - Transaction Safety - currencies.go
-├─ 3045230751 - Transaction Safety - continents.go
-├─ 3045230772 - Performance - code_mappings.go
-└─ 3046789012 - Code Quality - service.go
+├─ {comment_id_1} - Transaction Safety - currencies.go
+├─ {comment_id_2} - Transaction Safety - continents.go
+├─ {comment_id_3} - Performance - code_mappings.go
+└─ {comment_id_5} - Code Quality - service.go
 
 ⏳ DEFERRED (1)
-└─ 3045230787 - Test Coverage - [Requires test DB setup]
+└─ {comment_id_4} - Test Coverage - [Requires test DB setup]
 
 ⚪ N/A (3)
 ├─ [Markdown files removed]
@@ -192,10 +192,10 @@ MARKDOWN LINT (3 comments) - N/A
 
 ```text
 REPLIED (4)
-├─ 3045230708 ✓ replied at 14:32
-├─ 3045230751 ✓ replied at 14:35
-├─ 3045230772 ✓ replied at 14:38
-└─ 3045230787 ✓ replied at 14:50 (deferred note)
+├─ {comment_id_1} ✓ replied at 14:32
+├─ {comment_id_2} ✓ replied at 14:35
+├─ {comment_id_3} ✓ replied at 14:38
+└─ {comment_id_4} ✓ replied at 14:50 (deferred note)
 
 NOT REPLIED (0)
 
@@ -209,7 +209,7 @@ SUMMARY (1)
 
 ```bash
 # Extract all Copilot comment IDs and save to file
-gh api repos/techie2000/axiom/pulls/261/comments \
+gh api repos/{owner}/{repo}/pulls/{pr_number}/comments \
   --jq '.[] | select(.user.login == "Copilot") | "\(.id),\(.path),\(.line),\(.body[0:50])"' \
   > comments_to_address.csv
 
@@ -222,18 +222,18 @@ gh api repos/techie2000/axiom/pulls/261/comments \
 ## Addressing Comments - Session 1
 
 ### Working On:
-- [ ] Comment 3045230708 (Line 473) - **IN PROGRESS**
+- [ ] Comment {comment_id_1} (Line 473) - **IN PROGRESS**
   - File: backend/internal/service/masterdata_service.go
   - Issue: Audit write before UPDATE
   - Fix: Reordering audit call
   
 ### Completed:
-- [x] Comment 3045230708 (Line 473)
+- [x] Comment {comment_id_1} (Line 473)
   - Fix commit: abc1234
   - Reply posted: Yes
   
 ### To Address Later:
-- [ ] Comment 3045230787 (Line 204)
+- [ ] Comment {comment_id_4} (Line 204)
   - Reason: Needs test DB infrastructure
   - When: Next sprint
 ```
@@ -245,7 +245,7 @@ gh api repos/techie2000/axiom/pulls/261/comments \
 
 $replyPath = Join-Path $env:TEMP "copilot-reply.md"
 
-# Reply to comment 3045230708
+# Reply to comment {comment_id_1}
 Set-Content -Path $replyPath -Value @'
 ✅ **RESOLVED**: Reordered audit to after UPDATE
 
@@ -256,9 +256,9 @@ Set-Content -Path $replyPath -Value @'
 
 **Validation**: Tests pass, behavior maintained
 '@ -Encoding utf8
-gh pr comment 261 --reply-to 3045230708 --body-file "$replyPath"
+gh api repos/{owner}/{repo}/pulls/{pr_number}/comments/{comment_id_1}/replies -X POST -F "body=@$replyPath"
 
-# Reply to comment 3045230751
+# Reply to comment {comment_id_2}
 Set-Content -Path $replyPath -Value @'
 ✅ **RESOLVED**: Reordered audit to after DELETE
 
@@ -268,14 +268,14 @@ Set-Content -Path $replyPath -Value @'
 
 **Validation**: Tests pass, audit consistency verified
 '@ -Encoding utf8
-gh pr comment 261 --reply-to 3045230751 --body-file "$replyPath"
+gh api repos/{owner}/{repo}/pulls/{pr_number}/comments/{comment_id_2}/replies -X POST -F "body=@$replyPath"
 ```
 
 ### Step 4: Verify All Replied
 
 ```bash
 # Check which comments you've replied to
-gh api repos/techie2000/axiom/pulls/261/comments \
+gh api repos/{owner}/{repo}/pulls/{pr_number}/comments \
   --jq '[.[] | select(.user.login == "Copilot") | {id: .id, repliedCount: (.. | objects | select(.user.login != "Copilot") | .user.login) | length}]'
 ```
 
@@ -287,7 +287,7 @@ gh api repos/techie2000/axiom/pulls/261/comments \
 
 ```bash
 # Save original count
-ORIGINAL_COUNT=$(gh api repos/techie2000/axiom/pulls/261/comments \
+ORIGINAL_COUNT=$(gh api repos/{owner}/{repo}/pulls/{pr_number}/comments \
   --jq '[.[] | select(.user.login == "Copilot")] | length')
 
 echo "Total Copilot comments to address: $ORIGINAL_COUNT"
@@ -308,12 +308,12 @@ fi
 
 ```bash
 # Always verify comment ID before posting
-COMMENT_ID="3045230708"
-gh api repos/techie2000/axiom/pulls/261/comments/$COMMENT_ID \
+COMMENT_ID="{comment_id}"
+gh api repos/{owner}/{repo}/pulls/{pr_number}/comments/$COMMENT_ID \
   --jq '{id: .id, path: .path, line: .line, preview: .body[0:80]}'
 
 # Review output before posting reply
-gh pr comment 261 --reply-to $COMMENT_ID --body "[Your reply]"
+gh api repos/{owner}/{repo}/pulls/{pr_number}/comments/$COMMENT_ID/replies -X POST -f body='[Your reply]'
 ```
 
 ### Mistake 3: Missing Comments in Pagination
@@ -323,7 +323,7 @@ gh pr comment 261 --reply-to $COMMENT_ID --body "[Your reply]"
 ```bash
 # GitHub API paginates at 30 items by default
 # Use --paginate to get all
-gh api repos/techie2000/axiom/pulls/261/comments --paginate \
+gh api repos/{owner}/{repo}/pulls/{pr_number}/comments --paginate \
   --jq '[.[] | select(.user.login == "Copilot") | .id]' \
   > all_copilot_ids.txt
 
@@ -336,11 +336,11 @@ wc -l all_copilot_ids.txt  # Verify you got all
 
 ```bash
 # Create a tracking snapshot
-gh api repos/techie2000/axiom/pulls/261/comments --paginate \
+gh api repos/{owner}/{repo}/pulls/{pr_number}/comments --paginate \
   --jq '.[] | select(.user.login == "Copilot") | {id: .id, file: .path, line: .line, status: "pending"}' \
-  > pr261_copilot_tracking.json
+  > pr${pr_number}_copilot_tracking.json
 
-echo "Tracking created: $(jq 'length' pr261_copilot_tracking.json) comments"
+echo "Tracking created: $(jq 'length' pr${pr_number}_copilot_tracking.json) comments"
 ```
 
 ### While Fixing
@@ -350,14 +350,14 @@ echo "Tracking created: $(jq 'length' pr261_copilot_tracking.json) comments"
 # (Manual or via script)
 
 # Check progress
-jq '[.[] | select(.status == "resolved") | .id]' pr261_copilot_tracking.json | wc -l
+jq '[.[] | select(.status == "resolved") | .id]' pr${pr_number}_copilot_tracking.json | wc -l
 ```
 
 ### After All Fixes
 
 ```bash
 # Verify all comments addressed
-jq '.[] | select(.status != "resolved" and .status != "deferred" and .status != "n/a")' pr261_copilot_tracking.json
+jq '.[] | select(.status != "resolved" and .status != "deferred" and .status != "n/a")' pr${pr_number}_copilot_tracking.json
 
 # Should return empty if all handled
 ```
@@ -371,8 +371,8 @@ jq '.[] | select(.status != "resolved" and .status != "deferred" and .status != 
 # track-copilot-comments.sh
 
 PR_NUMBER=$1
-OWNER="techie2000"
-REPO="axiom"
+OWNER="<owner>"
+REPO="<repo>"
 
 # Fetch all Copilot comments
 echo "Fetching all Copilot comments..."
@@ -395,7 +395,7 @@ Usage:
 
 ```bash
 chmod +x track-copilot-comments.sh
-./track-copilot-comments.sh 261
+./track-copilot-comments.sh <pr_number>
 ```
 
 ## Troubleshooting Comment ID Issues
@@ -404,7 +404,7 @@ chmod +x track-copilot-comments.sh
 
 ```bash
 # Verify comment still exists
-gh api repos/techie2000/axiom/pulls/261/comments/3045230708
+gh api repos/{owner}/{repo}/pulls/{pr_number}/comments/{comment_id}
 
 # If deleted, it won't exist but that's OK - note it as removed
 ```
@@ -413,7 +413,7 @@ gh api repos/techie2000/axiom/pulls/261/comments/3045230708
 
 ```bash
 # Ensure format is correct (must be numeric ID, not thread ID)
-gh api repos/techie2000/axiom/pulls/261/comments \
+gh api repos/{owner}/{repo}/pulls/{pr_number}/comments \
   --jq '.[] | select(.user.login == "Copilot") | .id'
 
 # Use numeric ID from above, not node_id
@@ -423,7 +423,7 @@ gh api repos/techie2000/axiom/pulls/261/comments \
 
 ```bash
 # GitHub doesn't prevent duplicate replies, but you can check:
-gh api repos/techie2000/axiom/pulls/261/comments/3045230708/replies \
+gh api repos/{owner}/{repo}/pulls/{pr_number}/comments/{comment_id}/replies \
   --jq '.[] | {author: .user.login, created: .created_at}'
 ```
 
