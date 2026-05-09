@@ -59,17 +59,33 @@ PORT_KEYS=("POSTGRES_PORT" "RABBITMQ_PORT" "RABBITMQ_MGMT_PORT" "BACKEND_PORT" "
 # Helper: get value of a key from a file
 get_env_value() {
   local file="$1" key="$2"
-  grep -E "^\s*${key}=" "$file" | head -1 | cut -d= -f2- | tr -d '[:space:]' || true
+  grep -E "^[[:space:]]*${key}=" "$file" | head -1 | cut -d= -f2- | tr -d '[:space:]' || true
 }
 
 # Helper: set or add a key=value in a file (edits in place)
 set_env_value() {
   local file="$1" key="$2" value="$3"
-  if grep -qE "^\s*${key}=" "$file"; then
-    sed -i "s|^\s*${key}=.*|${key}=${value}|" "$file"
-  else
-    echo "${key}=${value}" >> "$file"
-  fi
+  local tmp_file
+  tmp_file="$(mktemp "${file}.XXXXXX")"
+
+  awk -v key="$key" -v value="$value" '
+    BEGIN { updated = 0 }
+    $0 ~ "^[[:space:]]*" key "=" {
+      if (!updated) {
+        print key "=" value
+        updated = 1
+      }
+      next
+    }
+    { print }
+    END {
+      if (!updated) {
+        print key "=" value
+      }
+    }
+  ' "$file" > "$tmp_file"
+
+  mv "$tmp_file" "$file"
 }
 
 # Start from a copy of the source file

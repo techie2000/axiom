@@ -70,7 +70,7 @@ PYEOF
 # ---------------------------------------------------------------------------
 parse_env_value() {
   local file="$1" key="$2"
-  grep -E "^\s*${key}=" "$file" | head -1 | cut -d= -f2- | tr -d '[:space:]' || true
+  grep -E "^[[:space:]]*${key}=" "$file" | head -1 | cut -d= -f2- | tr -d '[:space:]' || true
 }
 
 http_get() {
