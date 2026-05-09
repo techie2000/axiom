@@ -1,3 +1,7 @@
 node_modules/
 **/node_modules/**
 docs-user/node_modules/
+.tmp/
+**/.tmp/**
+.venv/
+**/.venv/**
