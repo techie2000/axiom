@@ -20,7 +20,8 @@ If `.vscode/settings.json` exists, the hook runs `scripts/sort-vscode-settings.p
 the JSON keys alphabetically sorted. If the sorter modifies the file it is automatically staged
 so the sorted version is part of the commit.
 
-This is an intentional exception to the [script shell parity rule](../../.github/instructions/script-shell-parity.instructions.md)
+This is an intentional exception to the
+[script shell parity rule][script-shell-parity-rule]
 because git-hook utilities mandate PowerShell. During **pre-commit**, if `pwsh` is unavailable,
 the sort step is skipped with a warning (commit is not blocked). During **pre-push**, if `pwsh`
 is unavailable, the push is **blocked** — you must sort the file before pushing.
@@ -58,7 +59,8 @@ is caught before review, not during it.
 If `frontend/public/data/ra-urls.json` exists, the hook runs `scripts/sort-ra-urls.ps1`
 to keep `RA*` keys alphabetically sorted. If the sorter modifies the file it is automatically staged.
 
-This is an intentional exception to the [script shell parity rule](../../.github/instructions/script-shell-parity.instructions.md)
+This is an intentional exception to the
+[script shell parity rule][script-shell-parity-rule]
 because git-hook utilities mandate PowerShell. During **pre-commit**, if `pwsh` is unavailable,
 the sort step is skipped with a warning (commit is not blocked). During **pre-push**, if `pwsh`
 is unavailable, the push is **blocked** — you must sort the file before pushing.
@@ -168,6 +170,8 @@ git config --unset core.hooksPath
 ```
 
 ## Requirements
+
+[script-shell-parity-rule]: ../../.github/instructions/script-shell-parity.instructions.md
 
 | Tool | Purpose | Install |
 | ---- | ------- | ------- |

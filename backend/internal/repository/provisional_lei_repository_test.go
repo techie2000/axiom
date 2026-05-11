@@ -22,6 +22,7 @@ func TestProvisionalLEIInsertPayload_ContainsExpectedValues(t *testing.T) {
 		RegistrationStatus:      "ISSUED",
 		IsProvisional:           true,
 		ProvisioningSource:      "test",
+		Notes:                   "initial note",
 		InitialRegistrationDate: now,
 		LastUpdateDate:          now,
 		NextRenewalDate:         now.AddDate(1, 0, 0),
@@ -39,6 +40,9 @@ func TestProvisionalLEIInsertPayload_ContainsExpectedValues(t *testing.T) {
 	}
 	if got := payload["provisioning_source"]; got != record.ProvisioningSource {
 		t.Fatalf("payload provisioning_source = %v, want %v", got, record.ProvisioningSource)
+	}
+	if got := payload["notes"]; got != record.Notes {
+		t.Fatalf("payload notes = %v, want %v", got, record.Notes)
 	}
 }
 

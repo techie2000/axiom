@@ -93,6 +93,7 @@ func provisionalLEIInsertPayload(record *domain.LEIRecord) map[string]interface{
 		"updated_by":                record.UpdatedBy,
 		"is_provisional":            record.IsProvisional,
 		"provisioning_source":       record.ProvisioningSource,
+		"notes":                     nullableString(record.Notes),
 		"created_at":                record.CreatedAt,
 		"updated_at":                record.UpdatedAt,
 		"deleted_at":                nullableDeletedAt(record.DeletedAt),
@@ -144,6 +145,7 @@ func (r *provisionalLEIRepository) Update(record *domain.LEIRecord) error {
 		"legal_jurisdiction":    record.LegalJurisdiction,
 		"entity_status":         record.EntityStatus,
 		"provisioning_source":   record.ProvisioningSource,
+		"notes":                 nullableString(record.Notes),
 		"updated_by":            record.UpdatedBy,
 		"last_update_date":      record.LastUpdateDate,
 	})

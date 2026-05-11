@@ -63,7 +63,7 @@ Extend `lei_raw.lei_records` with two new columns:
 | Column | Type | Purpose |
 | ------ | ---- | ------- |
 | `is_provisional` | `BOOLEAN NOT NULL DEFAULT FALSE` | Marks records that are Axiom-issued rather than GLEIF-sourced |
-| `provisioning_source` | `VARCHAR(50)` | Free-text label identifying why the provisional LEI was created (e.g. `onboarding`, `counterparty`, `internal`) |
+| `provisioning_source` | `VARCHAR(1000)` | Free-text label or URL identifying why the provisional LEI was created (e.g. `onboarding`, `counterparty`, `internal`, or document URL) |
 
 No separate table is created. Keeping provisional records in the same table means all
 existing search, filter, and sort paths continue to work unmodified. The `is_provisional`
@@ -218,6 +218,10 @@ entities via a dedicated `user_entity_links` table.
   digit calculation is self-contained in that file.
 - **IMP-002**: Migration `000062` adds `is_provisional` and `provisioning_source` to
   `lei_raw.lei_records`. Existing rows default to `is_provisional = FALSE`.
+- **IMP-002a**: Migration `000073` increases `provisioning_source` from `VARCHAR(50)` to
+  `VARCHAR(1000)` to support long document URLs and extended references (e.g., prospectus
+  links). This accommodates real-world provisioning sources including full URLs (typically
+  100–500 characters) plus optional metadata.
 - **IMP-003**: Migration `000063` creates `user_entity_links`.
 - **IMP-004**: Admin endpoints for provisional LEI management are mounted under
   `/api/v1/lei/provisional` (JWT + AdminRequired).
@@ -238,7 +242,10 @@ entities via a dedicated `user_entity_links` table.
 - **REF-005**: [backend/internal/service/provisional_lei_service.go](../../backend/internal/service/provisional_lei_service.go)
 - **REF-006**: [backend/migrations/000062_add_provisional_lei_support.up.sql](../../backend/migrations/000062_add_provisional_lei_support.up.sql)
 - **REF-007**: [backend/migrations/000063_add_user_entity_links.up.sql](../../backend/migrations/000063_add_user_entity_links.up.sql)
+- **REF-008**: [backend/migrations/000073_increase_provisioning_source_varchar_length.up.sql](../../backend/migrations/000073_increase_provisioning_source_varchar_length.up.sql)
 
 ## Revision History
 
 - **2026-04-27**: Initial decision
+- **2026-05-11**: Increased `provisioning_source` VARCHAR length from 50 to 1000
+  characters to accommodate long document URLs (migration 000073)
