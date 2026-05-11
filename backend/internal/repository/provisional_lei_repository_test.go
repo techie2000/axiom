@@ -83,6 +83,38 @@ func TestProvisionalLEIInsertPayload_ConvertsConstrainedEmptyStringsToNull(t *te
 	}
 }
 
+func TestProvisionalLEIUpdatePayload_ConvertsConstrainedEmptyStringsToNull(t *testing.T) {
+	t.Helper()
+
+	// Regression test: Verify UPDATE payload converts empty country/jurisdiction to NULL.
+	// Issue #546: Empty string for legal_address_country triggered domain constraint violation.
+	// Update path must wrap these fields with nullableString() just like Create path.
+	record := &domain.LEIRecord{
+		ID:                  uuid.New(),
+		LegalName:           "Test Update",
+		LegalAddressCountry: "", // Empty string should become NULL
+		LegalJurisdiction:   "", // Empty string should become NULL
+		LegalAddressCity:    "London",
+		EntityStatus:        "ACTIVE",
+		ProvisioningSource:  "update-test",
+	}
+
+	payload := provisionalLEIUpdatePayload(record)
+
+	// These fields should be nil (NULL in SQL) when source is empty string
+	constrainedFields := []string{"legal_address_country", "legal_jurisdiction"}
+	for _, key := range constrainedFields {
+		if payload[key] != nil {
+			t.Fatalf("expected %s to be nil for empty string (UPDATE path), got %v", key, payload[key])
+		}
+	}
+
+	// Non-constrained fields should still work normally
+	if payload["legal_address_city"] != record.LegalAddressCity {
+		t.Fatalf("payload legal_address_city = %v, want %v", payload["legal_address_city"], record.LegalAddressCity)
+	}
+}
+
 func TestValidateLEICode(t *testing.T) {
 	t.Helper()
 
