@@ -138,18 +138,22 @@ func (r *provisionalLEIRepository) Update(record *domain.LEIRecord) error {
 	}
 	// Update only the fields that matter for provisional LEI records, not all fields.
 	// This prevents empty strings from being written to domain-typed columns like hq_address_country.
-	result := r.db.Table("lei_raw.lei_records").Where("id = ?", record.ID).Updates(map[string]interface{}{
+	result := r.db.Table("lei_raw.lei_records").Where("id = ?", record.ID).Updates(provisionalLEIUpdatePayload(record))
+	return result.Error
+}
+
+func provisionalLEIUpdatePayload(record *domain.LEIRecord) map[string]interface{} {
+	return map[string]interface{}{
 		"legal_name":            record.LegalName,
-		"legal_address_country": record.LegalAddressCountry,
+		"legal_address_country": nullableString(record.LegalAddressCountry),
 		"legal_address_city":    record.LegalAddressCity,
-		"legal_jurisdiction":    record.LegalJurisdiction,
+		"legal_jurisdiction":    nullableString(record.LegalJurisdiction),
 		"entity_status":         record.EntityStatus,
 		"provisioning_source":   record.ProvisioningSource,
 		"notes":                 nullableString(record.Notes),
 		"updated_by":            record.UpdatedBy,
 		"last_update_date":      record.LastUpdateDate,
-	})
-	return result.Error
+	}
 }
 
 func (r *provisionalLEIRepository) FindByLEI(lei string) (*domain.LEIRecord, error) {
