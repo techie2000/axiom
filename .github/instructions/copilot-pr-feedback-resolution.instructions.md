@@ -5,7 +5,23 @@ applyTo: '**'
 
 # Copilot PR Feedback Resolution Workflow
 
+## ⚡ Quick Start
+
+**Use the `address-pr-comments` skill to automatically resolve review feedback.**
+
+The skill handles the complete workflow: identify unresolved threads, implement
+fixes, post individual resolution replies, create comprehensive summary, and
+mirror updates to linked issues—all without asking for confirmation.
+
+**Skill triggers**: "Address PR comments", "Resolve review feedback",
+"Fix Copilot feedback"
+
+---
+
 ## Overview
+
+This page documents the manual workflow for resolving Copilot PR review feedback.
+For automated execution, use the `address-pr-comments` skill (see Quick Start above).
 
 When Copilot provides review feedback on a pull request, implement fixes and
 automatically manage feedback resolution without requiring explicit user prompts
@@ -72,20 +88,16 @@ $body = @'
 
 Set-Content -Path $bodyPath -Value $body -Encoding utf8
 
-# Prefer the safe helper to post + verify body fidelity and receive a stable URL.
-$commentUrl = pwsh ./scripts/post-gh-comment-safe.ps1 `
-  -Repo "{owner}/{repo}" `
-  -TargetType pr `
-  -PrNumber 261 `
-  -BodyFile "$bodyPath"
+# Capability check:
+# - If `gh pr comment --help` includes `--reply-to`, that command is usable.
+# - Otherwise (or by default), use the API endpoint below.
 
-Write-Host "Posted resolution comment: $commentUrl"
+gh api repos/{owner}/{repo}/pulls/{pr_number}/comments/{comment_id}/replies `
+  -X POST `
+  -F "body=@$bodyPath"
 
-# If posting a reply with gh directly, verify with issues/comments endpoint
-# because gh pr comment --reply-to creates an issue comment in the PR timeline.
-# $replyUrl = gh pr comment 261 --reply-to {comment_id} --body-file "$bodyPath"
-# $newCommentId = [regex]::Match(($replyUrl | Select-Object -Last 1), 'issuecomment-(\d+)$').Groups[1].Value
-# gh api repos/{owner}/{repo}/issues/comments/$newCommentId --jq .body
+# Verify reply exists on thread
+gh api repos/{owner}/{repo}/pulls/{pr_number}/comments/{comment_id}/replies --jq '.[-1].body'
 ```
 
 ### Comment Template by Issue Type
@@ -255,7 +267,8 @@ If any comments are deferred for later:
 
 ### Comment in Correct Scope
 
-- **Individual resolutions**: Reply directly to the Copilot comment thread using `--reply-to {comment_id}`
+- **Individual resolutions**: Reply directly to the Copilot comment thread using
+  `POST /repos/{owner}/{repo}/pulls/{pr}/comments/{comment_id}/replies`
 - **Summary comment**: Post as standalone comment on the PR using `gh pr comment`
 - **Issue updates**: Post concise mirrored updates on linked underlying issues using `gh issue comment`
 - **Never duplicate**: Don't post the same resolution in multiple places
@@ -273,7 +286,7 @@ If you cannot locate a Copilot comment ID:
 
 - Use `gh api repos/{owner}/{repo}/pulls/{pr}/comments` to list all comments
 - Filter by `.user.login == "Copilot"`
-- Extract the `.id` for the reply-to target
+- Extract the `.id` for the `pulls/comments/{id}/replies` target
 
 ## Best Practices
 

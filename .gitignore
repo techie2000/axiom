@@ -20,6 +20,7 @@ go.work
 /frontend/.env*.local
 /frontend/.vercel
 /frontend/tsconfig.tsbuildinfo
+/frontend/next-env.d.ts
 
 # IDEs
 .idea/
@@ -72,7 +73,11 @@ compose-output.txt
 
 # Temporary files
 /tmp/
+/.tmp/
 *.tmp
+copilot_comment_*.md
+copilot_summary.md
+pr_body.md
 
 # Testing
 /backend/coverage.out
