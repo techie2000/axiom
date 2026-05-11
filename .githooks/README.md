@@ -14,14 +14,16 @@ Hooks run automatically once installed — no manual steps required per commit.
 
 Runs four checks on every commit attempt:
 
-#### 1. VS Code settings sort (when `pwsh` is available)
+#### 1. VS Code settings sort (`pwsh` required for pre-push)
 
-If `.vscode/settings.json` exists and PowerShell 7+ (`pwsh`) is on your `PATH`, the hook runs
-`scripts/sort-vscode-settings.ps1` to keep the JSON keys alphabetically sorted. If the sorter
-modifies the file it is automatically staged so the sorted version is part of the commit.
+If `.vscode/settings.json` exists, the hook runs `scripts/sort-vscode-settings.ps1` to keep
+the JSON keys alphabetically sorted. If the sorter modifies the file it is automatically staged
+so the sorted version is part of the commit.
 
-If `pwsh` is not available the sort step is skipped with a warning — the commit is **not**
-blocked.
+This is an intentional exception to the [script shell parity rule](../../.github/instructions/script-shell-parity.instructions.md)
+because git-hook utilities mandate PowerShell. During **pre-commit**, if `pwsh` is unavailable,
+the sort step is skipped with a warning (commit is not blocked). During **pre-push**, if `pwsh`
+is unavailable, the push is **blocked** — you must sort the file before pushing.
 
 #### 2. i18n common aliasing (when `frontend/public/locales/en/common.json` is staged)
 
@@ -51,14 +53,15 @@ Runs `npx --no-install markdownlint-cli2` against every staged `.md` file using 
 The hook **fails fast** if `npx` is not available. This is intentional — markdown non-compliance
 is caught before review, not during it.
 
-#### 4. RA URL key sort (when `pwsh` is available)
+#### 4. RA URL key sort (`pwsh` required for pre-push)
 
-If `frontend/public/data/ra-urls.json` exists and PowerShell 7+ (`pwsh`) is on your `PATH`,
-the hook runs `scripts/sort-ra-urls.ps1` to keep `RA*` keys alphabetically sorted.
-If the sorter modifies the file it is automatically staged.
+If `frontend/public/data/ra-urls.json` exists, the hook runs `scripts/sort-ra-urls.ps1`
+to keep `RA*` keys alphabetically sorted. If the sorter modifies the file it is automatically staged.
 
-If `pwsh` is not available the sort step is skipped with a warning — the commit is **not**
-blocked.
+This is an intentional exception to the [script shell parity rule](../../.github/instructions/script-shell-parity.instructions.md)
+because git-hook utilities mandate PowerShell. During **pre-commit**, if `pwsh` is unavailable,
+the sort step is skipped with a warning (commit is not blocked). During **pre-push**, if `pwsh`
+is unavailable, the push is **blocked** — you must sort the file before pushing.
 
 ### pre-push
 
