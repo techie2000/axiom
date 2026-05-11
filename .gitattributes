@@ -1,6 +1,7 @@
 # Git attributes for consistent line endings across platforms
 
-# Auto-detect text files and normalize line endings to LF
+# Auto-detect text files and normalize line endings in the repository index.
+# Working-tree line endings can still vary with developer Git settings.
 * text=auto
 
 # Shell scripts - must use LF
