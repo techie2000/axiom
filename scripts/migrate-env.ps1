@@ -58,12 +58,32 @@ $cmdSuffix = switch ($Direction) {
     }
 }
 
+$allowInsecureDownload = if ($Environment -eq "prod") { "0" } else { "1" }
+
 $containerScript = @'
-rm -f /tmp/migrate /tmp/migrate.tar.gz && apk add --no-cache wget tar >/dev/null && wget --no-check-certificate -q -O /tmp/migrate.tar.gz https://github.com/golang-migrate/migrate/releases/download/v4.18.1/migrate.linux-amd64.tar.gz && tar -xzf /tmp/migrate.tar.gz -C /tmp && chmod +x /tmp/migrate && /tmp/migrate -path /root/migrations -database '__DB__' -verbose __CMD__
+set -e
+rm -f /tmp/migrate /tmp/migrate.tar.gz
+apk add --no-cache ca-certificates wget tar >/dev/null
+URL="https://github.com/golang-migrate/migrate/releases/download/v4.18.1/migrate.linux-amd64.tar.gz"
+
+if wget -q -O /tmp/migrate.tar.gz "$URL"; then
+    echo "Downloaded migrate with TLS verification."
+elif [ "__ALLOW_INSECURE__" = "1" ]; then
+    echo "WARNING: TLS-verified download failed; retrying without certificate verification for non-prod environment." >&2
+    wget --no-check-certificate -q -O /tmp/migrate.tar.gz "$URL"
+else
+    echo "ERROR: secure migrate download failed and insecure fallback is disabled for production." >&2
+    exit 1
+fi
+
+tar -xzf /tmp/migrate.tar.gz -C /tmp
+chmod +x /tmp/migrate
+/tmp/migrate -path /root/migrations -database '__DB__' -verbose __CMD__
 '@
 
 $containerScript = $containerScript.Replace("__CMD__", $cmdSuffix)
 $containerScript = $containerScript.Replace("__DB__", $databaseUrl)
+$containerScript = $containerScript.Replace("__ALLOW_INSECURE__", $allowInsecureDownload)
 
 Write-Host "Starting dependencies for $Environment..."
 docker compose --env-file $($config.EnvFile) -f $($config.ComposeFile) up -d postgres rabbitmq backend
