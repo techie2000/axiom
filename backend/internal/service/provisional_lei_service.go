@@ -50,6 +50,7 @@ type UpdateProvisionalLEIRequest struct {
 	LegalJurisdiction   string `json:"legal_jurisdiction"`
 	EntityStatus        string `json:"entity_status"`
 	ProvisioningSource  string `json:"provisioning_source"`
+	Notes               string `json:"notes"`
 	ParentLEI           string `json:"parent_lei"`
 	ChildLEI            string `json:"child_lei"`
 }
@@ -103,6 +104,7 @@ func (s *provisionalLEIService) Create(req CreateProvisionalLEIRequest, adminUse
 		RegistrationStatus:      "ISSUED",
 		IsProvisional:           true,
 		ProvisioningSource:      req.ProvisioningSource,
+		Notes:                   req.Notes,
 		CreatedBy:               adminUserID,
 		UpdatedBy:               adminUserID,
 		InitialRegistrationDate: time.Now().UTC(),
@@ -183,6 +185,7 @@ func (s *provisionalLEIService) Update(lei string, req UpdateProvisionalLEIReque
 	if req.ProvisioningSource != "" {
 		record.ProvisioningSource = req.ProvisioningSource
 	}
+	record.Notes = req.Notes
 	record.UpdatedBy = adminUserID
 	record.LastUpdateDate = time.Now().UTC()
 
@@ -230,6 +233,7 @@ func (s *provisionalLEIService) createProvisionalAudit(action string, before, af
 		appendChange("legal_jurisdiction", before.LegalJurisdiction, after.LegalJurisdiction)
 		appendChange("entity_status", before.EntityStatus, after.EntityStatus)
 		appendChange("provisioning_source", before.ProvisioningSource, after.ProvisioningSource)
+		appendChange("notes", before.Notes, after.Notes)
 		appendChange("successor_lei", before.SuccessorLEI, after.SuccessorLEI)
 
 		// Track parent_lei and child_lei changes using hydrated record fields
