@@ -197,24 +197,44 @@ func connectDatabase(cfg *config.Config) (*gorm.DB, error) {
 	sqlDB.SetMaxOpenConns(100)
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
-	// Pre-warm connection pool to avoid high latency on first user request
+	// Verify database connectivity before proceeding with warm-up
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
+	if err := sqlDB.PingContext(ctx); err != nil {
+		return nil, fmt.Errorf("failed to verify database connectivity: %w", err)
+	}
+
+	// Pre-warm connection pool to avoid high latency on first user request
+	// Use a new context for warm-up since we've already used the ping context
+	warmCtx, warmCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer warmCancel()
+
+	successCount := 0
 	var wg sync.WaitGroup
+	var mu sync.Mutex
+
 	for i := 0; i < 5; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			var dummy int
-			if err := db.WithContext(ctx).Raw("SELECT 1").Scan(&dummy).Error; err != nil {
-				logger.Warn().Err(err).Msg("Connection pool warm-up failed")
+			if err := db.WithContext(warmCtx).Raw("SELECT 1").Scan(&dummy).Error; err != nil {
+				logger.Warn().Err(err).Msg("Connection pool warm-up query failed")
+			} else {
+				mu.Lock()
+				successCount++
+				mu.Unlock()
 			}
 		}()
 	}
 	wg.Wait()
 
-	logger.Info().Msg("Connection pool warmed up")
+	if successCount == 0 {
+		return nil, fmt.Errorf("connection pool warm-up failed: no queries succeeded")
+	}
+
+	logger.Info().Msgf("Connection pool warmed up successfully (%d/%d queries succeeded)", successCount, 5)
 	logger.Info().Msgf("Database connection established (log level: %s)", cfg.Database.LogLevel)
 	return db, nil
 }
