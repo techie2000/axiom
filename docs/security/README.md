@@ -64,7 +64,7 @@ See [AUTOMATED_UPDATES.md](AUTOMATED_UPDATES.md) for complete documentation.
 - [Docker Best Practices](../../.github/instructions/containerization-docker-best-practices.instructions.md) -
   Container security guidelines
 - [Security Scan Enhanced Workflow](../../.github/workflows/security-scan-enhanced.yml) - Automated security scanning
-- [CodeQL Workflow](../../.github/workflows/codeql-static-analysis.yml) - Advanced CodeQL analysis for Go, JavaScript/TypeScript,
-  and GitHub Actions
+- [CodeQL Workflow](../../.github/workflows/codeql-static-analysis.yml) - Advanced CodeQL analysis
+  for Go, JavaScript/TypeScript, and GitHub Actions
 - [Dependabot Configuration](../../.github/dependabot.yml) - Dependency monitoring
 - [Security Version Tracking](../../.github/security-versions.yml) - Pinned versions audit trail

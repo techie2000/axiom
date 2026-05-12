@@ -91,7 +91,7 @@ export default function PageHeader({
           </nav>
         )}
 
-        {showBackLink && (
+        {showBackLink && !dashboardPageSection && (
           <Link
             href={backHref}
             className="theme-link hover:opacity-80 mb-4 inline-block rounded theme-focus"

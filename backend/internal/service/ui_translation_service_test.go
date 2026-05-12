@@ -156,6 +156,72 @@ func TestUITranslationServiceSubmitRejectsInvalidPayload(t *testing.T) {
 	}
 }
 
+func TestUITranslationServiceSubmitRejectsUnsafeNestingPatterns(t *testing.T) {
+	tests := []struct {
+		name  string
+		value string
+	}{
+		{name: "comma in nesting", value: "$t(key, fallback)"},
+		{name: "object in nesting", value: "$t(key, {defaultValue: text})"},
+		{name: "array in nesting", value: "$t(key, [1, 2])"},
+		{name: "nesting with context", value: "$t(key, {context: plural})"},
+		{name: "nesting in middle of text", value: "See $t(key, {option: value}) for details"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			repo := &uiTranslationRepoStub{}
+			svc := NewUITranslationService(repo)
+
+			translation, err := svc.Submit("test.key", "en", tc.value, "", "")
+			if !errors.Is(err, errUnsafeNestingOptions) {
+				t.Fatalf("Submit error = %v, want %v", err, errUnsafeNestingOptions)
+			}
+			if translation != nil {
+				t.Fatalf("Submit translation = %#v, want nil", translation)
+			}
+			if repo.upserted != nil {
+				t.Fatal("Upsert should not be called for unsafe nesting")
+			}
+		})
+	}
+}
+
+func TestUITranslationServiceSubmitAcceptsSafePointerPatterns(t *testing.T) {
+	tests := []struct {
+		name  string
+		value string
+	}{
+		{name: "plain text", value: "Hello World"},
+		{name: "simple pointer", value: "$t(home.title)"},
+		{name: "nested pointer", value: "$t(reference.layout.header)"},
+		{name: "interpolation", value: "Hello {{name}}"},
+		{name: "pointer with text", value: "$t(nav.home) or visit our website"},
+		{name: "multiple pointers", value: "$t(prefix.label) - $t(suffix.label)"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			repo := &uiTranslationRepoStub{}
+			svc := NewUITranslationService(repo)
+
+			translation, err := svc.Submit("test.key", "en", tc.value, "", "")
+			if err != nil {
+				t.Fatalf("Submit returned unexpected error: %v", err)
+			}
+			if translation == nil {
+				t.Fatal("Submit returned nil translation")
+			}
+			if repo.upserted == nil {
+				t.Fatal("expected Upsert to be called")
+			}
+			if repo.upserted.TranslationValue != tc.value {
+				t.Fatalf("TranslationValue = %q, want %q", repo.upserted.TranslationValue, tc.value)
+			}
+		})
+	}
+}
+
 func TestUITranslationServiceGetApproveRejectDeleteValidateIDs(t *testing.T) {
 	repo := &uiTranslationRepoStub{}
 	svc := NewUITranslationService(repo)

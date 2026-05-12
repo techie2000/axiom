@@ -43,35 +43,35 @@ WHERE successor_lei IS NOT NULL AND BTRIM(successor_lei) = '';
 -- Add FK constraints as NOT VALID.
 -- NULL values always pass FK checks; only non-null values are looked up.
 ALTER TABLE lei_raw.lei_records
-    ADD CONSTRAINT fk_lei_records_registration_authority
-        FOREIGN KEY (registration_authority)
-        REFERENCES lei_raw.gleif_registration_authorities (ra_id)
-        NOT VALID,
-    ADD CONSTRAINT fk_lei_records_entity_legal_form
-        FOREIGN KEY (entity_legal_form)
-        REFERENCES lei_raw.gleif_entity_legal_forms (elf_code)
-        NOT VALID,
-    ADD CONSTRAINT fk_lei_records_validation_authority
-        FOREIGN KEY (validation_authority)
-        REFERENCES lei_raw.gleif_registration_authorities (ra_id)
-        NOT VALID,
-    ADD CONSTRAINT fk_lei_records_successor_lei
-        FOREIGN KEY (successor_lei)
-        REFERENCES lei_raw.lei_records (lei)
-        NOT VALID,
-    ADD CONSTRAINT fk_lei_records_managing_lou
-        FOREIGN KEY (managing_lou)
-        REFERENCES lei_raw.lei_records (lei)
-        NOT VALID;
+ADD CONSTRAINT fk_lei_records_registration_authority
+FOREIGN KEY (registration_authority)
+REFERENCES lei_raw.gleif_registration_authorities (ra_id)
+NOT VALID,
+ADD CONSTRAINT fk_lei_records_entity_legal_form
+FOREIGN KEY (entity_legal_form)
+REFERENCES lei_raw.gleif_entity_legal_forms (elf_code)
+NOT VALID,
+ADD CONSTRAINT fk_lei_records_validation_authority
+FOREIGN KEY (validation_authority)
+REFERENCES lei_raw.gleif_registration_authorities (ra_id)
+NOT VALID,
+ADD CONSTRAINT fk_lei_records_successor_lei
+FOREIGN KEY (successor_lei)
+REFERENCES lei_raw.lei_records (lei)
+NOT VALID,
+ADD CONSTRAINT fk_lei_records_managing_lou
+FOREIGN KEY (managing_lou)
+REFERENCES lei_raw.lei_records (lei)
+NOT VALID;
 
 ALTER TABLE lei_raw.lei_relationship_records
-    ADD CONSTRAINT fk_lei_rr_start_node_lei
-        FOREIGN KEY (start_node_lei)
-        REFERENCES lei_raw.lei_records (lei)
-        NOT VALID;
+ADD CONSTRAINT fk_lei_rr_start_node_lei
+FOREIGN KEY (start_node_lei)
+REFERENCES lei_raw.lei_records (lei)
+NOT VALID;
 
 ALTER TABLE lei_raw.lei_reporting_exceptions
-    ADD CONSTRAINT fk_lei_repex_lei
-        FOREIGN KEY (lei)
-        REFERENCES lei_raw.lei_records (lei)
-        NOT VALID;
+ADD CONSTRAINT fk_lei_repex_lei
+FOREIGN KEY (lei)
+REFERENCES lei_raw.lei_records (lei)
+NOT VALID;

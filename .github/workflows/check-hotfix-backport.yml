@@ -1,0 +1,126 @@
+name: Check Hotfix Backport
+
+on:
+  pull_request_target:
+    branches:
+      - dev
+      - uat
+      - prod
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - edited
+      - ready_for_review
+      - labeled
+      - unlabeled
+
+permissions:
+  pull-requests: read
+
+jobs:
+  check-backport:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require backport reference or waiver for hotfix/emergency env PRs
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request
+            const base = pr.base.ref
+            const head = pr.head.ref
+            const labels = (pr.labels || []).map((l) =>
+              (typeof l === 'string' ? l : l.name).toLowerCase()
+            )
+            const title = (pr.title || '').toLowerCase()
+            const body = pr.body || ''
+            const bodyLower = body.toLowerCase()
+
+            const isEnvTarget =
+              base === 'dev' || base === 'uat' || base === 'prod'
+
+            const isHotfix =
+              labels.includes('hotfix') ||
+              labels.includes('emergency') ||
+              title.startsWith('hotfix:') ||
+              title.startsWith('emergency:')
+
+            if (!isEnvTarget || !isHotfix) {
+              core.info('Not a hotfix/emergency PR targeting an env branch; skipping backport check.')
+              return
+            }
+
+            const matchesPromotionText = (text, from, to) => {
+              if (!text) {
+                return false
+              }
+
+              return [
+                `${from} -> ${to}`,
+                `${from} → ${to}`,
+                `${from} to ${to}`,
+                `${from} into ${to}`,
+                `promotion ${from} -> ${to}`,
+                `promotion ${from} → ${to}`,
+                `promotion ${from} to ${to}`,
+                `from ${from} to ${to}`,
+              ].some((pattern) => text.includes(pattern))
+            }
+
+            // Skip backport check for forward-merge promotion PRs.
+            // These PRs merge changes from source branch into destination env branch atomically.
+            // All changes are already on source; destination gets them via the merge.
+            // No backport needed because the merge IS the promotion.
+            const promotionPairs = [
+              { from: 'main', to: 'dev' },
+              { from: 'dev', to: 'uat' },
+              { from: 'uat', to: 'prod' },
+            ]
+
+            const isForwardMerge = promotionPairs.some(({ from, to }) =>
+              base === to && (
+                head === from ||
+                head.startsWith(`fix/sync-${from}-${to}-`) ||
+                matchesPromotionText(title, from, to) ||
+                matchesPromotionText(bodyLower, from, to)
+              )
+            )
+
+            if (isForwardMerge) {
+              core.info(
+                `Forward-merge promotion PR (${head} → ${base}); backport check skipped. ` +
+                `Changes are promoted atomically via the merge.`
+              )
+              return
+            }
+
+            // Check for a backport PR cross-reference in the body.
+            const hasBackportRef = /backport\s+pr\s*[:#]?\s*#?\d+/i.test(body) ||
+              /backports?\s+hotfix\s+pr\s*[:#]?\s*#?\d+/i.test(body) ||
+              /\bbackport\b.*#\d+/i.test(body) ||
+              /#\d+.*\bbackport\b/i.test(body)
+
+            // Check for an explicit waiver block.
+            const hasWaiver =
+              /##\s*backport\s+waiver/i.test(body) ||
+              /backport\s+not\s+required/i.test(body) ||
+              /no\s+backport\s+needed/i.test(body)
+
+            if (hasBackportRef) {
+              core.info('Backport PR reference found in PR body; requirement satisfied.')
+              return
+            }
+
+            if (hasWaiver) {
+              core.info('Backport waiver section found in PR body; requirement satisfied.')
+              return
+            }
+
+            core.setFailed(
+              `Hotfix backport gate: this ${base === 'uat' ? 'uat' : base === 'prod' ? 'prod' : 'dev'} ` +
+              `hotfix/emergency PR must include one of:\n` +
+              `  1. A backport PR reference — e.g., "Backport PR: #<number>" in the description.\n` +
+              `  2. A waiver section — a "## Backport Waiver" heading or "Backport not required: <reason>".\n\n` +
+              `Rationale: changes merged directly into env branches can be overwritten by later ` +
+              `promotions unless they are also applied to main.`
+            )
