@@ -60,9 +60,12 @@ func main() {
 	// Initialize logger
 	logger.Init(cfg.Log.Level)
 
-	// Configure Swagger metadata once at startup to avoid request-time global mutations.
-	docs.SwaggerInfo.Host = fmt.Sprintf("localhost:%d", cfg.Server.Port)
-	docs.SwaggerInfo.Schemes = []string{"http"}
+	// Configure Swagger metadata to use request origin instead of hard-coded localhost/http.
+	// This allows Swagger UI to work correctly behind reverse proxies, non-localhost hosts, and HTTPS.
+	// Empty Host means Swagger will use the request origin (the actual host of the incoming request).
+	// Empty Schemes means Swagger will use the request scheme (http or https).
+	docs.SwaggerInfo.Host = ""
+	docs.SwaggerInfo.Schemes = []string{}
 
 	// Connect to database
 	db, err := connectDatabase(cfg)
