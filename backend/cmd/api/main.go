@@ -63,9 +63,11 @@ func main() {
 	// Configure Swagger metadata to use request origin instead of hard-coded localhost/http.
 	// This allows Swagger UI to work correctly behind reverse proxies, non-localhost hosts, and HTTPS.
 	// Empty Host means Swagger will use the request origin (the actual host of the incoming request).
-	// Empty Schemes means Swagger will use the request scheme (http or https).
+	// For Schemes, we keep both http and https since reverse proxies and load balancers may handle
+	// TLS termination upstream. This allows Swagger UI to work in both dev (http) and production (https).
+	// In reverse proxy scenarios, the actual scheme is determined by the request headers, not the configured schemes.
 	docs.SwaggerInfo.Host = ""
-	docs.SwaggerInfo.Schemes = []string{}
+	docs.SwaggerInfo.Schemes = []string{"http", "https"}
 
 	// Connect to database
 	db, err := connectDatabase(cfg)
