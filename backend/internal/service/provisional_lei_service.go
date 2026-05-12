@@ -36,6 +36,7 @@ type CreateProvisionalLEIRequest struct {
 	LegalAddressCountry string `json:"legal_address_country"`
 	LegalAddressCity    string `json:"legal_address_city"`
 	LegalJurisdiction   string `json:"legal_jurisdiction"`
+	EntityStatus        string `json:"entity_status"`
 	ProvisioningSource  string `json:"provisioning_source"` // e.g. "onboarding", "counterparty"
 	ParentLEI           string `json:"parent_lei"`
 	ChildLEI            string `json:"child_lei"`
@@ -44,14 +45,15 @@ type CreateProvisionalLEIRequest struct {
 
 // UpdateProvisionalLEIRequest holds the fields that may be changed after creation.
 type UpdateProvisionalLEIRequest struct {
-	LegalName           string `json:"legal_name"`
-	LegalAddressCountry string `json:"legal_address_country"`
-	LegalAddressCity    string `json:"legal_address_city"`
-	LegalJurisdiction   string `json:"legal_jurisdiction"`
-	EntityStatus        string `json:"entity_status"`
-	ProvisioningSource  string `json:"provisioning_source"`
-	ParentLEI           string `json:"parent_lei"`
-	ChildLEI            string `json:"child_lei"`
+	LegalName           string  `json:"legal_name"`
+	LegalAddressCountry string  `json:"legal_address_country"`
+	LegalAddressCity    string  `json:"legal_address_city"`
+	LegalJurisdiction   string  `json:"legal_jurisdiction"`
+	EntityStatus        string  `json:"entity_status"`
+	ProvisioningSource  *string `json:"provisioning_source"`
+	Notes               *string `json:"notes"`
+	ParentLEI           string  `json:"parent_lei"`
+	ChildLEI            string  `json:"child_lei"`
 }
 
 type provisionalLEIService struct {
@@ -73,6 +75,11 @@ func (s *provisionalLEIService) Create(req CreateProvisionalLEIRequest, adminUse
 	code, err := generateProvisionalLEI()
 	if err != nil {
 		return nil, fmt.Errorf("generate provisional LEI code: %w", err)
+	}
+
+	entityStatus, err := normalizeProvisionalEntityStatus(req.EntityStatus)
+	if err != nil {
+		return nil, err
 	}
 
 	parentLEI, childLEI, err := normalizeRelationshipInputs(req.ParentLEI, req.ChildLEI, code)
@@ -99,10 +106,11 @@ func (s *provisionalLEIService) Create(req CreateProvisionalLEIRequest, adminUse
 		LegalAddressCountry:     req.LegalAddressCountry,
 		LegalAddressCity:        req.LegalAddressCity,
 		LegalJurisdiction:       req.LegalJurisdiction,
-		EntityStatus:            "ACTIVE",
+		EntityStatus:            entityStatus,
 		RegistrationStatus:      "ISSUED",
 		IsProvisional:           true,
 		ProvisioningSource:      req.ProvisioningSource,
+		Notes:                   req.Notes,
 		CreatedBy:               adminUserID,
 		UpdatedBy:               adminUserID,
 		InitialRegistrationDate: time.Now().UTC(),
@@ -178,10 +186,17 @@ func (s *provisionalLEIService) Update(lei string, req UpdateProvisionalLEIReque
 		record.LegalJurisdiction = req.LegalJurisdiction
 	}
 	if req.EntityStatus != "" {
-		record.EntityStatus = req.EntityStatus
+		normalizedStatus, statusErr := normalizeProvisionalEntityStatus(req.EntityStatus)
+		if statusErr != nil {
+			return nil, statusErr
+		}
+		record.EntityStatus = normalizedStatus
 	}
-	if req.ProvisioningSource != "" {
-		record.ProvisioningSource = req.ProvisioningSource
+	if req.ProvisioningSource != nil {
+		record.ProvisioningSource = *req.ProvisioningSource
+	}
+	if req.Notes != nil {
+		record.Notes = *req.Notes
 	}
 	record.UpdatedBy = adminUserID
 	record.LastUpdateDate = time.Now().UTC()
@@ -204,6 +219,19 @@ func (s *provisionalLEIService) Update(lei string, req UpdateProvisionalLEIReque
 
 	log.Info().Str("lei", lei).Str("updated_by", adminUserID).Msg("provisional LEI updated")
 	return record, nil
+}
+
+func normalizeProvisionalEntityStatus(raw string) (string, error) {
+	status := strings.ToUpper(strings.TrimSpace(raw))
+	if status == "" {
+		return "ACTIVE", nil
+	}
+	switch status {
+	case "ACTIVE", "INACTIVE", "MERGED":
+		return status, nil
+	default:
+		return "", fmt.Errorf("invalid entity_status %q", raw)
+	}
 }
 
 func (s *provisionalLEIService) createProvisionalAudit(action string, before, after *domain.LEIRecord, adminUserID string) error {
@@ -230,6 +258,7 @@ func (s *provisionalLEIService) createProvisionalAudit(action string, before, af
 		appendChange("legal_jurisdiction", before.LegalJurisdiction, after.LegalJurisdiction)
 		appendChange("entity_status", before.EntityStatus, after.EntityStatus)
 		appendChange("provisioning_source", before.ProvisioningSource, after.ProvisioningSource)
+		appendChange("notes", before.Notes, after.Notes)
 		appendChange("successor_lei", before.SuccessorLEI, after.SuccessorLEI)
 
 		// Track parent_lei and child_lei changes using hydrated record fields

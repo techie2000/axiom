@@ -282,6 +282,10 @@ type provisionalLevel2RepoStub struct {
 	repository.LEILevel2Repository
 }
 
+func strPtr(v string) *string {
+	return &v
+}
+
 func (s *provisionalLevel2RepoStub) UpsertRelationshipRecord(record *domain.LEIRelationshipRecord) error {
 	return nil
 }
@@ -321,6 +325,7 @@ func TestProvisionalUpdate_WritesLEIRecordAudit(t *testing.T) {
 		LegalJurisdiction:   "GB",
 		EntityStatus:        "ACTIVE",
 		ProvisioningSource:  "manual",
+		Notes:               "old notes",
 		IsProvisional:       true,
 	}}
 	leiRepo := &leiRepoAuditStub{}
@@ -330,6 +335,7 @@ func TestProvisionalUpdate_WritesLEIRecordAudit(t *testing.T) {
 
 	updated, err := svc.Update("AXIO1234567890123479", UpdateProvisionalLEIRequest{
 		LegalName: "New Name Ltd",
+		Notes:     strPtr("new notes"),
 	}, "admin-user")
 	if err != nil {
 		t.Fatalf("Update returned error: %v", err)
@@ -373,6 +379,13 @@ func TestProvisionalUpdate_WritesLEIRecordAudit(t *testing.T) {
 	if nameChange["old"] != "Old Name Ltd" || nameChange["new"] != "New Name Ltd" {
 		t.Fatalf("unexpected legal_name change payload: %+v", nameChange)
 	}
+	notesChange, ok := changed["notes"]
+	if !ok {
+		t.Fatalf("expected notes change in changed_fields, got %v", changed)
+	}
+	if notesChange["old"] != "old notes" || notesChange["new"] != "new notes" {
+		t.Fatalf("unexpected notes change payload: %+v", notesChange)
+	}
 }
 
 func TestProvisionalCreate_WritesLEIRecordAudit(t *testing.T) {
@@ -382,7 +395,7 @@ func TestProvisionalCreate_WritesLEIRecordAudit(t *testing.T) {
 
 	svc := NewProvisionalLEIService(provisionalRepo, leiRepo, level2Repo)
 
-	created, err := svc.Create(CreateProvisionalLEIRequest{LegalName: "Create Name Ltd"}, "admin-user")
+	created, err := svc.Create(CreateProvisionalLEIRequest{LegalName: "Create Name Ltd", Notes: "create notes"}, "admin-user")
 	if err != nil {
 		t.Fatalf("Create returned error: %v", err)
 	}
@@ -391,6 +404,12 @@ func TestProvisionalCreate_WritesLEIRecordAudit(t *testing.T) {
 	}
 	if provisionalRepo.createCount != 1 {
 		t.Fatalf("expected provisional repo create to be called once, got %d", provisionalRepo.createCount)
+	}
+	if created.Notes != "create notes" {
+		t.Fatalf("expected created notes to be persisted, got %q", created.Notes)
+	}
+	if created.EntityStatus != "ACTIVE" {
+		t.Fatalf("expected default entity_status ACTIVE, got %q", created.EntityStatus)
 	}
 	if len(leiRepo.audits) != 1 {
 		t.Fatalf("expected one audit record, got %d", len(leiRepo.audits))
@@ -408,6 +427,84 @@ func TestProvisionalCreate_WritesLEIRecordAudit(t *testing.T) {
 	}
 	if audit.ChangedBy != "admin-user" {
 		t.Fatalf("expected ChangedBy admin-user, got %q", audit.ChangedBy)
+	}
+}
+
+func TestProvisionalCreate_UsesRequestedEntityStatus(t *testing.T) {
+	provisionalRepo := &provisionalRepoStub{}
+	leiRepo := &leiRepoAuditStub{}
+	level2Repo := &provisionalLevel2RepoStub{}
+
+	svc := NewProvisionalLEIService(provisionalRepo, leiRepo, level2Repo)
+
+	created, err := svc.Create(CreateProvisionalLEIRequest{
+		LegalName:    "Create Name Ltd",
+		EntityStatus: "INACTIVE",
+	}, "admin-user")
+	if err != nil {
+		t.Fatalf("Create returned error: %v", err)
+	}
+	if created.EntityStatus != "INACTIVE" {
+		t.Fatalf("expected created entity_status INACTIVE, got %q", created.EntityStatus)
+	}
+}
+
+func TestProvisionalUpdate_OmittedNotesAndSourcePreserveExisting(t *testing.T) {
+	provisionalRepo := &provisionalRepoStub{record: &domain.LEIRecord{
+		ID:                 uuid.New(),
+		LEI:                "AXIO1234567890123479",
+		LegalName:          "Old Name Ltd",
+		EntityStatus:       "ACTIVE",
+		ProvisioningSource: "manual",
+		Notes:              "old notes",
+		IsProvisional:      true,
+	}}
+	leiRepo := &leiRepoAuditStub{}
+	level2Repo := &provisionalLevel2RepoStub{}
+
+	svc := NewProvisionalLEIService(provisionalRepo, leiRepo, level2Repo)
+
+	updated, err := svc.Update("AXIO1234567890123479", UpdateProvisionalLEIRequest{
+		LegalName: "Renamed Ltd",
+	}, "admin-user")
+	if err != nil {
+		t.Fatalf("Update returned error: %v", err)
+	}
+	if updated.ProvisioningSource != "manual" {
+		t.Fatalf("expected provisioning source to remain manual, got %q", updated.ProvisioningSource)
+	}
+	if updated.Notes != "old notes" {
+		t.Fatalf("expected notes to remain unchanged, got %q", updated.Notes)
+	}
+}
+
+func TestProvisionalUpdate_CanClearNotesAndSource(t *testing.T) {
+	provisionalRepo := &provisionalRepoStub{record: &domain.LEIRecord{
+		ID:                 uuid.New(),
+		LEI:                "AXIO1234567890123479",
+		LegalName:          "Old Name Ltd",
+		EntityStatus:       "ACTIVE",
+		ProvisioningSource: "manual",
+		Notes:              "old notes",
+		IsProvisional:      true,
+	}}
+	leiRepo := &leiRepoAuditStub{}
+	level2Repo := &provisionalLevel2RepoStub{}
+
+	svc := NewProvisionalLEIService(provisionalRepo, leiRepo, level2Repo)
+
+	updated, err := svc.Update("AXIO1234567890123479", UpdateProvisionalLEIRequest{
+		ProvisioningSource: strPtr(""),
+		Notes:              strPtr(""),
+	}, "admin-user")
+	if err != nil {
+		t.Fatalf("Update returned error: %v", err)
+	}
+	if updated.ProvisioningSource != "" {
+		t.Fatalf("expected provisioning source to be cleared, got %q", updated.ProvisioningSource)
+	}
+	if updated.Notes != "" {
+		t.Fatalf("expected notes to be cleared, got %q", updated.Notes)
 	}
 }
 
