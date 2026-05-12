@@ -18,6 +18,7 @@ var (
 	errLanguageCodeRequired    = errors.New("language code is required")
 	errTranslationValueRequired = errors.New("translation value is required")
 	errUnsafeNestingOptions    = errors.New("unsafe nesting options detected: use simple pointer form $t(key) or $t(some.nested.key); option blocks like $t(key, {...}) are not allowed")
+	translationNestingPattern  = regexp.MustCompile(`\$t\(([^)]*)\)`)
 )
 
 // UITranslationService manages community-contributed UI translation strings.
@@ -62,9 +63,8 @@ func validateTranslationValueNesting(value string) error {
 		return nil
 	}
 
-	// Pattern to find $t(...) expressions
-	nestingPattern := regexp.MustCompile(`\$t\(([^)]*)\)`)
-	matches := nestingPattern.FindAllStringSubmatch(value, -1)
+	// Use pre-compiled translationNestingPattern for performance
+	matches := translationNestingPattern.FindAllStringSubmatch(value, -1)
 
 	for _, match := range matches {
 		if len(match) < 2 {
