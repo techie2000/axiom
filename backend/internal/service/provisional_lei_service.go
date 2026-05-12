@@ -230,7 +230,7 @@ func normalizeProvisionalEntityStatus(raw string) (string, error) {
 	case "ACTIVE", "INACTIVE", "MERGED":
 		return status, nil
 	default:
-		return "", fmt.Errorf("invalid entity_status %q", raw)
+		return "", fmt.Errorf("invalid entity_status %q: must be one of ACTIVE, INACTIVE, MERGED", raw)
 	}
 }
 

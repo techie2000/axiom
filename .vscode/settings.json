@@ -245,6 +245,7 @@
     "noopener",
     "noqa",
     "noreferrer",
+    "nullglob",
     "NWBK",
     "ofac",
     "opencorporates",
