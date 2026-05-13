@@ -1397,23 +1397,19 @@ func (r *leiRepository) BatchUpdateLEILinkReferences(records []*domain.LEIRecord
 		if batchUpdatedCount > 0 {
 			auditRecords := make([]domain.LEIRecordAudit, 0, len(updatedRecords))
 
+			// derefStr returns the pointed-to string or "" for nil pointers.
+			derefStr := func(p *string) string {
+				if p == nil {
+					return ""
+				}
+				return *p
+			}
+
 			for _, rec := range updatedRecords {
-				oldSuccessorLEI := ""
-				if rec.OldSuccessorLEI != nil {
-					oldSuccessorLEI = *rec.OldSuccessorLEI
-				}
-				newSuccessorLEI := ""
-				if rec.NewSuccessorLEI != nil {
-					newSuccessorLEI = *rec.NewSuccessorLEI
-				}
-				oldManagingLOU := ""
-				if rec.OldManagingLOU != nil {
-					oldManagingLOU = *rec.OldManagingLOU
-				}
-				newManagingLOU := ""
-				if rec.NewManagingLOU != nil {
-					newManagingLOU = *rec.NewManagingLOU
-				}
+				oldSuccessorLEI := derefStr(rec.OldSuccessorLEI)
+				newSuccessorLEI := derefStr(rec.NewSuccessorLEI)
+				oldManagingLOU := derefStr(rec.OldManagingLOU)
+				newManagingLOU := derefStr(rec.NewManagingLOU)
 
 				changes := make(map[string]domain.LEIChangeDetection)
 				if oldSuccessorLEI != newSuccessorLEI {
