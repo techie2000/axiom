@@ -117,7 +117,15 @@
     "Write-Error": true,
     "wsl": true
   },
-  "cSpell.dictionaries": "./.vscode/axiom-words.txt",
+  "cSpell.customDictionaries": {
+    "axiom-words": {
+      "addWords": true,
+      "description": "Project-specific accepted words",
+      "name": "axiom-words",
+      "path": "${workspaceFolder}/.vscode/axiom-words.txt",
+      "scope": "workspace"
+    }
+  },
   "cSpell.ignorePatterns": [
     "backend/bin/**",
     "backend/go.mod",
