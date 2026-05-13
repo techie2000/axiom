@@ -333,15 +333,6 @@ func setupRouter(cfg *config.Config, h *handler.Handlers) *gin.Engine {
 		})
 	})
 
-	// Debug CORS config (remove in production)
-	router.GET("/debug/cors", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"allowed_origins": cfg.CORS.AllowedOrigins,
-			"allowed_methods": cfg.CORS.AllowedMethods,
-			"allowed_headers": cfg.CORS.AllowedHeaders,
-		})
-	})
-
 	// Swagger documentation
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
