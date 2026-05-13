@@ -62,6 +62,8 @@ type provisionalLEIService struct {
 	level2Repo repository.LEILevel2Repository
 }
 
+const allowedProvisionalEntityStatuses = "ACTIVE, INACTIVE, MERGED"
+
 // NewProvisionalLEIService creates a ProvisionalLEIService.
 func NewProvisionalLEIService(
 	repo repository.ProvisionalLEIRepository,
@@ -230,7 +232,7 @@ func normalizeProvisionalEntityStatus(raw string) (string, error) {
 	case "ACTIVE", "INACTIVE", "MERGED":
 		return status, nil
 	default:
-		return "", fmt.Errorf("invalid entity_status %q: must be one of ACTIVE, INACTIVE, MERGED", raw)
+		return "", fmt.Errorf("invalid entity_status %q: must be one of %s", raw, allowedProvisionalEntityStatuses)
 	}
 }
 

@@ -558,6 +558,18 @@ func TestProvisionalSucceed_WritesLEIRecordAudit(t *testing.T) {
 	}
 }
 
+func TestNormalizeProvisionalEntityStatus_InvalidIncludesAllowedValues(t *testing.T) {
+	_, err := normalizeProvisionalEntityStatus("BAD")
+	if err == nil {
+		t.Fatal("expected error for invalid entity_status, got nil")
+	}
+
+	want := `invalid entity_status "BAD": must be one of ACTIVE, INACTIVE, MERGED`
+	if err.Error() != want {
+		t.Fatalf("unexpected error message: got %q want %q", err.Error(), want)
+	}
+}
+
 func TestProvisionalCreate_RejectsInvalidEntityStatus(t *testing.T) {
 	provisionalRepo := &provisionalRepoStub{}
 	leiRepo := &leiRepoAuditStub{}
