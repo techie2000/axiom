@@ -189,13 +189,13 @@ func validateSecrets(cfg *Config) error {
 		return fmt.Errorf("JWT_SECRET is required: set the JWT_SECRET environment variable to a strong random secret")
 	}
 	if isSecretPlaceholder(cfg.JWT.Secret) {
-		return fmt.Errorf("JWT_SECRET uses placeholder value %q: replace it with a real secret before startup", cfg.JWT.Secret)
+		return fmt.Errorf("JWT_SECRET uses a placeholder value: replace it with a real secret before startup")
 	}
 	if cfg.Database.Password == "" {
 		return fmt.Errorf("DATABASE_PASSWORD is required: set the DATABASE_PASSWORD environment variable")
 	}
 	if isSecretPlaceholder(cfg.Database.Password) {
-		return fmt.Errorf("DATABASE_PASSWORD uses placeholder value %q: replace it with a real password before startup", cfg.Database.Password)
+		return fmt.Errorf("DATABASE_PASSWORD uses a placeholder value: replace it with a real password before startup")
 	}
 	if cfg.Testing.PlaywrightSeedUser && cfg.Server.Mode == "release" {
 		return fmt.Errorf("PLAYWRIGHT_SEED_USER=true is not permitted when SERVER_MODE=release: test fixtures must never run in UAT or production environments")
@@ -204,7 +204,7 @@ func validateSecrets(cfg *Config) error {
 		return fmt.Errorf("PLAYWRIGHT_USER_PASSWORD is required when PLAYWRIGHT_SEED_USER=true: set the PLAYWRIGHT_USER_PASSWORD environment variable")
 	}
 	if cfg.Testing.PlaywrightSeedUser && isSecretPlaceholder(cfg.Testing.PlaywrightUserPassword) {
-		return fmt.Errorf("PLAYWRIGHT_USER_PASSWORD uses placeholder value %q: replace it with a real password when PLAYWRIGHT_SEED_USER=true", cfg.Testing.PlaywrightUserPassword)
+		return fmt.Errorf("PLAYWRIGHT_USER_PASSWORD uses a placeholder value: replace it with a real password when PLAYWRIGHT_SEED_USER=true")
 	}
 	return nil
 }
