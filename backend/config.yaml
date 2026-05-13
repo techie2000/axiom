@@ -15,7 +15,7 @@ jwt:
   expiry: 24h
 
 rabbitmq:
-  # url: set via RABBITMQ_URL environment variable (required); example: amqp://user:pass@localhost:5672/
+  # url: defaults to local dev broker; set via RABBITMQ_URL for deployed environments.
   url: amqp://localhost:5672/
 
 log:

@@ -531,49 +531,49 @@ The backend **refuses to start** if:
 
 ### Rotating secrets
 
-1. Generate a new secret value:
+- **Step 1**: Generate a new secret value.
 
-   **Bash:**
+  Bash:
 
-   ```bash
-   openssl rand -base64 48
-   ```
+  ```bash
+  openssl rand -base64 48
+  ```
 
-   **PowerShell:**
+  PowerShell:
 
-   ```powershell
-   [Convert]::ToBase64String([System.Security.Cryptography.RandomNumberGenerator]::GetBytes(36))
-   ```
+  ```powershell
+  [Convert]::ToBase64String([System.Security.Cryptography.RandomNumberGenerator]::GetBytes(36))
+  ```
 
-2. Update the value in your secrets manager or `.env.*` file (never commit real values).
+- **Step 2**: Update the value in your secrets manager or `.env.*` file (never commit real values).
 
-3. Restart the affected service:
+- **Step 3**: Restart the affected service.
 
-   **Bash:**
+  Bash:
 
-   ```bash
-   docker compose --env-file .env.prod restart backend
-   ```
+  ```bash
+  docker compose --env-file .env.prod -f docker-compose.prod.yml restart backend
+  ```
 
-   **PowerShell:**
+  PowerShell:
 
-   ```powershell
-   docker compose --env-file .env.prod restart backend
-   ```
+  ```powershell
+  docker compose --env-file .env.prod -f docker-compose.prod.yml restart backend
+  ```
 
-4. Verify the service starts cleanly by checking logs:
+- **Step 4**: Verify the service starts cleanly by checking logs.
 
-   **Bash:**
+  Bash:
 
-   ```bash
-   docker compose --env-file .env.prod logs --tail 20 backend
-   ```
+  ```bash
+  docker compose --env-file .env.prod -f docker-compose.prod.yml logs --tail 20 backend
+  ```
 
-   **PowerShell:**
+  PowerShell:
 
-   ```powershell
-   docker compose --env-file .env.prod logs --tail 20 backend
-   ```
+  ```powershell
+  docker compose --env-file .env.prod -f docker-compose.prod.yml logs --tail 20 backend
+  ```
 
 ### Where to store production secrets
 

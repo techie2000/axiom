@@ -158,15 +158,15 @@ make migrate-prod-up
 
 **PostgreSQL:**
 
-- Main: axiom / axiom_main_pass
-- Dev: axiom / axiom_dev_pass
+- Main: use values from `.env.main` (development-grade only)
+- Dev: use values from `.env.dev` (development-grade only)
 - UAT: set via `CHANGE_ME_REQUIRED` placeholder — must be configured before deployment
 - Prod: set via `CHANGE_ME_REQUIRED` placeholder — must be configured before deployment
 
 **RabbitMQ:**
 
-- Main: axiom_main / axiom_main_mq_pass
-- Dev: axiom_dev / axiom_dev_mq_pass
+- Main: use values from `.env.main` (development-grade only)
+- Dev: use values from `.env.dev` (development-grade only)
 - UAT / Prod: `CHANGE_ME_REQUIRED` — must be configured before deployment
 
 ⚠️ **Security Note**: UAT and production credentials **must** be set to strong, unique values in a

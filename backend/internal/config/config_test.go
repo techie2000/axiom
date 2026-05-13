@@ -35,6 +35,28 @@ func TestValidateSecrets_MissingDatabasePassword(t *testing.T) {
 	}
 }
 
+func TestValidateSecrets_PlaceholderJWTSecretRejected(t *testing.T) {
+	cfg := &Config{
+		JWT:      JWTConfig{Secret: "CHANGE_ME_REQUIRED"},
+		Database: DatabaseConfig{Password: "somepass"},
+	}
+	err := validateSecrets(cfg)
+	if err == nil {
+		t.Fatal("expected error when JWT_SECRET is a placeholder, got nil")
+	}
+}
+
+func TestValidateSecrets_PlaceholderDatabasePasswordRejected(t *testing.T) {
+	cfg := &Config{
+		JWT:      JWTConfig{Secret: "some-secret"},
+		Database: DatabaseConfig{Password: "CHANGE_ME_REQUIRED"},
+	}
+	err := validateSecrets(cfg)
+	if err == nil {
+		t.Fatal("expected error when DATABASE_PASSWORD is a placeholder, got nil")
+	}
+}
+
 func TestValidateSecrets_PlaywrightPasswordRequiredWhenSeedEnabled(t *testing.T) {
 	cfg := &Config{
 		JWT:      JWTConfig{Secret: "some-secret"},
@@ -145,5 +167,21 @@ func TestValidateSecrets_PlaywrightSeedAllowedInDebugMode(t *testing.T) {
 	err := validateSecrets(cfg)
 	if err != nil {
 		t.Fatalf("expected no error when PLAYWRIGHT_SEED_USER=true in debug mode, got: %v", err)
+	}
+}
+
+func TestValidateSecrets_PlaceholderPlaywrightPasswordRejectedWhenSeedEnabled(t *testing.T) {
+	cfg := &Config{
+		JWT:      JWTConfig{Secret: "some-secret"},
+		Database: DatabaseConfig{Password: "somepass"},
+		Server:   ServerConfig{Mode: "debug"},
+		Testing: TestingConfig{
+			PlaywrightSeedUser:     true,
+			PlaywrightUserPassword: "CHANGE_ME_REQUIRED",
+		},
+	}
+	err := validateSecrets(cfg)
+	if err == nil {
+		t.Fatal("expected error when PLAYWRIGHT_USER_PASSWORD is placeholder and seed is enabled, got nil")
 	}
 }
