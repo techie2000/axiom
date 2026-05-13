@@ -12,13 +12,13 @@ import (
 )
 
 var (
-	errTranslationIDRequired   = errors.New("translation ID is required")
-	errReviewerUserIDRequired  = errors.New("reviewer user ID is required")
-	errTranslationKeyRequired  = errors.New("translation key is required")
-	errLanguageCodeRequired    = errors.New("language code is required")
+	errTranslationIDRequired    = errors.New("translation ID is required")
+	errReviewerUserIDRequired   = errors.New("reviewer user ID is required")
+	errTranslationKeyRequired   = errors.New("translation key is required")
+	errLanguageCodeRequired     = errors.New("language code is required")
 	errTranslationValueRequired = errors.New("translation value is required")
-	errUnsafeNestingOptions    = errors.New("unsafe nesting options detected: use simple pointer form $t(key) or $t(some.nested.key); option blocks like $t(key, {...}) are not allowed")
-	translationNestingPattern  = regexp.MustCompile(`\$t\(([^)]*)\)`)
+	errUnsafeNestingOptions     = errors.New("unsafe nesting options detected: use simple pointer form $t(key) or $t(some.nested.key); option blocks like $t(key, {...}) are not allowed")
+	translationNestingPattern   = regexp.MustCompile(`\$t\(([^)]*)\)`)
 )
 
 // UITranslationService manages community-contributed UI translation strings.
