@@ -1375,10 +1375,15 @@ func (r *leiRepository) BatchUpdateLEILinkReferences(records []*domain.LEIRecord
 
 		stmt := buildLEILinkReferenceUpdateSQL(strings.Join(valueStrings, ","))
 
-		// Execute the UPDATE and capture which records were actually modified
+		// Execute the UPDATE and capture which records were actually modified,
+		// including the old field values captured before the update for proper audit trails.
 		var updatedRecords []struct {
-			ID  uuid.UUID
-			LEI string
+			ID              uuid.UUID `gorm:"column:id"`
+			LEI             string    `gorm:"column:lei"`
+			OldSuccessorLEI *string   `gorm:"column:old_successor_lei"`
+			OldManagingLOU  *string   `gorm:"column:old_managing_lou"`
+			NewSuccessorLEI *string   `gorm:"column:new_successor_lei"`
+			NewManagingLOU  *string   `gorm:"column:new_managing_lou"`
 		}
 		result := r.db.Raw(stmt, valueArgs...).Scan(&updatedRecords)
 		if result.Error != nil {
@@ -1388,18 +1393,66 @@ func (r *leiRepository) BatchUpdateLEILinkReferences(records []*domain.LEIRecord
 		batchUpdatedCount := len(updatedRecords)
 		updatedCount += batchUpdatedCount
 
-		// Create audit records for updated links
+		// Create audit records for updated links with proper before/after change tracking.
 		if batchUpdatedCount > 0 {
 			auditRecords := make([]domain.LEIRecordAudit, 0, len(updatedRecords))
-			changedFieldsJSON := []byte(`{"successor_lei":true,"managing_lou":true}`)
 
 			for _, rec := range updatedRecords {
+				oldSuccessorLEI := ""
+				if rec.OldSuccessorLEI != nil {
+					oldSuccessorLEI = *rec.OldSuccessorLEI
+				}
+				newSuccessorLEI := ""
+				if rec.NewSuccessorLEI != nil {
+					newSuccessorLEI = *rec.NewSuccessorLEI
+				}
+				oldManagingLOU := ""
+				if rec.OldManagingLOU != nil {
+					oldManagingLOU = *rec.OldManagingLOU
+				}
+				newManagingLOU := ""
+				if rec.NewManagingLOU != nil {
+					newManagingLOU = *rec.NewManagingLOU
+				}
+
+				changes := make(map[string]domain.LEIChangeDetection)
+				if oldSuccessorLEI != newSuccessorLEI {
+					changes["successor_lei"] = domain.LEIChangeDetection{
+						FieldName: "successor_lei",
+						OldValue:  oldSuccessorLEI,
+						NewValue:  newSuccessorLEI,
+					}
+				}
+				if oldManagingLOU != newManagingLOU {
+					changes["managing_lou"] = domain.LEIChangeDetection{
+						FieldName: "managing_lou",
+						OldValue:  oldManagingLOU,
+						NewValue:  newManagingLOU,
+					}
+				}
+
+				changesJSON, marshalErr := json.Marshal(changes)
+				if marshalErr != nil {
+					return updatedCount, fmt.Errorf("failed to marshal link reference changes for %s: %w", rec.LEI, marshalErr)
+				}
+
+				// Snapshot captures the post-reconciliation state of the link fields.
+				snapshotData := map[string]string{
+					"lei":           rec.LEI,
+					"successor_lei": newSuccessorLEI,
+					"managing_lou":  newManagingLOU,
+				}
+				snapshotJSON, snapshotErr := json.Marshal(snapshotData)
+				if snapshotErr != nil {
+					return updatedCount, fmt.Errorf("failed to marshal link reference snapshot for %s: %w", rec.LEI, snapshotErr)
+				}
+
 				auditRecords = append(auditRecords, domain.LEIRecordAudit{
 					LEIRecordID:    rec.ID,
 					LEI:            rec.LEI,
 					Action:         "UPDATE",
-					RecordSnapshot: "{}",
-					ChangedFields:  domain.JSONBString(changedFieldsJSON),
+					RecordSnapshot: domain.JSONBString(snapshotJSON),
+					ChangedFields:  domain.JSONBString(changesJSON),
 					ChangedBy:      "system",
 				})
 			}
@@ -1423,6 +1476,10 @@ func (r *leiRepository) BatchUpdateLEILinkReferences(records []*domain.LEIRecord
 }
 
 func buildLEILinkReferenceUpdateSQL(values string) string {
+	// The before_values CTE captures the pre-update state so the RETURNING clause
+	// can expose old field values alongside the new ones written by the UPDATE.
+	// Both CTEs observe the same snapshot (PostgreSQL writable-CTE semantics),
+	// so before_values always sees the row state from before the UPDATE fires.
 	return fmt.Sprintf(`
 		WITH link_updates_raw (lei, successor_lei, managing_lou) AS (
 			VALUES %s
@@ -1433,23 +1490,52 @@ func buildLEILinkReferenceUpdateSQL(values string) string {
 				NULLIF(BTRIM(successor_lei::text), '') AS successor_lei,
 				NULLIF(BTRIM(managing_lou::text), '') AS managing_lou
 			FROM link_updates_raw
-		)
-		UPDATE lei_raw.lei_records AS current
-		SET
-			successor_lei = link_updates.successor_lei,
-			managing_lou = link_updates.managing_lou,
-			updated_at = NOW(),
-			updated_by = 'system'
-		FROM link_updates
-		WHERE current.lei = link_updates.lei
-			AND (
-				NULLIF(BTRIM(COALESCE(current.successor_lei, '')), ''),
-				NULLIF(BTRIM(COALESCE(current.managing_lou, '')), '')
+		),
+		before_values AS (
+			SELECT
+				lr.id,
+				lr.lei,
+				NULLIF(BTRIM(COALESCE(lr.successor_lei, '')), '') AS old_successor_lei,
+				NULLIF(BTRIM(COALESCE(lr.managing_lou, '')), '') AS old_managing_lou
+			FROM lei_raw.lei_records AS lr
+			JOIN link_updates AS lu ON lr.lei = lu.lei
+			WHERE (
+				NULLIF(BTRIM(COALESCE(lr.successor_lei, '')), ''),
+				NULLIF(BTRIM(COALESCE(lr.managing_lou, '')), '')
 			) IS DISTINCT FROM (
-				link_updates.successor_lei,
-				link_updates.managing_lou
+				lu.successor_lei,
+				lu.managing_lou
 			)
-		RETURNING current.id, current.lei
+		),
+		updated AS (
+			UPDATE lei_raw.lei_records AS current
+			SET
+				successor_lei = link_updates.successor_lei,
+				managing_lou = link_updates.managing_lou,
+				updated_at = NOW(),
+				updated_by = 'system'
+			FROM link_updates
+			WHERE current.lei = link_updates.lei
+				AND (
+					NULLIF(BTRIM(COALESCE(current.successor_lei, '')), ''),
+					NULLIF(BTRIM(COALESCE(current.managing_lou, '')), '')
+				) IS DISTINCT FROM (
+					link_updates.successor_lei,
+					link_updates.managing_lou
+				)
+			RETURNING current.id, current.lei,
+				current.successor_lei AS new_successor_lei,
+				current.managing_lou AS new_managing_lou
+		)
+		SELECT
+			updated.id,
+			updated.lei,
+			before_values.old_successor_lei,
+			before_values.old_managing_lou,
+			updated.new_successor_lei,
+			updated.new_managing_lou
+		FROM updated
+		JOIN before_values ON before_values.id = updated.id
 	`, values)
 }
 

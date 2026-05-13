@@ -43,4 +43,21 @@ func TestBatchUpdateLEILinkReferences_SQLShape(t *testing.T) {
 	if !strings.Contains(stmt, "NULLIF(BTRIM(COALESCE(current.managing_lou, '')), '')") {
 		t.Fatalf("expected reconciliation SQL to compare normalized managing_lou values, got: %s", stmt)
 	}
+
+	// Verify the SQL returns old field values for proper audit trail generation.
+	if !strings.Contains(stmt, "old_successor_lei") {
+		t.Fatalf("expected reconciliation SQL to return old_successor_lei for audit, got: %s", stmt)
+	}
+	if !strings.Contains(stmt, "old_managing_lou") {
+		t.Fatalf("expected reconciliation SQL to return old_managing_lou for audit, got: %s", stmt)
+	}
+	if !strings.Contains(stmt, "new_successor_lei") {
+		t.Fatalf("expected reconciliation SQL to return new_successor_lei for audit, got: %s", stmt)
+	}
+	if !strings.Contains(stmt, "new_managing_lou") {
+		t.Fatalf("expected reconciliation SQL to return new_managing_lou for audit, got: %s", stmt)
+	}
+	if !strings.Contains(stmt, "before_values") {
+		t.Fatalf("expected reconciliation SQL to include before_values CTE for pre-update snapshot, got: %s", stmt)
+	}
 }
