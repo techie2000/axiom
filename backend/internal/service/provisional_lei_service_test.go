@@ -597,7 +597,7 @@ func TestProvisionalUpdate_RejectsInvalidEntityStatus(t *testing.T) {
 
 	// Test invalid entity_status value
 	_, err := svc.Update("AXIO1234567890123479", UpdateProvisionalLEIRequest{
-		EntityStatus: "INVALID",
+		EntityStatus: "BAD",
 	}, "admin-user")
 
 	if err == nil {
