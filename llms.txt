@@ -128,8 +128,7 @@ WebSocket support, rate limiting, Prometheus metrics, and containerized deployme
   incremental adoption decision for machine-readable architecture with phased CI validation
 - [ADR-0016: Multi-Theme System](docs/adr/adr-0016-theming-system.md): CSS custom properties + data-theme
   approach for multi-theme support; evaluates tweakcn/shadcn as future direction
-- [ADR-0019: Deprecate lei_raw.lei_records.changed_fields](docs/adr/adr-0019-lei-records-changed-fields-deprecation.md):
-  decision to remove legacy base-table changed_fields and keep audit changed_fields as source of truth
+- [ADR-0019: Deprecate lei_raw.lei_records.changed_fields](docs/adr/adr-0019-lei-records-changed-fields-deprecation.md): remove legacy base-table changed_fields; keep audit changed_fields as source of truth
 
 ## Deployment and Infrastructure
 
