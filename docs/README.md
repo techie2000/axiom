@@ -22,6 +22,7 @@ Located in [adr/](./adr/):
 - [ADR-0007: Docker Compose Local Development](./adr/adr-0007-docker-compose-local-dev.md)
 - [ADR-0008: Sticky Headers with Smooth Transitions](./adr/adr-0008-sticky-headers-with-smooth-transitions.md)
 - [ADR-0009: Git Branching Strategy](./adr/adr-0009-git-branching-strategy.md)
+- [ADR-0019: Deprecate lei_raw.lei_records.changed_fields](./adr/adr-0019-lei-records-changed-fields-deprecation.md)
 
 ### 🤝 Contributing
 
