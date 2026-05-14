@@ -1375,10 +1375,15 @@ func (r *leiRepository) BatchUpdateLEILinkReferences(records []*domain.LEIRecord
 
 		stmt := buildLEILinkReferenceUpdateSQL(strings.Join(valueStrings, ","))
 
-		// Execute the UPDATE and capture which records were actually modified
+		// Execute the UPDATE and capture which records were actually modified,
+		// including the old field values captured before the update for proper audit trails.
 		var updatedRecords []struct {
-			ID  uuid.UUID
-			LEI string
+			ID              uuid.UUID `gorm:"column:id"`
+			LEI             string    `gorm:"column:lei"`
+			OldSuccessorLEI *string   `gorm:"column:old_successor_lei"`
+			OldManagingLOU  *string   `gorm:"column:old_managing_lou"`
+			NewSuccessorLEI *string   `gorm:"column:new_successor_lei"`
+			NewManagingLOU  *string   `gorm:"column:new_managing_lou"`
 		}
 		result := r.db.Raw(stmt, valueArgs...).Scan(&updatedRecords)
 		if result.Error != nil {
@@ -1388,18 +1393,28 @@ func (r *leiRepository) BatchUpdateLEILinkReferences(records []*domain.LEIRecord
 		batchUpdatedCount := len(updatedRecords)
 		updatedCount += batchUpdatedCount
 
-		// Create audit records for updated links
+		// Create audit records for updated links with proper before/after change tracking.
 		if batchUpdatedCount > 0 {
 			auditRecords := make([]domain.LEIRecordAudit, 0, len(updatedRecords))
-			changedFieldsJSON := []byte(`{"successor_lei":true,"managing_lou":true}`)
 
 			for _, rec := range updatedRecords {
+				changesJSON, snapshotJSON, payloadErr := buildLinkReferenceAuditPayload(
+					rec.LEI,
+					rec.OldSuccessorLEI,
+					rec.OldManagingLOU,
+					rec.NewSuccessorLEI,
+					rec.NewManagingLOU,
+				)
+				if payloadErr != nil {
+					return updatedCount, fmt.Errorf("failed to build link reference audit payload for %s: %w", rec.LEI, payloadErr)
+				}
+
 				auditRecords = append(auditRecords, domain.LEIRecordAudit{
 					LEIRecordID:    rec.ID,
 					LEI:            rec.LEI,
 					Action:         "UPDATE",
-					RecordSnapshot: "{}",
-					ChangedFields:  domain.JSONBString(changedFieldsJSON),
+					RecordSnapshot: domain.JSONBString(snapshotJSON),
+					ChangedFields:  domain.JSONBString(changesJSON),
 					ChangedBy:      "system",
 				})
 			}
@@ -1423,6 +1438,8 @@ func (r *leiRepository) BatchUpdateLEILinkReferences(records []*domain.LEIRecord
 }
 
 func buildLEILinkReferenceUpdateSQL(values string) string {
+	// The updated CTE joins before_values so UPDATE explicitly depends on the
+	// pre-update snapshot CTE when returning old/new values for audit payloads.
 	return fmt.Sprintf(`
 		WITH link_updates_raw (lei, successor_lei, managing_lou) AS (
 			VALUES %s
@@ -1433,24 +1450,108 @@ func buildLEILinkReferenceUpdateSQL(values string) string {
 				NULLIF(BTRIM(successor_lei::text), '') AS successor_lei,
 				NULLIF(BTRIM(managing_lou::text), '') AS managing_lou
 			FROM link_updates_raw
-		)
-		UPDATE lei_raw.lei_records AS current
-		SET
-			successor_lei = link_updates.successor_lei,
-			managing_lou = link_updates.managing_lou,
-			updated_at = NOW(),
-			updated_by = 'system'
-		FROM link_updates
-		WHERE current.lei = link_updates.lei
-			AND (
-				NULLIF(BTRIM(COALESCE(current.successor_lei, '')), ''),
-				NULLIF(BTRIM(COALESCE(current.managing_lou, '')), '')
+		),
+		before_values AS (
+			SELECT
+				lr.id,
+				lr.lei,
+				NULLIF(BTRIM(COALESCE(lr.successor_lei, '')), '') AS old_successor_lei,
+				NULLIF(BTRIM(COALESCE(lr.managing_lou, '')), '') AS old_managing_lou
+			FROM lei_raw.lei_records AS lr
+			JOIN link_updates AS lu ON lr.lei = lu.lei
+			WHERE (
+				NULLIF(BTRIM(COALESCE(lr.successor_lei, '')), ''),
+				NULLIF(BTRIM(COALESCE(lr.managing_lou, '')), '')
 			) IS DISTINCT FROM (
-				link_updates.successor_lei,
-				link_updates.managing_lou
+				lu.successor_lei,
+				lu.managing_lou
 			)
-		RETURNING current.id, current.lei
+		),
+		updated AS (
+			UPDATE lei_raw.lei_records AS current
+			SET
+				successor_lei = lu.successor_lei,
+				managing_lou = lu.managing_lou,
+				updated_at = NOW(),
+				updated_by = 'system'
+			FROM link_updates AS lu
+			JOIN before_values AS bv ON bv.lei = lu.lei
+			WHERE current.id = bv.id
+				AND (
+					NULLIF(BTRIM(COALESCE(current.successor_lei, '')), ''),
+					NULLIF(BTRIM(COALESCE(current.managing_lou, '')), '')
+				) IS DISTINCT FROM (
+					lu.successor_lei,
+					lu.managing_lou
+				)
+			RETURNING current.id, current.lei,
+				bv.old_successor_lei,
+				bv.old_managing_lou,
+				current.successor_lei AS new_successor_lei,
+				current.managing_lou AS new_managing_lou
+		)
+		SELECT
+			updated.id,
+			updated.lei,
+			updated.old_successor_lei,
+			updated.old_managing_lou,
+			updated.new_successor_lei,
+			updated.new_managing_lou
+		FROM updated
 	`, values)
+}
+
+func normalizeOptionalText(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return strings.TrimSpace(*value)
+}
+
+func buildLinkReferenceAuditPayload(
+	lei string,
+	oldSuccessorLEI *string,
+	oldManagingLOU *string,
+	newSuccessorLEI *string,
+	newManagingLOU *string,
+) (domain.JSONBString, domain.JSONBString, error) {
+	normalizedOldSuccessor := normalizeOptionalText(oldSuccessorLEI)
+	normalizedNewSuccessor := normalizeOptionalText(newSuccessorLEI)
+	normalizedOldManaging := normalizeOptionalText(oldManagingLOU)
+	normalizedNewManaging := normalizeOptionalText(newManagingLOU)
+
+	changes := make(map[string]domain.LEIChangeDetection)
+	if normalizedOldSuccessor != normalizedNewSuccessor {
+		changes["successor_lei"] = domain.LEIChangeDetection{
+			FieldName: "successor_lei",
+			OldValue:  normalizedOldSuccessor,
+			NewValue:  normalizedNewSuccessor,
+		}
+	}
+	if normalizedOldManaging != normalizedNewManaging {
+		changes["managing_lou"] = domain.LEIChangeDetection{
+			FieldName: "managing_lou",
+			OldValue:  normalizedOldManaging,
+			NewValue:  normalizedNewManaging,
+		}
+	}
+
+	changesJSON, err := json.Marshal(changes)
+	if err != nil {
+		return "", "", err
+	}
+
+	snapshotData := map[string]string{
+		"lei":           lei,
+		"successor_lei": normalizedNewSuccessor,
+		"managing_lou":  normalizedNewManaging,
+	}
+	snapshotJSON, err := json.Marshal(snapshotData)
+	if err != nil {
+		return "", "", err
+	}
+
+	return domain.JSONBString(changesJSON), domain.JSONBString(snapshotJSON), nil
 }
 
 // DeleteLEI soft deletes an LEI record
