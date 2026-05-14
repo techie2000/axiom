@@ -60,14 +60,10 @@ func main() {
 	// Initialize logger
 	logger.Init(cfg.Log.Level)
 
-	// Configure Swagger metadata to use request origin instead of hard-coded localhost/http.
-	// This allows Swagger UI to work correctly behind reverse proxies, non-localhost hosts, and HTTPS.
-	// Empty Host means Swagger will use the request origin (the actual host of the incoming request).
-	// For Schemes, we keep both http and https since reverse proxies and load balancers may handle
-	// TLS termination upstream. This allows Swagger UI to work in both dev (http) and production (https).
-	// In reverse proxy scenarios, the actual scheme is determined by the request headers, not the configured schemes.
-	docs.SwaggerInfo.Host = ""
-	docs.SwaggerInfo.Schemes = []string{"http", "https"}
+	// Keep static defaults at startup and derive request-specific host/scheme in the
+	// Swagger route handler to support reverse proxies and non-localhost deployments.
+	docs.SwaggerInfo.Host = "localhost:8080"
+	docs.SwaggerInfo.Schemes = []string{"http"}
 
 	// Connect to database
 	db, err := connectDatabase(cfg)
@@ -334,7 +330,12 @@ func setupRouter(cfg *config.Config, h *handler.Handlers) *gin.Engine {
 	})
 
 	// Swagger documentation
-	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	swaggerHandler := ginSwagger.WrapHandler(swaggerFiles.Handler)
+	router.GET("/swagger/*any", func(c *gin.Context) {
+		docs.SwaggerInfo.Host = resolveSwaggerHost(c)
+		docs.SwaggerInfo.Schemes = []string{resolveSwaggerScheme(c)}
+		swaggerHandler(c)
+	})
 
 	// API v1 routes
 	v1 := router.Group("/api/v1")
@@ -521,4 +522,27 @@ func setupRouter(cfg *config.Config, h *handler.Handlers) *gin.Engine {
 	}
 
 	return router
+}
+
+func resolveSwaggerHost(c *gin.Context) string {
+	if forwardedHost := strings.TrimSpace(c.GetHeader("X-Forwarded-Host")); forwardedHost != "" {
+		return forwardedHost
+	}
+	if host := strings.TrimSpace(c.Request.Host); host != "" {
+		return host
+	}
+	return "localhost:8080"
+}
+
+func resolveSwaggerScheme(c *gin.Context) string {
+	if forwardedProto := strings.TrimSpace(c.GetHeader("X-Forwarded-Proto")); forwardedProto != "" {
+		if strings.EqualFold(forwardedProto, "https") {
+			return "https"
+		}
+		return "http"
+	}
+	if c.Request.TLS != nil {
+		return "https"
+	}
+	return "http"
 }
