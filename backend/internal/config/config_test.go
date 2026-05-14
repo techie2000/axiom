@@ -185,3 +185,40 @@ func TestValidateSecrets_PlaceholderPlaywrightPasswordRejectedWhenSeedEnabled(t 
 		t.Fatal("expected error when PLAYWRIGHT_USER_PASSWORD is placeholder and seed is enabled, got nil")
 	}
 }
+
+func TestValidateSecrets_PlaceholderPatternsRejected(t *testing.T) {
+	cases := []string{
+		"change-me-use-a-strong-password",
+		"replace-with-output-of-openssl-rand-hex-32",
+	}
+
+	for _, placeholder := range cases {
+		cfg := &Config{
+			JWT:      JWTConfig{Secret: placeholder},
+			Database: DatabaseConfig{Password: "somepass"},
+		}
+		if err := validateSecrets(cfg); err == nil {
+			t.Fatalf("expected error for placeholder pattern %q in JWT secret", placeholder)
+		}
+	}
+}
+
+func TestLoad_UsesEnvForRequiredSecretsWithoutDefaults(t *testing.T) {
+	resetViper()
+	defer resetViper()
+
+	t.Setenv("DATABASE_PASSWORD", "env-db-password")
+	t.Setenv("JWT_SECRET", "env-jwt-secret")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("expected Load to succeed with env-only required secrets, got: %v", err)
+	}
+
+	if cfg.Database.Password != "env-db-password" {
+		t.Fatalf("expected DATABASE_PASSWORD from env, got %q", cfg.Database.Password)
+	}
+	if cfg.JWT.Secret != "env-jwt-secret" {
+		t.Fatalf("expected JWT_SECRET from env, got %q", cfg.JWT.Secret)
+	}
+}

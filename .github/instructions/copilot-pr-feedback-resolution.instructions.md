@@ -90,7 +90,7 @@ Set-Content -Path $bodyPath -Value $body -Encoding utf8
 
 # For LOCAL VS CODE (Terminal):
 # Use gh CLI as default (MCP tools consistently fail with 403 EMU).
-gh pr comment {pr_number} --repo {owner}/{repo} --reply-to {comment_id} --body-file "$bodyPath"
+gh api repos/{owner}/{repo}/pulls/{pr_number}/comments/{comment_id}/replies -X POST -F "body=@$bodyPath"
 
 # Verify your reply appears in PR comments.
 gh pr view {pr_number} --repo {owner}/{repo} --comments
@@ -268,7 +268,8 @@ If any comments are deferred for later:
 ### Comment in Correct Scope
 
 - **Individual resolutions**: Reply directly to the Copilot comment thread using:
-  - **Local VS Code**: `gh pr comment <pr> --repo <owner>/<repo> --reply-to <comment_id> --body-file <path>` (CLI-first)
+  - **Local VS Code**: `gh api repos/<owner>/<repo>/pulls/<pr>/comments/<comment_id>/replies -X POST -F "body=@<path>"`
+    (CLI-first)
   - **Cloud Copilot**: MCP tools (with gh CLI fallback if 403 Unauthorized)
 - **Summary comment**: Post as standalone comment on the PR using `gh pr comment`
 - **Issue updates**: Post concise mirrored updates on linked underlying issues using `gh issue comment`

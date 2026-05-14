@@ -121,6 +121,12 @@ func Load() (*Config, error) {
 	if err := viper.BindEnv("testing.playwrightuserpassword", "PLAYWRIGHT_USER_PASSWORD"); err != nil {
 		return nil, err
 	}
+	if err := viper.BindEnv("database.password", "DATABASE_PASSWORD"); err != nil {
+		return nil, err
+	}
+	if err := viper.BindEnv("jwt.secret", "JWT_SECRET"); err != nil {
+		return nil, err
+	}
 
 	var config Config
 	if err := viper.Unmarshal(&config); err != nil {
@@ -211,5 +217,11 @@ func validateSecrets(cfg *Config) error {
 
 func isSecretPlaceholder(value string) bool {
 	normalized := strings.ToUpper(strings.TrimSpace(value))
-	return normalized == "CHANGE_ME_REQUIRED"
+	if normalized == "" {
+		return false
+	}
+
+	return normalized == "CHANGE_ME_REQUIRED" ||
+		strings.HasPrefix(normalized, "CHANGE-ME") ||
+		strings.HasPrefix(normalized, "REPLACE-WITH")
 }
