@@ -557,3 +557,56 @@ func TestProvisionalSucceed_WritesLEIRecordAudit(t *testing.T) {
 		t.Fatalf("unexpected successor_lei change payload: %+v", successorChange)
 	}
 }
+
+func TestProvisionalCreate_RejectsInvalidEntityStatus(t *testing.T) {
+	provisionalRepo := &provisionalRepoStub{}
+	leiRepo := &leiRepoAuditStub{}
+	level2Repo := &provisionalLevel2RepoStub{}
+
+	svc := NewProvisionalLEIService(provisionalRepo, leiRepo, level2Repo)
+
+	// Test invalid entity_status value
+	_, err := svc.Create(CreateProvisionalLEIRequest{
+		LegalName:    "Test Ltd",
+		EntityStatus: "BAD",
+	}, "admin-user")
+
+	if err == nil {
+		t.Fatal("expected error for invalid entity_status, got nil")
+	}
+	if provisionalRepo.createCount != 0 {
+		t.Fatalf("expected no repo write on validation error, got %d calls", provisionalRepo.createCount)
+	}
+	if len(leiRepo.audits) != 0 {
+		t.Fatalf("expected no audit write on validation error, got %d audits", len(leiRepo.audits))
+	}
+}
+
+func TestProvisionalUpdate_RejectsInvalidEntityStatus(t *testing.T) {
+	provisionalRepo := &provisionalRepoStub{record: &domain.LEIRecord{
+		ID:            uuid.New(),
+		LEI:           "AXIO1234567890123479",
+		LegalName:     "Old Name Ltd",
+		EntityStatus:  "ACTIVE",
+		IsProvisional: true,
+	}}
+	leiRepo := &leiRepoAuditStub{}
+	level2Repo := &provisionalLevel2RepoStub{}
+
+	svc := NewProvisionalLEIService(provisionalRepo, leiRepo, level2Repo)
+
+	// Test invalid entity_status value
+	_, err := svc.Update("AXIO1234567890123479", UpdateProvisionalLEIRequest{
+		EntityStatus: "INVALID",
+	}, "admin-user")
+
+	if err == nil {
+		t.Fatal("expected error for invalid entity_status, got nil")
+	}
+	if provisionalRepo.updatedCount != 0 {
+		t.Fatalf("expected no repo write on validation error, got %d calls", provisionalRepo.updatedCount)
+	}
+	if len(leiRepo.audits) != 0 {
+		t.Fatalf("expected no audit write on validation error, got %d audits", len(leiRepo.audits))
+	}
+}

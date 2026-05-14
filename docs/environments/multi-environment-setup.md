@@ -164,11 +164,11 @@ DOCS_USER_PORT={prefix}5173  # optional docs profile in main/dev
 
 # Database credentials
 POSTGRES_USER=axiom
-POSTGRES_PASSWORD=axiom_{env}_pass
+POSTGRES_PASSWORD=axiom_{env}_pass   # dev/main: change for production environments
 POSTGRES_DB=axiom_{env}
 
 # Application configuration
-JWT_SECRET={env}-secret-change-in-production
+JWT_SECRET=<set-a-long-random-secret-here>   # REQUIRED — never use placeholder in production
 SERVER_MODE=debug|release
 ```
 
@@ -307,10 +307,10 @@ psql -h localhost -p 35432 -U axiom -d axiom_prod
 
 ### RabbitMQ Management UI
 
-- Main: http://localhost:45673 (guest/guest)
-- Development: http://localhost:15673 (guest/guest)
-- UAT: http://localhost:25673 (guest/guest)
-- Production: http://localhost:35673 (guest/guest)
+- Main: http://localhost:45673 (axiom_main / see `.env.main` for password)
+- Development: http://localhost:15673 (axiom_dev / see `.env.dev` for password)
+- UAT: http://localhost:25673 (credentials set in `.env.uat` — `CHANGE_ME_REQUIRED`)
+- Production: http://localhost:35673 (credentials set in `.env.prod` — `CHANGE_ME_REQUIRED`)
 
 ## Container Naming
 
@@ -507,6 +507,94 @@ Running all four environments simultaneously requires:
 3. **Network isolation**: Environments are isolated by Docker networks; additional firewall rules may be needed for
    production
 4. **SSL/TLS**: Consider adding SSL termination for production-like environments
+
+## Secret Management
+
+### Required secrets per environment
+
+| Variable | dev/main | uat/prod |
+| --- | --- | --- |
+| `JWT_SECRET` | Weak placeholder acceptable | **Must be strong random value (≥ 32 chars)** |
+| `DATABASE_PASSWORD` | Weak placeholder acceptable | **Must be strong, unique** |
+| `RABBITMQ_DEFAULT_PASS` | Weak placeholder acceptable | **Must be strong, unique** |
+| `PLAYWRIGHT_USER_PASSWORD` | Set when `PLAYWRIGHT_SEED_USER=true` | **Must not be set** |
+
+### Rules enforced at startup
+
+The backend **refuses to start** if:
+
+- `JWT_SECRET` is empty
+- `DATABASE_PASSWORD` is empty
+- `PLAYWRIGHT_SEED_USER=true` and `SERVER_MODE=release` (test fixtures are
+  blocked in UAT/prod at the config-validation layer)
+- `PLAYWRIGHT_SEED_USER=true` and `PLAYWRIGHT_USER_PASSWORD` is empty
+
+### Rotating secrets
+
+- **Step 1**: Generate a new secret value.
+
+  Bash:
+
+  ```bash
+  openssl rand -base64 48
+  ```
+
+  PowerShell:
+
+  ```powershell
+  [Convert]::ToBase64String([System.Security.Cryptography.RandomNumberGenerator]::GetBytes(36))
+  ```
+
+- **Step 2**: Update the value in your secrets manager or `.env.*` file (never commit real values).
+
+- **Step 3**: Restart the affected service.
+
+  Bash:
+
+  ```bash
+  docker compose --env-file .env.prod -f docker-compose.prod.yml restart backend
+  ```
+
+  PowerShell:
+
+  ```powershell
+  docker compose --env-file .env.prod -f docker-compose.prod.yml restart backend
+  ```
+
+- **Step 4**: Verify the service starts cleanly by checking logs.
+
+  Bash:
+
+  ```bash
+  docker compose --env-file .env.prod -f docker-compose.prod.yml logs --tail 20 backend
+  ```
+
+  PowerShell:
+
+  ```powershell
+  docker compose --env-file .env.prod -f docker-compose.prod.yml logs --tail 20 backend
+  ```
+
+### Where to store production secrets
+
+- **Local dev/main**: `.env.dev` / `.env.main` in the repo are acceptable for
+  development-grade passwords.
+- **UAT/Production**: Do **not** commit real credentials. Inject secrets at
+  runtime using one of:
+  - A secrets manager (AWS Secrets Manager, HashiCorp Vault, Azure Key Vault)
+  - Docker secrets (`docker secret create` + compose `secrets:` stanza)
+  - CI/CD environment variables (GitHub Actions encrypted secrets, etc.)
+
+The `.env.uat` and `.env.prod` files in this repo contain `CHANGE_ME_REQUIRED`
+placeholders. Real values must be supplied out-of-band before deploying.
+
+### What never to do
+
+- Never commit a real `JWT_SECRET`, `DATABASE_PASSWORD`, or
+  `RABBITMQ_DEFAULT_PASS` to git.
+- Never set `PLAYWRIGHT_SEED_USER=true` in a UAT or production env file —
+  the backend will refuse to start.
+- Never share dev credentials with UAT/prod environments.
 
 ## Future Enhancements
 

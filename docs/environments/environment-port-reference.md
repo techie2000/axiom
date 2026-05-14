@@ -158,13 +158,18 @@ make migrate-prod-up
 
 **PostgreSQL:**
 
-- Main: axiom / axiom_main_pass
-- Dev: axiom / axiom_dev_pass
-- UAT: axiom / axiom_uat_pass
-- Prod: axiom / axiom_prod_pass
+- Main: use values from `.env.main` (development-grade only)
+- Dev: use values from `.env.dev` (development-grade only)
+- UAT: set via `CHANGE_ME_REQUIRED` placeholder — must be configured before deployment
+- Prod: set via `CHANGE_ME_REQUIRED` placeholder — must be configured before deployment
 
 **RabbitMQ:**
 
-- All environments: guest / guest
+- Main: use values from `.env.main` (development-grade only)
+- Dev: use values from `.env.dev` (development-grade only)
+- UAT / Prod: `CHANGE_ME_REQUIRED` — must be configured before deployment
 
-⚠️ **Security Note**: Change these credentials for actual production use!
+⚠️ **Security Note**: UAT and production credentials **must** be set to strong, unique values in a
+secrets manager (e.g. AWS Secrets Manager, HashiCorp Vault, Azure Key Vault). Never commit real
+credentials to version control. The `CHANGE_ME_REQUIRED` placeholders in `.env.uat` and `.env.prod`
+will cause the backend to refuse to start until real values are supplied.
