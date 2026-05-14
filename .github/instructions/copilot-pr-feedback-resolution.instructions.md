@@ -88,16 +88,16 @@ $body = @'
 
 Set-Content -Path $bodyPath -Value $body -Encoding utf8
 
-# Capability check:
-# - If `gh pr comment --help` includes `--reply-to`, that command is usable.
-# - Otherwise (or by default), use the API endpoint below.
+# For LOCAL VS CODE (Terminal):
+# Use gh CLI as default (MCP tools consistently fail with 403 EMU).
+gh pr comment {pr_number} --repo {owner}/{repo} --reply-to {comment_id} --body-file "$bodyPath"
 
-gh api repos/{owner}/{repo}/pulls/{pr_number}/comments/{comment_id}/replies `
-  -X POST `
-  -F "body=@$bodyPath"
+# Verify your reply appears in PR comments.
+gh pr view {pr_number} --repo {owner}/{repo} --comments
 
-# Verify reply exists on thread
-gh api repos/{owner}/{repo}/pulls/{pr_number}/comments/{comment_id}/replies --jq '.[-1].body'
+# For CLOUD COPILOT (MCP available):
+# You may try MCP PR review-write/reply first; if 403 Unauthorized, fall back to gh CLI above.
+# Do not retry MCP after 403 in the same session.
 ```
 
 ### Comment Template by Issue Type
@@ -267,11 +267,28 @@ If any comments are deferred for later:
 
 ### Comment in Correct Scope
 
-- **Individual resolutions**: Reply directly to the Copilot comment thread using
-  `POST /repos/{owner}/{repo}/pulls/{pr}/comments/{comment_id}/replies`
+- **Individual resolutions**: Reply directly to the Copilot comment thread using:
+  - **Local VS Code**: `gh pr comment <pr> --repo <owner>/<repo> --reply-to <comment_id> --body-file <path>` (CLI-first)
+  - **Cloud Copilot**: MCP tools (with gh CLI fallback if 403 Unauthorized)
 - **Summary comment**: Post as standalone comment on the PR using `gh pr comment`
 - **Issue updates**: Post concise mirrored updates on linked underlying issues using `gh issue comment`
 - **Never duplicate**: Don't post the same resolution in multiple places
+
+### Enterprise Managed User Guardrail (REQUIRED)
+
+In this repository, for PR review comment replies and thread handling:
+
+**Local VS Code (always use gh CLI):**
+
+1. Use `gh` CLI commands via terminal for all PR review thread operations.
+2. Do not attempt MCP GitHub PR review-write/reply tools (they consistently fail with 403).
+3. If thread resolve is not available via CLI, document the fix in-thread and then resolve manually in UI.
+
+**Cloud Copilot (MCP-first with fallback):**
+
+1. Try MCP PR review tools first (you may have better API permissions than local).
+2. If you hit 403 Unauthorized, immediately fall back to terminal `gh` CLI commands.
+3. Do not retry MCP for the same action after a known 403 pattern in that session.
 
 ## Error Handling
 
