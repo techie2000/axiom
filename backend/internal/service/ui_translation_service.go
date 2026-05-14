@@ -63,7 +63,6 @@ func validateTranslationValueNesting(value string) error {
 		return nil
 	}
 
-	// Use pre-compiled translationNestingPattern for performance
 	matches := translationNestingPattern.FindAllStringSubmatch(value, -1)
 
 	for _, match := range matches {
