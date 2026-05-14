@@ -1397,50 +1397,16 @@ func (r *leiRepository) BatchUpdateLEILinkReferences(records []*domain.LEIRecord
 		if batchUpdatedCount > 0 {
 			auditRecords := make([]domain.LEIRecordAudit, 0, len(updatedRecords))
 
-			// derefStr returns the pointed-to string or "" for nil pointers.
-			derefStr := func(p *string) string {
-				if p == nil {
-					return ""
-				}
-				return *p
-			}
-
 			for _, rec := range updatedRecords {
-				oldSuccessorLEI := derefStr(rec.OldSuccessorLEI)
-				newSuccessorLEI := derefStr(rec.NewSuccessorLEI)
-				oldManagingLOU := derefStr(rec.OldManagingLOU)
-				newManagingLOU := derefStr(rec.NewManagingLOU)
-
-				changes := make(map[string]domain.LEIChangeDetection)
-				if oldSuccessorLEI != newSuccessorLEI {
-					changes["successor_lei"] = domain.LEIChangeDetection{
-						FieldName: "successor_lei",
-						OldValue:  oldSuccessorLEI,
-						NewValue:  newSuccessorLEI,
-					}
-				}
-				if oldManagingLOU != newManagingLOU {
-					changes["managing_lou"] = domain.LEIChangeDetection{
-						FieldName: "managing_lou",
-						OldValue:  oldManagingLOU,
-						NewValue:  newManagingLOU,
-					}
-				}
-
-				changesJSON, marshalErr := json.Marshal(changes)
-				if marshalErr != nil {
-					return updatedCount, fmt.Errorf("failed to marshal link reference changes for %s: %w", rec.LEI, marshalErr)
-				}
-
-				// Snapshot captures the post-reconciliation state of the link fields.
-				snapshotData := map[string]string{
-					"lei":           rec.LEI,
-					"successor_lei": newSuccessorLEI,
-					"managing_lou":  newManagingLOU,
-				}
-				snapshotJSON, snapshotErr := json.Marshal(snapshotData)
-				if snapshotErr != nil {
-					return updatedCount, fmt.Errorf("failed to marshal link reference snapshot for %s: %w", rec.LEI, snapshotErr)
+				changesJSON, snapshotJSON, payloadErr := buildLinkReferenceAuditPayload(
+					rec.LEI,
+					rec.OldSuccessorLEI,
+					rec.OldManagingLOU,
+					rec.NewSuccessorLEI,
+					rec.NewManagingLOU,
+				)
+				if payloadErr != nil {
+					return updatedCount, fmt.Errorf("failed to build link reference audit payload for %s: %w", rec.LEI, payloadErr)
 				}
 
 				auditRecords = append(auditRecords, domain.LEIRecordAudit{
@@ -1472,10 +1438,8 @@ func (r *leiRepository) BatchUpdateLEILinkReferences(records []*domain.LEIRecord
 }
 
 func buildLEILinkReferenceUpdateSQL(values string) string {
-	// The before_values CTE captures the pre-update state so the RETURNING clause
-	// can expose old field values alongside the new ones written by the UPDATE.
-	// Both CTEs observe the same snapshot (PostgreSQL writable-CTE semantics),
-	// so before_values always sees the row state from before the UPDATE fires.
+	// The updated CTE joins before_values so UPDATE explicitly depends on the
+	// pre-update snapshot CTE when returning old/new values for audit payloads.
 	return fmt.Sprintf(`
 		WITH link_updates_raw (lei, successor_lei, managing_lou) AS (
 			VALUES %s
@@ -1506,33 +1470,88 @@ func buildLEILinkReferenceUpdateSQL(values string) string {
 		updated AS (
 			UPDATE lei_raw.lei_records AS current
 			SET
-				successor_lei = link_updates.successor_lei,
-				managing_lou = link_updates.managing_lou,
+				successor_lei = lu.successor_lei,
+				managing_lou = lu.managing_lou,
 				updated_at = NOW(),
 				updated_by = 'system'
-			FROM link_updates
-			WHERE current.lei = link_updates.lei
+			FROM link_updates AS lu
+			JOIN before_values AS bv ON bv.lei = lu.lei
+			WHERE current.id = bv.id
 				AND (
 					NULLIF(BTRIM(COALESCE(current.successor_lei, '')), ''),
 					NULLIF(BTRIM(COALESCE(current.managing_lou, '')), '')
 				) IS DISTINCT FROM (
-					link_updates.successor_lei,
-					link_updates.managing_lou
+					lu.successor_lei,
+					lu.managing_lou
 				)
 			RETURNING current.id, current.lei,
+				bv.old_successor_lei,
+				bv.old_managing_lou,
 				current.successor_lei AS new_successor_lei,
 				current.managing_lou AS new_managing_lou
 		)
 		SELECT
 			updated.id,
 			updated.lei,
-			before_values.old_successor_lei,
-			before_values.old_managing_lou,
+			updated.old_successor_lei,
+			updated.old_managing_lou,
 			updated.new_successor_lei,
 			updated.new_managing_lou
 		FROM updated
-		JOIN before_values ON before_values.id = updated.id
 	`, values)
+}
+
+func normalizeOptionalText(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return strings.TrimSpace(*value)
+}
+
+func buildLinkReferenceAuditPayload(
+	lei string,
+	oldSuccessorLEI *string,
+	oldManagingLOU *string,
+	newSuccessorLEI *string,
+	newManagingLOU *string,
+) (domain.JSONBString, domain.JSONBString, error) {
+	normalizedOldSuccessor := normalizeOptionalText(oldSuccessorLEI)
+	normalizedNewSuccessor := normalizeOptionalText(newSuccessorLEI)
+	normalizedOldManaging := normalizeOptionalText(oldManagingLOU)
+	normalizedNewManaging := normalizeOptionalText(newManagingLOU)
+
+	changes := make(map[string]domain.LEIChangeDetection)
+	if normalizedOldSuccessor != normalizedNewSuccessor {
+		changes["successor_lei"] = domain.LEIChangeDetection{
+			FieldName: "successor_lei",
+			OldValue:  normalizedOldSuccessor,
+			NewValue:  normalizedNewSuccessor,
+		}
+	}
+	if normalizedOldManaging != normalizedNewManaging {
+		changes["managing_lou"] = domain.LEIChangeDetection{
+			FieldName: "managing_lou",
+			OldValue:  normalizedOldManaging,
+			NewValue:  normalizedNewManaging,
+		}
+	}
+
+	changesJSON, err := json.Marshal(changes)
+	if err != nil {
+		return "", "", err
+	}
+
+	snapshotData := map[string]string{
+		"lei":           lei,
+		"successor_lei": normalizedNewSuccessor,
+		"managing_lou":  normalizedNewManaging,
+	}
+	snapshotJSON, err := json.Marshal(snapshotData)
+	if err != nil {
+		return "", "", err
+	}
+
+	return domain.JSONBString(changesJSON), domain.JSONBString(snapshotJSON), nil
 }
 
 // DeleteLEI soft deletes an LEI record

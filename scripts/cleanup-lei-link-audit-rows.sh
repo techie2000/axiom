@@ -9,7 +9,7 @@
 # values.
 #
 # Usage:
-#   bash scripts/cleanup-lei-link-audit-rows.sh [--dry-run] [--env <dev|uat|prod>]
+#   bash scripts/cleanup-lei-link-audit-rows.sh [--dry-run] [--env <dev|main|uat|prod>]
 #
 # Options:
 #   --dry-run   Show the count of rows that would be deleted without deleting
@@ -18,6 +18,7 @@
 # Examples:
 #   bash scripts/cleanup-lei-link-audit-rows.sh --dry-run
 #   bash scripts/cleanup-lei-link-audit-rows.sh --env dev
+#   bash scripts/cleanup-lei-link-audit-rows.sh --env main
 #   bash scripts/cleanup-lei-link-audit-rows.sh --env prod
 
 set -euo pipefail
@@ -28,10 +29,25 @@ ENV="dev"
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --dry-run) DRY_RUN=true; shift ;;
-        --env) ENV="$2"; shift 2 ;;
+        --env)
+            if [[ $# -lt 2 ]]; then
+                echo "Missing value for --env. Allowed values: dev|main|uat|prod" >&2
+                exit 1
+            fi
+            ENV="$2"
+            shift 2
+            ;;
         *) echo "Unknown argument: $1" >&2; exit 1 ;;
     esac
 done
+
+case "$ENV" in
+    dev|main|uat|prod) ;;
+    *)
+        echo "Invalid --env value: $ENV. Allowed values: dev|main|uat|prod" >&2
+        exit 1
+        ;;
+esac
 
 CONTAINER="axiom-${ENV}-postgres"
 DB_USER="axiom"

@@ -9,7 +9,7 @@
 # values.
 #
 # Usage:
-#   .\scripts\cleanup-lei-link-audit-rows.ps1 [-DryRun] [-Env <dev|uat|prod>]
+#   .\scripts\cleanup-lei-link-audit-rows.ps1 [-DryRun] [-Env <dev|main|uat|prod>]
 #
 # Options:
 #   -DryRun    Show the count of rows that would be deleted without deleting
@@ -18,10 +18,12 @@
 # Examples:
 #   .\scripts\cleanup-lei-link-audit-rows.ps1 -DryRun
 #   .\scripts\cleanup-lei-link-audit-rows.ps1 -Env dev
+#   .\scripts\cleanup-lei-link-audit-rows.ps1 -Env main
 #   .\scripts\cleanup-lei-link-audit-rows.ps1 -Env prod
 
 param(
     [switch]$DryRun,
+    [ValidateSet('dev', 'main', 'uat', 'prod')]
     [string]$Env = "dev"
 )
 
