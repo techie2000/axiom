@@ -5,10 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -531,18 +534,18 @@ func setupRouter(cfg *config.Config, h *handler.Handlers) *gin.Engine {
 }
 
 func resolveSwaggerHost(c *gin.Context) string {
-	if forwardedHost := strings.TrimSpace(c.GetHeader("X-Forwarded-Host")); forwardedHost != "" {
+	if forwardedHost, ok := normalizeForwardedHost(c.GetHeader("X-Forwarded-Host")); ok {
 		return forwardedHost
 	}
-	if host := strings.TrimSpace(c.Request.Host); host != "" {
+	if host, ok := normalizeSwaggerHost(c.Request.Host); ok {
 		return host
 	}
 	return "localhost:8080"
 }
 
 func resolveSwaggerScheme(c *gin.Context) string {
-	if forwardedProto := strings.TrimSpace(c.GetHeader("X-Forwarded-Proto")); forwardedProto != "" {
-		if strings.EqualFold(forwardedProto, "https") {
+	if forwardedProto := normalizeForwardedProto(c.GetHeader("X-Forwarded-Proto")); forwardedProto != "" {
+		if forwardedProto == "https" {
 			return "https"
 		}
 		return "http"
@@ -573,4 +576,59 @@ func buildSwaggerDoc(host, scheme string) ([]byte, error) {
 	}
 
 	return rendered, nil
+}
+
+func normalizeForwardedHost(raw string) (string, bool) {
+	parts := strings.Split(raw, ",")
+	if len(parts) == 0 {
+		return "", false
+	}
+
+	return normalizeSwaggerHost(parts[0])
+}
+
+func normalizeSwaggerHost(raw string) (string, bool) {
+	host := strings.TrimSpace(raw)
+	if host == "" || strings.Contains(host, "://") {
+		return "", false
+	}
+
+	parsed, err := url.Parse("//" + host)
+	if err != nil || parsed.Host != host || parsed.Path != "" || parsed.User != nil {
+		return "", false
+	}
+
+	hostname := parsed.Hostname()
+	if hostname == "" || strings.ContainsAny(hostname, " \t\r\n\\/") {
+		return "", false
+	}
+
+	if ip := net.ParseIP(hostname); ip == nil && strings.ContainsAny(hostname, "[]:") {
+		return "", false
+	}
+
+	if port := parsed.Port(); port != "" {
+		value, err := strconv.Atoi(port)
+		if err != nil || value < 1 || value > 65535 {
+			return "", false
+		}
+	}
+
+	return host, true
+}
+
+func normalizeForwardedProto(raw string) string {
+	parts := strings.Split(raw, ",")
+	if len(parts) == 0 {
+		return ""
+	}
+
+	proto := strings.ToLower(strings.TrimSpace(parts[0]))
+	if proto == "https" {
+		return "https"
+	}
+	if proto == "http" {
+		return "http"
+	}
+	return ""
 }
