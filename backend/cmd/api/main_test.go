@@ -74,6 +74,24 @@ func TestResolveSwaggerHost(t *testing.T) {
 			want:          "service.internal:8080",
 		},
 		{
+			name:          "falls back when forwarded host contains whitespace",
+			forwardedHost: "bad host:8443",
+			requestHost:   "service.internal:8080",
+			want:          "service.internal:8080",
+		},
+		{
+			name:          "falls back when forwarded host contains control characters",
+			forwardedHost: "badhost\nexample.com",
+			requestHost:   "service.internal:8080",
+			want:          "service.internal:8080",
+		},
+		{
+			name:          "falls back when forwarded host uses invalid port",
+			forwardedHost: "proxy.example.com:65536",
+			requestHost:   "service.internal:8080",
+			want:          "service.internal:8080",
+		},
+		{
 			name:        "falls back to default when all hosts invalid",
 			requestHost: "bad host value",
 			want:        "localhost:8080",

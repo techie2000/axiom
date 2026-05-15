@@ -580,10 +580,6 @@ func buildSwaggerDoc(host, scheme string) ([]byte, error) {
 
 func normalizeForwardedHost(raw string) (string, bool) {
 	parts := strings.Split(raw, ",")
-	if len(parts) == 0 {
-		return "", false
-	}
-
 	return normalizeSwaggerHost(parts[0])
 }
 
@@ -610,7 +606,9 @@ func normalizeSwaggerHost(raw string) (string, bool) {
 		return "", false
 	}
 
-	if ip := net.ParseIP(hostname); ip == nil && hasUnexpectedAuthorityPunctuation(hostname) {
+	// Domain names must not include IPv6/port punctuation in the hostname portion.
+	// IPv6 literals are already accepted via net.ParseIP(hostname) above.
+	if ip := net.ParseIP(hostname); ip == nil && hasInvalidDomainNamePunctuation(hostname) {
 		return "", false
 	}
 
@@ -624,16 +622,12 @@ func normalizeSwaggerHost(raw string) (string, bool) {
 	return host, true
 }
 
-func hasUnexpectedAuthorityPunctuation(hostname string) bool {
+func hasInvalidDomainNamePunctuation(hostname string) bool {
 	return strings.ContainsAny(hostname, "[]:")
 }
 
 func normalizeForwardedProto(raw string) string {
 	parts := strings.Split(raw, ",")
-	if len(parts) == 0 {
-		return ""
-	}
-
 	proto := strings.ToLower(strings.TrimSpace(parts[0]))
 	if proto == "https" {
 		return "https"
