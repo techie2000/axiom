@@ -52,48 +52,63 @@ func TestResolveSwaggerHost(t *testing.T) {
 	tests := []struct {
 		name          string
 		forwardedHost string
+		setHeader     bool
 		requestHost   string
 		want          string
 	}{
 		{
 			name:          "uses canonical forwarded host",
 			forwardedHost: "proxy.example.com:8443",
+			setHeader:     true,
 			requestHost:   "service.internal:8080",
 			want:          "proxy.example.com:8443",
 		},
 		{
 			name:          "uses first token from multi-host forwarded header",
 			forwardedHost: "proxy.example.com:8443, attacker.example.com",
+			setHeader:     true,
 			requestHost:   "service.internal:8080",
 			want:          "proxy.example.com:8443",
 		},
 		{
 			name:          "falls back when forwarded host malformed",
 			forwardedHost: "https://attacker.example.com/path",
+			setHeader:     true,
+			requestHost:   "service.internal:8080",
+			want:          "service.internal:8080",
+		},
+		{
+			name:          "falls back when forwarded host is explicitly empty",
+			forwardedHost: "",
+			setHeader:     true,
 			requestHost:   "service.internal:8080",
 			want:          "service.internal:8080",
 		},
 		{
 			name:          "falls back when forwarded host contains whitespace",
 			forwardedHost: "bad host:8443",
+			setHeader:     true,
 			requestHost:   "service.internal:8080",
 			want:          "service.internal:8080",
 		},
 		{
 			name:          "falls back when forwarded host contains tab character",
 			forwardedHost: "bad\thost:8443",
+			setHeader:     true,
 			requestHost:   "service.internal:8080",
 			want:          "service.internal:8080",
 		},
 		{
 			name:          "falls back when forwarded host contains control characters",
 			forwardedHost: "badhost\nexample.com",
+			setHeader:     true,
 			requestHost:   "service.internal:8080",
 			want:          "service.internal:8080",
 		},
 		{
 			name:          "falls back when forwarded host uses invalid port",
 			forwardedHost: "proxy.example.com:65536",
+			setHeader:     true,
 			requestHost:   "service.internal:8080",
 			want:          "service.internal:8080",
 		},
@@ -102,12 +117,17 @@ func TestResolveSwaggerHost(t *testing.T) {
 			requestHost: "bad host value",
 			want:        "localhost:8080",
 		},
+		{
+			name:        "falls back to default when request host empty",
+			requestHost: "",
+			want:        "localhost:8080",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := newSwaggerTestContext(tt.requestHost)
-			if tt.forwardedHost != "" {
+			if tt.setHeader {
 				c.Request.Header.Set("X-Forwarded-Host", tt.forwardedHost)
 			}
 

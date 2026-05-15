@@ -35,6 +35,8 @@ import (
 	"github.com/swaggo/swag"
 )
 
+const invalidSwaggerHostnameChars = " \t\r\n\\/"
+
 // @title Axiom API
 // @version 1.0
 // @description Financial Services Static Data Management System
@@ -579,6 +581,10 @@ func buildSwaggerDoc(host, scheme string) ([]byte, error) {
 }
 
 func normalizeForwardedHost(raw string) (string, bool) {
+	if strings.TrimSpace(raw) == "" {
+		return "", false
+	}
+
 	parts := strings.Split(raw, ",")
 	return normalizeSwaggerHost(parts[0])
 }
@@ -602,12 +608,13 @@ func normalizeSwaggerHost(raw string) (string, bool) {
 	}
 
 	hostname := parsed.Hostname()
-	if hostname == "" || strings.ContainsAny(hostname, " \t\r\n\\/") {
+	if hostname == "" || strings.ContainsAny(hostname, invalidSwaggerHostnameChars) {
 		return "", false
 	}
 
 	// Domain names must not include IPv6/port punctuation in the hostname portion.
 	// IPv6 literals are accepted via net.ParseIP(hostname) in the condition below.
+	// This blocks malformed domain hostnames that could be used for host header injection.
 	if ip := net.ParseIP(hostname); ip == nil && hasInvalidDomainNamePunctuation(hostname) {
 		return "", false
 	}
