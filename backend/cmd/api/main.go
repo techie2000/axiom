@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -28,6 +29,7 @@ import (
 
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+	"github.com/swaggo/swag"
 )
 
 // @title Axiom API
@@ -330,12 +332,16 @@ func setupRouter(cfg *config.Config, h *handler.Handlers) *gin.Engine {
 	})
 
 	// Swagger documentation
-	swaggerHandler := ginSwagger.WrapHandler(swaggerFiles.Handler)
-	router.GET("/swagger/*any", func(c *gin.Context) {
-		docs.SwaggerInfo.Host = resolveSwaggerHost(c)
-		docs.SwaggerInfo.Schemes = []string{resolveSwaggerScheme(c)}
-		swaggerHandler(c)
+	swaggerHandler := ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/swagger/doc.json"))
+	router.GET("/swagger/doc.json", func(c *gin.Context) {
+		swaggerDoc, err := buildSwaggerDoc(resolveSwaggerHost(c), resolveSwaggerScheme(c))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to render swagger document"})
+			return
+		}
+		c.Data(http.StatusOK, "application/json; charset=utf-8", swaggerDoc)
 	})
+	router.GET("/swagger/*any", swaggerHandler)
 
 	// API v1 routes
 	v1 := router.Group("/api/v1")
@@ -545,4 +551,26 @@ func resolveSwaggerScheme(c *gin.Context) string {
 		return "https"
 	}
 	return "http"
+}
+
+func buildSwaggerDoc(host, scheme string) ([]byte, error) {
+	doc, err := swag.ReadDoc(docs.SwaggerInfo.InstanceName())
+	if err != nil {
+		return nil, fmt.Errorf("read swagger document: %w", err)
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal([]byte(doc), &payload); err != nil {
+		return nil, fmt.Errorf("decode swagger document: %w", err)
+	}
+
+	payload["host"] = host
+	payload["schemes"] = []string{scheme}
+
+	rendered, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("encode swagger document: %w", err)
+	}
+
+	return rendered, nil
 }
