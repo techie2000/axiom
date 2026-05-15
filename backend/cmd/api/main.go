@@ -594,7 +594,14 @@ func normalizeSwaggerHost(raw string) (string, bool) {
 	}
 
 	parsed, err := url.Parse("//" + host)
-	if err != nil || parsed.Host != host || parsed.Path != "" || parsed.User != nil {
+	if err != nil {
+		return "", false
+	}
+
+	hasMatchingAuthority := parsed.Host == host
+	hasNoPath := parsed.Path == ""
+	hasNoUserInfo := parsed.User == nil
+	if !hasMatchingAuthority || !hasNoPath || !hasNoUserInfo {
 		return "", false
 	}
 
@@ -603,7 +610,7 @@ func normalizeSwaggerHost(raw string) (string, bool) {
 		return "", false
 	}
 
-	if ip := net.ParseIP(hostname); ip == nil && strings.ContainsAny(hostname, "[]:") {
+	if ip := net.ParseIP(hostname); ip == nil && hasUnexpectedAuthorityPunctuation(hostname) {
 		return "", false
 	}
 
@@ -615,6 +622,10 @@ func normalizeSwaggerHost(raw string) (string, bool) {
 	}
 
 	return host, true
+}
+
+func hasUnexpectedAuthorityPunctuation(hostname string) bool {
+	return strings.ContainsAny(hostname, "[]:")
 }
 
 func normalizeForwardedProto(raw string) string {
