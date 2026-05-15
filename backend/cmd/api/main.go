@@ -607,7 +607,7 @@ func normalizeSwaggerHost(raw string) (string, bool) {
 	}
 
 	// Domain names must not include IPv6/port punctuation in the hostname portion.
-	// IPv6 literals are already accepted via net.ParseIP(hostname) above.
+	// IPv6 literals are accepted via net.ParseIP(hostname) in the condition below.
 	if ip := net.ParseIP(hostname); ip == nil && hasInvalidDomainNamePunctuation(hostname) {
 		return "", false
 	}

@@ -80,6 +80,12 @@ func TestResolveSwaggerHost(t *testing.T) {
 			want:          "service.internal:8080",
 		},
 		{
+			name:          "falls back when forwarded host contains tab character",
+			forwardedHost: "bad\thost:8443",
+			requestHost:   "service.internal:8080",
+			want:          "service.internal:8080",
+		},
+		{
 			name:          "falls back when forwarded host contains control characters",
 			forwardedHost: "badhost\nexample.com",
 			requestHost:   "service.internal:8080",
