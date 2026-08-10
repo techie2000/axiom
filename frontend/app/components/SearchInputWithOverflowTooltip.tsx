@@ -2,7 +2,9 @@
 
 import { forwardRef, InputHTMLAttributes, useCallback, useEffect, useState } from 'react'
 
-type SearchInputWithOverflowTooltipProps = InputHTMLAttributes<HTMLInputElement>
+type SearchInputWithOverflowTooltipProps = InputHTMLAttributes<HTMLInputElement> & {
+  [key: `data-${string}`]: string | number | boolean | undefined
+}
 
 const parsePx = (value: string) => {
   const parsed = Number.parseFloat(value)
