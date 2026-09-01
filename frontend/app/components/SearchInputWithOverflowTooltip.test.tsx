@@ -24,11 +24,7 @@ describe('SearchInputWithOverflowTooltip', () => {
 
     it('forwards standard HTML attributes', () => {
       const html = renderToStaticMarkup(
-        React.createElement(SearchInputWithOverflowTooltip, {
-          disabled: true,
-          maxLength: 100,
-          'data-testid': 'search-input',
-        })
+        <SearchInputWithOverflowTooltip disabled maxLength={100} data-testid="search-input" />
       )
 
       expect(html).toContain('disabled')
@@ -156,12 +152,12 @@ describe('SearchInputWithOverflowTooltip', () => {
   describe('prop spreading', () => {
     it('spreads remaining props to the input element', () => {
       const html = renderToStaticMarkup(
-        React.createElement(SearchInputWithOverflowTooltip, {
-          placeholder: 'Search',
-          'aria-label': 'Search input',
-          'data-custom': 'value',
-          autoFocus: true,
-        })
+        <SearchInputWithOverflowTooltip
+          placeholder="Search"
+          aria-label="Search input"
+          data-custom="value"
+          autoFocus
+        />
       )
 
       expect(html).toContain('aria-label="Search input"')
