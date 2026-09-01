@@ -156,6 +156,7 @@ describe('SearchInputWithOverflowTooltip', () => {
           placeholder="Search"
           aria-label="Search input"
           data-custom="value"
+          // eslint-disable-next-line jsx-a11y/no-autofocus -- verifying prop forwarding, not real UX
           autoFocus
         />
       )
