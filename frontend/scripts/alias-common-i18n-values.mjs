@@ -7,6 +7,9 @@ const SCRIPT_DIR = path.dirname(SCRIPT_FILE)
 const FRONTEND_ROOT = path.resolve(SCRIPT_DIR, '..')
 const LOCALE_FILE = path.join(FRONTEND_ROOT, 'public', 'locales', 'en', 'common.json')
 
+const SHOULD_SKIP_VALUE = (value) =>
+  value.startsWith('$t(') || value.includes('{{') || value.trim().length === 0
+
 function isPlainObject(value) {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) {
     return false
@@ -15,7 +18,7 @@ function isPlainObject(value) {
   return proto === Object.prototype || proto === null
 }
 
-function collectCommonStringValues(commonNode, prefix = 'common') {
+export function collectStringPathsByValue(root, prefix = '') {
   const byValue = new Map()
 
   function walk(node, currentPath) {
@@ -24,17 +27,17 @@ function collectCommonStringValues(commonNode, prefix = 'common') {
     }
 
     for (const [key, value] of Object.entries(node)) {
-      const nextPath = `${currentPath}.${key}`
+      const nextPath = currentPath ? `${currentPath}.${key}` : key
 
       if (typeof value === 'string') {
-        if (value.startsWith('$t(') || value.includes('{{') || value.trim().length === 0) {
+        if (SHOULD_SKIP_VALUE(value)) {
           continue
         }
 
-        // Keep first key as canonical alias target.
         if (!byValue.has(value)) {
-          byValue.set(value, nextPath)
+          byValue.set(value, [])
         }
+        byValue.get(value).push(nextPath)
         continue
       }
 
@@ -42,11 +45,38 @@ function collectCommonStringValues(commonNode, prefix = 'common') {
     }
   }
 
-  walk(commonNode, prefix)
+  walk(root, prefix)
   return byValue
 }
 
-function aliasDuplicatesUsingCommon(root, valueToCommonPath) {
+function pickCanonicalPath(paths) {
+  const commonPath = paths.find((candidate) => candidate.startsWith('common.'))
+  return commonPath ?? paths[0]
+}
+
+export function buildAliasPlan(root) {
+  const valueToPaths = collectStringPathsByValue(root)
+  const byPath = new Map()
+
+  for (const paths of valueToPaths.values()) {
+    if (paths.length < 2) {
+      continue
+    }
+
+    const canonicalPath = pickCanonicalPath(paths)
+
+    for (const pathToAlias of paths) {
+      if (pathToAlias === canonicalPath) {
+        continue
+      }
+      byPath.set(pathToAlias, canonicalPath)
+    }
+  }
+
+  return byPath
+}
+
+export function applyAliasPlan(root, aliasPlan) {
   let replacements = 0
 
   function walk(node, pathSegments = []) {
@@ -57,7 +87,6 @@ function aliasDuplicatesUsingCommon(root, valueToCommonPath) {
     for (const [key, value] of Object.entries(node)) {
       const nextPath = [...pathSegments, key]
 
-      // Never rewrite values inside common.*
       if (nextPath[0] === 'common') {
         if (isPlainObject(value)) {
           walk(value, nextPath)
@@ -66,12 +95,16 @@ function aliasDuplicatesUsingCommon(root, valueToCommonPath) {
       }
 
       if (typeof value === 'string') {
-        if (value.startsWith('$t(') || value.includes('{{')) {
+        if (SHOULD_SKIP_VALUE(value)) {
           continue
         }
 
-        const aliasPath = valueToCommonPath.get(value)
+        const dottedPath = nextPath.join('.')
+        const aliasPath = aliasPlan.get(dottedPath)
         if (!aliasPath) {
+          continue
+        }
+        if (aliasPath === dottedPath) {
           continue
         }
 
@@ -91,24 +124,34 @@ function aliasDuplicatesUsingCommon(root, valueToCommonPath) {
   return replacements
 }
 
-if (!fs.existsSync(LOCALE_FILE)) {
-  console.log(`[i18n:alias-common] File not found, skipping: ${LOCALE_FILE}`)
-  process.exit(0)
+export function aliasDuplicateValues(root) {
+  const aliasPlan = buildAliasPlan(root)
+  return applyAliasPlan(root, aliasPlan)
 }
 
-const parsed = JSON.parse(fs.readFileSync(LOCALE_FILE, 'utf8'))
-if (!isPlainObject(parsed) || !isPlainObject(parsed.common)) {
-  console.error('[i18n:alias-common] Invalid locale structure: expected root.common object')
-  process.exit(1)
+function runCli() {
+  if (!fs.existsSync(LOCALE_FILE)) {
+    console.log(`[i18n:alias-common] File not found, skipping: ${LOCALE_FILE}`)
+    process.exit(0)
+  }
+
+  const parsed = JSON.parse(fs.readFileSync(LOCALE_FILE, 'utf8'))
+  if (!isPlainObject(parsed) || !isPlainObject(parsed.common)) {
+    console.error('[i18n:alias-common] Invalid locale structure: expected root.common object')
+    process.exit(1)
+  }
+
+  const replacements = aliasDuplicateValues(parsed)
+
+  if (replacements === 0) {
+    console.log('[i18n:alias-common] No duplicate opportunities found')
+    process.exit(0)
+  }
+
+  fs.writeFileSync(LOCALE_FILE, `${JSON.stringify(parsed, null, 2)}\n`, 'utf8')
+  console.log(`[i18n:alias-common] Aliased ${replacements} duplicate value(s)`)
 }
 
-const valueToCommonPath = collectCommonStringValues(parsed.common)
-const replacements = aliasDuplicatesUsingCommon(parsed, valueToCommonPath)
-
-if (replacements === 0) {
-  console.log('[i18n:alias-common] No duplicate opportunities found')
-  process.exit(0)
+if (process.argv[1] && path.resolve(process.argv[1]) === SCRIPT_FILE) {
+  runCli()
 }
-
-fs.writeFileSync(LOCALE_FILE, `${JSON.stringify(parsed, null, 2)}\n`, 'utf8')
-console.log(`[i18n:alias-common] Aliased ${replacements} duplicate value(s) to common.*`)

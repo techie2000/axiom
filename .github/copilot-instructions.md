@@ -623,40 +623,79 @@ This repository configuration is designed to make AI coding agents immediately p
 
 ## PR Finalization Default (Team Preference)
 
-When an AI agent creates a pull request, it should complete standard PR hygiene automatically **without asking for confirmation**:
+**Use the `create-pull-request` skill to automatically handle PR creation with labels,
+reviewer assignment, and verification checklist.**
 
-1. Add appropriate labels following the three-namespace taxonomy:
-   - **Category** (optional, max one): `bug`, `enhancement`, `security`, `performance`, or `question` — add only when it conveys information not already implied by Area
-   - **Area** (required, exactly one): `area:backend`, `area:frontend`, `area:database`, `area:docs`,
-     `area:infra`, `area:ci`, `area:lei`, or `area:dependencies` — infer from the files touched OR let CI workflow auto-apply
-   - **Type** (optional secondary, one or two): `type:tests`, `type:refactor`, `type:chore`
-   - Add `automated` to mark AI-created items and `no-issue-needed` for PRs with no backing issue
-   - **Note**: The CI workflow (`auto-label-prs.yml`) automatically applies Area labels based on file paths. Do not manually add Area labels unless the auto-detection fails. Avoid duplicate semantics: do not add `documentation` when `area:docs` is present. Category labels are only needed when they are orthogonal to Area (e.g., `area:backend` change that is also a `security` fix should add `security`).
-   - **Replacement promotion PRs** (e.g., conflict-resolution branches like `fix/sync-dev-from-main-*` or
-     `fix/sync-uat-from-dev-*` that target `dev` or `uat` but do not originate from the required source branch):
-     apply `hotfix` **and** `no-issue-needed` at PR creation time — not reactively after CI flags them.
-     This is required because `Check Environment Branch Flow` blocks non-`main` branches targeting `dev`
-     unless the `hotfix` or `emergency` label is present, and `Check PR Issue Link` blocks PRs with no
-     issue reference unless `no-issue-needed` is present. Both checks will show
-     `Expected — Waiting for status to be reported` until the labels are applied, which triggers the
-     relevant workflows against the current PR head SHA without requiring an extra commit push.
-2. Request a reviewer (prefer `copilot-pull-request-reviewer` when available).
-3. Post a concise verification checklist comment relevant to the changed files.
-4. After each commit push to the PR branch, post a concise implementation summary comment that includes:
-   - what changed,
-   - what validation/tests were run,
-   - any follow-up actions or known limitations.
-   - If a push has no meaningful reviewer-facing delta, do not post a new summary comment.
-5. For each linked underlying issue (prefer `Refs #123`; use `Fixes/Closes #123` only when `#123` is confirmed to be
-   an issue and not a pull request),
-   post a concise issue update comment after each PR push (same per-push trigger as
-   [`instructions/copilot-pr-feedback-resolution.instructions.md`](instructions/copilot-pr-feedback-resolution.instructions.md))
-   that includes:
-   - implementation status,
-   - validation status,
-   - testing guidance for user/UAT verification,
-   - PR link.
-6. Do not ask whether to post the summary/checklist/issue-update comments; post them by default.
+The skill encodes these Axiom-specific workflows and posts all required comments automatically without asking for confirmation.
+
+### Manual Reference: Label Taxonomy
+
+If manually applying labels (not using the skill), follow this taxonomy:
+
+**Categories** (optional, max one):
+
+- `bug` — defect fix
+- `enhancement` — new feature or capability
+- `security` — security issue or fix
+- `performance` — performance improvement
+- `question` — unclear or needs clarification
+
+**Area** (required, exactly one):
+
+- `area:backend` — Go backend code changes
+- `area:frontend` — React/Next.js frontend changes
+- `area:database` — migrations, schema, or DB-related
+- `area:docs` — documentation and guides
+- `area:infra` — Docker, Docker Compose, infrastructure
+- `area:ci` — GitHub Actions workflows
+- `area:lei` — LEI-specific features
+- `area:dependencies` — dependency updates
+
+**Type** (optional secondary, one or two):
+
+- `type:tests` — test additions or modifications
+- `type:refactor` — code restructuring without behavior change
+- `type:chore` — maintenance, tooling
+
+**Special Labels**:
+
+- `automated` — mark AI-created PRs
+- `no-issue-needed` — for PRs with no backing issue
+- `hotfix` — for replacement promotion branches (`fix/sync-*` branches). Apply **with** `no-issue-needed`
+  at PR creation time to bypass branch-flow checks.
+
+**Notes**:
+
+- The CI workflow (`auto-label-prs.yml`) auto-applies Area labels; do not manually duplicate.
+- Avoid duplicate semantics: do not add `documentation` when `area:docs` is present.
+- Category labels are only needed when orthogonal to Area (e.g., `area:backend` change that is also `security` should add `security`).
+
+### Hotfix Backport Gate (REQUIRED)
+
+When a PR merges directly into `dev`, `uat`, or `prod` using `hotfix` or `emergency` labels,
+the agent must ensure those changes are not lost in later promotions.
+
+Workflow:
+
+1. Identify whether the merged PR introduced changes that are not already on `main`:
+   - `gh pr view <pr> --repo <owner>/<repo> --json files,commits`
+   - `git fetch origin --prune`
+   - `git cherry -v origin/main origin/<target-env-branch>`
+2. For each substantive change missing from `main`, create a backport PR targeting `main`.
+   - Prefer cherry-picking focused fix commits.
+   - Do **not** blindly cherry-pick merge commits; extract intentional edits instead.
+3. Cross-link the PRs:
+   - In the env hotfix PR, post `Backport PR: #<id>`.
+   - In the backport PR, post `Backports hotfix PR: #<id>`.
+4. Treat the hotfix as incomplete until either:
+   - the backport PR to `main` exists, or
+   - a documented waiver explains why backport is not required.
+
+Rules:
+
+- Apply this gate to direct env hotfixes for `dev`, `uat`, and `prod`.
+- Backport only meaningful fixes. Avoid noisy backports for pure promotion-sync merges.
+- If a fix already exists on `main` with equivalent patch content, do not duplicate it.
 
 ### Required Check Context Fallback (REQUIRED)
 
@@ -665,7 +704,6 @@ GitHub Actions check run is already `SUCCESS`, treat this as a status-context mi
 immediately without asking for confirmation.
 
 Workflow:
-
 1. Get the exact PR head SHA and the required context name(s) configured by branch protection:
    - `gh pr view <pr> --repo <owner>/<repo> --json headRefOid`
    - `gh api repos/<owner>/<repo>/branches/<base>/protection/required_status_checks`
@@ -673,20 +711,19 @@ Workflow:
    head SHA is already `SUCCESS` and capture that check run URL.
 3. If a required context returned by branch protection is missing from the commit status API
    (`/commits/<sha>/status`) but the matching check run for the same `<sha>` is verified `SUCCESS`,
-   post a success status only for the exact required context string copied from branch protection
-   and set `target_url` to the verified matching check run URL (example command below).
-4. Re-check with `gh pr checks <pr> --repo <owner>/<repo>` and proceed only when all required checks
+   post a success status only for the exact required context string copied from branch protection and
+   set `target_url` to the verified matching check run URL:
+
+   ```bash
+   gh api repos/<owner>/<repo>/statuses/<sha> -X POST \
+     -f state=success \
+     -f context='<exact-required-context-from-branch-protection>' \
+     -f description='Branch protection context reconciled after verified successful check run' \
+     -f target_url='<verified-matching-check-run-url>'
+   ```
+
+1. Re-check with `gh pr checks <pr> --repo <owner>/<repo>` and proceed only when all required checks
    are green.
-
-Example status reconciliation command:
-
-```bash
-gh api repos/<owner>/<repo>/statuses/<sha> -X POST \
-  -f state=success \
-  -f context='<exact-required-context-from-branch-protection>' \
-  -f description='Branch protection context reconciled after verified successful check run' \
-  -f target_url='<verified-matching-check-run-url>'
-```
 
 Notes:
 
@@ -711,6 +748,18 @@ Use this gate even when checks are green. CI success alone is not sufficient for
 
 Only ask follow-up questions if required metadata cannot be applied (for example, reviewer handle is unavailable).
 
+### Issue Close Gate (REQUIRED)
+
+Never close a GitHub issue solely because a fix has been applied locally or to a running container.
+An issue may only be closed when **all** of the following are true:
+
+1. The fix is committed to a branch (not just applied ad-hoc via CLI/psql/docker exec).
+2. A PR exists that references the issue (`Fixes #N` or `Closes #N`).
+3. The PR has been merged to the default branch (`main`).
+
+If the fix is live in a running environment but the migration/code is uncommitted, the issue must
+remain open with a comment noting the current state (e.g. "Applied to axiom_main; pending PR").
+
 ## GitHub Comment Formatting (REQUIRED)
 
 When posting PR/issue comments, checklists, PR descriptions, or review summaries via CLI/API:
@@ -723,16 +772,50 @@ When posting PR/issue comments, checklists, PR descriptions, or review summaries
    - `gh api ... --method PATCH/POST -f "body=..."` where the body variable already contains real newlines.
 4. Immediately verify the posted body (for example with `gh api ... --jq .body` or
    `gh pr view --comments`) and fix in-place if formatting is not human-readable.
-5. For checklist comments, keep concise one-line bullets and avoid shell-escaped artifacts in the final rendered text.
+5. For checklist comments, keep concise one-line bullets and avoid shell-escaped artifacts in the
+   final rendered text.
 6. Keep comments actionable: include decisions, code/test results, or explicit next actions.
-7. Do not add non-actionable filler such as "checks are in progress" or equivalent
-   queue/waiting notes in public comments.
+7. Do not add non-actionable filler such as "checks are in progress" or equivalent queue/waiting notes in public comments.
 
-### Comment Deduplication Guardrail (REQUIRED)
+### EMU GitHub Review Comment Guardrail (REQUIRED)
 
-Before posting any PR/issue comment from an AI agent, perform a dedupe check to avoid duplicate comments.
+For this repository under Enterprise Managed User constraints, when handling PR review comment threads:
 
-Workflow:
+#### If Running In Cloud Copilot With MCP
+
+1. Try MCP GitHub PR review write/reply/resolve tools first (you may have better API permissions).
+2. If you hit 403 Unauthorized, immediately fall back to `gh` CLI method.
+3. Do not retry MCP after a 403 pattern in the same session.
+
+#### If Running In Local VS Code (Terminal)
+
+1. Use `gh` CLI in terminal as the first and default path.
+2. Do not call MCP GitHub PR review write/reply/resolve tools (they consistently fail with 403 EMU).
+3. For thread replies, use:
+   - `gh api repos/<owner>/<repo>/pulls/<pr>/comments/<comment_id>/replies -X POST -F "body=@<file>"`
+4. After posting, verify with `gh pr view <pr> --repo <owner>/<repo> --comments`.
+5. If thread resolution is not available via CLI, resolve in GitHub UI and note that action.
+
+### Comment and Issue Deduplication Guardrail (REQUIRED)
+
+Before posting any PR/issue comment **or creating any issue/PR** from an AI agent, follow the
+steps below to avoid duplicates.
+
+#### Issue / PR creation
+
+1. **Always search before creating**:
+   - `gh issue list --repo <owner>/<repo> --search "<topic keywords>" --limit 5`
+   - If a recently created issue with the same intent appears, do not create another.
+2. **Never combine file-write and create/post commands in one terminal call.** Split them:
+   - Call 1: write the body file and verify it exists (`Test-Path $bodyPath`).
+   - Call 2: run the `gh issue create` / `gh pr create` command and capture the URL output.
+3. **If the create command's output is not visible** (terminal truncated or returned early), do not
+   assume failure and rerun. First verify whether the object already exists via `gh issue list`
+   / `gh pr list` (or `gh api`), then proceed.
+4. After creation, record the returned URL/number. If the URL is missing, verify with
+   `gh issue list --limit 3` before creating again.
+
+#### PR/issue comment deduplication
 
 1. Read recent comments first:
    - `gh pr view <pr> --repo <owner>/<repo> --comments`
@@ -748,6 +831,10 @@ Rules:
 
 - Never post the same checklist/summary twice on the same PR/issue.
 - Prefer one canonical checklist comment per PR and update it, rather than posting replacements.
+- Never combine file-write + gh create/post in a single terminal call; split into two calls and
+   confirm success after each.
+- After posting any comment, immediately verify with `gh api repos/<owner>/<repo>/issues/comments/<id> --jq .body`
+   or `gh issue view <issue> --comments` to confirm exactly one copy was posted before proceeding.
 
 ## Markdown Authoring Guardrail (REQUIRED)
 

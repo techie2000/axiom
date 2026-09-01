@@ -1,6 +1,6 @@
 ALTER TABLE user_entity_links
 ADD COLUMN IF NOT EXISTS children_scope VARCHAR(10) NOT NULL DEFAULT 'none'
-    CHECK (children_scope IN ('none', 'direct', 'all'));
+CHECK (children_scope IN ('none', 'direct', 'all'));
 
 -- Migrate existing rows: any link that had include_children=true becomes 'direct'.
 UPDATE user_entity_links

@@ -17,9 +17,15 @@
 --   DAILY_DELTA       (root — currently disabled)
 
 INSERT INTO lei_raw.file_processing_status (job_type, status, depends_on_job_type, created_at, updated_at)
-SELECT 'MASTER_DATA_SYNC', 'IDLE', NULL, NOW(), NOW()
+SELECT
+    'MASTER_DATA_SYNC' AS job_type,
+    'IDLE' AS status,
+    NULL AS depends_on_job_type,
+    NOW() AS created_at,
+    NOW() AS updated_at
 WHERE NOT EXISTS (
-    SELECT 1 FROM lei_raw.file_processing_status WHERE job_type = 'MASTER_DATA_SYNC'
+    SELECT 1 AS col1 FROM lei_raw.file_processing_status
+    WHERE job_type = 'MASTER_DATA_SYNC'
 );
 
 COMMENT ON TABLE lei_raw.file_processing_status IS
@@ -31,6 +37,7 @@ DAILY_DELTA is a separate root job (currently disabled).';
 -- Link DAILY_FULL to its upstream dependency.
 -- Backfill only: do not overwrite an already-set value.
 UPDATE lei_raw.file_processing_status
-    SET depends_on_job_type = 'MASTER_DATA_SYNC'
-WHERE job_type = 'DAILY_FULL'
-  AND depends_on_job_type IS NULL;
+SET depends_on_job_type = 'MASTER_DATA_SYNC'
+WHERE
+    job_type = 'DAILY_FULL'
+    AND depends_on_job_type IS NULL;
