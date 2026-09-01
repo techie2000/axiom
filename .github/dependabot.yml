@@ -87,11 +87,19 @@ updates:
     # in @eslint/eslintrc config validator). Remove this ignore rule once
     # eslint-config-next 16.x+ publishes a legacy-compatible export or the
     # project migrates away from FlatCompat in eslint.config.mjs.
+    #
+    # typescript 7.x is the new Go-native compiler rewrite; @typescript-eslint's
+    # parser doesn't support its restructured internals yet (ESLint fails with
+    # "Cannot read properties of undefined (reading 'Cjs')" when loading
+    # @typescript-eslint/parser). Remove this ignore rule once @typescript-eslint
+    # ships TypeScript 7 support.
     ignore:
       - dependency-name: "eslint-config-next"
         versions: [">=16"]
       - dependency-name: "eslint"
         versions: [">=10"]
+      - dependency-name: "typescript"
+        versions: [">=7"]
     # Group npm updates by type
     groups:
       npm-framework:
