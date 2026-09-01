@@ -2,12 +2,16 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -28,7 +32,10 @@ import (
 
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+	"github.com/swaggo/swag"
 )
+
+const invalidSwaggerHostnameChars = " \t\r\n\\/"
 
 // @title Axiom API
 // @version 1.0
@@ -330,12 +337,16 @@ func setupRouter(cfg *config.Config, h *handler.Handlers) *gin.Engine {
 	})
 
 	// Swagger documentation
-	swaggerHandler := ginSwagger.WrapHandler(swaggerFiles.Handler)
-	router.GET("/swagger/*any", func(c *gin.Context) {
-		docs.SwaggerInfo.Host = resolveSwaggerHost(c)
-		docs.SwaggerInfo.Schemes = []string{resolveSwaggerScheme(c)}
-		swaggerHandler(c)
+	swaggerHandler := ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/swagger/doc.json"))
+	router.GET("/swagger/doc.json", func(c *gin.Context) {
+		swaggerDoc, err := buildSwaggerDoc(resolveSwaggerHost(c), resolveSwaggerScheme(c))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to render swagger document"})
+			return
+		}
+		c.Data(http.StatusOK, "application/json; charset=utf-8", swaggerDoc)
 	})
+	router.GET("/swagger/*any", swaggerHandler)
 
 	// API v1 routes
 	v1 := router.Group("/api/v1")
@@ -525,18 +536,18 @@ func setupRouter(cfg *config.Config, h *handler.Handlers) *gin.Engine {
 }
 
 func resolveSwaggerHost(c *gin.Context) string {
-	if forwardedHost := strings.TrimSpace(c.GetHeader("X-Forwarded-Host")); forwardedHost != "" {
+	if forwardedHost, ok := normalizeForwardedHost(c.GetHeader("X-Forwarded-Host")); ok {
 		return forwardedHost
 	}
-	if host := strings.TrimSpace(c.Request.Host); host != "" {
+	if host, ok := normalizeSwaggerHost(c.Request.Host); ok {
 		return host
 	}
 	return "localhost:8080"
 }
 
 func resolveSwaggerScheme(c *gin.Context) string {
-	if forwardedProto := strings.TrimSpace(c.GetHeader("X-Forwarded-Proto")); forwardedProto != "" {
-		if strings.EqualFold(forwardedProto, "https") {
+	if forwardedProto := normalizeForwardedProto(c.GetHeader("X-Forwarded-Proto")); forwardedProto != "" {
+		if forwardedProto == "https" {
 			return "https"
 		}
 		return "http"
@@ -545,4 +556,116 @@ func resolveSwaggerScheme(c *gin.Context) string {
 		return "https"
 	}
 	return "http"
+}
+
+func buildSwaggerDoc(host, scheme string) ([]byte, error) {
+	doc, err := swag.ReadDoc(docs.SwaggerInfo.InstanceName())
+	if err != nil {
+		return nil, fmt.Errorf("read swagger document: %w", err)
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal([]byte(doc), &payload); err != nil {
+		return nil, fmt.Errorf("decode swagger document: %w", err)
+	}
+
+	payload["host"] = host
+	payload["schemes"] = []string{scheme}
+
+	rendered, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("encode swagger document: %w", err)
+	}
+
+	return rendered, nil
+}
+
+func normalizeForwardedHost(raw string) (string, bool) {
+	if strings.TrimSpace(raw) == "" {
+		return "", false
+	}
+
+	parts := strings.Split(raw, ",")
+	return normalizeSwaggerHost(parts[0])
+}
+
+func normalizeSwaggerHost(raw string) (string, bool) {
+	host := strings.TrimSpace(raw)
+	if host == "" || strings.Contains(host, "://") {
+		return "", false
+	}
+
+	parsed, err := url.Parse("//" + host)
+	if err != nil {
+		return "", false
+	}
+
+	hasMatchingAuthority := parsed.Host == host
+	hasNoPath := parsed.Path == ""
+	hasNoUserInfo := parsed.User == nil
+	if !hasMatchingAuthority || !hasNoPath || !hasNoUserInfo {
+		return "", false
+	}
+
+	hostname := parsed.Hostname()
+	if hostname == "" || strings.ContainsAny(hostname, invalidSwaggerHostnameChars) {
+		return "", false
+	}
+
+	// Non-IP hostnames must be valid DNS names; this rejects percent-escaped
+	// sequences, underscores, and other characters that could be used for
+	// host header injection while still permitting IPv6 literals.
+	if ip := net.ParseIP(hostname); ip == nil && !isValidDomainHostname(hostname) {
+		return "", false
+	}
+
+	if port := parsed.Port(); port != "" {
+		value, err := strconv.Atoi(port)
+		if err != nil || value < 1 || value > 65535 {
+			return "", false
+		}
+	}
+
+	return host, true
+}
+
+// isValidDomainHostname reports whether hostname is a valid RFC 1035/1123 DNS
+// name: dot-separated labels of 1-63 ASCII letters, digits, or hyphens, not
+// starting or ending with a hyphen, and no more than 253 characters overall.
+func isValidDomainHostname(hostname string) bool {
+	if hostname == "" || len(hostname) > 253 {
+		return false
+	}
+
+	labels := strings.Split(strings.TrimSuffix(hostname, "."), ".")
+	for _, label := range labels {
+		if len(label) == 0 || len(label) > 63 {
+			return false
+		}
+		if label[0] == '-' || label[len(label)-1] == '-' {
+			return false
+		}
+		for i := 0; i < len(label); i++ {
+			c := label[i]
+			isAlpha := c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z'
+			isDigit := c >= '0' && c <= '9'
+			if !isAlpha && !isDigit && c != '-' {
+				return false
+			}
+		}
+	}
+
+	return true
+}
+
+func normalizeForwardedProto(raw string) string {
+	parts := strings.Split(raw, ",")
+	proto := strings.ToLower(strings.TrimSpace(parts[0]))
+	if proto == "https" {
+		return "https"
+	}
+	if proto == "http" {
+		return "http"
+	}
+	return ""
 }
