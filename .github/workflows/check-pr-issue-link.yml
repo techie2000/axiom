@@ -45,6 +45,24 @@ jobs:
 
             const body = pr.body || ''
 
+            // Guardrail: a single closing keyword only applies to the issue number
+            // immediately after it. GitHub does NOT extend it across a comma-separated
+            // list — `Fixes #1, #2, #3` closes only #1; #2 and #3 are inert plain
+            // references and will stay open even though the PR merges.
+            const multiIssueClosingMatches = [
+              ...body.matchAll(/\b(closes?|fixes?|resolves?)(?:\s+|:\s*)#\d+(?:\s*,\s*#\d+)+/gi),
+            ]
+
+            if (multiIssueClosingMatches.length > 0) {
+              const offenders = multiIssueClosingMatches.map((m) => m[0].replace(/\s+/g, ' ')).join('; ')
+              core.setFailed(
+                `Closing keyword applied to a comma-separated issue list, which GitHub does not support: "${offenders}". ` +
+                  'Only the first issue after the keyword actually closes. Repeat the keyword for each issue ' +
+                  '(e.g. "Fixes #1, Fixes #2, Fixes #3") or put one reference per line.'
+              )
+              return
+            }
+
             // Issue-reference keywords: closes/fixes/resolves/refs/relates to + #N
             // Also support GitHub-accepted colon forms such as `Fixes: #123`.
             const hasIssueReferenceKeyword = /\b(closes?|fixes?|resolves?|refs?|relates?\s+to)(?:\s+|:\s*)#\d+/i.test(body)

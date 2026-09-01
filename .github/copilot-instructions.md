@@ -757,6 +757,10 @@ An issue may only be closed when **all** of the following are true:
 2. A PR exists that references the issue (`Fixes #N` or `Closes #N`).
 3. The PR has been merged to the default branch (`main`).
 
+When a PR fixes multiple issues, repeat the keyword for each one (`Fixes #1, Fixes #2`).
+GitHub only closes the issue immediately after the keyword, so a bare comma-separated
+list (`Fixes #1, #2`) leaves every issue after the first open even though it merged.
+
 If the fix is live in a running environment but the migration/code is uncommitted, the issue must
 remain open with a comment noting the current state (e.g. "Applied to axiom_main; pending PR").
 
