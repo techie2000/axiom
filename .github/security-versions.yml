@@ -3,7 +3,7 @@
 # Last updated: 2026-09-01
 
 version_tracking:
-  last_updated: "2026-09-01T15:39:00Z"
+  last_updated: "2026-09-01T16:22:00Z"
   automated_updates_enabled: true
   
 alpine_packages:
@@ -59,65 +59,64 @@ alpine_packages:
 go_modules:
   # Go module dependencies
   description: "Go dependencies tracked in backend/go.mod"
-  go_version: "1.24.0"
-  toolchain: "go1.24.12"
+  go_version: "1.25.1"
   
   direct_dependencies:
     gin:
       module: "github.com/gin-gonic/gin"
-      version: "v1.11.0"
+      version: "v1.12.0"
       reason: "Web framework - security and feature updates"
-      updated: "2026-02-15"
+      updated: "2026-04-20"
       severity: "HIGH"
-    
+
     jwt:
       module: "github.com/golang-jwt/jwt/v5"
-      version: "v5.2.2"
+      version: "v5.3.1"
       reason: "JWT authentication library"
-      updated: "2025-12-01"
+      updated: "2026-04-20"
       severity: "HIGH"
-    
+
     uuid:
       module: "github.com/google/uuid"
       version: "v1.6.0"
       reason: "UUID generation"
       updated: "2025-11-01"
       severity: "LOW"
-    
+
     zerolog:
       module: "github.com/rs/zerolog"
-      version: "v1.31.0"
+      version: "v1.35.1"
       reason: "Structured logging"
-      updated: "2025-10-01"
+      updated: "2026-04-27"
       severity: "LOW"
-    
+
     viper:
       module: "github.com/spf13/viper"
-      version: "v1.18.2"
+      version: "v1.21.0"
       reason: "Configuration management"
-      updated: "2025-11-15"
+      updated: "2026-04-20"
       severity: "MEDIUM"
-    
+
     gorm:
       module: "gorm.io/gorm"
-      version: "v1.25.5"
+      version: "v1.31.2"
       reason: "ORM for database operations"
-      updated: "2025-10-20"
+      updated: "2026-06-29"
       severity: "MEDIUM"
-    
+
     postgres_driver:
       module: "gorm.io/driver/postgres"
-      version: "v1.5.4"
+      version: "v1.6.2"
       reason: "PostgreSQL driver for GORM"
-      updated: "2025-10-20"
+      updated: "2026-08-03"
       severity: "MEDIUM"
-  
+
   indirect_dependencies:
     pgx:
       module: "github.com/jackc/pgx/v5"
-      version: "v5.4.3"
+      version: "v5.10.0"
       reason: "PostgreSQL driver - security vulnerability (Alert #42)"
-      updated: "2025-12-01"
+      updated: "2026-08-03"
       severity: "HIGH"
       note: "Indirect dependency, update via postgres driver"
 
@@ -196,10 +195,10 @@ nodejs_packages:
 external_tools:
   # External tools and binaries
   golang_migrate:
-    version: "v4.18.1"
-    url: "Built from source via: go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.18.1"
+    version: "v4.19.1"
+    url: "Built from source via: go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.19.1"
     reason: "Database migration tool - built from source to use current Go toolchain, avoiding stdlib CVEs in pre-built binaries"
-    updated: "2026-02-23"
+    updated: "2026-03-27"
     severity: "MEDIUM"
     files:
       - docker/Dockerfile.backend (builder stage)
