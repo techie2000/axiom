@@ -87,6 +87,9 @@ updates:
     # in @eslint/eslintrc config validator). Remove this ignore rule once
     # eslint-config-next 16.x+ publishes a legacy-compatible export or the
     # project migrates away from FlatCompat in eslint.config.mjs.
+    # Re-verified against eslint-config-next 16.3.3 on 2026-09-01 (issue #686):
+    # `npm run lint` still throws "Converting circular structure to JSON" from
+    # @eslint/eslintrc's config-validator, so the pin remains necessary.
     #
     # typescript 7.x is the new Go-native compiler rewrite; @typescript-eslint's
     # parser doesn't support its restructured internals yet (ESLint fails with
