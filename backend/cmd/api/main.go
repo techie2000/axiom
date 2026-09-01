@@ -612,10 +612,10 @@ func normalizeSwaggerHost(raw string) (string, bool) {
 		return "", false
 	}
 
-	// Domain names must not include IPv6/port punctuation in the hostname portion.
-	// IPv6 literals are accepted via net.ParseIP(hostname) in the condition below.
-	// This blocks malformed domain hostnames that could be used for host header injection.
-	if ip := net.ParseIP(hostname); ip == nil && hasInvalidDomainNamePunctuation(hostname) {
+	// Non-IP hostnames must be valid DNS names; this rejects percent-escaped
+	// sequences, underscores, and other characters that could be used for
+	// host header injection while still permitting IPv6 literals.
+	if ip := net.ParseIP(hostname); ip == nil && !isValidDomainHostname(hostname) {
 		return "", false
 	}
 
@@ -629,8 +629,33 @@ func normalizeSwaggerHost(raw string) (string, bool) {
 	return host, true
 }
 
-func hasInvalidDomainNamePunctuation(hostname string) bool {
-	return strings.ContainsAny(hostname, "[]:")
+// isValidDomainHostname reports whether hostname is a valid RFC 1035/1123 DNS
+// name: dot-separated labels of 1-63 ASCII letters, digits, or hyphens, not
+// starting or ending with a hyphen, and no more than 253 characters overall.
+func isValidDomainHostname(hostname string) bool {
+	if hostname == "" || len(hostname) > 253 {
+		return false
+	}
+
+	labels := strings.Split(strings.TrimSuffix(hostname, "."), ".")
+	for _, label := range labels {
+		if len(label) == 0 || len(label) > 63 {
+			return false
+		}
+		if label[0] == '-' || label[len(label)-1] == '-' {
+			return false
+		}
+		for i := 0; i < len(label); i++ {
+			c := label[i]
+			isAlpha := c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z'
+			isDigit := c >= '0' && c <= '9'
+			if !isAlpha && !isDigit && c != '-' {
+				return false
+			}
+		}
+	}
+
+	return true
 }
 
 func normalizeForwardedProto(raw string) string {

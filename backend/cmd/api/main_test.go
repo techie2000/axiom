@@ -113,6 +113,20 @@ func TestResolveSwaggerHost(t *testing.T) {
 			want:          "service.internal:8080",
 		},
 		{
+			name:          "falls back when forwarded host contains percent-escaped sequence",
+			forwardedHost: "attacker%2eexample.com",
+			setHeader:     true,
+			requestHost:   "service.internal:8080",
+			want:          "service.internal:8080",
+		},
+		{
+			name:          "falls back when forwarded host contains underscore",
+			forwardedHost: "under_score.example.com",
+			setHeader:     true,
+			requestHost:   "service.internal:8080",
+			want:          "service.internal:8080",
+		},
+		{
 			name:        "falls back to default when all hosts invalid",
 			requestHost: "bad host value",
 			want:        "localhost:8080",
