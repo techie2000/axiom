@@ -72,7 +72,7 @@ const PROVISIONAL_COLUMNS: ProvisionalColumn[] = [
   // Core fields
   { key: 'lei', labelKey: 'provisionalLei.columns.lei', groupKey: 'provisionalLei.columns.groups.core', defaultVisible: true, width: 'w-44' },
   { key: 'legal_name', labelKey: 'provisionalLei.columns.legalName', groupKey: 'provisionalLei.columns.groups.core', defaultVisible: true, width: 'min-w-96' },
-  { key: 'provisioning_source', labelKey: 'provisionalLei.columns.source', groupKey: 'provisionalLei.columns.groups.core', defaultVisible: true, width: 'w-32' },
+  { key: 'provisioning_source', labelKey: 'provisionalLei.columns.source', groupKey: 'provisionalLei.columns.groups.core', defaultVisible: false, width: 'w-32' },
   { key: 'entity_status', labelKey: 'provisionalLei.columns.status', groupKey: 'provisionalLei.columns.groups.core', defaultVisible: true, width: 'w-32' },
   
   // Associated Entities
@@ -101,6 +101,7 @@ interface CreateForm {
   legal_address_country: string
   legal_address_city: string
   legal_jurisdiction: string
+  entity_status: string
   provisioning_source: string
   notes: string
   parent_lei: string
@@ -122,6 +123,7 @@ const EMPTY_CREATE: CreateForm = {
   legal_address_country: '',
   legal_address_city: '',
   legal_jurisdiction: '',
+  entity_status: 'ACTIVE',
   provisioning_source: '',
   notes: '',
   parent_lei: '',
@@ -666,12 +668,12 @@ function ProvisionalLEIContent() {
   const openEdit = (r: ProvisionalLEI) => {
     setEditTarget(r)
     setEditForm({
-      legal_name: r.legal_name,
-      legal_address_country: r.legal_address_country,
-      legal_address_city: r.legal_address_city,
-      legal_jurisdiction: r.legal_jurisdiction,
-      entity_status: r.entity_status,
-      provisioning_source: r.provisioning_source,
+      legal_name: r.legal_name || '',
+      legal_address_country: r.legal_address_country || '',
+      legal_address_city: r.legal_address_city || '',
+      legal_jurisdiction: r.legal_jurisdiction || '',
+      entity_status: r.entity_status || 'ACTIVE',
+      provisioning_source: r.provisioning_source || '',
       notes: r.notes || '',
       parent_lei: r.parent_lei || '',
     })
@@ -731,6 +733,7 @@ function ProvisionalLEIContent() {
       legal_address_country: record.legal_address_country || '',
       legal_address_city: record.legal_address_city || '',
       legal_jurisdiction: record.legal_jurisdiction || '',
+      entity_status: record.entity_status || 'ACTIVE',
       provisioning_source: record.provisioning_source || '',
       notes: record.notes || '',
       parent_lei: record.parent_lei || '',
@@ -1079,6 +1082,18 @@ function ProvisionalLEIContent() {
               </div>
               <div>
                 <label className="block text-xs font-medium mb-1 theme-text-muted">
+                  {t('provisionalLei.form.entityStatus')}
+                </label>
+                <ThemedSelect
+                  value={createForm.entity_status}
+                  onChange={(value) => setCreateForm((f) => ({ ...f, entity_status: value }))}
+                  options={ENTITY_STATUS_OPTIONS}
+                  ariaLabel={t('provisionalLei.form.entityStatus')}
+                  className="w-full"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1 theme-text-muted">
                   {t('provisionalLei.form.provisioningSource')}
                 </label>
                 <input
@@ -1295,6 +1310,18 @@ function ProvisionalLEIContent() {
                 {!leiLookupError.editParent && !leiLookupLoading.editParent && getLeiName(editForm.parent_lei) && (
                   <p className="mt-1 text-xs theme-text-muted">{getLeiName(editForm.parent_lei)}</p>
                 )}
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1 theme-text-muted">
+                  {t('provisionalLei.form.notes')}
+                </label>
+                <input
+                  type="text"
+                  value={editForm.notes}
+                  onChange={(e) => setEditForm((f) => f ? { ...f, notes: e.target.value } : f)}
+                  className="w-full rounded-md border border-[rgb(var(--border-rgb))] bg-[rgb(var(--surface-rgb))] px-3 py-2 text-sm theme-focus"
+                  placeholder={t('provisionalLei.form.notesPlaceholder')}
+                />
               </div>
             </div>
             <div className="flex gap-3 mt-4">
@@ -1654,11 +1681,12 @@ function ProvisionalLEIContent() {
               { key: 'legal_jurisdiction', labelKey: 'provisionalLei.columns.jurisdiction', groupKey: 'provisionalLei.columns.groups.address', defaultVisible: true },
               { key: 'entity_status', labelKey: 'provisionalLei.columns.status', groupKey: 'provisionalLei.columns.groups.core', defaultVisible: true },
               { key: 'provisioning_source', labelKey: 'provisionalLei.columns.source', groupKey: 'provisionalLei.columns.groups.core', defaultVisible: true },
+              { key: 'notes', labelKey: 'provisionalLei.columns.notes', groupKey: 'provisionalLei.columns.groups.metadata', defaultVisible: true },
               { key: 'successor_lei', labelKey: 'provisionalLei.columns.successorLei', groupKey: 'provisionalLei.columns.groups.associated', defaultVisible: true },
               { key: 'parent_lei', labelKey: 'provisionalLei.columns.parentLei', groupKey: 'provisionalLei.columns.groups.hierarchy', defaultVisible: false },
               { key: 'child_lei', labelKey: 'provisionalLei.columns.childLei', groupKey: 'provisionalLei.columns.groups.hierarchy', defaultVisible: false },
             ]}
-            visibleColumns={new Set(['legal_name', 'legal_address_country', 'legal_address_city', 'legal_jurisdiction', 'entity_status', 'provisioning_source', 'successor_lei', 'parent_lei', 'child_lei'])}
+            visibleColumns={new Set(['legal_name', 'legal_address_country', 'legal_address_city', 'legal_jurisdiction', 'entity_status', 'provisioning_source', 'notes', 'successor_lei', 'parent_lei', 'child_lei'])}
             onLeiClick={() => { /* no-op for provisional LEI */ }}
           />
         )}

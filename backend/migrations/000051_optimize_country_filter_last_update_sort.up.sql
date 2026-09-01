@@ -17,11 +17,11 @@ WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_lei_records_not_set_status_last_update
 ON lei_raw.lei_records (last_update_date)
 WHERE deleted_at IS NULL
-	AND (
-		entity_status IS NULL
-		OR TRIM(entity_status) = ''
-		OR UPPER(TRIM(entity_status)) = 'NULL'
-	);
+AND (
+    entity_status IS NULL
+    OR TRIM(entity_status) = ''
+    OR UPPER(TRIM(entity_status)) = 'NULL'
+);
 
 -- Optimize LEI list query for category + country filtering with last_update_date sorting
 -- Target query pattern:

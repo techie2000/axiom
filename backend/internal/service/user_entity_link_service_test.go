@@ -85,7 +85,6 @@ func TestUpdateEntityLinkRequest_PartialNilPreservesOriginal(t *testing.T) {
 	// When all fields in UpdateEntityLinkRequest are nil, the original link
 	// values should be preserved. Simulate the service update logic.
 	original := &domain.UserEntityLink{
-		ID:            uuid.New(),
 		EntityRole:    domain.EntityRoleTrader,
 		ChildrenScope: domain.ChildrenScopeDirect,
 		Notes:         "original note",
@@ -121,7 +120,6 @@ func TestUpdateEntityLinkRequest_PartialNilPreservesOriginal(t *testing.T) {
 
 func TestUpdateEntityLinkRequest_AllFieldsUpdated(t *testing.T) {
 	original := &domain.UserEntityLink{
-		ID:            uuid.New(),
 		EntityRole:    domain.EntityRoleViewer,
 		ChildrenScope: domain.ChildrenScopeNone,
 		Notes:         "",
@@ -172,8 +170,6 @@ func TestUpdateEntityLinkRequest_AllFieldsUpdated(t *testing.T) {
 
 func TestGrantEntityLinkRequest_DefaultsToViewer(t *testing.T) {
 	req := GrantEntityLinkRequest{
-		UserID: uuid.New().String(),
-		LEI:    "AXIO00000000000001AB",
 		// EntityRole intentionally omitted → should default to viewer
 	}
 

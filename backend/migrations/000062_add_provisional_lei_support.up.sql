@@ -1,6 +1,6 @@
 ALTER TABLE lei_raw.lei_records
-    ADD COLUMN IF NOT EXISTS is_provisional BOOLEAN NOT NULL DEFAULT FALSE,
-    ADD COLUMN IF NOT EXISTS provisioning_source VARCHAR(50);
+ADD COLUMN IF NOT EXISTS is_provisional BOOLEAN NOT NULL DEFAULT FALSE,
+ADD COLUMN IF NOT EXISTS provisioning_source VARCHAR(50);
 
 COMMENT ON COLUMN lei_raw.lei_records.is_provisional IS
 'TRUE for LEI records issued by Axiom as a provisional identifier (AXIO prefix) rather

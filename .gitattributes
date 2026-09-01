@@ -1,2 +1,39 @@
+# Git attributes for consistent line endings across platforms
+
+# Auto-detect text files and normalize line endings in the repository index.
+# Working-tree line endings can still vary with developer Git settings.
+* text=auto
+
+# Shell scripts - must use LF
 *.sh text eol=lf
+
+# PowerShell scripts - must use LF
+*.ps1 text eol=lf
+
+# Git hooks - must use LF
 .githooks/* text eol=lf
+
+# Python files - should use LF
+*.py text eol=lf
+
+# YAML/JSON - should use LF
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+
+# Markdown - should use LF
+*.md text eol=lf
+
+# Windows-specific line endings (CRLF) for batch files
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary files - do not modify
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.zip binary
+*.tar binary
+*.gz binary

@@ -1265,12 +1265,18 @@ export default function LEIRecordsPage() {
 
   // Measure filter bar height dynamically
   useEffect(() => {
-    if (filterBarRef.current && hasActiveFilters) {
-      const height = filterBarRef.current.offsetHeight
-      setFilterBarHeight(height)
-    } else {
+    if (!hasActiveFilters) {
       setFilterBarHeight(0)
+      return
     }
+
+    const updateHeight = () => {
+      setFilterBarHeight(filterBarRef.current?.offsetHeight || 0)
+    }
+
+    updateHeight()
+    window.addEventListener('resize', updateHeight)
+    return () => window.removeEventListener('resize', updateHeight)
   }, [hasActiveFilters, debouncedSearch, statusFilter, categoryFilter, countryFilter])
   const isLastPage = !hasMorePages
 

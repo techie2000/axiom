@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 import i18n, { SUPPORTED_LANGUAGES } from '../../lib/i18n'
+import { validateTranslationValue } from '../../lib/translation-validation'
 import PageHeader from '../../components/PageHeader'
 import Alert from '../../components/Alert'
 import Badge from '../../components/Badge'
@@ -481,6 +482,14 @@ export default function AdminTranslationsPage() {
       setFormError(t('admin.translations.errors.submitFailed'))
       return
     }
+
+    // Validate translation value for unsafe nesting patterns
+    const validation = validateTranslationValue(formData.translation_value)
+    if (!validation.valid) {
+      setFormError(validation.errorKey ? t(validation.errorKey) : t('admin.translations.errors.submitFailed'))
+      return
+    }
+
     setFormLoading(true)
     setFormError('')
     const token = getToken()

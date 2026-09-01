@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -59,9 +60,10 @@ func main() {
 	// Initialize logger
 	logger.Init(cfg.Log.Level)
 
-	// Leave host/schemes empty so Swagger uses the request origin in deployed environments.
-	docs.SwaggerInfo.Host = ""
-	docs.SwaggerInfo.Schemes = nil
+	// Keep static defaults at startup and derive request-specific host/scheme in the
+	// Swagger route handler to support reverse proxies and non-localhost deployments.
+	docs.SwaggerInfo.Host = "localhost:8080"
+	docs.SwaggerInfo.Schemes = []string{"http"}
 
 	// Connect to database
 	db, err := connectDatabase(cfg)
@@ -196,6 +198,44 @@ func connectDatabase(cfg *config.Config) (*gorm.DB, error) {
 	sqlDB.SetMaxOpenConns(100)
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
+	// Verify database connectivity before proceeding with warm-up
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := sqlDB.PingContext(ctx); err != nil {
+		return nil, fmt.Errorf("failed to verify database connectivity: %w", err)
+	}
+
+	// Pre-warm connection pool to avoid high latency on first user request
+	// Use a new context for warm-up since we've already used the ping context
+	warmCtx, warmCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer warmCancel()
+
+	successCount := 0
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+
+	for i := 0; i < 5; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			var dummy int
+			if err := db.WithContext(warmCtx).Raw("SELECT 1").Scan(&dummy).Error; err != nil {
+				logger.Warn().Err(err).Msg("Connection pool warm-up query failed")
+			} else {
+				mu.Lock()
+				successCount++
+				mu.Unlock()
+			}
+		}()
+	}
+	wg.Wait()
+
+	if successCount == 0 {
+		return nil, fmt.Errorf("connection pool warm-up failed: no queries succeeded")
+	}
+
+	logger.Info().Msgf("Connection pool warmed up successfully (%d/%d queries succeeded)", successCount, 5)
 	logger.Info().Msgf("Database connection established (log level: %s)", cfg.Database.LogLevel)
 	return db, nil
 }
@@ -289,17 +329,13 @@ func setupRouter(cfg *config.Config, h *handler.Handlers) *gin.Engine {
 		})
 	})
 
-	// Debug CORS config (remove in production)
-	router.GET("/debug/cors", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"allowed_origins": cfg.CORS.AllowedOrigins,
-			"allowed_methods": cfg.CORS.AllowedMethods,
-			"allowed_headers": cfg.CORS.AllowedHeaders,
-		})
-	})
-
 	// Swagger documentation
-	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	swaggerHandler := ginSwagger.WrapHandler(swaggerFiles.Handler)
+	router.GET("/swagger/*any", func(c *gin.Context) {
+		docs.SwaggerInfo.Host = resolveSwaggerHost(c)
+		docs.SwaggerInfo.Schemes = []string{resolveSwaggerScheme(c)}
+		swaggerHandler(c)
+	})
 
 	// API v1 routes
 	v1 := router.Group("/api/v1")
@@ -486,4 +522,27 @@ func setupRouter(cfg *config.Config, h *handler.Handlers) *gin.Engine {
 	}
 
 	return router
+}
+
+func resolveSwaggerHost(c *gin.Context) string {
+	if forwardedHost := strings.TrimSpace(c.GetHeader("X-Forwarded-Host")); forwardedHost != "" {
+		return forwardedHost
+	}
+	if host := strings.TrimSpace(c.Request.Host); host != "" {
+		return host
+	}
+	return "localhost:8080"
+}
+
+func resolveSwaggerScheme(c *gin.Context) string {
+	if forwardedProto := strings.TrimSpace(c.GetHeader("X-Forwarded-Proto")); forwardedProto != "" {
+		if strings.EqualFold(forwardedProto, "https") {
+			return "https"
+		}
+		return "http"
+	}
+	if c.Request.TLS != nil {
+		return "https"
+	}
+	return "http"
 }

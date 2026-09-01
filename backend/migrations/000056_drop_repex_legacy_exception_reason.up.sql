@@ -18,4 +18,4 @@ END;
 $$;
 
 ALTER TABLE lei_raw.lei_reporting_exceptions
-    DROP COLUMN IF EXISTS exception_reason;
+DROP COLUMN IF EXISTS exception_reason;

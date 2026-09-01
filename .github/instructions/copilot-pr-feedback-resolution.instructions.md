@@ -5,7 +5,23 @@ applyTo: '**'
 
 # Copilot PR Feedback Resolution Workflow
 
+## ⚡ Quick Start
+
+**Use the `address-pr-comments` skill to automatically resolve review feedback.**
+
+The skill handles the complete workflow: identify unresolved threads, implement
+fixes, post individual resolution replies, create comprehensive summary, and
+mirror updates to linked issues—all without asking for confirmation.
+
+**Skill triggers**: "Address PR comments", "Resolve review feedback",
+"Fix Copilot feedback"
+
+---
+
 ## Overview
+
+This page documents the manual workflow for resolving Copilot PR review feedback.
+For automated execution, use the `address-pr-comments` skill (see Quick Start above).
 
 When Copilot provides review feedback on a pull request, implement fixes and
 automatically manage feedback resolution without requiring explicit user prompts
@@ -72,20 +88,16 @@ $body = @'
 
 Set-Content -Path $bodyPath -Value $body -Encoding utf8
 
-# Prefer the safe helper to post + verify body fidelity and receive a stable URL.
-$commentUrl = pwsh ./scripts/post-gh-comment-safe.ps1 `
-  -Repo "{owner}/{repo}" `
-  -TargetType pr `
-  -PrNumber 261 `
-  -BodyFile "$bodyPath"
+# For LOCAL VS CODE (Terminal):
+# Use gh CLI as default (MCP tools consistently fail with 403 EMU).
+gh api repos/{owner}/{repo}/pulls/{pr_number}/comments/{comment_id}/replies -X POST -F "body=@$bodyPath"
 
-Write-Host "Posted resolution comment: $commentUrl"
+# Verify your reply appears in PR comments.
+gh pr view {pr_number} --repo {owner}/{repo} --comments
 
-# If posting a reply with gh directly, verify with issues/comments endpoint
-# because gh pr comment --reply-to creates an issue comment in the PR timeline.
-# $replyUrl = gh pr comment 261 --reply-to {comment_id} --body-file "$bodyPath"
-# $newCommentId = [regex]::Match(($replyUrl | Select-Object -Last 1), 'issuecomment-(\d+)$').Groups[1].Value
-# gh api repos/{owner}/{repo}/issues/comments/$newCommentId --jq .body
+# For CLOUD COPILOT (MCP available):
+# You may try MCP PR review-write/reply first; if 403 Unauthorized, fall back to gh CLI above.
+# Do not retry MCP after 403 in the same session.
 ```
 
 ### Comment Template by Issue Type
@@ -255,10 +267,29 @@ If any comments are deferred for later:
 
 ### Comment in Correct Scope
 
-- **Individual resolutions**: Reply directly to the Copilot comment thread using `--reply-to {comment_id}`
+- **Individual resolutions**: Reply directly to the Copilot comment thread using:
+  - **Local VS Code**: `gh api repos/<owner>/<repo>/pulls/<pr>/comments/<comment_id>/replies -X POST -F "body=@<path>"`
+    (CLI-first)
+  - **Cloud Copilot**: MCP tools (with gh CLI fallback if 403 Unauthorized)
 - **Summary comment**: Post as standalone comment on the PR using `gh pr comment`
 - **Issue updates**: Post concise mirrored updates on linked underlying issues using `gh issue comment`
 - **Never duplicate**: Don't post the same resolution in multiple places
+
+### Enterprise Managed User Guardrail (REQUIRED)
+
+In this repository, for PR review comment replies and thread handling:
+
+**Local VS Code (always use gh CLI):**
+
+1. Use `gh` CLI commands via terminal for all PR review thread operations.
+2. Do not attempt MCP GitHub PR review-write/reply tools (they consistently fail with 403).
+3. If thread resolve is not available via CLI, document the fix in-thread and then resolve manually in UI.
+
+**Cloud Copilot (MCP-first with fallback):**
+
+1. Try MCP PR review tools first (you may have better API permissions than local).
+2. If you hit 403 Unauthorized, immediately fall back to terminal `gh` CLI commands.
+3. Do not retry MCP for the same action after a known 403 pattern in that session.
 
 ## Error Handling
 
@@ -273,7 +304,7 @@ If you cannot locate a Copilot comment ID:
 
 - Use `gh api repos/{owner}/{repo}/pulls/{pr}/comments` to list all comments
 - Filter by `.user.login == "Copilot"`
-- Extract the `.id` for the reply-to target
+- Extract the `.id` for the `pulls/comments/{id}/replies` target
 
 ## Best Practices
 

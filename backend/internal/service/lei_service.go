@@ -822,7 +822,11 @@ func (s *leiService) processJSONFile(jsonPath string, sourceFile *domain.SourceF
 				Str("source_file_id", sourceFile.ID.String()).
 				Msg("Found records array, starting record processing")
 			// Found the records array, start processing
-			return s.processRecordsArray(decoder, sourceFile, resumeFromLEI)
+			if err := s.processRecordsArray(decoder, sourceFile, resumeFromLEI); err != nil {
+				return err
+			}
+
+			return s.reconcileLEILinkReferences(jsonPath, sourceFile)
 		}
 
 		// Skip the value for non-records keys
@@ -833,6 +837,118 @@ func (s *leiService) processJSONFile(jsonPath string, sourceFile *domain.SourceF
 	}
 
 	return fmt.Errorf("records array not found in JSON file")
+}
+
+func (s *leiService) reconcileLEILinkReferences(jsonPath string, sourceFile *domain.SourceFile) error {
+	log.Info().
+		Str("file", jsonPath).
+		Str("source_file_id", sourceFile.ID.String()).
+		Msg("Starting LEI self-reference reconciliation pass")
+
+	file, err := os.Open(jsonPath)
+	if err != nil {
+		return fmt.Errorf("failed to open JSON file for LEI link reconciliation: %w", err)
+	}
+	defer func() {
+		if err := file.Close(); err != nil {
+			log.Error().Err(err).Msg("Failed to close JSON file after LEI link reconciliation")
+		}
+	}()
+
+	decoder := json.NewDecoder(file)
+	token, err := decoder.Token()
+	if err != nil {
+		return fmt.Errorf("failed to read opening brace for LEI link reconciliation: %w", err)
+	}
+	if delim, ok := token.(json.Delim); !ok || delim != '{' {
+		return fmt.Errorf("expected '{' during LEI link reconciliation, got %v", token)
+	}
+
+	for decoder.More() {
+		token, err := decoder.Token()
+		if err != nil {
+			return fmt.Errorf("failed to read token during LEI link reconciliation: %w", err)
+		}
+
+		key, ok := token.(string)
+		if !ok {
+			return fmt.Errorf("expected JSON object key during LEI link reconciliation, got %T", token)
+		}
+
+		if key != "records" {
+			var skipValue interface{}
+			if err := decoder.Decode(&skipValue); err != nil {
+				return fmt.Errorf("failed to skip non-records value during LEI link reconciliation: %w", err)
+			}
+			continue
+		}
+
+		return s.reconcileLEILinkReferencesArray(decoder, sourceFile)
+	}
+
+	return fmt.Errorf("records array not found during LEI link reconciliation")
+}
+
+func (s *leiService) reconcileLEILinkReferencesArray(decoder *json.Decoder, sourceFile *domain.SourceFile) error {
+	token, err := decoder.Token()
+	if err != nil {
+		return fmt.Errorf("failed to read records array during LEI link reconciliation: %w", err)
+	}
+	if delim, ok := token.(json.Delim); !ok || delim != '[' {
+		return fmt.Errorf("expected '[' during LEI link reconciliation, got %v", token)
+	}
+
+	const batchSize = 1000
+	records := make([]*domain.LEIRecord, 0, batchSize)
+	totalUpdated := 0
+	recordCount := 0
+
+	flushBatch := func() error {
+		if len(records) == 0 {
+			return nil
+		}
+
+		updated, err := s.repo.BatchUpdateLEILinkReferences(records)
+		if err != nil {
+			return fmt.Errorf("failed to reconcile LEI link references: %w", err)
+		}
+
+		totalUpdated += updated
+		records = records[:0]
+		return nil
+	}
+
+	for decoder.More() {
+		recordCount++
+		var jsonRecord LEIJSONRecord
+		if err := decoder.Decode(&jsonRecord); err != nil {
+			return fmt.Errorf("failed to decode LEI JSON record during link reconciliation at record %d: %w", recordCount, err)
+		}
+
+		record := s.jsonToDomainRecord(&jsonRecord, sourceFile.ID)
+		if !isValidLEICode(record.LEI) {
+			continue
+		}
+
+		records = append(records, record)
+		if len(records) >= batchSize {
+			if err := flushBatch(); err != nil {
+				return err
+			}
+		}
+	}
+
+	if err := flushBatch(); err != nil {
+		return err
+	}
+
+	log.Info().
+		Str("source_file_id", sourceFile.ID.String()).
+		Int("records_scanned", recordCount).
+		Int("records_updated", totalUpdated).
+		Msg("Completed LEI self-reference reconciliation pass")
+
+	return nil
 }
 
 // processRecordsArray processes the records array from the JSON decoder using batch processing

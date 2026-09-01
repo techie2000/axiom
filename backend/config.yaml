@@ -6,16 +6,17 @@ database:
   host: localhost
   port: 5432
   user: axiom
-  password: axiom
+  # password: set via DATABASE_PASSWORD environment variable (required)
   name: axiom
   sslmode: disable
 
 jwt:
-  secret: change-this-secret-in-production
+  # secret: set via JWT_SECRET environment variable (required)
   expiry: 24h
 
 rabbitmq:
-  url: amqp://guest:guest@localhost:5672/
+  # url: defaults to local dev broker; set via RABBITMQ_URL for deployed environments.
+  url: amqp://localhost:5672/
 
 log:
   level: info
