@@ -29,6 +29,17 @@ jobs:
               return
             }
 
+            // Bot-authored PR bodies (Dependabot changelogs, release notes, commit lists)
+            // are full of `#N` references to issues in upstream repos, not this one. The
+            // generic reference scan below can't tell those apart from real issue links,
+            // so skip status sync entirely for bots rather than risk mislabeling — or, once
+            // merged, auto-closing — an unrelated issue that happens to share a number.
+            const actor = pr.user.login
+            if (actor.endsWith('[bot]') || actor === 'dependabot') {
+              core.info('Bot PR — skipping issue status label sync.')
+              return
+            }
+
             const statusLabels = [
               {
                 name: 'status: triage',
