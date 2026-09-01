@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"slices"
 	"strings"
 	"time"
 
@@ -62,7 +63,9 @@ type provisionalLEIService struct {
 	level2Repo repository.LEILevel2Repository
 }
 
-const allowedProvisionalEntityStatuses = "ACTIVE, INACTIVE, MERGED"
+var allowedProvisionalEntityStatusValues = []string{"ACTIVE", "INACTIVE", "MERGED"}
+
+var allowedProvisionalEntityStatuses = strings.Join(allowedProvisionalEntityStatusValues, ", ")
 
 // NewProvisionalLEIService creates a ProvisionalLEIService.
 func NewProvisionalLEIService(
@@ -228,12 +231,10 @@ func normalizeProvisionalEntityStatus(raw string) (string, error) {
 	if status == "" {
 		return "ACTIVE", nil
 	}
-	switch status {
-	case "ACTIVE", "INACTIVE", "MERGED":
-		return status, nil
-	default:
+	if !slices.Contains(allowedProvisionalEntityStatusValues, status) {
 		return "", fmt.Errorf("invalid entity_status %q: must be one of %s", raw, allowedProvisionalEntityStatuses)
 	}
+	return status, nil
 }
 
 func (s *provisionalLEIService) createProvisionalAudit(action string, before, after *domain.LEIRecord, adminUserID string) error {
