@@ -1,9 +1,9 @@
 # Security Versions Tracking
 # This file documents all pinned versions for security and reproducibility
-# Last updated: 2026-02-19
+# Last updated: 2026-09-01
 
 version_tracking:
-  last_updated: "2026-02-23T18:18:00Z"
+  last_updated: "2026-09-01T15:39:00Z"
   automated_updates_enabled: true
   
 alpine_packages:
@@ -120,6 +120,27 @@ go_modules:
       updated: "2025-12-01"
       severity: "HIGH"
       note: "Indirect dependency, update via postgres driver"
+
+    x_mod:
+      module: "golang.org/x/mod"
+      version: "v0.40.0"
+      reason: "Security scan (PR #672) - vulnerability fix"
+      updated: "2026-09-01"
+      severity: "HIGH"
+
+    x_net:
+      module: "golang.org/x/net"
+      version: "v0.58.0"
+      reason: "Security scan (PR #672) - pulled in alongside x/mod update"
+      updated: "2026-09-01"
+      severity: "MEDIUM"
+
+    x_tools:
+      module: "golang.org/x/tools"
+      version: "v0.49.0"
+      reason: "Security scan (PR #672) - pulled in alongside x/mod update"
+      updated: "2026-09-01"
+      severity: "MEDIUM"
 
 nodejs_packages:
   # Node.js and npm package dependencies

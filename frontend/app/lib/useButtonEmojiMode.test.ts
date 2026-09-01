@@ -77,7 +77,7 @@ describe('useButtonEmojiMode', () => {
   })
 
   it('formatLabel strips emoji when mode is text', () => {
-    vi.mocked(useUserPreference).mockReturnValueOnce(['text', vi.fn()])
+    vi.mocked(useUserPreference).mockReturnValueOnce(['text', vi.fn(), false])
 
     const { result } = renderHook(() => useButtonEmojiMode())
 
@@ -85,7 +85,7 @@ describe('useButtonEmojiMode', () => {
   })
 
   it('formatLabel returns only the emoji when mode is emoji', () => {
-    vi.mocked(useUserPreference).mockReturnValueOnce(['emoji', vi.fn()])
+    vi.mocked(useUserPreference).mockReturnValueOnce(['emoji', vi.fn(), false])
 
     const { result } = renderHook(() => useButtonEmojiMode())
 
