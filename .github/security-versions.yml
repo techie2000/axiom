@@ -3,7 +3,7 @@
 # Last updated: 2026-09-01
 
 version_tracking:
-  last_updated: "2026-09-01T16:22:00Z"
+  last_updated: "2026-09-01T17:05:00Z"
   automated_updates_enabled: true
   
 alpine_packages:
@@ -151,45 +151,45 @@ nodejs_packages:
   dependencies:
     next:
       package: "next"
-      version: "15.2.9"
+      version: "16.3.3"
       reason: "Next.js framework - security and feature updates"
-      updated: "2026-01-15"
+      updated: "2026-09-01"
       severity: "HIGH"
-    
+
     react:
       package: "react"
-      version: "^19.0.0"
+      version: "^19.2.8"
       reason: "React framework - major version update"
-      updated: "2026-01-10"
+      updated: "2026-07-27"
       severity: "HIGH"
-    
+
     react_dom:
       package: "react-dom"
-      version: "^19.0.0"
+      version: "^19.2.8"
       reason: "React DOM library - matches React version"
-      updated: "2026-01-10"
+      updated: "2026-07-27"
       severity: "HIGH"
-    
+
     tailwindcss:
       package: "tailwindcss"
-      version: "^3.4.0"
+      version: "^4.3.1"
       reason: "CSS framework"
-      updated: "2025-12-01"
+      updated: "2026-06-27"
       severity: "LOW"
-  
+
   dev_dependencies:
     typescript:
       package: "typescript"
-      version: "^5.3.3"
+      version: "~6.0.0"
       reason: "TypeScript compiler"
-      updated: "2025-12-15"
+      updated: "2026-08-10"
       severity: "LOW"
-    
+
     types_node:
       package: "@types/node"
-      version: "^22.10.0"
+      version: "^26.4.0"
       reason: "Node.js type definitions"
-      updated: "2026-01-05"
+      updated: "2026-09-01"
       severity: "LOW"
 
 external_tools:
