@@ -1,3 +1,30 @@
+# Node modules and dependencies
 node_modules/
 **/node_modules/**
 docs-user/node_modules/
+.npm
+
+# Git and version control
+.git/
+.gitignore
+
+# Generated/built files
+dist/
+build/
+*.min.md
+
+# Package manager lock files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db

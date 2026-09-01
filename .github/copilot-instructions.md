@@ -777,6 +777,25 @@ When posting PR/issue comments, checklists, PR descriptions, or review summaries
 6. Keep comments actionable: include decisions, code/test results, or explicit next actions.
 7. Do not add non-actionable filler such as "checks are in progress" or equivalent queue/waiting notes in public comments.
 
+### EMU GitHub Review Comment Guardrail (REQUIRED)
+
+For this repository under Enterprise Managed User constraints, when handling PR review comment threads:
+
+#### If Running In Cloud Copilot With MCP
+
+1. Try MCP GitHub PR review write/reply/resolve tools first (you may have better API permissions).
+2. If you hit 403 Unauthorized, immediately fall back to `gh` CLI method.
+3. Do not retry MCP after a 403 pattern in the same session.
+
+#### If Running In Local VS Code (Terminal)
+
+1. Use `gh` CLI in terminal as the first and default path.
+2. Do not call MCP GitHub PR review write/reply/resolve tools (they consistently fail with 403 EMU).
+3. For thread replies, use:
+   - `gh api repos/<owner>/<repo>/pulls/<pr>/comments/<comment_id>/replies -X POST -F "body=@<file>"`
+4. After posting, verify with `gh pr view <pr> --repo <owner>/<repo> --comments`.
+5. If thread resolution is not available via CLI, resolve in GitHub UI and note that action.
+
 ### Comment and Issue Deduplication Guardrail (REQUIRED)
 
 Before posting any PR/issue comment **or creating any issue/PR** from an AI agent, follow the
