@@ -1,6 +1,6 @@
 module github.com/techie2000/axiom
 
-go 1.25.1
+go 1.26.0
 
 require (
 	github.com/gin-gonic/gin v1.12.0
@@ -11,7 +11,7 @@ require (
 	github.com/swaggo/files v1.0.1
 	github.com/swaggo/gin-swagger v1.6.1
 	github.com/swaggo/swag v1.16.6
-	golang.org/x/crypto v0.55.0
+	golang.org/x/crypto v0.56.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gorm.io/driver/postgres v1.6.2
 	gorm.io/gorm v1.31.2
