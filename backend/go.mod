@@ -13,7 +13,7 @@ require (
 	github.com/swaggo/swag v1.16.6
 	golang.org/x/crypto v0.56.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
-	gorm.io/driver/postgres v1.6.2
+	gorm.io/driver/postgres v1.6.3
 	gorm.io/gorm v1.31.2
 )
 
