@@ -210,6 +210,7 @@ Coding standards that AI applies when generating or reviewing code:
   - `performance-optimization.instructions.md` - Performance guidelines
   - `containerization-docker-best-practices.instructions.md` - Docker optimization
   - `github-actions-ci-cd-best-practices.instructions.md` - CI/CD patterns
+  - `dependabot-batch-updates.instructions.md` - Triage and batch safe Dependabot PRs into one validated PR
 - **Code Quality**:
   - `code-review-generic.instructions.md` - General code review standards
   - `self-explanatory-code-commenting.instructions.md` - Comment guidelines
