@@ -41,7 +41,9 @@ jobs:
       - name: Run govulncheck (SARIF output)
         uses: golang/govulncheck-action@v1
         with:
+          go-version-input: '' # empty so go-version-file is used (default 'stable' overrides it)
           go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
           work-dir: backend
           repo-checkout: false
           output-format: sarif
