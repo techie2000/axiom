@@ -76,6 +76,15 @@ If a bump breaks something, drop that bump from the branch, note it in the PR, a
 - Title: `build(deps): apply safe dependency updates (YYYY-MM-DD)`
 - List every bump (package, old version, new version, originating Dependabot PR) and the validation results.
 - Use `Refs #N` for the Dependabot PRs. Never use `Closes`/`Fixes` for PRs (see the PR template).
+- In the "Linked Work" section, list the refs one per line as a bullet list, not one long comma-separated
+  sentence, so they are easy to scan:
+
+  ```markdown
+  - Issue(s):
+    - Refs #712
+    - Refs #713
+  ```
+
 - Check "No linked issue" in the PR template with reason "Dependabot".
 
 ## Step 6: Copilot Review Loop
