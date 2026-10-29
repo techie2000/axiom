@@ -59,6 +59,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Wait for base image mirror
+        run: >-
+          .github/scripts/wait-for-mirror.sh ghcr.io/techie2000/mirror
+          docker/Dockerfile.backend docker/Dockerfile.frontend
+
       - name: Build Backend Docker image
         run: |
           docker build -f docker/Dockerfile.backend --build-arg DOCKER_LIBRARY=ghcr.io/techie2000/mirror -t axiom-backend:latest ./backend
