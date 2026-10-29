@@ -27,7 +27,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Keep in sync with the FROM lines in docker/Dockerfile.*
+        # Keep in sync with the FROM lines in docker/Dockerfile.* (see
+        # .github/instructions/containerization-docker-best-practices.instructions.md)
         image:
           - alpine:3.21
           - golang:1.25.1-alpine3.21
