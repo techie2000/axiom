@@ -49,6 +49,13 @@ Summarise the safe, review, and excluded PRs and ask for approval before changin
    and `npm update <pkg>` for transitive ones.
    - Keep exact pins exact (e.g. `next` is pinned without a caret) and do not let npm reorder `package.json`.
 4. Backend (`/backend`): `go get <module>@<version>` then `go mod tidy`.
+5. Keep `.github/security-versions.yml` in step (see `security-versions.instructions.md`). For every bumped
+   package or module that already has an entry there (including indirect ones such as `x/mod`, `x/net`,
+   `x/tools`), set `version` to the resolved version and `updated` to the bump commit's date, in the same
+   commit. Do not add entries for untracked packages.
+6. Check the resolved versions in the lockfiles match what you intend to claim in the PR table. Packages that
+   ship as a family (e.g. `vue` and `@vue/*`) must be bumped together, otherwise the lockfile keeps the old
+   versions.
 
 ## Step 4: Validate
 
@@ -71,7 +78,36 @@ If a bump breaks something, drop that bump from the branch, note it in the PR, a
 - Use `Refs #N` for the Dependabot PRs. Never use `Closes`/`Fixes` for PRs (see the PR template).
 - Check "No linked issue" in the PR template with reason "Dependabot".
 
-## Step 6: After Merge
+## Step 6: Copilot Review Loop
+
+Copilot reviews the PR automatically. Handle its feedback without waiting to be asked, following
+`copilot-pr-feedback-resolution.instructions.md` (use the `address-pr-comments` skill where available).
+Pushing the approved PR and fixing review feedback on it are part of this workflow and need no extra approval.
+
+Fixes and replies can trigger a new Copilot review with new conversations, so treat this as a loop:
+
+1. List unresolved threads:
+   `gh api graphql` on `repository.pullRequest.reviewThreads` (`isResolved`, first comment `databaseId`).
+2. For each thread, check the claim against the repo before acting. If it is valid, fix it. If it is wrong or
+   out of scope, reply with the reason instead of changing code.
+3. Re-run the Step 4 validation for anything touched, commit, and push.
+4. Reply in each thread (`gh api repos/{owner}/{repo}/pulls/{pr}/comments/{id}/replies`), then resolve it
+   (`resolveReviewThread` mutation).
+5. Post one summary comment per round (`gh pr comment`).
+6. Wait for CI and for Copilot to review the new commit (`gh pr checks`, then re-list threads). If new threads
+   appeared, go back to step 1.
+
+Stop the loop when any of these is true, then report to the user:
+
+- No unresolved threads remain on the latest commit and CI is green.
+- Three rounds have completed and new threads are still appearing. Summarise what keeps recurring.
+- A thread asks for something that conflicts with the plan the user approved, or a major bump or scope
+  change. Do not apply it; ask the user.
+- Two consecutive rounds raise the same issue. The fix is not landing, so stop and ask.
+
+Do not merge the PR while any thread is unresolved or CI is failing. Merging stays with the user.
+
+## Step 7: After Merge
 
 Once the PR is merged, close the superseded Dependabot PRs with a comment pointing at the batch PR
 (with user approval), then follow `pr-merge-cleanup.instructions.md`.
