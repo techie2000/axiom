@@ -36,7 +36,7 @@ jobs:
       security-events: write
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Run govulncheck (SARIF output)
         uses: golang/govulncheck-action@v1
@@ -61,7 +61,7 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -69,13 +69,13 @@ jobs:
           ref: main
 
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version-file: 'backend/go.mod'
           cache-dependency-path: backend/go.sum
 
       - name: Set up Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
 
@@ -445,7 +445,7 @@ jobs:
       - name: Check existing open automated security PR for main
         id: check-existing-pr
         if: steps.parse-vulns.outputs.has_updates == 'true' && (github.event.inputs.create_pr == 'true' || github.event_name != 'workflow_dispatch')
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -477,7 +477,7 @@ jobs:
         id: create-pr
         if: steps.parse-vulns.outputs.has_updates == 'true' && (github.event.inputs.create_pr == 'true' || github.event_name != 'workflow_dispatch') && steps.check-existing-pr.outputs.should_create_pr == 'true'
         continue-on-error: true
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@v8
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: 'security: automated dependency updates for security vulnerabilities'
@@ -496,7 +496,7 @@ jobs:
       - name: Parse Trivy results and create issues (Backend)
         if: always()
         continue-on-error: true
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
@@ -653,7 +653,7 @@ jobs:
       - name: Parse Trivy results and create issues (Frontend)
         if: always()
         continue-on-error: true
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
