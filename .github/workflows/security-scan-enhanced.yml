@@ -23,6 +23,7 @@ permissions:
   contents: write
   pull-requests: write
   security-events: write
+  packages: read
 
 jobs:
   security-scan-and-update:
@@ -51,13 +52,20 @@ jobs:
       - name: Install jq for JSON parsing
         run: sudo apt-get update && sudo apt-get install -y jq
 
+      - name: Log in to GitHub Container Registry (base image mirror)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build Backend Docker image
         run: |
-          docker build -f docker/Dockerfile.backend -t axiom-backend:latest ./backend
+          docker build -f docker/Dockerfile.backend --build-arg DOCKER_LIBRARY=ghcr.io/techie2000/mirror -t axiom-backend:latest ./backend
 
       - name: Build Frontend Docker image
         run: |
-          docker build -f docker/Dockerfile.frontend -t axiom-frontend:latest ./frontend
+          docker build -f docker/Dockerfile.frontend --build-arg DOCKER_LIBRARY=ghcr.io/techie2000/mirror -t axiom-frontend:latest ./frontend
 
       - name: Run Trivy scan on Backend (JSON output)
         uses: aquasecurity/trivy-action@v0.35.0

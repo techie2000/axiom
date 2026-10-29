@@ -45,13 +45,21 @@ jobs:
       contents: read
       security-events: write
       issues: write
+      packages: read
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
 
+      - name: Log in to GitHub Container Registry (base image mirror)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build Backend Docker image
-        run: docker build -f docker/Dockerfile.backend -t axiom-backend:latest ./backend
+        run: docker build -f docker/Dockerfile.backend --build-arg DOCKER_LIBRARY=ghcr.io/techie2000/mirror -t axiom-backend:latest ./backend
 
       - name: Run Trivy vulnerability scanner on Backend image
         uses: aquasecurity/trivy-action@v0.35.0
@@ -68,7 +76,7 @@ jobs:
           category: 'trivy-backend-scan'
 
       - name: Build Frontend Docker image
-        run: docker build -f docker/Dockerfile.frontend -t axiom-frontend:latest ./frontend
+        run: docker build -f docker/Dockerfile.frontend --build-arg DOCKER_LIBRARY=ghcr.io/techie2000/mirror -t axiom-frontend:latest ./frontend
 
       - name: Run Trivy vulnerability scanner on Frontend image
         uses: aquasecurity/trivy-action@v0.35.0
