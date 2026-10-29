@@ -107,7 +107,12 @@ function setNestedValue(target, dottedKey, defaultValue) {
   const leaf = parts[parts.length - 1]
 
   if (!hasOwn(cursor, leaf) || cursor[leaf] === undefined) {
-    cursor[leaf] = defaultValue
+    Object.defineProperty(cursor, leaf, {
+      configurable: true,
+      enumerable: true,
+      writable: true,
+      value: defaultValue,
+    })
     return true
   }
 
