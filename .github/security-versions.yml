@@ -9,7 +9,7 @@ version_tracking:
 alpine_packages:
   # Alpine Linux 3.21 base image packages
   description: "Alpine packages with pinned versions for reproducibility"
-  base_image: "alpine:3.21"
+  base_image: "alpine:3.23"
   packages:
     libssl3:
       version: "3.3.6-r0"
@@ -59,7 +59,7 @@ alpine_packages:
 go_modules:
   # Go module dependencies
   description: "Go dependencies tracked in backend/go.mod"
-  go_version: "1.25.1"
+  go_version: "1.26.2"
   
   direct_dependencies:
     gin:
