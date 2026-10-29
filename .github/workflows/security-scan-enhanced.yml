@@ -805,10 +805,23 @@ jobs:
             }
 
       - name: Fail on critical vulnerabilities
-        if: always() && steps.parse-vulns.outputs.critical_count != '' && steps.parse-vulns.outputs.critical_count != '0'
+        if: always()
         run: |
-          echo "::error::${{ steps.parse-vulns.outputs.critical_count }} critical vulnerabilities with an available fix were found. See the Security tab, the created issues and the automated PR."
-          exit 1
+          # Count fixable CRITICAL findings across both full reports, independent of the
+          # package-type filters used for the automated updates above.
+          count=0
+          for report in trivy-backend-results.json trivy-frontend-results.json; do
+            if [ -f "${report}" ]; then
+              n=$(jq '[.Results[]?.Vulnerabilities[]?
+                       | select(.Severity == "CRITICAL" and .FixedVersion != "" and .FixedVersion != null)] | length' "${report}")
+              echo "${report}: ${n} fixable critical"
+              count=$((count + n))
+            fi
+          done
+          if [ "${count}" -gt 0 ]; then
+            echo "::error::${count} critical vulnerabilities with an available fix were found. See the Security tab, the created issues and the automated PR."
+            exit 1
+          fi
 
       - name: Summary
         if: always()
