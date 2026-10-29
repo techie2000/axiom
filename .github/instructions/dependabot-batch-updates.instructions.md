@@ -116,7 +116,18 @@ Stop the loop when any of these is true, then report to the user:
 
 Do not merge the PR while any thread is unresolved or CI is failing. Merging stays with the user.
 
-## Step 7: After Merge
+## Step 7: Pre-Merge Check
+
+Green CI and resolved threads are not enough. Immediately before merging:
+
+1. Confirm the PR contains only what was intended:
+   `gh pr view N --json files,commits --jq '[.files[].path], [.commits[].messageHeadline]'`
+2. Every file and commit must belong to the batch. If something unexpected is there (for example a commit from
+   another session sharing the working directory), stop and ask the user before merging.
+3. Before each `git commit`, run `git branch --show-current` to confirm the branch, and use `git show --stat HEAD`
+   afterwards to confirm the commit holds only the intended files.
+
+## Step 8: After Merge
 
 Once the PR is merged, close the superseded Dependabot PRs with a comment pointing at the batch PR
 (with user approval), then follow `pr-merge-cleanup.instructions.md`.
