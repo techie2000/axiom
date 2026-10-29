@@ -39,10 +39,10 @@ jobs:
           - nginx:1.27-alpine
     steps:
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -54,8 +54,22 @@ jobs:
           OWNER: ${{ github.repository_owner }}
         run: |
           dest="ghcr.io/${OWNER,,}/mirror/${IMAGE}"
+          src="${SOURCE_LIBRARY}/${IMAGE}"
+          set -o pipefail
+          mirror_once() {
+            # mirror.gcr.io does not hold the attestation manifests (platform unknown/unknown)
+            # referenced by the upstream index, so copy only the real platform images.
+            local digests refs=() d
+            digests=$(docker buildx imagetools inspect "${src}" --raw               | jq -r '.manifests[] | select(.platform.os != "unknown") | .digest') || return 1
+            for d in ${digests}; do refs+=("${src}@${d}"); done
+            if [ "${#refs[@]}" -eq 0 ]; then
+              echo "No platform manifests found for ${src}" >&2
+              return 1
+            fi
+            docker buildx imagetools create --tag "${dest}" "${refs[@]}"
+          }
           for attempt in 1 2 3; do
-            docker buildx imagetools create --tag "${dest}" "${SOURCE_LIBRARY}/${IMAGE}" && break
+            mirror_once && break
             if [ "${attempt}" = 3 ]; then exit 1; fi
             echo "Attempt ${attempt} failed, retrying in $((attempt * 30))s"
             sleep $((attempt * 30))
