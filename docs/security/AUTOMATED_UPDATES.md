@@ -87,10 +87,11 @@ Dependabot complements the security scan workflow by monitoring base images and 
 
 #### What It Monitors
 
-- **Docker base images** in `/docker` directory
-  - `alpine:3.21`
-  - `golang:1.24-alpine3.21`
-  - `node:22-alpine3.21`
+- **Docker base images** in `/docker` directory (version placeholders shown; the pinned versions live in
+  `docker/Dockerfile.*`)
+  - `alpine:<alpine-version>`
+  - `golang:<go-version>-alpine<alpine-version>`
+  - `node:<node-major>-alpine<alpine-version>`
 
 - **Go modules** in `/backend` directory
   - All dependencies in `go.mod`

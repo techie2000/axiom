@@ -4,7 +4,7 @@
 # Note: builder stage still includes corporate network TLS workarounds for module download.
 # Build stage
 ARG DOCKER_LIBRARY=public.ecr.aws/docker/library
-FROM ${DOCKER_LIBRARY}/golang:1.26.2-alpine3.23 AS builder
+FROM ${DOCKER_LIBRARY}/golang:1.26.10-alpine3.23 AS builder
 
 # Security: keep OpenSSL patched using latest package available in Alpine repo.
 # security-scan-managed
