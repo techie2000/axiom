@@ -151,7 +151,7 @@ nodejs_packages:
   dependencies:
     next:
       package: "next"
-      version: "16.4.2"
+      version: "16.4.3"
       reason: "Next.js framework - security and feature updates"
       updated: "2026-10-29"
       severity: "HIGH"
