@@ -18,7 +18,9 @@ permissions:
   packages: write
 
 env:
-  SOURCE_LIBRARY: public.ecr.aws/docker/library
+  # Google's anonymous cache of Docker Hub official images. public.ecr.aws rate limits
+  # shared GitHub runner IPs ('Rate exceeded' / 'Data limit exceeded').
+  SOURCE_LIBRARY: mirror.gcr.io/library
 
 jobs:
   mirror:
@@ -52,5 +54,10 @@ jobs:
           OWNER: ${{ github.repository_owner }}
         run: |
           dest="ghcr.io/${OWNER,,}/mirror/${IMAGE}"
-          docker buildx imagetools create --tag "${dest}" "${SOURCE_LIBRARY}/${IMAGE}"
+          for attempt in 1 2 3; do
+            docker buildx imagetools create --tag "${dest}" "${SOURCE_LIBRARY}/${IMAGE}" && break
+            if [ "${attempt}" = 3 ]; then exit 1; fi
+            echo "Attempt ${attempt} failed, retrying in $((attempt * 30))s"
+            sleep $((attempt * 30))
+          done
           docker buildx imagetools inspect "${dest}"
