@@ -106,9 +106,9 @@ go_modules:
 
     postgres_driver:
       module: "gorm.io/driver/postgres"
-      version: "v1.6.2"
+      version: "v1.6.3"
       reason: "PostgreSQL driver for GORM"
-      updated: "2026-08-03"
+      updated: "2026-10-29"
       severity: "MEDIUM"
 
   indirect_dependencies:
@@ -122,23 +122,23 @@ go_modules:
 
     x_mod:
       module: "golang.org/x/mod"
-      version: "v0.40.0"
+      version: "v0.41.0"
       reason: "Security scan (PR #672) - vulnerability fix"
-      updated: "2026-09-01"
+      updated: "2026-10-29"
       severity: "HIGH"
 
     x_net:
       module: "golang.org/x/net"
-      version: "v0.58.0"
+      version: "v0.60.0"
       reason: "Security scan (PR #672) - pulled in alongside x/mod update"
-      updated: "2026-09-01"
+      updated: "2026-10-29"
       severity: "MEDIUM"
 
     x_tools:
       module: "golang.org/x/tools"
-      version: "v0.49.0"
+      version: "v0.51.0"
       reason: "Security scan (PR #672) - pulled in alongside x/mod update"
-      updated: "2026-09-01"
+      updated: "2026-10-29"
       severity: "MEDIUM"
 
 nodejs_packages:
@@ -151,23 +151,23 @@ nodejs_packages:
   dependencies:
     next:
       package: "next"
-      version: "16.3.3"
+      version: "16.4.2"
       reason: "Next.js framework - security and feature updates"
-      updated: "2026-09-01"
+      updated: "2026-10-29"
       severity: "HIGH"
 
     react:
       package: "react"
-      version: "^19.2.8"
+      version: "^19.3.1"
       reason: "React framework - major version update"
-      updated: "2026-07-27"
+      updated: "2026-10-29"
       severity: "HIGH"
 
     react_dom:
       package: "react-dom"
-      version: "^19.2.8"
+      version: "^19.3.1"
       reason: "React DOM library - matches React version"
-      updated: "2026-07-27"
+      updated: "2026-10-29"
       severity: "HIGH"
 
     tailwindcss:
@@ -187,9 +187,9 @@ nodejs_packages:
 
     types_node:
       package: "@types/node"
-      version: "^26.4.0"
+      version: "^26.6.5"
       reason: "Node.js type definitions"
-      updated: "2026-09-01"
+      updated: "2026-10-29"
       severity: "LOW"
 
 external_tools:
