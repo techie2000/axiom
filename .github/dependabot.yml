@@ -121,3 +121,31 @@ updates:
 # Security advisories
 # Dependabot will automatically create PRs for security vulnerabilities
 # found in dependencies, regardless of the schedule above.
+
+  # GitHub Actions used in .github/workflows (includes aquasecurity/trivy-action,
+  # whose default Trivy version moves with each action release)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "techie2000"
+    assignees:
+      - "techie2000"
+    labels:
+      - "area:infra"
+      - "area:dependencies"
+      - "no-issue-needed"
+    commit-message:
+      prefix: "build(actions)"
+      include: "scope"
+    pull-request-branch-name:
+      separator: "/"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
