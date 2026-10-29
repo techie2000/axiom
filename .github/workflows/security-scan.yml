@@ -189,9 +189,9 @@ jobs:
 
               // Build issue body
               let issueBody = `## Security Vulnerability Alert - Backend\n\n`;
-              issueBody += `**Package:** \\`${pkgName}\`\n`;
-              issueBody += `**Current Version:** \\`${data.current}\`\n`;
-              issueBody += `**Fixed Version:** \\`${data.fixed}\`\n\n`;
+              issueBody += `**Package:** \`${pkgName}\`\n`;
+              issueBody += `**Current Version:** \`${data.current}\`\n`;
+              issueBody += `**Fixed Version:** \`${data.fixed}\`\n\n`;
               issueBody += `### Vulnerabilities\n\n`;
               issueBody += `- 🔴 Critical: ${criticalCount}\n`;
               issueBody += `- 🟡 High: ${highCount}\n\n`;
@@ -214,7 +214,7 @@ jobs:
               issueBody += `### Recommended Action\n\n`;
 
               if (pkgName.includes('golang') || pkgName.includes('go')) {
-                issueBody += `Update \\`go.mod\` and \\`docker/Dockerfile.backend\`:\n\n`;
+                issueBody += `Update \`go.mod\` and \`docker/Dockerfile.backend\`:\n\n`;
                 issueBody += `\`dockerfile\n`;
                 issueBody += `# In docker/Dockerfile.backend builder stage\n`;
                 issueBody += `FROM golang:${data.fixed}-alpine3.21\n`;
@@ -224,7 +224,7 @@ jobs:
                 issueBody += `go ${data.fixed}\n`;
                 issueBody += `\`\n\n`;
               } else if (pkgName.includes('alpine')) {
-                issueBody += `Update \\`docker/Dockerfile.backend\` runtime stage:\n\n`;
+                issueBody += `Update \`docker/Dockerfile.backend\` runtime stage:\n\n`;
                 issueBody += `\`dockerfile\n`;
                 issueBody += `FROM alpine:${data.fixed}\n`;
                 issueBody += `\`\n\n`;
@@ -342,9 +342,9 @@ jobs:
 
               // Build issue body
               let issueBody = `## Security Vulnerability Alert - Frontend\n\n`;
-              issueBody += `**Package:** \\`${pkgName}\`\n`;
-              issueBody += `**Current Version:** \\`${data.current}\`\n`;
-              issueBody += `**Fixed Version:** \\`${data.fixed}\`\n\n`;
+              issueBody += `**Package:** \`${pkgName}\`\n`;
+              issueBody += `**Current Version:** \`${data.current}\`\n`;
+              issueBody += `**Fixed Version:** \`${data.fixed}\`\n\n`;
               issueBody += `### Vulnerabilities\n\n`;
               issueBody += `- 🔴 Critical: ${criticalCount}\n`;
               issueBody += `- 🟡 High: ${highCount}\n\n`;
@@ -367,14 +367,14 @@ jobs:
               issueBody += `### Recommended Action\n\n`;
 
               if (pkgName.includes('node') || pkgName.includes('npm')) {
-                issueBody += `Update \\`package.json\` and \\`docker/Dockerfile.frontend\`:\n\n`;
+                issueBody += `Update \`package.json\` and \`docker/Dockerfile.frontend\`:\n\n`;
                 issueBody += `\`dockerfile\n`;
                 issueBody += `# In docker/Dockerfile.frontend builder stage\n`;
                 issueBody += `FROM node:${data.fixed}-alpine3.21\n`;
                 issueBody += `\`\n\n`;
-                issueBody += `Run \\`npm update\` or update specific package in \\`package.json\`\n\n`;
+                issueBody += `Run \`npm update\` or update specific package in \`package.json\`\n\n`;
               } else if (pkgName.includes('alpine')) {
-                issueBody += `Update \\`docker/Dockerfile.frontend\` runtime stage:\n\n`;
+                issueBody += `Update \`docker/Dockerfile.frontend\` runtime stage:\n\n`;
                 issueBody += `\`dockerfile\n`;
                 issueBody += `FROM alpine:${data.fixed}\n`;
                 issueBody += `\`\n\n`;
