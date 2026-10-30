@@ -37,6 +37,13 @@ jobs:
               (base === 'uat' && head === 'dev') ||
               (base === 'prod' && head === 'uat')
 
+            // Replacement PRs that carry a promotion whose conflicts were resolved on a
+            // `resolve/*` branch (merged from the promotion's head). Same-repo only, so
+            // forks cannot use the prefix to bypass the flow.
+            const isConflictResolutionPR =
+              head.startsWith('resolve/') &&
+              pr.head.repo?.full_name === pr.base.repo.full_name
+
             const hasEmergencyOverrideLabel =
               labels.includes('emergency') ||
               labels.includes('hotfix')
@@ -50,6 +57,11 @@ jobs:
               return
             }
 
+            if (isConflictResolutionPR) {
+              core.info(`Allowed conflict-resolution PR: ${head} -> ${base}`)
+              return
+            }
+
             if (hasEmergencyOverrideLabel || hasEmergencyOverrideTitle) {
               core.info('Allowed emergency/hotfix override detected')
               return
@@ -57,7 +69,7 @@ jobs:
 
             core.setFailed(
               `Branch-flow policy violation: non-promotion PR to '${base}' is blocked. ` +
-                `Allowed paths are main->dev, dev->uat, and uat->prod. ` +
+                `Allowed paths are main->dev, dev->uat, uat->prod, and resolve/* branches. ` +
                 `For an exception, explicitly mark the PR as emergency/hotfix ` +
                 `(label 'emergency' or 'hotfix', or title prefix 'emergency:'/'hotfix:').`
             )
