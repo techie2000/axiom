@@ -46,7 +46,7 @@ jobs:
       - name: Check for existing open promotion PR
         id: existing
         if: steps.check.outputs.needed == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const { data: prs } = await github.rest.pulls.list({
@@ -68,7 +68,7 @@ jobs:
           steps.check.outputs.needed == 'true' &&
           steps.existing.outputs.result == '"false"' &&
           inputs.dry_run != true
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const ahead = parseInt('${{ steps.check.outputs.commits_ahead }}', 10);
@@ -113,7 +113,7 @@ jobs:
           steps.existing.outputs.result == '"false"' &&
           inputs.dry_run != true &&
           steps.create_pr.outputs.head_sha != ''
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             await github.rest.checks.create({
@@ -136,7 +136,7 @@ jobs:
           steps.existing.outputs.result == '"false"' &&
           inputs.dry_run != true &&
           steps.create_pr.outputs.pr_number != ''
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             await github.rest.issues.addLabels({
