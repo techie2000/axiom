@@ -201,6 +201,11 @@ Closes #123  (issue only)
 Fixes #42    (issue only)
 ```
 
+For multiple issues, repeat the keyword per issue — `Fixes #1, Fixes #2` — or put one
+reference per line. GitHub only closes the issue immediately following the keyword; a
+bare comma-separated list (`Fixes #1, #2, #3`) closes only `#1`, leaving the rest open.
+The `check-pr-issue-link` workflow fails the PR if it detects this pattern.
+
 If no backing issue exists, check the **No linked issue** box in the PR template and
 state a brief reason (hotfix, chore, Dependabot, etc.).
 Bot-authored PRs (Dependabot, github-actions) are exempt automatically via
@@ -216,6 +221,9 @@ Do not apply these manually unless correcting an incorrect state.
 | `status: triage`        | Needs initial review               |
 | `status: in progress`   | Linked PR is open and active       |
 | `status: done`          | Linked PR merged                   |
+
+When a linked PR merges, the `sync-issue-status-from-pr` workflow both applies
+`status: done` and closes the issue, so the label and lifecycle state cannot drift apart.
 
 ## Comment Body Safety (REQUIRED)
 

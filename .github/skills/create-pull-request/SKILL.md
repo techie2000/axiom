@@ -67,6 +67,9 @@ PR does (e.g., `Add retry logic for failed API requests`).
 
 - A short summary of what changed and why
 - Any relevant issue references (e.g., `Fixes #123`, `Refs #123`)
+- For multiple issues, repeat the keyword for each one — `Fixes #1, Fixes #2`, not
+  `Fixes #1, #2`. GitHub only closes the issue immediately after the keyword; it does
+  not apply the keyword across a comma-separated list, so trailing issues would stay open.
 - Notable implementation decisions if useful for the reviewer
 
 ### 4. Create the PR

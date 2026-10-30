@@ -80,6 +80,16 @@ Rules:
 - After Dockerfile edits, run a no-cache local build for each affected image variant to verify reproducibility.
 - If a deliberate divergence is required, add an inline comment explaining why and reference the related issue/ADR.
 
+### Base Image Mirror
+
+Dockerfiles take their base images from `${DOCKER_LIBRARY}` (default `public.ecr.aws/docker/library`). CI builds use a
+GHCR mirror (`ghcr.io/techie2000/mirror`) to avoid anonymous pull rate limits.
+
+- When you add or change a `FROM ${DOCKER_LIBRARY}/<image>:<tag>` line in any `docker/Dockerfile.*`, add the same
+  `<image>:<tag>` to the matrix in `.github/workflows/mirror-base-images.yml`.
+- After merging, run **Mirror Base Images** (workflow_dispatch) so the new tag exists before the next scan runs.
+- New mirror packages are private by default: make them public or grant this repo Read access.
+
 ## Core Principles of Containerization
 
 ### **1. Immutability**
