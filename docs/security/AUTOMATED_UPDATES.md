@@ -25,6 +25,11 @@ This workflow is the primary automated security update system that:
 - Scans Docker images for vulnerabilities using Trivy
 - Automatically updates vulnerable packages
 - Creates a single consolidated PR with all updates
+- Opens a GitHub issue per vulnerable package that has a fix (CRITICAL/HIGH)
+- Runs `govulncheck` on the backend and uploads results to the Security tab
+- Fails the run when critical vulnerabilities with an available fix are found
+- Pins Trivy to a specific version (`version:` input on `trivy-action`); bump it manually,
+  since Dependabot only updates the action
 
 #### What It Scans
 
@@ -442,7 +447,6 @@ For critical vulnerabilities requiring immediate action:
 ## Related Files
 
 - `.github/workflows/security-scan-enhanced.yml` - Main security scan workflow
-- `.github/workflows/security-scan.yml` - Original security scan (issue creation)
 - `.github/dependabot.yml` - Dependabot configuration
 - `.github/security-versions.yml` - Version tracking document
 - `docker/Dockerfile.frontend` - Frontend Docker image with security fixes

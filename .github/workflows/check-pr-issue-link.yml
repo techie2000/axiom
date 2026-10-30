@@ -13,7 +13,7 @@ on:
 permissions:
   contents: read
   issues: write
-  pull-requests: read
+  pull-requests: write # needed to comment on PRs via the issues comments API
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Advise when PR has no linked issue and no override
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const pr = context.payload.pull_request
@@ -44,6 +44,24 @@ jobs:
             }
 
             const body = pr.body || ''
+
+            // Guardrail: a single closing keyword only applies to the issue number
+            // immediately after it. GitHub does NOT extend it across a comma-separated
+            // list — `Fixes #1, #2, #3` closes only #1; #2 and #3 are inert plain
+            // references and will stay open even though the PR merges.
+            const multiIssueClosingMatches = [
+              ...body.matchAll(/\b(closes?|fixes?|resolves?)(?:\s+|:\s*)#\d+(?:\s*,\s*#\d+)+/gi),
+            ]
+
+            if (multiIssueClosingMatches.length > 0) {
+              const offenders = multiIssueClosingMatches.map((m) => m[0].replace(/\s+/g, ' ')).join('; ')
+              core.setFailed(
+                `Closing keyword applied to a comma-separated issue list, which GitHub does not support: "${offenders}". ` +
+                  'Only the first issue after the keyword actually closes. Repeat the keyword for each issue ' +
+                  '(e.g. "Fixes #1, Fixes #2, Fixes #3") or put one reference per line.'
+              )
+              return
+            }
 
             // Issue-reference keywords: closes/fixes/resolves/refs/relates to + #N
             // Also support GitHub-accepted colon forms such as `Fixes: #123`.

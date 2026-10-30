@@ -24,6 +24,9 @@ Cheatsheet
 checkin
 cleanuptime
 cloudwego
+Cheatsheet
+checkin
+cleanuptime
 corporationsearch
 coverprofile
 cpuid
@@ -90,6 +93,7 @@ jackc
 jinzhu
 joinedload
 josharian
+joinedload
 jsmith
 jsonpointer
 jsonreference
@@ -114,6 +118,14 @@ maxsize
 MGMT
 minimatch
 mitchellh
+LASTEXITCODE
+LEIJSON
+llms
+LOGLEVEL
+mapstructure
+masterdata
+maxsize
+MGMT
 modelcontextprotocol
 MTTR
 multicurrency
@@ -166,6 +178,7 @@ shadcn
 softprops
 sourcefileid
 sourcegraph
+sourcefileid
 sqlfluff
 Squoosh
 SSIID
@@ -202,6 +215,7 @@ upserts
 urlesc
 VARCHAR
 vasile
+VARCHAR
 vercel
 vitepress
 Vitest
