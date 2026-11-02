@@ -38,8 +38,9 @@ The side that is **ahead** usually wins; check which one that is rather than ass
   both sides; the newer side has included follow-up review fixes.
 - Modify/delete conflicts: find out why the file was deleted (`git log` on the deleting
   side) and accept the deletion if it was merged or renamed, not silently dropped.
-- Word lists such as `.vscode/axiom-words.txt`: keep both sides; the pre-commit hook
-  sorts and de-duplicates.
+- Word lists such as `.vscode/axiom-words.txt`: keep both sides, then sort and
+  de-duplicate by hand (no hook does this), matching the file's existing ordering, for
+  example `LC_ALL=C sort -f -u .vscode/axiom-words.txt -o .vscode/axiom-words.txt`.
 - `git checkout --theirs` is `<head>` during `git merge origin/<head>`; `--ours` is `<base>`.
 
 ## Verify before pushing
