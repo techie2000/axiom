@@ -3,13 +3,13 @@
 # Last updated: 2026-09-01
 
 version_tracking:
-  last_updated: "2026-09-01T15:39:00Z"
+  last_updated: "2026-09-01T17:06:00Z"
   automated_updates_enabled: true
   
 alpine_packages:
   # Alpine Linux 3.21 base image packages
   description: "Alpine packages with pinned versions for reproducibility"
-  base_image: "alpine:3.21"
+  base_image: "alpine:3.23"
   packages:
     libssl3:
       version: "3.3.6-r0"
@@ -59,87 +59,86 @@ alpine_packages:
 go_modules:
   # Go module dependencies
   description: "Go dependencies tracked in backend/go.mod"
-  go_version: "1.24.0"
-  toolchain: "go1.24.12"
+  go_version: "1.26.2"
   
   direct_dependencies:
     gin:
       module: "github.com/gin-gonic/gin"
-      version: "v1.11.0"
+      version: "v1.12.0"
       reason: "Web framework - security and feature updates"
-      updated: "2026-02-15"
+      updated: "2026-04-20"
       severity: "HIGH"
-    
+
     jwt:
       module: "github.com/golang-jwt/jwt/v5"
-      version: "v5.2.2"
+      version: "v5.3.1"
       reason: "JWT authentication library"
-      updated: "2025-12-01"
+      updated: "2026-04-20"
       severity: "HIGH"
-    
+
     uuid:
       module: "github.com/google/uuid"
       version: "v1.6.0"
       reason: "UUID generation"
       updated: "2025-11-01"
       severity: "LOW"
-    
+
     zerolog:
       module: "github.com/rs/zerolog"
-      version: "v1.31.0"
+      version: "v1.35.1"
       reason: "Structured logging"
-      updated: "2025-10-01"
+      updated: "2026-04-27"
       severity: "LOW"
-    
+
     viper:
       module: "github.com/spf13/viper"
-      version: "v1.18.2"
+      version: "v1.21.0"
       reason: "Configuration management"
-      updated: "2025-11-15"
+      updated: "2026-04-20"
       severity: "MEDIUM"
-    
+
     gorm:
       module: "gorm.io/gorm"
-      version: "v1.25.5"
+      version: "v1.31.2"
       reason: "ORM for database operations"
-      updated: "2025-10-20"
+      updated: "2026-06-29"
       severity: "MEDIUM"
-    
+
     postgres_driver:
       module: "gorm.io/driver/postgres"
-      version: "v1.5.4"
+      version: "v1.6.3"
       reason: "PostgreSQL driver for GORM"
-      updated: "2025-10-20"
+      updated: "2026-10-29"
       severity: "MEDIUM"
-  
+
   indirect_dependencies:
     pgx:
       module: "github.com/jackc/pgx/v5"
-      version: "v5.4.3"
+      version: "v5.10.0"
       reason: "PostgreSQL driver - security vulnerability (Alert #42)"
-      updated: "2025-12-01"
+      updated: "2026-08-03"
       severity: "HIGH"
       note: "Indirect dependency, update via postgres driver"
 
     x_mod:
       module: "golang.org/x/mod"
-      version: "v0.40.0"
+      version: "v0.41.0"
       reason: "Security scan (PR #672) - vulnerability fix"
-      updated: "2026-09-01"
+      updated: "2026-10-29"
       severity: "HIGH"
 
     x_net:
       module: "golang.org/x/net"
-      version: "v0.58.0"
+      version: "v0.60.0"
       reason: "Security scan (PR #672) - pulled in alongside x/mod update"
-      updated: "2026-09-01"
+      updated: "2026-10-29"
       severity: "MEDIUM"
 
     x_tools:
       module: "golang.org/x/tools"
-      version: "v0.49.0"
+      version: "v0.51.0"
       reason: "Security scan (PR #672) - pulled in alongside x/mod update"
-      updated: "2026-09-01"
+      updated: "2026-10-29"
       severity: "MEDIUM"
 
 nodejs_packages:
@@ -152,54 +151,54 @@ nodejs_packages:
   dependencies:
     next:
       package: "next"
-      version: "15.2.9"
+      version: "16.4.3"
       reason: "Next.js framework - security and feature updates"
-      updated: "2026-01-15"
+      updated: "2026-10-29"
       severity: "HIGH"
-    
+
     react:
       package: "react"
-      version: "^19.0.0"
+      version: "^19.3.1"
       reason: "React framework - major version update"
-      updated: "2026-01-10"
+      updated: "2026-10-29"
       severity: "HIGH"
-    
+
     react_dom:
       package: "react-dom"
-      version: "^19.0.0"
+      version: "^19.3.1"
       reason: "React DOM library - matches React version"
-      updated: "2026-01-10"
+      updated: "2026-10-29"
       severity: "HIGH"
-    
+
     tailwindcss:
       package: "tailwindcss"
-      version: "^3.4.0"
+      version: "^4.3.1"
       reason: "CSS framework"
-      updated: "2025-12-01"
+      updated: "2026-06-27"
       severity: "LOW"
-  
+
   dev_dependencies:
     typescript:
       package: "typescript"
-      version: "^5.3.3"
+      version: "~6.0.0"
       reason: "TypeScript compiler"
-      updated: "2025-12-15"
+      updated: "2026-08-10"
       severity: "LOW"
-    
+
     types_node:
       package: "@types/node"
-      version: "^22.10.0"
+      version: "^26.6.5"
       reason: "Node.js type definitions"
-      updated: "2026-01-05"
+      updated: "2026-10-29"
       severity: "LOW"
 
 external_tools:
   # External tools and binaries
   golang_migrate:
-    version: "v4.18.1"
-    url: "Built from source via: go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.18.1"
+    version: "v4.19.1"
+    url: "Built from source via: go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.19.1"
     reason: "Database migration tool - built from source to use current Go toolchain, avoiding stdlib CVEs in pre-built binaries"
-    updated: "2026-02-23"
+    updated: "2026-03-27"
     severity: "MEDIUM"
     files:
       - docker/Dockerfile.backend (builder stage)
