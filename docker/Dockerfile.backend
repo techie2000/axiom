@@ -3,7 +3,7 @@
 # Runtime behavior: installs `migrate` and starts via /root/start.sh (runs DB migrations, then starts app).
 # Build stage
 ARG DOCKER_LIBRARY=public.ecr.aws/docker/library
-FROM ${DOCKER_LIBRARY}/golang:1.25.1-alpine3.21 AS builder
+FROM ${DOCKER_LIBRARY}/golang:1.26.2-alpine3.23 AS builder
 
 # Security: keep OpenSSL patched using latest package available in Alpine repo.
 # security-scan-managed
@@ -16,8 +16,8 @@ WORKDIR /app
 # hadolint ignore=DL3018
 RUN apk add --no-cache \
     ca-certificates \
-    git=2.47.3-r0 \
-    make=4.4.1-r2 \
+    git=2.52.0-r0 \
+    make=4.4.1-r3 \
     && update-ca-certificates
 
 # Copy go mod files
@@ -41,7 +41,7 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main cmd/api/main.go
 
 # Runtime stage
-FROM ${DOCKER_LIBRARY}/alpine:3.21
+FROM ${DOCKER_LIBRARY}/alpine:3.23
 
 # Security: keep OpenSSL patched using latest package available in Alpine repo.
 # security-scan-managed

@@ -166,6 +166,7 @@
       "-**/backups"
     ]
   },
+  "sarif-viewer.connectToGithubCodeScanning": "on",
   "search.exclude": {
     "**/backups/**": true,
     "**/worktrees/**": true

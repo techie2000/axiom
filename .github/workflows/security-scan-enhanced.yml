@@ -16,15 +16,46 @@ on:
     paths:
       - 'docker/**'
       - 'backend/go.mod'
+      - 'backend/go.sum'
       - 'frontend/package.json'
       - '.github/workflows/security-scan-enhanced.yml'
 
 permissions:
   contents: write
+  issues: write
   pull-requests: write
   security-events: write
+  packages: read
 
 jobs:
+  govulncheck:
+    name: Go Vulnerability Check (govulncheck)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Run govulncheck (SARIF output)
+        uses: golang/govulncheck-action@v1
+        with:
+          go-version-input: '' # empty so go-version-file is used (default 'stable' overrides it)
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+          work-dir: backend
+          repo-checkout: false
+          output-format: sarif
+          output-file: govulncheck-results.sarif
+
+      - name: Upload govulncheck results to GitHub Security tab
+        if: always() && hashFiles('backend/govulncheck-results.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: backend/govulncheck-results.sarif
+          category: govulncheck
+
   security-scan-and-update:
     runs-on: ubuntu-latest
     
@@ -51,17 +82,30 @@ jobs:
       - name: Install jq for JSON parsing
         run: sudo apt-get update && sudo apt-get install -y jq
 
+      - name: Log in to GitHub Container Registry (base image mirror)
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Wait for base image mirror
+        run: >-
+          .github/scripts/wait-for-mirror.sh ghcr.io/techie2000/mirror
+          docker/Dockerfile.backend docker/Dockerfile.frontend
+
       - name: Build Backend Docker image
         run: |
-          docker build -f docker/Dockerfile.backend -t axiom-backend:latest ./backend
+          docker build -f docker/Dockerfile.backend --build-arg DOCKER_LIBRARY=ghcr.io/techie2000/mirror -t axiom-backend:latest ./backend
 
       - name: Build Frontend Docker image
         run: |
-          docker build -f docker/Dockerfile.frontend -t axiom-frontend:latest ./frontend
+          docker build -f docker/Dockerfile.frontend --build-arg DOCKER_LIBRARY=ghcr.io/techie2000/mirror -t axiom-frontend:latest ./frontend
 
       - name: Run Trivy scan on Backend (JSON output)
-        uses: aquasecurity/trivy-action@v0.35.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
+          version: 'v0.76.1' # pinned; bump manually (Dependabot only updates the action)
           image-ref: 'axiom-backend:latest'
           format: 'json'
           output: 'trivy-backend-results.json'
@@ -69,8 +113,9 @@ jobs:
           exit-code: 0
 
       - name: Run Trivy scan on Frontend (JSON output)
-        uses: aquasecurity/trivy-action@v0.35.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
+          version: 'v0.76.1' # pinned; bump manually (Dependabot only updates the action)
           image-ref: 'axiom-frontend:latest'
           format: 'json'
           output: 'trivy-frontend-results.json'
@@ -78,8 +123,9 @@ jobs:
           exit-code: 0
 
       - name: Upload Trivy results (Backend SARIF)
-        uses: aquasecurity/trivy-action@v0.35.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
+          version: 'v0.76.1' # pinned; bump manually (Dependabot only updates the action)
           image-ref: 'axiom-backend:latest'
           format: 'sarif'
           output: 'trivy-backend-results.sarif'
@@ -92,8 +138,9 @@ jobs:
           category: 'trivy-backend-scan'
 
       - name: Upload Trivy results (Frontend SARIF)
-        uses: aquasecurity/trivy-action@v0.35.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
+          version: 'v0.76.1' # pinned; bump manually (Dependabot only updates the action)
           image-ref: 'axiom-frontend:latest'
           format: 'sarif'
           output: 'trivy-frontend-results.sarif'
@@ -445,6 +492,336 @@ jobs:
             automated
           assignees: techie2000
           reviewers: techie2000
+
+      - name: Parse Trivy results and create issues (Backend)
+        if: always()
+        continue-on-error: true
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require('fs');
+
+            // Read Trivy results
+            let results;
+            try {
+              results = JSON.parse(fs.readFileSync('trivy-backend-results.json', 'utf8'));
+            } catch (error) {
+              console.log('No Backend Trivy results file found or parse error');
+              return;
+            }
+
+            if (!results.Results || results.Results.length === 0) {
+              console.log('No backend vulnerabilities found! 🎉');
+              return;
+            }
+
+            // Group vulnerabilities by package
+            const packageVulns = {};
+
+            results.Results.forEach(result => {
+              if (result.Vulnerabilities) {
+                result.Vulnerabilities.forEach(vuln => {
+                  // The scan also reports MEDIUM; only CRITICAL/HIGH get issues
+                  if (vuln.Severity !== 'CRITICAL' && vuln.Severity !== 'HIGH') {
+                    return;
+                  }
+                  const pkg = vuln.PkgName || 'unknown';
+                  const currentVersion = vuln.InstalledVersion || 'unknown';
+                  const fixedVersion = vuln.FixedVersion || 'none';
+
+                  if (!packageVulns[pkg]) {
+                    packageVulns[pkg] = {
+                      current: currentVersion,
+                      fixed: fixedVersion,
+                      vulns: []
+                    };
+                  }
+
+                  packageVulns[pkg].vulns.push({
+                    id: vuln.VulnerabilityID,
+                    severity: vuln.Severity,
+                    title: vuln.Title || 'No title',
+                    description: vuln.Description || 'No description',
+                    references: vuln.References || []
+                  });
+                });
+              }
+            });
+
+            // Create or update issues for each package with vulnerabilities
+            for (const [pkgName, data] of Object.entries(packageVulns)) {
+              // Only create issues for packages with fixes available
+              if (data.fixed === 'none' || data.fixed === '') {
+                console.log(`Skipping ${pkgName} - no fix available`);
+                continue;
+              }
+
+              const criticalCount = data.vulns.filter(v => v.severity === 'CRITICAL').length;
+              const highCount = data.vulns.filter(v => v.severity === 'HIGH').length;
+
+              const issueTitle = `[Security][Backend] Upgrade ${pkgName} from ${data.current} to ${data.fixed}`;
+              const priorityLabel = criticalCount > 0 ? 'security-critical' : 'security-high';
+
+              // Check if issue already exists
+              const existingIssues = await github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                labels: priorityLabel,
+                per_page: 100
+              });
+
+              const issueExists = existingIssues.data.some(issue =>
+                issue.title === issueTitle
+              );
+
+              if (issueExists) {
+                console.log(`Issue already exists for ${pkgName}`);
+                continue;
+              }
+
+              // Build issue body
+              let issueBody = `## Security Vulnerability Alert - Backend\n\n`;
+              issueBody += `**Package:** \`${pkgName}\`\n`;
+              issueBody += `**Current Version:** \`${data.current}\`\n`;
+              issueBody += `**Fixed Version:** \`${data.fixed}\`\n\n`;
+              issueBody += `### Vulnerabilities\n\n`;
+              issueBody += `- 🔴 Critical: ${criticalCount}\n`;
+              issueBody += `- 🟡 High: ${highCount}\n\n`;
+
+              issueBody += `### Details\n\n`;
+              data.vulns.forEach(vuln => {
+                const emoji = vuln.severity === 'CRITICAL' ? '🔴' : '🟡';
+                issueBody += `#### ${emoji} ${vuln.id} (${vuln.severity})\n\n`;
+                issueBody += `**${vuln.title}**\n\n`;
+                issueBody += `${vuln.description}\n\n`;
+                if (vuln.references.length > 0) {
+                  issueBody += `**References:**\n`;
+                  vuln.references.slice(0, 3).forEach(ref => {
+                    issueBody += `- ${ref}\n`;
+                  });
+                  issueBody += `\n`;
+                }
+              });
+
+              issueBody += `### Recommended Action\n\n`;
+
+              if (pkgName.includes('golang') || pkgName.includes('go')) {
+                issueBody += `Update \`go.mod\` and \`docker/Dockerfile.backend\`:\n\n`;
+                issueBody += `\`dockerfile\n`;
+                issueBody += `# In docker/Dockerfile.backend builder stage\n`;
+                issueBody += `FROM golang:${data.fixed}-alpine3.21\n`;
+                issueBody += `\`\n\n`;
+                issueBody += `\`go\n`;
+                issueBody += `// In go.mod\n`;
+                issueBody += `go ${data.fixed}\n`;
+                issueBody += `\`\n\n`;
+              } else if (pkgName.includes('alpine')) {
+                issueBody += `Update \`docker/Dockerfile.backend\` runtime stage:\n\n`;
+                issueBody += `\`dockerfile\n`;
+                issueBody += `FROM alpine:${data.fixed}\n`;
+                issueBody += `\`\n\n`;
+              } else {
+                issueBody += `Update \`docker/Dockerfile.backend\` to use a newer base image `;
+                issueBody += `or install the fixed version of \`${pkgName}\`.\n`;
+              }
+
+              issueBody += `After updating, rebuild and test:\n`;
+              issueBody += `\`bash\n`;
+              issueBody += `docker-compose build --no-cache backend\n`;
+              issueBody += `go test ./... -v\n`;
+              issueBody += `docker-compose up -d\n`;
+              issueBody += `\`\n\n`;
+              issueBody += `---\n`;
+              issueBody += `*This issue was automatically created by the security scan workflow.*`;
+
+              // Create the issue
+              try {
+                await github.rest.issues.create({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  title: issueTitle,
+                  body: issueBody,
+                  labels: [priorityLabel, 'security', 'dependencies', 'backend']
+                });
+                console.log(`Created issue for ${pkgName}`);
+              } catch (error) {
+                console.error(`Failed to create issue for ${pkgName}:`, error.message);
+              }
+            }
+
+      - name: Parse Trivy results and create issues (Frontend)
+        if: always()
+        continue-on-error: true
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require('fs');
+
+            // Read Trivy results
+            let results;
+            try {
+              results = JSON.parse(fs.readFileSync('trivy-frontend-results.json', 'utf8'));
+            } catch (error) {
+              console.log('No Frontend Trivy results file found or parse error');
+              return;
+            }
+
+            if (!results.Results || results.Results.length === 0) {
+              console.log('No frontend vulnerabilities found! 🎉');
+              return;
+            }
+
+            // Group vulnerabilities by package
+            const packageVulns = {};
+
+            results.Results.forEach(result => {
+              if (result.Vulnerabilities) {
+                result.Vulnerabilities.forEach(vuln => {
+                  // The scan also reports MEDIUM; only CRITICAL/HIGH get issues
+                  if (vuln.Severity !== 'CRITICAL' && vuln.Severity !== 'HIGH') {
+                    return;
+                  }
+                  const pkg = vuln.PkgName || 'unknown';
+                  const currentVersion = vuln.InstalledVersion || 'unknown';
+                  const fixedVersion = vuln.FixedVersion || 'none';
+
+                  if (!packageVulns[pkg]) {
+                    packageVulns[pkg] = {
+                      current: currentVersion,
+                      fixed: fixedVersion,
+                      vulns: []
+                    };
+                  }
+
+                  packageVulns[pkg].vulns.push({
+                    id: vuln.VulnerabilityID,
+                    severity: vuln.Severity,
+                    title: vuln.Title || 'No title',
+                    description: vuln.Description || 'No description',
+                    references: vuln.References || []
+                  });
+                });
+              }
+            });
+
+            // Create or update issues for each package with vulnerabilities
+            for (const [pkgName, data] of Object.entries(packageVulns)) {
+              // Only create issues for packages with fixes available
+              if (data.fixed === 'none' || data.fixed === '') {
+                console.log(`Skipping ${pkgName} - no fix available`);
+                continue;
+              }
+
+              const criticalCount = data.vulns.filter(v => v.severity === 'CRITICAL').length;
+              const highCount = data.vulns.filter(v => v.severity === 'HIGH').length;
+
+              const issueTitle = `[Security][Frontend] Upgrade ${pkgName} from ${data.current} to ${data.fixed}`;
+              const priorityLabel = criticalCount > 0 ? 'security-critical' : 'security-high';
+
+              // Check if issue already exists
+              const existingIssues = await github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                labels: priorityLabel,
+                per_page: 100
+              });
+
+              const issueExists = existingIssues.data.some(issue =>
+                issue.title === issueTitle
+              );
+
+              if (issueExists) {
+                console.log(`Issue already exists for ${pkgName}`);
+                continue;
+              }
+
+              // Build issue body
+              let issueBody = `## Security Vulnerability Alert - Frontend\n\n`;
+              issueBody += `**Package:** \`${pkgName}\`\n`;
+              issueBody += `**Current Version:** \`${data.current}\`\n`;
+              issueBody += `**Fixed Version:** \`${data.fixed}\`\n\n`;
+              issueBody += `### Vulnerabilities\n\n`;
+              issueBody += `- 🔴 Critical: ${criticalCount}\n`;
+              issueBody += `- 🟡 High: ${highCount}\n\n`;
+
+              issueBody += `### Details\n\n`;
+              data.vulns.forEach(vuln => {
+                const emoji = vuln.severity === 'CRITICAL' ? '🔴' : '🟡';
+                issueBody += `#### ${emoji} ${vuln.id} (${vuln.severity})\n\n`;
+                issueBody += `**${vuln.title}**\n\n`;
+                issueBody += `${vuln.description}\n\n`;
+                if (vuln.references.length > 0) {
+                  issueBody += `**References:**\n`;
+                  vuln.references.slice(0, 3).forEach(ref => {
+                    issueBody += `- ${ref}\n`;
+                  });
+                  issueBody += `\n`;
+                }
+              });
+
+              issueBody += `### Recommended Action\n\n`;
+
+              if (pkgName.includes('node') || pkgName.includes('npm')) {
+                issueBody += `Update \`package.json\` and \`docker/Dockerfile.frontend\`:\n\n`;
+                issueBody += `\`dockerfile\n`;
+                issueBody += `# In docker/Dockerfile.frontend builder stage\n`;
+                issueBody += `FROM node:${data.fixed}-alpine3.21\n`;
+                issueBody += `\`\n\n`;
+                issueBody += `Run \`npm update\` or update specific package in \`package.json\`\n\n`;
+              } else if (pkgName.includes('alpine')) {
+                issueBody += `Update \`docker/Dockerfile.frontend\` runtime stage:\n\n`;
+                issueBody += `\`dockerfile\n`;
+                issueBody += `FROM alpine:${data.fixed}\n`;
+                issueBody += `\`\n\n`;
+              } else {
+                issueBody += `Update \`docker/Dockerfile.frontend\` to use a newer base image `;
+                issueBody += `or install the fixed version of \`${pkgName}\`.\n`;
+              }
+
+              issueBody += `After updating, rebuild and test:\n`;
+              issueBody += `\`bash\n`;
+              issueBody += `docker-compose build --no-cache frontend\n`;
+              issueBody += `npm test\n`;
+              issueBody += `docker-compose up -d\n`;
+              issueBody += `\`\n\n`;
+              issueBody += `---\n`;
+              issueBody += `*This issue was automatically created by the security scan workflow.*`;
+
+              // Create the issue
+              try {
+                await github.rest.issues.create({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  title: issueTitle,
+                  body: issueBody,
+                  labels: [priorityLabel, 'security', 'dependencies', 'frontend']
+                });
+                console.log(`Created issue for ${pkgName}`);
+              } catch (error) {
+                console.error(`Failed to create issue for ${pkgName}:`, error.message);
+              }
+            }
+
+      - name: Fail on critical vulnerabilities
+        if: always()
+        run: |
+          # Count fixable CRITICAL findings across both full reports, independent of the
+          # package-type filters used for the automated updates above.
+          count=0
+          for report in trivy-backend-results.json trivy-frontend-results.json; do
+            if [ -f "${report}" ]; then
+              n=$(jq '[.Results[]?.Vulnerabilities[]?
+                       | select(.Severity == "CRITICAL" and .FixedVersion != "" and .FixedVersion != null)] | length' "${report}")
+              echo "${report}: ${n} fixable critical"
+              count=$((count + n))
+            fi
+          done
+          if [ "${count}" -gt 0 ]; then
+            echo "::error::${count} critical vulnerabilities with an available fix were found. See the Security tab, the created issues and the automated PR."
+            exit 1
+          fi
 
       - name: Summary
         if: always()
