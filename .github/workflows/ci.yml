@@ -54,8 +54,10 @@ jobs:
             frontend:
               - 'frontend/**/*.{ts,tsx,js,jsx,mjs,json}'
               - 'frontend/package-lock.json'
+              - '.github/workflows/ci.yml'
             migrations:
               - 'backend/migrations/**/*.sql'
+              - '.github/workflows/ci.yml'
             calm:
               - 'docs/architecture-as-code/**'
             docs_user:
