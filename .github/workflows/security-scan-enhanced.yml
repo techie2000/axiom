@@ -445,7 +445,7 @@ jobs:
       - name: Check existing open automated security PR for main
         id: check-existing-pr
         if: steps.parse-vulns.outputs.has_updates == 'true' && (github.event.inputs.create_pr == 'true' || github.event_name != 'workflow_dispatch')
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -496,7 +496,7 @@ jobs:
       - name: Parse Trivy results and create issues (Backend)
         if: always()
         continue-on-error: true
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
@@ -653,7 +653,7 @@ jobs:
       - name: Parse Trivy results and create issues (Frontend)
         if: always()
         continue-on-error: true
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');

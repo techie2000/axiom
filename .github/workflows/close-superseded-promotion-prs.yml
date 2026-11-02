@@ -21,7 +21,7 @@ jobs:
     steps:
       - name: Detect if this PR is a promotion or replacement PR
         id: detect
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const pr = context.payload.pull_request;
@@ -51,7 +51,7 @@ jobs:
 
       - name: Find and close older open promotion PRs targeting the same base
         if: steps.detect.outputs.is_promotion == 'true'
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const newPrNumber = parseInt('${{ steps.detect.outputs.new_pr_number }}', 10);
