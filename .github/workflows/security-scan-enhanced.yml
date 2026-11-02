@@ -477,7 +477,7 @@ jobs:
         id: create-pr
         if: steps.parse-vulns.outputs.has_updates == 'true' && (github.event.inputs.create_pr == 'true' || github.event_name != 'workflow_dispatch') && steps.check-existing-pr.outputs.should_create_pr == 'true'
         continue-on-error: true
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@v8
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: 'security: automated dependency updates for security vulnerabilities'
