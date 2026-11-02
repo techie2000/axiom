@@ -187,9 +187,9 @@ nodejs_packages:
 
     types_node:
       package: "@types/node"
-      version: "^26.6.5"
+      version: "^26.6.6"
       reason: "Node.js type definitions"
-      updated: "2026-10-29"
+      updated: "2026-11-02"
       severity: "LOW"
 
 external_tools:
