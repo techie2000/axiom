@@ -59,13 +59,15 @@ gh workflow run security-report.yml
 
 ### Use the output
 
-After the run finishes, the report is committed to `docs/security/latest-report.md`. Pull the
-branch and that file is immediately readable by the agent:
+After the run finishes, the report is committed to `docs/security/latest-report.md` on the
+`security-report` branch (not on the default branch). Each run replaces the branch with a fresh
+commit, so fetch it to read the latest report:
 
 ```bash
-git pull
+git fetch origin security-report
+git show origin/security-report:docs/security/latest-report.md
 # then in the agent task:
-# "Review docs/security/latest-report.md and fix any issues"
+# "Review docs/security/latest-report.md on the security-report branch and fix any issues"
 ```
 
 The workflow also runs on a weekly schedule (every Monday 08:00 UTC) so there is always a

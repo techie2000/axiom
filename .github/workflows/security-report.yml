@@ -159,5 +159,8 @@ jobs:
             echo "No changes to report."
           else
             git commit -m "chore: refresh security report [skip ci]"
-            git push origin HEAD:security-report
+            # The security-report branch is a bot-owned output branch holding only the latest report.
+            # Each run commits on top of the current default branch, so it is not a descendant of the
+            # previous run's commit; force-push to replace it (a plain push is rejected as non-fast-forward).
+            git push --force origin HEAD:security-report
           fi
