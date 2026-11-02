@@ -48,7 +48,7 @@ jobs:
 
       - name: Create Release
         id: create_release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           body_path: release_notes.md
           draft: false
@@ -86,7 +86,8 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version-file: 'go.mod'
+          go-version-file: 'backend/go.mod'
+          cache-dependency-path: backend/go.sum
           cache: true
 
       - name: Get build metadata
@@ -105,10 +106,11 @@ jobs:
           GIT_COMMIT=${{ steps.metadata.outputs.git_commit }}
           BUILD_DATE=${{ steps.metadata.outputs.build_date }}
 
-          LDFLAGS="-w -s -X github.com/techie2000/axiom/backend/internal/version.GitCommit=$GIT_COMMIT -X github.com/techie2000/axiom/backend/internal/version.BuildDate=$BUILD_DATE"
+          LDFLAGS="-w -s -X github.com/techie2000/axiom/internal/version.GitCommit=$GIT_COMMIT -X github.com/techie2000/axiom/internal/version.BuildDate=$BUILD_DATE"
 
           OUTPUT_NAME="axiom-api-${{ matrix.suffix }}"
-          go build -ldflags="$LDFLAGS" -o "$OUTPUT_NAME" ./backend/cmd/api
+          # The Go module lives in backend/, so build from there and write the binary to the workspace root
+          go -C backend build -ldflags="$LDFLAGS" -o "$GITHUB_WORKSPACE/$OUTPUT_NAME" ./cmd/api
 
           # Create checksum
           if [ "${{ matrix.goos }}" = "windows" ]; then
@@ -120,7 +122,7 @@ jobs:
           fi
 
       - name: Upload Release Asset
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: v${{ needs.create-release.outputs.version }}
           files: |
@@ -138,6 +140,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
@@ -150,7 +155,7 @@ jobs:
 
       - name: Extract metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ github.repository_owner }}/axiom
           tags: |
@@ -166,13 +171,15 @@ jobs:
           echo "build_date=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> $GITHUB_OUTPUT
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
-          context: .
+          context: ./backend
+          file: docker/Dockerfile.backend
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
+            DOCKER_LIBRARY=ghcr.io/${{ github.repository_owner }}/mirror
             VERSION=${{ needs.create-release.outputs.version }}
             GIT_COMMIT=${{ steps.metadata.outputs.git_commit }}
             BUILD_DATE=${{ steps.metadata.outputs.build_date }}
