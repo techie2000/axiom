@@ -42,7 +42,7 @@ jobs:
 
       - name: Detect file changes by type
         id: filter
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@v4
         with:
           filters: |
             go:
@@ -54,8 +54,10 @@ jobs:
             frontend:
               - 'frontend/**/*.{ts,tsx,js,jsx,mjs,json}'
               - 'frontend/package-lock.json'
+              - '.github/workflows/ci.yml'
             migrations:
               - 'backend/migrations/**/*.sql'
+              - '.github/workflows/ci.yml'
             calm:
               - 'docs/architecture-as-code/**'
             docs_user:
@@ -121,7 +123,7 @@ jobs:
           cache-dependency-path: 'backend/go.sum'
 
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v8
+        uses: golangci/golangci-lint-action@v9
         with:
           version: latest
           working-directory: ./backend
@@ -318,7 +320,7 @@ jobs:
           fi
 
       - name: Set up Python for sqlfluff
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.12'
 
@@ -391,7 +393,7 @@ jobs:
           cache-dependency-path: 'frontend/package-lock.json'
 
       - name: Restore Next.js build cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: frontend/.next/cache
           key: ${{ runner.os }}-nextjs-${{ hashFiles('frontend/package-lock.json', 'frontend/next.config.js', 'frontend/tsconfig.json') }}
