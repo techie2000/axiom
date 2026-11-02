@@ -36,13 +36,13 @@ jobs:
       has_issue_labeling_changes: ${{ steps.filter.outputs.issue_labeling }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 2
 
       - name: Detect file changes by type
         id: filter
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@v4
         with:
           filters: |
             go:
@@ -71,10 +71,10 @@ jobs:
     if: ${{ needs.detect-file-changes.outputs.has_issue_labeling_changes == 'true' }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
 
@@ -111,17 +111,17 @@ jobs:
     if: ${{ needs.detect-file-changes.outputs.has_go_changes == 'true' }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version-file: 'backend/go.mod'
           cache: true
           cache-dependency-path: 'backend/go.sum'
 
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v8
+        uses: golangci/golangci-lint-action@v9
         with:
           version: latest
           working-directory: ./backend
@@ -134,7 +134,7 @@ jobs:
     if: ${{ needs.detect-file-changes.outputs.has_docker_changes == 'true' }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Lint Dockerfiles
         run: |
@@ -175,12 +175,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Set up Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
 
@@ -219,10 +219,10 @@ jobs:
     continue-on-error: true
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
 
@@ -236,10 +236,10 @@ jobs:
     if: ${{ needs.detect-file-changes.outputs.has_calm_changes == 'true' && vars.CALM_VALIDATE_STRICT == 'true' }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
 
@@ -267,7 +267,7 @@ jobs:
           --health-retries 5
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Validate migration version uniqueness
         shell: bash
@@ -318,7 +318,7 @@ jobs:
           fi
 
       - name: Set up Python for sqlfluff
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.12'
 
@@ -329,7 +329,7 @@ jobs:
         run: sqlfluff lint backend/migrations/ --dialect postgres
 
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version-file: 'backend/go.mod'
           cache: true
@@ -357,10 +357,10 @@ jobs:
     if: ${{ needs.detect-file-changes.outputs.has_frontend_changes == 'true' }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: 'npm'
@@ -381,17 +381,17 @@ jobs:
     if: ${{ needs.detect-file-changes.outputs.has_frontend_changes == 'true' }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: 'npm'
           cache-dependency-path: 'frontend/package-lock.json'
 
       - name: Restore Next.js build cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: frontend/.next/cache
           key: ${{ runner.os }}-nextjs-${{ hashFiles('frontend/package-lock.json', 'frontend/next.config.js', 'frontend/tsconfig.json') }}
@@ -423,10 +423,10 @@ jobs:
     if: ${{ needs.detect-file-changes.outputs.has_go_changes == 'true' }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version-file: 'backend/go.mod'
           cache: true
@@ -443,10 +443,10 @@ jobs:
     if: ${{ needs.detect-file-changes.outputs.has_go_changes == 'true' }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version-file: 'backend/go.mod'
           cache: true
@@ -463,10 +463,10 @@ jobs:
     if: ${{ needs.detect-file-changes.outputs.has_docs_user_changes == 'true' }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: 'npm'
