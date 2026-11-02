@@ -338,15 +338,20 @@ func setupRouter(cfg *config.Config, h *handler.Handlers) *gin.Engine {
 
 	// Swagger documentation
 	swaggerHandler := ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/swagger/doc.json"))
-	router.GET("/swagger/doc.json", func(c *gin.Context) {
-		swaggerDoc, err := buildSwaggerDoc(resolveSwaggerHost(c), resolveSwaggerScheme(c))
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to render swagger document"})
+	// Gin panics at startup if /swagger/doc.json is registered alongside the /swagger/*any catch-all,
+	// so register the catch-all once and serve doc.json from inside it.
+	router.GET("/swagger/*any", func(c *gin.Context) {
+		if c.Param("any") == "/doc.json" {
+			swaggerDoc, err := buildSwaggerDoc(resolveSwaggerHost(c), resolveSwaggerScheme(c))
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to render swagger document"})
+				return
+			}
+			c.Data(http.StatusOK, "application/json; charset=utf-8", swaggerDoc)
 			return
 		}
-		c.Data(http.StatusOK, "application/json; charset=utf-8", swaggerDoc)
+		swaggerHandler(c)
 	})
-	router.GET("/swagger/*any", swaggerHandler)
 
 	// API v1 routes
 	v1 := router.Group("/api/v1")
