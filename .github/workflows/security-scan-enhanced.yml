@@ -477,7 +477,7 @@ jobs:
         id: create-pr
         if: steps.parse-vulns.outputs.has_updates == 'true' && (github.event.inputs.create_pr == 'true' || github.event_name != 'workflow_dispatch') && steps.check-existing-pr.outputs.should_create_pr == 'true'
         continue-on-error: true
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@v8
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: 'security: automated dependency updates for security vulnerabilities'
@@ -610,7 +610,7 @@ jobs:
                 issueBody += `Update \`go.mod\` and \`docker/Dockerfile.backend\`:\n\n`;
                 issueBody += `\`dockerfile\n`;
                 issueBody += `# In docker/Dockerfile.backend builder stage\n`;
-                issueBody += `FROM golang:${data.fixed}-alpine3.21\n`;
+                issueBody += `FROM golang:${data.fixed}-alpine3.23\n`;
                 issueBody += `\`\n\n`;
                 issueBody += `\`go\n`;
                 issueBody += `// In go.mod\n`;
@@ -767,7 +767,7 @@ jobs:
                 issueBody += `Update \`package.json\` and \`docker/Dockerfile.frontend\`:\n\n`;
                 issueBody += `\`dockerfile\n`;
                 issueBody += `# In docker/Dockerfile.frontend builder stage\n`;
-                issueBody += `FROM node:${data.fixed}-alpine3.21\n`;
+                issueBody += `FROM node:${data.fixed}-alpine3.23\n`;
                 issueBody += `\`\n\n`;
                 issueBody += `Run \`npm update\` or update specific package in \`package.json\`\n\n`;
               } else if (pkgName.includes('alpine')) {

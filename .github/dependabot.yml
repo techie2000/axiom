@@ -145,7 +145,12 @@ updates:
       include: "scope"
     pull-request-branch-name:
       separator: "/"
+    # Group only minor/patch updates. Major bumps (often Node runtime changes) are left out of the
+    # group so each arrives as its own PR and can be reviewed and tested separately.
     groups:
-      github-actions:
+      github-actions-minor-patch:
         patterns:
           - "*"
+        update-types:
+          - "minor"
+          - "patch"

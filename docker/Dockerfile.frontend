@@ -1,11 +1,11 @@
 # Build stage
 ARG DOCKER_LIBRARY=public.ecr.aws/docker/library
-FROM ${DOCKER_LIBRARY}/node:22-alpine3.21 AS builder
+FROM ${DOCKER_LIBRARY}/node:22-alpine3.23 AS builder
 
 # Security: keep OpenSSL patched using latest package available in Alpine repo.
 # security-scan-managed
 # hadolint ignore=DL3018
-RUN apk add --no-cache --upgrade libssl3
+RUN apk add --no-cache --upgrade libssl3 musl-utils zlib
 
 WORKDIR /app
 
@@ -14,7 +14,7 @@ ENV INTERNAL_API_PROXY_TARGET=${INTERNAL_API_PROXY_TARGET}
 
 # Security: Upgrade npm to address npm bundled dependency CVEs (tar/minimatch family)
 # security-scan-managed
-RUN npm install -g npm@11.12.0
+RUN npm install -g npm@11.21.1
 
 # Copy package files
 COPY package*.json ./
@@ -29,14 +29,14 @@ ENV NODE_TLS_REJECT_UNAUTHORIZED=0
 RUN npm run build
 
 # Runtime stage
-FROM ${DOCKER_LIBRARY}/node:22-alpine3.21
+FROM ${DOCKER_LIBRARY}/node:22-alpine3.23
 
 # Security: keep OpenSSL patched using latest package available in Alpine repo
 # and install the patched npm CLI in the runtime image.
 # security-scan-managed
 # hadolint ignore=DL3018
-RUN apk add --no-cache --upgrade libssl3 \
-	&& npm install -g npm@11.12.0
+RUN apk add --no-cache --upgrade libssl3 musl-utils zlib \
+	&& npm install -g npm@11.21.1
 
 WORKDIR /app
 
