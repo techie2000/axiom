@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Upsert weekly rolling check-in comment
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const issueNumber = 207;
